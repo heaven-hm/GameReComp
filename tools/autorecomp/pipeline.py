@@ -45,9 +45,15 @@ STAGE_WEIGHTS = {
 # 402 MB translation (a single 273 MB unit, see translator.MAX_UNIT_BYTES) ran
 # for 30+ minutes with no sign of finishing. The deadline scales with generated
 # source size, can be overridden with --build-timeout, and 0 disables it.
+#
+# 5 s/MiB is calibrated from that same huge input after byte-capped units:
+# a GeneRally clean build of 375 MiB was at 56% when the old 1 s/MiB budget
+# (974 s) expired, i.e. roughly 4.6 s/MiB wall clock with --parallel 8. The
+# deadline is a safety net for pathological compiles, not a performance target,
+# so it errs above the measurement.
 BUILD_TIMEOUT_BASE = 600.0
-BUILD_TIMEOUT_PER_MB = 1.0
-BUILD_TIMEOUT_CAP = 1800.0
+BUILD_TIMEOUT_PER_MB = 5.0
+BUILD_TIMEOUT_CAP = 3600.0
 
 
 def default_build_timeout(source_bytes):
