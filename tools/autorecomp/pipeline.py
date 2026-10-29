@@ -585,7 +585,7 @@ class _StageRun:
         self.p.stages.append(record)
         self.p.stage_status[self.name] = record["status"]
         self.p._emit(event="stage-end", **record)
-        return not issubclass(exc_type, KeyboardInterrupt)
+        return exc_type is not None and not issubclass(exc_type, KeyboardInterrupt)
 
 
 def _run_stage(pipeline, name):
