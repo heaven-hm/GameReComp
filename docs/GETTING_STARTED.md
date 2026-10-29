@@ -220,7 +220,44 @@ generated-source size. Nothing is silently retried.
 
 ---
 
-## 8. Troubleshooting
+## 8. Readability pass (optional)
+
+`autorecomp readability` improves the generated source *after* the pipeline has
+proved the project, never before. It is a separate, gated step:
+
+```sh
+./autorecomp readability projects/noiz2sa --providers revng
+./autorecomp readability projects/noiz2sa --providers all --max-units 1 \
+    --max-attempts 3 --max-seconds 900 --provider-timeout 300
+```
+
+The gates, in order:
+
+1. the project must have a recorded build matching `src/` on disk
+   (`manifest.json` digest), and a verification status of `partial`,
+   `scenario-pass`, `verified-playable-scope` or `trace-diverged` — a
+   `launch-failed` project is refused, because there is no observed run to
+   reproduce;
+2. **rev.ng** must be available (`REVNG_BIN`, a `REVNG_DECOMPILE_CMD`
+   template, or `revng` on `PATH`) and must produce candidates;
+3. the optional AI polish only runs after rev.ng succeeded — it is never a
+   substitute for the primary provider.
+
+Every edit is compile-checked, the project is rebuilt and re-run, and the
+process evidence must match the recorded baseline; a failing edit is given back
+to the provider as feedback for up to `--max-attempts` repairs, then reverted.
+The whole pass is bounded by `--max-seconds`, and interruption restores every
+edited file. Results are written to `projects/<name>/reports/readability.json`
+and `.html`, with the log under `projects/<name>/logs/readability.log`.
+
+Exit codes: `0` for `complete`, `no-edits` or `revng-candidates-recorded`;
+`2` for `blocked` (gate or provider unavailable) and for rejected edits. This
+build of the product ships no high-level provider yet, so a run without rev.ng
+installed is expected to end `blocked` with exit code 2.
+
+---
+
+## 9. Troubleshooting
 
 | Symptom | Cause | What to do |
 | --- | --- | --- |
@@ -240,12 +277,13 @@ the evidence is comparable.
 
 ---
 
-## 9. Where to read next
+## 10. Where to read next
 
 | You want to know | Read |
 | --- | --- |
 | how the stages fit together | [`ARCHITECTURE.md`](ARCHITECTURE.md), [`PIPELINE.md`](PIPELINE.md) |
 | what the source labels mean and how provenance is tracked | [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md) |
+| how the readability pass and its gates work | [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md), section 8 above |
 | how verification decides pass/fail | [`VERIFICATION.md`](VERIFICATION.md) |
 | what upstream backend code is used and under which licence | [`BACKENDS.md`](BACKENDS.md), [`LICENSES.md`](LICENSES.md) |
 | measured benchmark data and methodology | [`BENCHMARKS.md`](BENCHMARKS.md), [`table.md`](../table.md) |
