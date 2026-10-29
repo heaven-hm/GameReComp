@@ -67,6 +67,13 @@ def build_parser():
     parser.add_argument("--jobs", type=int, help="parallel compile jobs")
     parser.add_argument("--split", type=int, default=1000,
                         help="functions per generated source unit (default 1000)")
+    parser.add_argument("--split-bytes", type=int, default=8 * 1024 * 1024,
+                        help="soft cap on generated text per source unit "
+                             "(default 8 MiB)")
+    parser.add_argument("--build-timeout", type=float, default=None,
+                        help="hard deadline for configure+build in seconds "
+                             "(default: adaptive, 600 s + 1 s/MiB of generated "
+                             "source capped at 1800 s; 0 disables)")
     parser.add_argument("--no-build", action="store_true")
     parser.add_argument("--no-run", action="store_true",
                         help="build but do not execute the rebuilt binary")
@@ -96,6 +103,7 @@ def main(argv=None):
         pe_path, project_dir=args.project_dir, assets_dir=args.assets_dir,
         timeout=args.timeout, headless=not args.interactive,
         oracle=args.oracle, jobs=args.jobs, split=args.split,
+        split_bytes=args.split_bytes, build_timeout=args.build_timeout,
         build=not args.no_build, run_binary=not args.no_run,
         on_event=_progress)
     try:

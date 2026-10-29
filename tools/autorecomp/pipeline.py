@@ -28,7 +28,8 @@ for _sub in ("pe", "disasm", "lift"):
         sys.path.insert(0, _p)
 
 from pe_analyze import analyze_pe, build_iat_map  # noqa: E402
-from translator import discover_functions, generate_recomp_files  # noqa: E402
+from translator import (MAX_UNIT_BYTES, discover_functions,  # noqa: E402
+                        generate_recomp_files)
 
 from . import projectgen  # noqa: E402
 
@@ -39,6 +40,19 @@ STAGE_WEIGHTS = {
     "inspect": 10, "recover": 10, "translate": 10, "project": 10,
     "compile": 20, "run": 15, "verify": 15, "report": 10,
 }
+
+# A stalled compile used to hold the pipeline open indefinitely: GeneRally's
+# 402 MB translation (a single 273 MB unit, see translator.MAX_UNIT_BYTES) ran
+# for 30+ minutes with no sign of finishing. The deadline scales with generated
+# source size, can be overridden with --build-timeout, and 0 disables it.
+BUILD_TIMEOUT_BASE = 600.0
+BUILD_TIMEOUT_PER_MB = 1.0
+BUILD_TIMEOUT_CAP = 1800.0
+
+
+def default_build_timeout(source_bytes):
+    return min(BUILD_TIMEOUT_CAP,
+               BUILD_TIMEOUT_BASE + BUILD_TIMEOUT_PER_MB * (source_bytes / (1 << 20)))
 
 CATEGORIES = ("HIGH_LEVEL_VERIFIED", "HIGH_LEVEL_UNVERIFIED",
               "LOW_LEVEL_FALLBACK", "UNRESOLVED")
@@ -73,7 +87,8 @@ class StageFailure(Exception):
 class Pipeline:
     def __init__(self, pe_path, project_dir=None, assets_dir=None,
                  timeout=30.0, headless=True, oracle=None, jobs=None,
-                 split=1000, build=True, run_binary=True, on_event=None):
+                 split=1000, build=True, run_binary=True, on_event=None,
+                 split_bytes=MAX_UNIT_BYTES, build_timeout=None):
         self.pe_path = Path(pe_path).expanduser().resolve()
         self.project_dir = Path(project_dir or projectgen.default_project_dir(self.pe_path)).resolve()
         self.assets_dir = Path(assets_dir).expanduser().resolve() if assets_dir else self.pe_path.parent
@@ -82,6 +97,8 @@ class Pipeline:
         self.oracle_path = Path(oracle).expanduser().resolve() if oracle else None
         self.jobs = jobs
         self.split = split
+        self.split_bytes = split_bytes
+        self.build_timeout = build_timeout
         self.do_build = build
         self.do_run = run_binary
         self.on_event = on_event
@@ -193,9 +210,19 @@ class Pipeline:
         with contextlib.redirect_stdout(buf):
             lifted = generate_recomp_files(
                 self.functions, self.iat_map, str(gen_dir),
-                split_size=self.split)
+                split_size=self.split, max_unit_bytes=self.split_bytes)
         log_path.write_text(buf.getvalue())
         self.lifted = lifted
+
+        # stage_recover guesses the unit from the function count; by-size
+        # chunking makes that guess wrong, so use the generator's own manifest.
+        unit_ranges = []
+        units_manifest = gen_dir / "recomp_units.json"
+        if units_manifest.exists():
+            for unit in json.loads(units_manifest.read_text()).get("units", []):
+                unit_ranges.append((int(unit["first_address"], 16),
+                                    int(unit["last_address"], 16),
+                                    f"src/recomp/gen/{unit['file']}"))
 
         errors = 0
         failed_names = set()
@@ -214,6 +241,15 @@ class Pipeline:
                     entry["name"] = by_addr[entry["address"]]
                 if entry["name"] in failed_names:
                     entry["category"] = "UNRESOLVED"
+                if unit_ranges:
+                    try:
+                        addr = int(entry["address"], 16)
+                    except (KeyError, ValueError):
+                        continue
+                    for first, last, rel in unit_ranges:
+                        if first <= addr <= last:
+                            entry["source_unit"] = rel
+                            break
             data["lift_errors"] = errors
             func_path.write_text(json.dumps(data, indent=2) + "\n")
 
@@ -273,13 +309,34 @@ class Pipeline:
                      "-DCMAKE_BUILD_TYPE=Release"]
         build = [cmake, "--build", str(build_dir), "--parallel",
                  str(self.jobs or os.cpu_count() or 4)]
+
+        source_bytes = sum(p.stat().st_size
+                           for p in (self.project_dir / "src").rglob("*")
+                           if p.is_file())
+        adaptive = self.build_timeout is None
+        timeout = (default_build_timeout(source_bytes)
+                   if adaptive else float(self.build_timeout))
+        deadline = (time.monotonic() + timeout) if timeout > 0 else None
+        deadline_data = {"log": str(log_path), "timed_out": True,
+                         "timeout_seconds": timeout, "adaptive": adaptive,
+                         "source_bytes": source_bytes}
+
         t0 = time.time()
         with open(log_path, "w") as log:
             log.write("$ " + " ".join(configure) + "\n")
-            rc = subprocess.run(configure, stdout=log, stderr=subprocess.STDOUT).returncode
+            rc, timed_out = self._run_build_command(configure, log, deadline)
+            if timed_out:
+                raise StageFailure(
+                    f"cmake configure exceeded the {timeout:g}s build deadline "
+                    f"(see {log_path})", deadline_data)
             if rc == 0:
                 log.write("\n$ " + " ".join(build) + "\n")
-                rc = subprocess.run(build, stdout=log, stderr=subprocess.STDOUT).returncode
+                rc, timed_out = self._run_build_command(build, log, deadline)
+            if timed_out:
+                raise StageFailure(
+                    f"build exceeded the {timeout:g}s deadline (see {log_path}); "
+                    f"the deadline scales with generated source size and can be "
+                    f"raised or disabled with --build-timeout", deadline_data)
         seconds = round(time.time() - t0, 1)
         binary = build_dir / self.name
         if os.name == "nt":
@@ -296,7 +353,33 @@ class Pipeline:
             "binary": str(binary),
             "sha256": _sha256_file(binary),
             "seconds": seconds,
+            "source_bytes": source_bytes,
+            "build_timeout_seconds": timeout or None,
+            "build_timeout_adaptive": adaptive,
         }
+
+    def _run_build_command(self, cmd, log, deadline):
+        """Run a build command under one shared deadline.
+
+        subprocess.run(timeout=...) kills only the direct child; cmake leaves
+        compiler processes behind. The build gets its own session so the whole
+        group can be killed when the deadline expires.
+        """
+        timeout = None if deadline is None else max(1.0, deadline - time.monotonic())
+        proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT,
+                                start_new_session=(os.name != "nt"))
+        try:
+            return proc.wait(timeout=timeout), False
+        except subprocess.TimeoutExpired:
+            if os.name != "nt":
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except OSError:
+                    proc.kill()
+            else:
+                proc.kill()
+            proc.wait()
+            return None, True
 
     def stage_run(self):
         if not self.binary:
