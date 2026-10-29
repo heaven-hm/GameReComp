@@ -605,10 +605,16 @@ def _run_stage(pipeline, name):
 
 
 def run_pipeline(pipeline):
-    """Run all stages in order, stopping at the first non-report failure."""
+    """Run all stages in order, stopping at the first non-report failure.
+
+    Verification still runs when the run stage failed but left evidence:
+    a launch-failed verdict is a verification result, and skipping it
+    would leave the project without any reports/verification.json.
+    """
     stop = False
     for name in STAGES:
-        if stop and name != "report":
+        if stop and name != "report" and not (
+                name == "verify" and pipeline.run_result is not None):
             pipeline.stages.append({
                 "name": name, "status": "skipped", "seconds": 0.0,
                 "message": "skipped after earlier failure", "data": {}})
