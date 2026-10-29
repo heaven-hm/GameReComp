@@ -6,11 +6,15 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-10-29T17:26:28Z by `python -m tools.gamesdb`. Measured 0; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-10-29T19:56:41Z by `python -m tools.gamesdb`. Measured 1; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+
+Best measured result: **Ikachan** (dxIka.exe) at 75/100, launch-failed: rebuilt process crashed (exit -6).
 
 ## Measured by this repository
 
-No autorecomp runs recorded yet. Run `./autorecomp <game.exe>` to add the first row.
+| Game | Filename | Arch | OS | PASS /100 | Status | Evidence |
+| --- | --- | --- | --- | ---: | --- | --- |
+| Ikachan | dxIka.exe | i386 (PE32) | Windows | 75 | launch-failed: rebuilt process crashed (exit -6) | projects/ikachan/reports/report.html (host: Darwin arm64 (host build)) |
 
 ## Local corpus (not yet measured)
 
@@ -25,7 +29,6 @@ No autorecomp runs recorded yet. Run `./autorecomp <game.exe>` to add the first 
 | Gunroar | gr.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at jcxz 0x42fceb | sha256 6ea800ee9185 |
 | Hero Core | herocore gm5.exe | i386 (PE32) | Windows | 0 | not yet run by the autorecomp pipeline | sha256 be411b8b64cf |
 | Hero Core | herocore gm7.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at arpl 0x40113a | sha256 9146fc64eb67 |
-| Ikachan | dxIka.exe | i386 (PE32) | Windows | 0 | legacy engine: built, exited 3 at kernel32.dll!OpenMutexA; PCRecomp experiment reached the title screen | sha256 22923218ba97 |
 | Noiz2sa | noiz2sa.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at arpl; follow-up lifted 384,200/384,200 and built, 60 imports missing | sha256 389af5a46ee8 |
 | OpenTyrian | opentyrian.exe | x86-64 (PE32+) | Windows | 0 | not yet run; PE32+ backend not implemented (pipeline fails closed) | sha256 8eb615e58e38 |
 | Parsec47 | p47.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at jcxz 0x4246df | sha256 41b2f77d2d7a |

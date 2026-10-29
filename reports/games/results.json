@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "runs": [
+    {
+      "relative_path": "ikachan/dxIka.exe",
+      "game": "Ikachan",
+      "filename": "dxIka.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 75,
+      "verification": "launch-failed",
+      "status": "rebuilt process crashed (exit -6)",
+      "run_status": "crashed",
+      "exit_code": -6,
+      "host": "Darwin arm64 (host build)",
+      "input_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+      "evidence": "projects/ikachan/reports/report.html",
+      "generated_at": "2026-10-29T19:56:41Z"
+    }
+  ]
+}
