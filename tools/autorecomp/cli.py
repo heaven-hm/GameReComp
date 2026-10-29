@@ -74,6 +74,11 @@ def build_parser():
                         help="hard deadline for configure+build in seconds "
                              "(default: adaptive, 600 s + 5 s/MiB of generated "
                              "source capped at 3600 s; 0 disables)")
+    parser.add_argument("--reuse-build", action="store_true",
+                        help="adopt the existing build/<name> binary when its "
+                             "recorded source digest matches the freshly "
+                             "generated source, skipping recompilation; "
+                             "refuses (fail-closed) on any mismatch")
     parser.add_argument("--no-build", action="store_true")
     parser.add_argument("--no-run", action="store_true",
                         help="build but do not execute the rebuilt binary")
@@ -105,7 +110,7 @@ def main(argv=None):
         oracle=args.oracle, jobs=args.jobs, split=args.split,
         split_bytes=args.split_bytes, build_timeout=args.build_timeout,
         build=not args.no_build, run_binary=not args.no_run,
-        on_event=_progress)
+        reuse_build=args.reuse_build, on_event=_progress)
     try:
         run_pipeline(pipeline)
     except KeyboardInterrupt:

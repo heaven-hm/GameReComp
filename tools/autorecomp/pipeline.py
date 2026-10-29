@@ -84,6 +84,25 @@ def _tail(path, lines=80):
     return "\n".join(text[-lines:])
 
 
+def _source_files(project_dir):
+    """Every file delivered under src/, sorted, with content hashes."""
+    files = []
+    for base in ("src",):
+        for path in sorted((project_dir / base).rglob("*")):
+            if path.is_file():
+                files.append({
+                    "path": str(path.relative_to(project_dir)),
+                    "sha256": _sha256_file(path),
+                    "size": path.stat().st_size,
+                })
+    return files
+
+
+def _source_digest(files):
+    return hashlib.sha256(
+        "".join(f"{f['sha256']}  {f['path']}\n" for f in files).encode()).hexdigest()
+
+
 class StageFailure(Exception):
     def __init__(self, message, data=None):
         super().__init__(message)
@@ -94,7 +113,8 @@ class Pipeline:
     def __init__(self, pe_path, project_dir=None, assets_dir=None,
                  timeout=30.0, headless=True, oracle=None, jobs=None,
                  split=1000, build=True, run_binary=True, on_event=None,
-                 split_bytes=MAX_UNIT_BYTES, build_timeout=None):
+                 split_bytes=MAX_UNIT_BYTES, build_timeout=None,
+                 reuse_build=False):
         self.pe_path = Path(pe_path).expanduser().resolve()
         self.project_dir = Path(project_dir or projectgen.default_project_dir(self.pe_path)).resolve()
         self.assets_dir = Path(assets_dir).expanduser().resolve() if assets_dir else self.pe_path.parent
@@ -107,6 +127,7 @@ class Pipeline:
         self.build_timeout = build_timeout
         self.do_build = build
         self.do_run = run_binary
+        self.reuse_build = reuse_build
         self.on_event = on_event
 
         self.info = None
@@ -308,6 +329,24 @@ class Pipeline:
         log_path = self.project_dir / "logs" / "compile.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
+        source_files = _source_files(self.project_dir)
+        source_digest = _source_digest(source_files)
+        source_bytes = sum(f["size"] for f in source_files)
+        binary = build_dir / self.name
+        if os.name == "nt":
+            binary = binary.with_suffix(".exe")
+
+        if self.reuse_build:
+            self.binary = self._adopt_reused_binary(binary, source_digest, log_path)
+            return f"{binary} ({binary.stat().st_size} bytes, reused build)", {
+                "binary": str(binary),
+                "sha256": _sha256_file(binary),
+                "seconds": 0.0,
+                "source_bytes": source_bytes,
+                "reused": True,
+                "reused_source_digest": source_digest,
+            }
+
         cmake = shutil.which("cmake")
         if not cmake:
             raise StageFailure("cmake not found on PATH")
@@ -316,9 +355,6 @@ class Pipeline:
         build = [cmake, "--build", str(build_dir), "--parallel",
                  str(self.jobs or os.cpu_count() or 4)]
 
-        source_bytes = sum(p.stat().st_size
-                           for p in (self.project_dir / "src").rglob("*")
-                           if p.is_file())
         adaptive = self.build_timeout is None
         timeout = (default_build_timeout(source_bytes)
                    if adaptive else float(self.build_timeout))
@@ -344,9 +380,6 @@ class Pipeline:
                     f"the deadline scales with generated source size and can be "
                     f"raised or disabled with --build-timeout", deadline_data)
         seconds = round(time.time() - t0, 1)
-        binary = build_dir / self.name
-        if os.name == "nt":
-            binary = binary.with_suffix(".exe")
         if rc != 0:
             raise StageFailure(
                 f"build failed (see {log_path})\n{_tail(log_path)}",
@@ -363,6 +396,42 @@ class Pipeline:
             "build_timeout_seconds": timeout or None,
             "build_timeout_adaptive": adaptive,
         }
+
+    def _adopt_reused_binary(self, binary, source_digest, log_path):
+        """Adopt an existing binary only when it provably came from this source.
+
+        --reuse-build exists so re-verification does not pay the compile cost
+        again, but the delivered binary must still be the one built from
+        exactly the generated source; any mismatch is a hard failure.
+        """
+        manifest_path = self.project_dir / "manifest.json"
+        if not binary.exists():
+            raise StageFailure(
+                f"--reuse-build: {binary} is missing; run a build first",
+                {"log": str(log_path)})
+        try:
+            manifest = json.loads(manifest_path.read_text())
+        except (OSError, ValueError):
+            raise StageFailure(
+                f"--reuse-build: no readable {manifest_path}; run a build first",
+                {"log": str(log_path)})
+        built_from = (manifest.get("binary") or {}).get("built_from_source_digest")
+        if not built_from:
+            raise StageFailure(
+                f"--reuse-build: {manifest_path} does not record which source "
+                f"the binary was built from", {"log": str(log_path)})
+        if built_from != source_digest:
+            raise StageFailure(
+                f"--reuse-build: {binary} was built from source digest "
+                f"{built_from[:12]} but the current generated source is "
+                f"{source_digest[:12]}; the source changed since that build",
+                {"log": str(log_path), "manifest_digest": built_from,
+                 "source_digest": source_digest})
+        log_path.write_text(
+            f"$ reuse {binary}\n"
+            f"# adopted existing binary; manifest built_from_source_digest "
+            f"{source_digest} matches the current src/ tree\n")
+        return binary
 
     def _run_build_command(self, cmd, log, deadline):
         """Run a build command under one shared deadline.
@@ -567,17 +636,8 @@ class Pipeline:
         # A failure before the project stage (e.g. an unsupported PE) still
         # has to leave a report behind, so the directory may not exist yet.
         self.project_dir.mkdir(parents=True, exist_ok=True)
-        files = []
-        for base in ("src",):
-            for path in sorted((self.project_dir / base).rglob("*")):
-                if path.is_file():
-                    files.append({
-                        "path": str(path.relative_to(self.project_dir)),
-                        "sha256": _sha256_file(path),
-                        "size": path.stat().st_size,
-                    })
-        source_digest = hashlib.sha256(
-            "".join(f"{f['sha256']}  {f['path']}\n" for f in files).encode()).hexdigest()
+        files = _source_files(self.project_dir)
+        source_digest = _source_digest(files)
         manifest = {
             "schema": 1,
             "game": self.pe_path.name,

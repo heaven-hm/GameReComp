@@ -72,6 +72,7 @@ def collect(results_path=RESULTS_PATH):
                 "source_bytes": translate.get("source_bytes"),
                 "lift_errors": translate.get("lift_errors"),
                 "compile_seconds": compile_.get("seconds"),
+                "compile_reused": bool(compile_.get("reused")),
                 "binary_bytes": _binary_size(compile_.get("binary")),
                 "target": (report or {}).get("outcome", {}).get("target", {}).get("label"),
             }
@@ -102,7 +103,10 @@ def render(rows):
         "",
         "Only measured values appear. A game listed as unmeasured was not run, or its",
         "report did not carry the metric; it is never scored from the upstream project's",
-        "own claims. The full per-input database lives in `table.md`, and the evidence",
+        "own claims. Compile seconds come from real compilations: a run that adopted an",
+        "existing binary with `--reuse-build` (after checking its manifest source digest)",
+        "shows `-` instead of a fake zero and is excluded from the timing statistics.",
+        "The full per-input database lives in `table.md`, and the evidence",
         "behind each row is the linked HTML report.",
         "",
         f"Last measurement: {generated or 'unknown'}",
@@ -142,7 +146,11 @@ def render(rows):
             )
         )
 
-    compiled = [r for r in rows if r["compile_seconds"]]
+    built = [r for r in rows if r["binary_bytes"] is not None]
+    # Reused builds (--reuse-build) adopt an existing binary after checking it
+    # was built from exactly the current source; their ~0 s is not a compile
+    # measurement and must not enter the timing statistics.
+    timed = [r for r in rows if r["compile_seconds"] and not r["compile_reused"]]
     verified = [r for r in rows if r["run"].get("verification") == "scenario-pass"]
     partial = [r for r in rows if r["run"].get("verification") == "partial"]
     launch_failed = [r for r in rows if r["run"].get("verification") == "launch-failed"]
@@ -156,15 +164,15 @@ def render(rows):
         "| Metric | Value |",
         "| --- | ---: |",
         f"| Inputs measured | {len(rows)} |",
-        f"| Reached a built binary | {len(compiled)} |",
+        f"| Reached a built binary | {len(built)} |",
         f"| Verification `scenario-pass` | {len(verified)} |",
         f"| Verification `partial` | {len(partial)} |",
         f"| Verification `launch-failed` | {len(launch_failed)} |",
         f"| Generated C source | {total_source / (1024 * 1024):.1f} MiB |",
         f"| Recovered instructions | {_int(total_instructions)} |",
     ]
-    if compiled:
-        seconds = [r["compile_seconds"] for r in compiled]
+    if timed:
+        seconds = [r["compile_seconds"] for r in timed]
         lines.append(f"| Compile time, median | {statistics.median(seconds):.0f} s |")
         lines.append(f"| Compile time, max | {max(seconds):.0f} s |")
 
