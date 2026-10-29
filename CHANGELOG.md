@@ -13,6 +13,13 @@ fail-closed verification report. All generated functions are `LOW_LEVEL_FALLBACK
 register-transfer C; no game has passed a gameplay scenario yet, and the desktop
 GUI is deferred. See the README "Honest limits" section.
 
+Measured at this tag on the local 19-input corpus: 15 inputs reached a built
+native binary (760.9 MiB of register-transfer C compiled in 10-32 s each), 14 of
+those stopped in the PE loader on 2-179 unresolved imports and are recorded
+`launch-failed` (85/100), and Ikachan bound all 97 imports, launched, and exited
+on its own with no oracle supplied, recorded `partial` (93/100). Four PE32+
+inputs are preserved as `not-run` rows (0/100).
+
 ### Added
 - `autorecomp` staged pipeline (`tools/autorecomp/`): inspect, recover, translate,
   project, compile, run, verify, report, with per-stage timings, weighted scoring
@@ -71,9 +78,11 @@ GUI is deferred. See the README "Honest limits" section.
   not yet wired into the build.
 - Verification reaches launch-level checks only; gameplay/frame/audio oracles
   are recorded gaps on every run.
-- On the development host, rebuilt PE32 binaries currently abort at dynamic-link
-  time inside Homebrew freetype 2.15.0 (`_HVF_clear_part_cache`), so the honest
-  status is `launch-failed` until the host library is repaired.
+- Runtime coverage, not translation, is the measured ceiling: 14 of the 15
+  rebuilt PE32 inputs bind part of their imports and stop with the loader's
+  explicit unresolved-name list (2-179 names: SDL.dll and SDL_mixer.dll 1.2 for
+  the ABA games, DirectX, and KERNEL32 atom functions), which is why they are
+  `launch-failed`.
 - The Qt 6 desktop GUI is designed (`docs/GUI.md`) but not shipped.
 
 ## [Unreleased]
