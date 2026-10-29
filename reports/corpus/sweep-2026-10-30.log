@@ -1,0 +1,875 @@
+
+===== cavestory_DoConfig.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doconfig --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x0040A000...
+[*] Found 242 potential call targets
+[*] Found 48 prologue patterns
+[*] Total unique function candidates: 253
+[*] Disassembling 253 initial candidates...
+[*] Discovery round 2: 40 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 42 pointer targets, rejected 0 that do not decode as code and 0 that land inside an instruction
+[*] Data scan: 42 functions reachable only via data pointers...
+[*] Discovery round 4: 42 new jmp/call targets...
+[*] Discovery round 5: 12 new jmp/call targets...
+[*] Successfully disassembled 348 functions (5 discovery rounds)
+[*] Dropped 7 entries that are not instruction boundaries
+[*] 48 scan candidates are labels inside another body: aliases
+[*] Clamped 52 function extents to the next function start
+[*] Added 54 branch targets that had no dispatchable body
+[*] Added 11 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doconfig
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doconfig/reports/report.html
+
+===== cavestory_DoConfig.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doconfig
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x0040A000...
+[*] Found 242 potential call targets
+[*] Found 48 prologue patterns
+[*] Total unique function candidates: 253
+[*] Disassembling 253 initial candidates...
+[*] Discovery round 2: 40 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 42 pointer targets, rejected 0 that do not decode as code and 0 that land inside an instruction
+[*] Data scan: 42 functions reachable only via data pointers...
+[*] Discovery round 4: 42 new jmp/call targets...
+[*] Discovery round 5: 12 new jmp/call targets...
+[*] Successfully disassembled 348 functions (5 discovery rounds)
+[*] Dropped 7 entries that are not instruction boundaries
+[*] 48 scan candidates are labels inside another body: aliases
+[*] Clamped 52 function extents to the next function start
+[*] Added 54 branch targets that had no dispatchable body
+[*] Added 11 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doconfig
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doconfig/reports/report.html
+
+----- cavestory/DoConfig.exe: rc=3 13s retried=True {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== cavestory_Doukutsu.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doukutsu --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x0048C000...
+[*] Found 2108 potential call targets
+[*] Found 907 prologue patterns
+[*] Total unique function candidates: 2539
+[*] Disassembling 2539 initial candidates...
+[*] Disassembling function 1000/2539...
+[*] Disassembling function 2000/2539...
+[*] Discovery round 2: 947 new jmp/call targets...
+[*] Data scan: probed 50 pointer targets, rejected 3 that do not decode as code and 1057 that land inside an instruction
+[*] Data scan: 47 functions reachable only via data pointers...
+[*] Discovery round 3: 47 new jmp/call targets...
+[*] Discovery round 4: 11 new jmp/call targets...
+[*] Successfully disassembled 3518 functions (4 discovery rounds)
+[*] Dropped 539 entries that are not instruction boundaries
+[*] Dropped 6 entries that are not instruction boundaries
+[*] 745 scan candidates are labels inside another body: aliases
+[*] Clamped 244 function extents to the next function start
+[*] Added 227 branch targets that had no dispatchable body
+[*] Added 60 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doukutsu
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doukutsu/reports/report.html
+
+----- cavestory/Doukutsu.exe: rc=3 35s retried=False {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== cavestory_OrgView.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/OrgView.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-orgview --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x0040D000...
+[*] Found 313 potential call targets
+[*] Found 108 prologue patterns
+[*] Total unique function candidates: 339
+[*] Disassembling 339 initial candidates...
+[*] Discovery round 2: 83 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 42 pointer targets, rejected 0 that do not decode as code and 1 that land inside an instruction
+[*] Data scan: 42 functions reachable only via data pointers...
+[*] Discovery round 4: 42 new jmp/call targets...
+[*] Discovery round 5: 12 new jmp/call targets...
+[*] Successfully disassembled 477 functions (5 discovery rounds)
+[*] Dropped 3 entries that are not instruction boundaries
+[*] 60 scan candidates are labels inside another body: aliases
+[*] Clamped 68 function extents to the next function start
+[*] Added 61 branch targets that had no dispatchable body
+[*] Added 16 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-orgview
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-orgview/reports/report.html
+
+===== cavestory_OrgView.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/OrgView.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-orgview
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x0040D000...
+[*] Found 313 potential call targets
+[*] Found 108 prologue patterns
+[*] Total unique function candidates: 339
+[*] Disassembling 339 initial candidates...
+[*] Discovery round 2: 83 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 42 pointer targets, rejected 0 that do not decode as code and 1 that land inside an instruction
+[*] Data scan: 42 functions reachable only via data pointers...
+[*] Discovery round 4: 42 new jmp/call targets...
+[*] Discovery round 5: 12 new jmp/call targets...
+[*] Successfully disassembled 477 functions (5 discovery rounds)
+[*] Dropped 3 entries that are not instruction boundaries
+[*] 60 scan candidates are labels inside another body: aliases
+[*] Clamped 68 function extents to the next function start
+[*] Added 61 branch targets that had no dispatchable body
+[*] Added 16 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-orgview
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-orgview/reports/report.html
+
+----- cavestory/OrgView.exe: rc=3 14s retried=True {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== generally_GeneRally.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/generally/GeneRally.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x0049AE00...
+[*] Found 962 potential call targets
+[*] Found 445 prologue patterns
+[*] Total unique function candidates: 1035
+[*] Disassembling 1035 initial candidates...
+[*] Disassembling function 1000/1035...
+[*] Discovery round 2: 525 new jmp/call targets...
+[*] Discovery round 3: 5 new jmp/call targets...
+[*] Data scan: probed 618 pointer targets, rejected 0 that do not decode as code and 194 that land inside an instruction
+[*] Data scan: 618 functions reachable only via data pointers...
+[*] Discovery round 4: 618 new jmp/call targets...
+[*] Discovery round 5: 14 new jmp/call targets...
+[*] Discovery round 6: 3 new jmp/call targets...
+[*] Successfully disassembled 2197 functions (6 discovery rounds)
+[*] Dropped 35 entries that are not instruction boundaries
+[*] Dropped 1 entries that start in int3 padding
+[*] 333 scan candidates are labels inside another body: aliases
+[*] 573 C++ EH stubs and funclets: aliases of the function that installs them
+[*] Clamped 242 function extents to the next function start
+[*] Added 266 branch targets that had no dispatchable body
+[*] Added 128 branch targets that had no dispatchable body
+[*] Added 22 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally/reports/report.html
+
+----- generally/GeneRally.exe: rc=3 187s retried=False {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== generally_TrackEditor.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/generally/TrackEditor.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally-trackeditor --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00411A00...
+[*] Found 200 potential call targets
+[*] Found 66 prologue patterns
+[*] Total unique function candidates: 210
+[*] Disassembling 210 initial candidates...
+[*] Discovery round 2: 32 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 11 pointer targets, rejected 0 that do not decode as code and 17 that land inside an instruction
+[*] Data scan: 11 functions reachable only via data pointers...
+[*] Discovery round 4: 11 new jmp/call targets...
+[*] Discovery round 5: 2 new jmp/call targets...
+[*] Successfully disassembled 256 functions (5 discovery rounds)
+[*] Dropped 1 entries that are not instruction boundaries
+[*] 38 scan candidates are labels inside another body: aliases
+[*] Clamped 18 function extents to the next function start
+[*] Added 30 branch targets that had no dispatchable body
+[*] Added 21 branch targets that had no dispatchable body
+[*] Added 5 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally-trackeditor
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally-trackeditor/reports/report.html
+
+===== generally_TrackEditor.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/generally/TrackEditor.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally-trackeditor
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00411A00...
+[*] Found 200 potential call targets
+[*] Found 66 prologue patterns
+[*] Total unique function candidates: 210
+[*] Disassembling 210 initial candidates...
+[*] Discovery round 2: 32 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 11 pointer targets, rejected 0 that do not decode as code and 17 that land inside an instruction
+[*] Data scan: 11 functions reachable only via data pointers...
+[*] Discovery round 4: 11 new jmp/call targets...
+[*] Discovery round 5: 2 new jmp/call targets...
+[*] Successfully disassembled 256 functions (5 discovery rounds)
+[*] Dropped 1 entries that are not instruction boundaries
+[*] 38 scan candidates are labels inside another body: aliases
+[*] Clamped 18 function extents to the next function start
+[*] Added 30 branch targets that had no dispatchable body
+[*] Added 21 branch targets that had no dispatchable body
+[*] Added 5 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally-trackeditor
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/generally-trackeditor/reports/report.html
+
+----- generally/TrackEditor.exe: rc=3 22s retried=True {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== gunroar_gr.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/gunroar/gr.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/gunroar --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00402000-0x00439E00...
+[*] Found 1165 potential call targets
+[*] Found 101 prologue patterns
+[*] Total unique function candidates: 1212
+[*] Disassembling 1212 initial candidates...
+[*] Disassembling function 1000/1212...
+[*] Discovery round 2: 267 new jmp/call targets...
+[*] Discovery round 3: 2 new jmp/call targets...
+[*] Data scan: 1 pointer targets start a function after padding that another body ran through
+[*] Data scan: probed 1635 pointer targets, rejected 9 that do not decode as code and 86 that land inside an instruction
+[*] Data scan: 1627 functions reachable only via data pointers...
+[*] Discovery round 4: 1627 new jmp/call targets...
+[*] Discovery round 5: 58 new jmp/call targets...
+[*] Discovery round 6: 17 new jmp/call targets...
+[*] Successfully disassembled 3182 functions (6 discovery rounds)
+[*] Dropped 31 entries that are not instruction boundaries
+[*] 175 scan candidates are labels inside another body: aliases
+[*] Clamped 723 function extents to the next function start
+[*] Added 114 branch targets that had no dispatchable body
+[*] Added 21 branch targets that had no dispatchable body
+[*] Added 2 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/gunroar
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/gunroar/reports/report.html
+
+===== gunroar_gr.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/gunroar/gr.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/gunroar
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00402000-0x00439E00...
+[*] Found 1165 potential call targets
+[*] Found 101 prologue patterns
+[*] Total unique function candidates: 1212
+[*] Disassembling 1212 initial candidates...
+[*] Disassembling function 1000/1212...
+[*] Discovery round 2: 267 new jmp/call targets...
+[*] Discovery round 3: 2 new jmp/call targets...
+[*] Data scan: 1 pointer targets start a function after padding that another body ran through
+[*] Data scan: probed 1635 pointer targets, rejected 9 that do not decode as code and 86 that land inside an instruction
+[*] Data scan: 1627 functions reachable only via data pointers...
+[*] Discovery round 4: 1627 new jmp/call targets...
+[*] Discovery round 5: 58 new jmp/call targets...
+[*] Discovery round 6: 17 new jmp/call targets...
+[*] Successfully disassembled 3182 functions (6 discovery rounds)
+[*] Dropped 31 entries that are not instruction boundaries
+[*] 175 scan candidates are labels inside another body: aliases
+[*] Clamped 723 function extents to the next function start
+[*] Added 114 branch targets that had no dispatchable body
+[*] Added 21 branch targets that had no dispatchable body
+[*] Added 2 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/gunroar
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/gunroar/reports/report.html
+
+----- gunroar/gr.exe: rc=3 36s retried=True {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== herocore_herocore gm5.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/herocore/herocore gm5.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/herocore-gm5 --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00519200...
+[*] Found 5529 potential call targets
+[*] Found 3279 prologue patterns
+[*] Total unique function candidates: 7281
+[*] Disassembling 7281 initial candidates...
+[*] Disassembling function 1000/7281...
+[*] Disassembling function 2000/7281...
+[*] Disassembling function 3000/7281...
+[*] Disassembling function 4000/7281...
+[*] Disassembling function 5000/7281...
+[*] Disassembling function 6000/7281...
+[*] Disassembling function 7000/7281...
+[*] Discovery round 2: 4273 new jmp/call targets...
+[*] Discovery round 3: 370 new jmp/call targets...
+[*] Discovery round 4: 38 new jmp/call targets...
+[*] Discovery round 5: 4 new jmp/call targets...
+[*] Discovery round 6: 1 new jmp/call targets...
+[*] Data scan: probed 2407 pointer targets, rejected 2032 that do not decode as code and 577 that land inside an instruction
+[*] Data scan: 375 functions reachable only via data pointers...
+[*] Discovery round 7: 375 new jmp/call targets...
+[*] Discovery round 8: 12 new jmp/call targets...
+[*] Successfully disassembled 12328 functions (8 discovery rounds)
+[*] Dropped 649 entries that are not instruction boundaries
+[*] 574 scan candidates are labels inside another body: aliases
+[*] Clamped 865 function extents to the next function start
+[*] Added 654 branch targets that had no dispatchable body
+[*] Added 87 branch targets that had no dispatchable body
+[*] Added 8 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/herocore-gm5
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/herocore-gm5/reports/report.html
+
+----- herocore/herocore gm5.exe: rc=3 39s retried=False {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== herocore_herocore gm7.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/herocore/herocore gm7.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/herocore-gm7 --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00584400...
+[*] Found 7006 potential call targets
+[*] Found 4347 prologue patterns
+[*] Total unique function candidates: 9331
+[*] Disassembling 9331 initial candidates...
+[*] Disassembling function 1000/9331...
+[*] Disassembling function 2000/9331...
+[*] Disassembling function 3000/9331...
+[*] Disassembling function 4000/9331...
+[*] Disassembling function 5000/9331...
+[*] Disassembling function 6000/9331...
+[*] Disassembling function 7000/9331...
+[*] Disassembling function 8000/9331...
+[*] Disassembling function 9000/9331...
+[*] Discovery round 2: 5343 new jmp/call targets...
+[*] Discovery round 3: 475 new jmp/call targets...
+[*] Discovery round 4: 38 new jmp/call targets...
+[*] Discovery round 5: 4 new jmp/call targets...
+[*] Discovery round 6: 1 new jmp/call targets...
+[*] Data scan: probed 2904 pointer targets, rejected 2346 that do not decode as code and 1523 that land inside an instruction
+[*] Data scan: 558 functions reachable only via data pointers...
+[*] Discovery round 7: 558 new jmp/call targets...
+[*] Discovery round 8: 28 new jmp/call targets...
+[*] Successfully disassembled 15747 functions (8 discovery rounds)
+[*] Dropped 890 entries that are not instruction boundaries
+[*] 815 scan candidates are labels inside another body: aliases
+[*] Clamped 1097 function extents to the next function start
+[*] Added 828 branch targets that had no dispatchable body
+[*] Added 97 branch targets that had no dispatchable body
+[*] Added 11 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/herocore-gm7
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/herocore-gm7/reports/report.html
+
+----- herocore/herocore gm7.exe: rc=3 53s retried=False {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== ikachan_dxIka.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/ikachan/dxIka.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/ikachan --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00411000...
+[*] Found 284 potential call targets
+[*] Found 33 prologue patterns
+[*] Total unique function candidates: 286
+[*] Disassembling 286 initial candidates...
+[*] Discovery round 2: 75 new jmp/call targets...
+[*] Data scan: probed 33 pointer targets, rejected 0 that do not decode as code and 14 that land inside an instruction
+[*] Data scan: 33 functions reachable only via data pointers...
+[*] Discovery round 3: 33 new jmp/call targets...
+[*] Discovery round 4: 6 new jmp/call targets...
+[*] Successfully disassembled 400 functions (4 discovery rounds)
+[*] Dropped 2 entries that are not instruction boundaries
+[*] 44 scan candidates are labels inside another body: aliases
+[*] Clamped 46 function extents to the next function start
+[*] Added 29 branch targets that had no dispatchable body
+[*] Added 55 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/ikachan
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/ikachan/reports/report.html
+
+===== ikachan_dxIka.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/ikachan/dxIka.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/ikachan
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00411000...
+[*] Found 284 potential call targets
+[*] Found 33 prologue patterns
+[*] Total unique function candidates: 286
+[*] Disassembling 286 initial candidates...
+[*] Discovery round 2: 75 new jmp/call targets...
+[*] Data scan: probed 33 pointer targets, rejected 0 that do not decode as code and 14 that land inside an instruction
+[*] Data scan: 33 functions reachable only via data pointers...
+[*] Discovery round 3: 33 new jmp/call targets...
+[*] Discovery round 4: 6 new jmp/call targets...
+[*] Successfully disassembled 400 functions (4 discovery rounds)
+[*] Dropped 2 entries that are not instruction boundaries
+[*] 44 scan candidates are labels inside another body: aliases
+[*] Clamped 46 function extents to the next function start
+[*] Added 29 branch targets that had no dispatchable body
+[*] Added 55 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/ikachan
+score:        93/100
+verification: partial
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/ikachan/reports/report.html
+
+----- ikachan/dxIka.exe: rc=3 19s retried=True {'score': 93, 'verification': 'partial', 'compile': 'ok'}
+
+===== noiz2sa_noiz2sa.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/noiz2sa/noiz2sa.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/noiz2sa --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00433C00...
+[*] Found 1249 potential call targets
+[*] Found 0 prologue patterns
+[*] Total unique function candidates: 1250
+[*] Disassembling 1250 initial candidates...
+[*] Disassembling function 1000/1250...
+[*] Discovery round 2: 377 new jmp/call targets...
+[*] Discovery round 3: 14 new jmp/call targets...
+[*] Data scan: probed 934 pointer targets, rejected 296 that do not decode as code and 52 that land inside an instruction
+[*] Data scan: 638 functions reachable only via data pointers...
+[*] Discovery round 4: 638 new jmp/call targets...
+[*] Discovery round 5: 56 new jmp/call targets...
+[*] Successfully disassembled 2335 functions (5 discovery rounds)
+[*] Dropped 48 entries that are not instruction boundaries
+[*] 317 scan candidates are labels inside another body: aliases
+[*] Clamped 504 function extents to the next function start
+[*] Added 500 branch targets that had no dispatchable body
+[*] Added 183 branch targets that had no dispatchable body
+[*] Added 54 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/noiz2sa
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/noiz2sa/reports/report.html
+
+----- noiz2sa/noiz2sa.exe: rc=3 18s retried=False {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== parsec47_p47.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/parsec47/p47.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/parsec47 --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00403000-0x0042D200...
+[*] Found 1055 potential call targets
+[*] Found 137 prologue patterns
+[*] Total unique function candidates: 1115
+[*] Disassembling 1115 initial candidates...
+[*] Disassembling function 1000/1115...
+[*] Discovery round 2: 260 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 440 pointer targets, rejected 0 that do not decode as code and 30 that land inside an instruction
+[*] Data scan: 440 functions reachable only via data pointers...
+[*] Discovery round 4: 440 new jmp/call targets...
+[*] Discovery round 5: 25 new jmp/call targets...
+[*] Discovery round 6: 16 new jmp/call targets...
+[*] Successfully disassembled 1857 functions (6 discovery rounds)
+[*] Dropped 23 entries that are not instruction boundaries
+[*] 206 scan candidates are labels inside another body: aliases
+[*] Clamped 108 function extents to the next function start
+[*] Added 88 branch targets that had no dispatchable body
+[*] Added 7 branch targets that had no dispatchable body
+[*] Added 1 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/parsec47
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/parsec47/reports/report.html
+
+===== parsec47_p47.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/parsec47/p47.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/parsec47
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00403000-0x0042D200...
+[*] Found 1055 potential call targets
+[*] Found 137 prologue patterns
+[*] Total unique function candidates: 1115
+[*] Disassembling 1115 initial candidates...
+[*] Disassembling function 1000/1115...
+[*] Discovery round 2: 260 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 440 pointer targets, rejected 0 that do not decode as code and 30 that land inside an instruction
+[*] Data scan: 440 functions reachable only via data pointers...
+[*] Discovery round 4: 440 new jmp/call targets...
+[*] Discovery round 5: 25 new jmp/call targets...
+[*] Discovery round 6: 16 new jmp/call targets...
+[*] Successfully disassembled 1857 functions (6 discovery rounds)
+[*] Dropped 23 entries that are not instruction boundaries
+[*] 206 scan candidates are labels inside another body: aliases
+[*] Clamped 108 function extents to the next function start
+[*] Added 88 branch targets that had no dispatchable body
+[*] Added 7 branch targets that had no dispatchable body
+[*] Added 1 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/parsec47
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/parsec47/reports/report.html
+
+----- parsec47/p47.exe: rc=3 28s retried=True {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== rrootage_rr.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/rrootage/rr.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/rrootage --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x0043B400...
+[*] Found 1368 potential call targets
+[*] Found 0 prologue patterns
+[*] Total unique function candidates: 1369
+[*] Disassembling 1369 initial candidates...
+[*] Disassembling function 1000/1369...
+[*] Discovery round 2: 391 new jmp/call targets...
+[*] Discovery round 3: 17 new jmp/call targets...
+[*] Data scan: probed 944 pointer targets, rejected 299 that do not decode as code and 39 that land inside an instruction
+[*] Data scan: 645 functions reachable only via data pointers...
+[*] Discovery round 4: 645 new jmp/call targets...
+[*] Discovery round 5: 52 new jmp/call targets...
+[*] Successfully disassembled 2472 functions (5 discovery rounds)
+[*] Dropped 58 entries that are not instruction boundaries
+[*] 367 scan candidates are labels inside another body: aliases
+[*] Clamped 553 function extents to the next function start
+[*] Added 540 branch targets that had no dispatchable body
+[*] Added 192 branch targets that had no dispatchable body
+[*] Added 53 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/rrootage
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/rrootage/reports/report.html
+
+----- rrootage/rr.exe: rc=3 20s retried=False {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== torus_trooper_tt.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/torus_trooper/tt.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/torus-trooper --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00403000-0x00431C00...
+[*] Found 1002 potential call targets
+[*] Found 97 prologue patterns
+[*] Total unique function candidates: 1044
+[*] Disassembling 1044 initial candidates...
+[*] Disassembling function 1000/1044...
+[*] Discovery round 2: 265 new jmp/call targets...
+[*] Discovery round 3: 3 new jmp/call targets...
+[*] Data scan: 1 pointer targets start a function after padding that another body ran through
+[*] Data scan: probed 877 pointer targets, rejected 9 that do not decode as code and 67 that land inside an instruction
+[*] Data scan: 869 functions reachable only via data pointers...
+[*] Discovery round 4: 869 new jmp/call targets...
+[*] Discovery round 5: 43 new jmp/call targets...
+[*] Discovery round 6: 10 new jmp/call targets...
+[*] Successfully disassembled 2233 functions (6 discovery rounds)
+[*] Dropped 22 entries that are not instruction boundaries
+[*] 139 scan candidates are labels inside another body: aliases
+[*] Clamped 321 function extents to the next function start
+[*] Added 117 branch targets that had no dispatchable body
+[*] Added 13 branch targets that had no dispatchable body
+[*] Added 1 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/torus-trooper
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/torus-trooper/reports/report.html
+
+===== torus_trooper_tt.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/torus_trooper/tt.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/torus-trooper
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00403000-0x00431C00...
+[*] Found 1002 potential call targets
+[*] Found 97 prologue patterns
+[*] Total unique function candidates: 1044
+[*] Disassembling 1044 initial candidates...
+[*] Disassembling function 1000/1044...
+[*] Discovery round 2: 265 new jmp/call targets...
+[*] Discovery round 3: 3 new jmp/call targets...
+[*] Data scan: 1 pointer targets start a function after padding that another body ran through
+[*] Data scan: probed 877 pointer targets, rejected 9 that do not decode as code and 67 that land inside an instruction
+[*] Data scan: 869 functions reachable only via data pointers...
+[*] Discovery round 4: 869 new jmp/call targets...
+[*] Discovery round 5: 43 new jmp/call targets...
+[*] Discovery round 6: 10 new jmp/call targets...
+[*] Successfully disassembled 2233 functions (6 discovery rounds)
+[*] Dropped 22 entries that are not instruction boundaries
+[*] 139 scan candidates are labels inside another body: aliases
+[*] Clamped 321 function extents to the next function start
+[*] Added 117 branch targets that had no dispatchable body
+[*] Added 13 branch targets that had no dispatchable body
+[*] Added 1 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/torus-trooper
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/torus-trooper/reports/report.html
+
+----- torus_trooper/tt.exe: rc=3 31s retried=True {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== tumiki_fighters_tf.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/tumiki_fighters/tf.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/tumiki-fighters --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00403000-0x00424E00...
+[*] Found 845 potential call targets
+[*] Found 96 prologue patterns
+[*] Total unique function candidates: 892
+[*] Disassembling 892 initial candidates...
+[*] Discovery round 2: 242 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 508 pointer targets, rejected 1 that do not decode as code and 24 that land inside an instruction
+[*] Data scan: 507 functions reachable only via data pointers...
+[*] Discovery round 4: 507 new jmp/call targets...
+[*] Discovery round 5: 16 new jmp/call targets...
+[*] Discovery round 6: 16 new jmp/call targets...
+[*] Successfully disassembled 1674 functions (6 discovery rounds)
+[*] Dropped 15 entries that are not instruction boundaries
+[*] 117 scan candidates are labels inside another body: aliases
+[*] Clamped 91 function extents to the next function start
+[*] Added 92 branch targets that had no dispatchable body
+[*] Added 8 branch targets that had no dispatchable body
+[*] Added 1 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/tumiki-fighters
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/tumiki-fighters/reports/report.html
+
+===== tumiki_fighters_tf.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/tumiki_fighters/tf.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/tumiki-fighters
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00403000-0x00424E00...
+[*] Found 845 potential call targets
+[*] Found 96 prologue patterns
+[*] Total unique function candidates: 892
+[*] Disassembling 892 initial candidates...
+[*] Discovery round 2: 242 new jmp/call targets...
+[*] Discovery round 3: 1 new jmp/call targets...
+[*] Data scan: probed 508 pointer targets, rejected 1 that do not decode as code and 24 that land inside an instruction
+[*] Data scan: 507 functions reachable only via data pointers...
+[*] Discovery round 4: 507 new jmp/call targets...
+[*] Discovery round 5: 16 new jmp/call targets...
+[*] Discovery round 6: 16 new jmp/call targets...
+[*] Successfully disassembled 1674 functions (6 discovery rounds)
+[*] Dropped 15 entries that are not instruction boundaries
+[*] 117 scan candidates are labels inside another body: aliases
+[*] Clamped 91 function extents to the next function start
+[*] Added 92 branch targets that had no dispatchable body
+[*] Added 8 branch targets that had no dispatchable body
+[*] Added 1 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/tumiki-fighters
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/tumiki-fighters/reports/report.html
+
+----- tumiki_fighters/tf.exe: rc=3 25s retried=True {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== warning_forever_wf.exe[reuse]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/warning_forever/wf.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/warning-forever --reuse-build
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00451000...
+[*] Found 1390 potential call targets
+[*] Found 237 prologue patterns
+[*] Total unique function candidates: 1409
+[*] Disassembling 1409 initial candidates...
+[*] Disassembling function 1000/1409...
+[*] Discovery round 2: 302 new jmp/call targets...
+[*] Discovery round 3: 2 new jmp/call targets...
+[*] Data scan: 1 pointer targets start a function after padding that another body ran through
+[*] Data scan: probed 529 pointer targets, rejected 5 that do not decode as code and 139 that land inside an instruction
+[*] Data scan: 525 functions reachable only via data pointers...
+[*] Discovery round 4: 525 new jmp/call targets...
+[*] Discovery round 5: 70 new jmp/call targets...
+[*] Successfully disassembled 2306 functions (5 discovery rounds)
+[*] Dropped 20 entries that are not instruction boundaries
+[*] 257 scan candidates are labels inside another body: aliases
+[*] 108 C++ EH stubs and funclets: aliases of the function that installs them
+[*] Clamped 169 function extents to the next function start
+[*] Added 219 branch targets that had no dispatchable body
+[*] Added 100 branch targets that had no dispatchable body
+[*] Added 19 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/warning-forever
+score:        50/100
+verification: not-run
+failed stages: compile
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/warning-forever/reports/report.html
+
+===== warning_forever_wf.exe[build]: /Users/haseeb-mir/Documents/Code/RevEng-Studio/autorecomp /Users/haseeb-mir/Downloads/recomp-apps/games/warning_forever/wf.exe --timeout 20 --no-table --project-dir /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/warning-forever
+==> inspect
+==> recover
+[*] Scanning for call targets in 0x00401000-0x00451000...
+[*] Found 1390 potential call targets
+[*] Found 237 prologue patterns
+[*] Total unique function candidates: 1409
+[*] Disassembling 1409 initial candidates...
+[*] Disassembling function 1000/1409...
+[*] Discovery round 2: 302 new jmp/call targets...
+[*] Discovery round 3: 2 new jmp/call targets...
+[*] Data scan: 1 pointer targets start a function after padding that another body ran through
+[*] Data scan: probed 529 pointer targets, rejected 5 that do not decode as code and 139 that land inside an instruction
+[*] Data scan: 525 functions reachable only via data pointers...
+[*] Discovery round 4: 525 new jmp/call targets...
+[*] Discovery round 5: 70 new jmp/call targets...
+[*] Successfully disassembled 2306 functions (5 discovery rounds)
+[*] Dropped 20 entries that are not instruction boundaries
+[*] 257 scan candidates are labels inside another body: aliases
+[*] 108 C++ EH stubs and funclets: aliases of the function that installs them
+[*] Clamped 169 function extents to the next function start
+[*] Added 219 branch targets that had no dispatchable body
+[*] Added 100 branch targets that had no dispatchable body
+[*] Added 19 branch targets that had no dispatchable body
+==> translate
+==> project
+==> compile
+==> run
+==> verify
+==> report
+
+project:      /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/warning-forever
+score:        85/100
+verification: launch-failed
+report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/warning-forever/reports/report.html
+
+----- warning_forever/wf.exe: rc=3 54s retried=True {'score': 85, 'verification': 'launch-failed', 'compile': 'ok'}
+
+===== SUMMARY
+{"game": "cavestory/DoConfig.exe", "project": "projects/cavestory-doconfig", "rc": 3, "seconds": 13.0, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "cavestory/Doukutsu.exe", "project": "projects/cavestory-doukutsu", "rc": 3, "seconds": 35.1, "retried_build": false, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "cavestory/OrgView.exe", "project": "projects/cavestory-orgview", "rc": 3, "seconds": 13.5, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "generally/GeneRally.exe", "project": "projects/generally", "rc": 3, "seconds": 186.8, "retried_build": false, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "generally/TrackEditor.exe", "project": "projects/generally-trackeditor", "rc": 3, "seconds": 21.8, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "gunroar/gr.exe", "project": "projects/gunroar", "rc": 3, "seconds": 36.2, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "herocore/herocore gm5.exe", "project": "projects/herocore-gm5", "rc": 3, "seconds": 39.3, "retried_build": false, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "herocore/herocore gm7.exe", "project": "projects/herocore-gm7", "rc": 3, "seconds": 53.2, "retried_build": false, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "ikachan/dxIka.exe", "project": "projects/ikachan", "rc": 3, "seconds": 19.3, "retried_build": true, "score": 93, "verification": "partial", "compile": "ok"}
+{"game": "noiz2sa/noiz2sa.exe", "project": "projects/noiz2sa", "rc": 3, "seconds": 17.6, "retried_build": false, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "parsec47/p47.exe", "project": "projects/parsec47", "rc": 3, "seconds": 27.9, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "rrootage/rr.exe", "project": "projects/rrootage", "rc": 3, "seconds": 20.3, "retried_build": false, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "torus_trooper/tt.exe", "project": "projects/torus-trooper", "rc": 3, "seconds": 30.6, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "tumiki_fighters/tf.exe", "project": "projects/tumiki-fighters", "rc": 3, "seconds": 24.8, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
+{"game": "warning_forever/wf.exe", "project": "projects/warning-forever", "rc": 3, "seconds": 54.4, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}

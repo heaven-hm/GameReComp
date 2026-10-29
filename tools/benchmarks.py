@@ -63,6 +63,7 @@ def collect(results_path=RESULTS_PATH):
         recover = _stage(report, "recover").get("data", {})
         translate = _stage(report, "translate").get("data", {})
         compile_ = _stage(report, "compile").get("data", {})
+        run_report = _load_json(REPO_ROOT / Path(run["evidence"]).parent / "run.json", {}) if run.get("evidence") else {}
         rows.append(
             {
                 "run": run,
@@ -74,6 +75,8 @@ def collect(results_path=RESULTS_PATH):
                 "compile_seconds": compile_.get("seconds"),
                 "compile_reused": bool(compile_.get("reused")),
                 "binary_bytes": _binary_size(compile_.get("binary")),
+                "run_status": run.get("run_status") or run_report.get("status"),
+                "unresolved_imports": run_report.get("unresolved_import_count"),
                 "target": (report or {}).get("outcome", {}).get("target", {}).get("label"),
             }
         )
@@ -117,7 +120,8 @@ def render(rows):
         "project 10, compile 20, run 15, verify 15, report 10. A stage counts only when it",
         "succeeded for the recorded input hash. The verification status is the honest",
         "outcome and can be lower than the score suggests: a rebuilt binary that compiles",
-        "and launches but crashes scores 75 and reports `launch-failed`.",
+        "but fails to boot or crashes scores 85 and reports `launch-failed`, while one that",
+        "launches and exits with no independent oracle scores 93 and reports `partial`.",
         "",
         "## Measured inputs",
         "",
@@ -176,17 +180,36 @@ def render(rows):
         lines.append(f"| Compile time, median | {statistics.median(seconds):.0f} s |")
         lines.append(f"| Compile time, max | {max(seconds):.0f} s |")
 
+    boot_failed = [r for r in rows if r["run_status"] == "boot-failed"]
+    launched_exited = [r for r in rows if r["run_status"] == "exited"]
+    unresolved = [r["unresolved_imports"] for r in boot_failed if r["unresolved_imports"]]
+
+    ceiling = ["", "## Current ceiling on this host", ""]
+    if boot_failed:
+        ceiling += [
+            f"{len(boot_failed)} of {len(rows)} rebuilt inputs compile to a native binary, then stop in the",
+            "PE loader because the runtime does not implement all the imports the executable needs.",
+            "The loader prints every unresolved name and exits 2 instead of binding a success stub,",
+            "and the verifier records that honestly as `launch-failed`.",
+        ]
+        if unresolved:
+            ceiling += [
+                "",
+                f"Unresolved imports per boot-failed input: {min(unresolved)} to {max(unresolved)}.",
+            ]
+    if launched_exited:
+        names = ", ".join(sorted({r["run"].get("game") or r["run"].get("filename") or "-"
+                                  for r in launched_exited}))
+        ceiling += [
+            "",
+            f"{names} binds every import and launches, then exits before a scenario can be graded;",
+            "with no independent original-Windows oracle supplied it is reported as `partial`, not",
+            "verified. The remaining gap is runtime coverage (the libraries the loader names), not",
+            "translation: every input here already reaches a built binary.",
+        ]
+
+    lines += ceiling
     lines += [
-        "",
-        "## Current ceiling on this host",
-        "",
-        "Every PE32 input that reaches the run stage compiles and launches, then the",
-        "rebuilt process aborts during dynamic linking of Homebrew freetype 2.15.0",
-        "(`dyld: Symbol not found`), exit code -6. That is a host dependency fault, not a",
-        "translation verdict, and it is recorded as `launch-failed` rather than hidden.",
-        "Rebuilding freetype from source is the tracked unblock (task: unblock the run",
-        "stage). Until then no scenario can pass and the honest measured ceiling is",
-        "compile-ok plus launch-failed.",
         "",
         "## Method",
         "",
