@@ -121,8 +121,13 @@ def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
                     f.write('\n\n')
                     all_func_names.append((func.address, func.name))
                 except Exception as e:
+                    # An empty stub would let the rebuilt game run with a
+                    # function silently doing nothing; fail loudly instead.
                     f.write(f"/* ERROR lifting sub_{func.address:08X}: {e} */\n")
-                    f.write(f"void sub_{func.address:08X}(void) {{ /* FAILED */ }}\n\n")
+                    f.write(f"void sub_{func.address:08X}(void) {{\n"
+                            f'    fprintf(stderr, "[recomp] unresolved function 0x{func.address:08X} called\\n");\n'
+                            f"    abort();\n"
+                            f"}}\n\n")
                     all_func_names.append((func.address, f"sub_{func.address:08X}"))
 
         func_idx += len(chunk)

@@ -227,7 +227,7 @@ class Pipeline:
         }
         if errors:
             data["warning"] = (f"{errors} function(s) failed to lift; they are "
-                               f"emitted as empty UNRESOLVED stubs")
+                               f"emitted as UNRESOLVED stubs that abort when called")
         return f"{len(units)} source files, {total_bytes} bytes, {errors} lift errors", data
 
     def stage_project(self):
