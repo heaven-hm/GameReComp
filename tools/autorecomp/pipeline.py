@@ -475,6 +475,9 @@ class Pipeline:
         path.write_text(json.dumps(data, indent=2) + "\n")
 
     def _write_manifest(self):
+        # A failure before the project stage (e.g. an unsupported PE) still
+        # has to leave a report behind, so the directory may not exist yet.
+        self.project_dir.mkdir(parents=True, exist_ok=True)
         files = []
         for base in ("src",):
             for path in sorted((self.project_dir / base).rglob("*")):
