@@ -2069,7 +2069,12 @@ class Lifter:
         elif m in ('jecxz', 'jcxz'):
             t = ops[0].imm if ops and ops[0].type == X86_OP_IMM else None
             reg = 'ecx' if m == 'jecxz' else 'LO16(ecx)'
-            if t is not None:
+            if t is not None and self._labels is not None and t not in self._labels:
+                # Target is not a block boundary -- data misdecoded as code, or
+                # a branch out of the function. Same rule as jcc: no label
+                # exists, so dispatch if the branch is actually taken.
+                lines.append(f"if ({reg} == 0) {{ RECOMP_ITAIL(0x{t:08X}u); return; }} {comment}")
+            elif t is not None:
                 lines.append(f"if ({reg} == 0) goto L_{t:08X}; {comment}")
 
         elif m in ('loop', 'loope', 'loopne'):
@@ -2080,11 +2085,19 @@ class Lifter:
             # whatever carry an earlier shr left, and the next span was drawn
             # from a corrupt destination.
             t = ops[0].imm if ops and ops[0].type == X86_OP_IMM else None
+            external = t is not None and self._labels is not None and t not in self._labels
             if t is not None and m == 'loop':
-                lines.append(f"if (--ecx != 0) goto L_{t:08X}; {comment}")
+                if external:
+                    lines.append(f"if (--ecx != 0) {{ RECOMP_ITAIL(0x{t:08X}u); return; }} {comment}")
+                else:
+                    lines.append(f"if (--ecx != 0) goto L_{t:08X}; {comment}")
             elif t is not None:
                 cond = self._make_condition('je' if m == 'loope' else 'jne')
-                lines.append(f"{{ int _zc = ({cond}); if (--ecx != 0 && _zc) goto L_{t:08X}; }} {comment}")
+                if external:
+                    lines.append(f"{{ int _zc = ({cond}); if (--ecx != 0 && _zc) "
+                                 f"{{ RECOMP_ITAIL(0x{t:08X}u); return; }} }} {comment}")
+                else:
+                    lines.append(f"{{ int _zc = ({cond}); if (--ecx != 0 && _zc) goto L_{t:08X}; }} {comment}")
 
         elif m == 'scasd':
             lines.append(f"_flag_a = eax; _flag_b = MEM32(edi); _flag_k = FK_CMP; "
