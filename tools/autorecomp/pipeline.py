@@ -304,7 +304,10 @@ class Pipeline:
         if not self.do_run:
             return "run skipped (--no-run)", {"skipped": True}
 
-        log_path = self.project_dir / "logs" / "run.log"
+        log_dir = self.project_dir / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        stdout_path = log_dir / "run.stdout.log"
+        stderr_path = log_dir / "run.stderr.log"
         env = dict(os.environ)
         if self.headless:
             env["SDL_VIDEODRIVER"] = "dummy"
@@ -312,10 +315,10 @@ class Pipeline:
         cmd = [str(self.binary), str(self.pe_path)]
         t0 = time.time()
         status, rc, timed_out = "exited", None, False
-        with open(log_path, "w") as log:
+        with open(stdout_path, "w") as out, open(stderr_path, "w") as err:
             proc = subprocess.Popen(
                 cmd, cwd=str(self.assets_dir), env=env,
-                stdout=log, stderr=subprocess.STDOUT,
+                stdout=out, stderr=err,
                 stdin=subprocess.DEVNULL, start_new_session=(os.name != "nt"))
             try:
                 rc = proc.wait(timeout=self.timeout)
@@ -331,7 +334,9 @@ class Pipeline:
                     proc.kill()
                 proc.wait()
         seconds = round(time.time() - t0, 1)
-        output = _tail(log_path, 200)
+        stdout = _tail(stdout_path, 200)
+        stderr = _tail(stderr_path, 200)
+        output = "\n".join(part for part in (stdout, stderr) if part)
         if not timed_out:
             if rc is not None and rc < 0:
                 status = "crashed"
@@ -357,7 +362,10 @@ class Pipeline:
             "unresolved_import_count": int(boot_m.group(2)) if boot_m else None,
             "bound_imports": int(bound_m.group(1)) if bound_m else None,
             "unresolved_imports": unresolved,
-            "log": str(log_path),
+            "log_stdout": str(stdout_path),
+            "log_stderr": str(stderr_path),
+            "stdout_tail": stdout,
+            "stderr_tail": stderr,
             "output_tail": output,
         }
         self.run_result = result
@@ -366,7 +374,7 @@ class Pipeline:
         if status == "boot-failed":
             raise StageFailure(
                 f"boot failed: {result['unresolved_import_count']} unresolved imports"
-                f" (see {log_path})", result)
+                f" (see {stdout_path} and {stderr_path})", result)
         return f"{status}, exit={rc}, {seconds}s, {len(unresolved)} unresolved imports", result
 
     def stage_verify(self):
@@ -390,12 +398,12 @@ class Pipeline:
                 if not ok:
                     mismatches.append("exit_code")
             for needle in oracle.get("stdout_contains", []):
-                ok = needle in run["output_tail"]
+                ok = needle in run.get("stdout_tail", "")
                 checks.append({"check": "stdout_contains", "expected": needle, "ok": ok})
                 if not ok:
                     mismatches.append(f"stdout missing {needle!r}")
             for needle in oracle.get("stderr_contains", []):
-                ok = needle in run["output_tail"]
+                ok = needle in run.get("stderr_tail", "")
                 checks.append({"check": "stderr_contains", "expected": needle, "ok": ok})
                 if not ok:
                     mismatches.append(f"stderr missing {needle!r}")
