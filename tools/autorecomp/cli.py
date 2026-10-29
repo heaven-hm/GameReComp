@@ -72,8 +72,8 @@ def build_parser():
                              "(default 8 MiB)")
     parser.add_argument("--build-timeout", type=float, default=None,
                         help="hard deadline for configure+build in seconds "
-                             "(default: adaptive, 600 s + 1 s/MiB of generated "
-                             "source capped at 1800 s; 0 disables)")
+                             "(default: adaptive, 600 s + 5 s/MiB of generated "
+                             "source capped at 3600 s; 0 disables)")
     parser.add_argument("--no-build", action="store_true")
     parser.add_argument("--no-run", action="store_true",
                         help="build but do not execute the rebuilt binary")
