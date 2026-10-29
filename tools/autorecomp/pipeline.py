@@ -529,10 +529,9 @@ class Pipeline:
         self.run_result = result
         self._write_json("reports/run.json", result)
 
-        if status == "boot-failed":
-            raise StageFailure(
-                f"boot failed: {result['unresolved_import_count']} unresolved imports"
-                f" (see {stdout_path} and {stderr_path})", result)
+        # A boot failure is a classified outcome, not a stage error: verify
+        # grades it as launch-failed, so it must not cost the run stage its
+        # points as well.
         return f"{status}, exit={rc}, {seconds}s, {len(unresolved)} unresolved imports", result
 
     def stage_verify(self):
@@ -616,7 +615,7 @@ class Pipeline:
             "project": str(self.project_dir),
             "stages": self.stages,
             "outcome": self.verification or {"status": "not-run", "reason": "verification did not run"},
-            "score": self.score(),
+            "score": self.score(include_report=True),
             "manifest": "manifest.json",
         }
         self._write_json("reports/report.json", report)
@@ -659,8 +658,11 @@ class Pipeline:
         (self.project_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2) + "\n")
 
-    def score(self):
-        total = 0
+    def score(self, include_report=False):
+        # The report stage records its own success only when it returns, so
+        # stage_report (which computes the score it is about to publish) must
+        # count it explicitly.
+        total = STAGE_WEIGHTS["report"] if include_report else 0
         for st in self.stages:
             if st["status"] != "ok":
                 continue
