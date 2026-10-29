@@ -1,4 +1,129 @@
-# pcrecomp
+# RevEng-Studio
+
+<p align="center">
+  <img src="assets/recomp-studio-logo.png" alt="RevEng-Studio logo" width="220">
+</p>
+
+**Windows PC game executable in, inspectable C source and a native binary out — with the verification to prove it.**
+
+RevEng-Studio is the PCRecomp-first product in this repository: one command takes a
+user-supplied Windows PE game, recovers its functions, translates them to C, generates
+a buildable project, compiles exactly that source, runs the result and writes a
+fail-closed verification report. A Qt desktop GUI over the same backend is planned;
+the CLI is the product today.
+
+> **Status: v0.1.0 — first vertical slice.** Fourteen PE32 games run the full
+> pipeline from inspect to a compiled native executable. No game has yet passed a
+> gameplay scenario, and every translated function is labelled
+> `LOW_LEVEL_FALLBACK`, not high-level reconstructed source. Those are the next
+> gates, not claims.
+
+## What works today
+
+```text
+Windows PE32 game + user-supplied assets
+  inspect    parse headers, imports, resources, entry point
+  recover    discover functions and instructions (Capstone)
+  translate  each function -> C register-transfer unit, address-tagged
+  project    generate a CMake project that links the recompiled units
+  compile    cmake + native C compiler, one shared adaptive deadline
+  run        launch the rebuilt binary headless (SDL dummy drivers) or --interactive
+  verify     fail-closed status: not-run / launch-failed / trace-diverged /
+             partial / scenario-pass
+  report     report.json + report.html with hashes, timings and oracle gaps
+```
+
+- One command: `./autorecomp path/to/game.exe`
+- Byte-capped source units (default 1000 functions or 8 MiB per unit, whichever
+  closes first) with `recomp_units.json` mapping address → function → source unit
+- Adaptive build deadline: `600 s + 5 s/MiB` of generated source, capped at 3600 s,
+  every configure/build subprocess in its own process group and killed on expiry
+- Exit codes: `0` scenario-pass, `2` a stage failed, `3` built/ran but unverified
+- Fail-closed architecture check: PE32+ inputs are rejected at inspect, with the
+  row recorded as measured, never silently skipped
+- Game database generated from measured runs: [`table.md`](table.md)
+
+## Measured so far
+
+17 executable rows in [`table.md`](table.md), each tied to the input's SHA-256:
+
+| Result | Games |
+| --- | --- |
+| 75/100 — compiled, launched, `launch-failed` (host blocker, see below) | 14 PE32 games: Cave Story (Doukutsu, OrgView, DoConfig), GeneRally TrackEditor, Gunroar, Hero Core (gm5, gm7), Ikachan, Noiz2sa, Parsec47, rRootage, Torus Trooper, Tumiki Fighters, Warning Forever |
+| 40/100 — inspect+recover+translate+project, compile timed out before the deadline fix | GeneRally.exe (rerun in progress) |
+| 0/100 — fail-closed PE32+ rejection, recorded honestly | OpenTyrian, Pixeltetris |
+
+The rebuilt binaries reach dynamic linking and then abort inside Homebrew freetype
+2.15.0 (`Symbol not found: _HVF_clear_part_cache` in
+`/System/Library/PrivateFrameworks/FontServices.framework/libhvf.dylib`). That is a
+host toolchain fault, not game code; until the host library is fixed the honest
+verification status is `launch-failed`. The pipeline never promotes it to anything
+stronger.
+
+## Honest limits
+
+- **All generated functions are `LOW_LEVEL_FALLBACK`.** They are register-transfer
+  C: compilable, address-traceable, not human-readable. High-level reconstruction
+  (rev.ng-backed, with AI only as an optional readability assist after a tested
+  stage) is Phase 2 and not yet wired into the build.
+- **PE32 (i386) only.** PE32+ x86-64 is detected and refused at inspect.
+- **No gameplay verification yet.** Oracle checks are process-level
+  (exit code, stdout/stderr, launch); frame/input/audio comparison is a recorded
+  oracle gap in every report.
+- **The three extra corpus titles** (`igi.exe`, `ac.exe`, `halo.exe`) are not
+  present locally and are reported as `MISSING_INPUT`, never invented.
+- **GUI deferred.** No Qt application ships in v0.1; the design lives in
+  [`docs/GUI.md`](docs/GUI.md).
+- **No hidden delegation.** The rebuilt executable is built from the generated
+  project's source and nothing else; no emulator or Wine path is used to run it.
+
+## Quick start (CLI)
+
+Requirements: Python 3, CMake ≥ 3.16, a C compiler, `pkg-config` with SDL2 and
+SDL2_ttf. See [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) for a
+step-by-step newcomer guide.
+
+```sh
+# point the tools at your own legally obtained corpus (never committed)
+export SMALL_GAMES_PATH=/path/to/your/games
+
+./autorecomp "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
+./autorecomp game.exe --assets-dir /path/to/game/files   # where the game reads data
+./autorecomp game.exe --timeout 60 --json                # longer run, machine output
+./autorecomp game.exe --no-build                         # stop after source generation
+./autorecomp game.exe --interactive                      # real window/audio, not dummy SDL
+```
+
+Each run writes a self-contained project:
+
+```text
+projects/<name>/
+  src/            generated C units + headers + recomp_units.json
+  build/          CMake build tree and the rebuilt executable
+  reports/        report.json and report.html (hashes, stages, oracle gaps)
+  logs/           per-stage logs
+```
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) | Install, first run, reading the report, troubleshooting |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Component map and data flow |
+| [`docs/PIPELINE.md`](docs/PIPELINE.md) | Stages, weights, timeouts, recovery loop |
+| [`docs/BACKENDS.md`](docs/BACKENDS.md) | Translation backends and their status |
+| [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | Verification statuses, oracle gaps, fail-closed rules |
+| [`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md) | How every delivered line maps to the input binary |
+| [`docs/RUNTIME_COMPAT.md`](docs/RUNTIME_COMPAT.md) | Win32/runtime coverage and known gaps |
+| [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) | Generated benchmark tables and methodology |
+| [`docs/GUI.md`](docs/GUI.md) | Planned Qt 6 desktop application |
+| [`docs/LICENSES.md`](docs/LICENSES.md) | Pinned upstream versions and licences |
+| [`table.md`](table.md) | Generated game database for the measured corpus |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release history |
+
+---
+
+# Upstream pcrecomp toolbox
 
 ```
     ____  ______   ____  ________________  __  ___ ____

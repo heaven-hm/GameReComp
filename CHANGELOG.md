@@ -1,7 +1,80 @@
 # Changelog
 
-All notable changes to pcrecomp. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
-versions follow [SemVer](https://semver.org/).
+All notable changes to this repository: the RevEng-Studio PCRecomp-first product
+(`tools/autorecomp` and the generated tooling) and the upstream pcrecomp toolbox.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
+[SemVer](https://semver.org/).
+
+## [0.1.0] - 2026-10-29
+
+First vertical slice of the RevEng-Studio product: one command from a Windows
+PE32 game executable to a generated C project, a compiled native executable and a
+fail-closed verification report. All generated functions are `LOW_LEVEL_FALLBACK`
+register-transfer C; no game has passed a gameplay scenario yet, and the desktop
+GUI is deferred. See the README "Honest limits" section.
+
+### Added
+- `autorecomp` staged pipeline (`tools/autorecomp/`): inspect, recover, translate,
+  project, compile, run, verify, report, with per-stage timings, weighted scoring
+  (stages sum to 100) and a shared `report.json`/`report.html` evidence bundle.
+- `./autorecomp` CLI: explicit PE path, `--assets-dir`, `--project-dir`,
+  `--timeout`, `--interactive`, `--oracle`, `--jobs`, `--split`,
+  `--split-bytes`, `--build-timeout`, `--no-build`, `--no-run`, `--no-table`,
+  `--json`, `--version`. Exit codes: 0 scenario-pass, 2 stage failed,
+  3 built/ran but unverified.
+- Generated CMake projects (CMake >= 3.16) that compile exactly the delivered
+  source units against SDL2/SDL2_ttf, pthread and libm, with `recomp_units.json`
+  mapping original addresses to functions and source units.
+- Byte-capped source units: `--split` (functions) and `--split-bytes` (generated
+  text), whichever closes a unit first, so very large inputs stay buildable.
+- Env-driven, metadata-only corpus inventory (`SMALL_GAMES_PATH`,
+  `LARGE_GAMES_PATH`) that records relative paths and SHA-256 hashes and reports
+  absent corpora as `MISSING_INPUT` instead of inventing paths.
+- Game database (`python -m tools.gamesdb`) rendering `table.md` from measured
+  runs, with a strict separation between measured scores and upstream claims
+  (marked `†`).
+- Benchmark generator (`python -m tools.benchmarks`) rendering
+  `docs/BENCHMARKS.md` from the same measured reports.
+- Gated readability harness: a rev.ng high-level provider slot that fails closed
+  when rev.ng is unavailable, with a bounded repair loop, per-function evidence
+  and a quality gate before anything is relabelled.
+- Documentation set: `ARCHITECTURE`, `BACKENDS`, `RUNTIME_COMPAT`,
+  `SOURCE_PROVENANCE`, `VERIFICATION`, `GUI`, `BENCHMARKS`, `LICENSES`,
+  `CONSOLIDATION`, `MIGRATION`, `PIPELINE`, `GETTING_STARTED`; product-first
+  README with the upstream toolbox preserved below it.
+
+### Changed
+- The compile stage now shares one adaptive deadline between configure and
+  build: `min(3600 s, 600 s + 5 s per MiB of generated source)`, calibrated from
+  a measured 375 MiB build (~4.6 s/MiB with `--jobs 8`). `--build-timeout`
+  overrides it; `0` disables it. On expiry the whole process group is killed and
+  the failure records `timed_out`, the budget and the source size.
+- The verify stage runs even when the run stage failed, so a crashed rebuilt
+  process still produces a verification status instead of `not-run`.
+- Run evidence keeps stdout and stderr separate; the pipeline's own stage summary
+  no longer leaks into recorded process output.
+
+### Fixed
+- Final report is written to `reports/report.json` instead of being clobbered by
+  the progress report.
+- The project directory is created before writing a failure manifest.
+- Generated units include `recomp_funcs.h`, and translation no longer emits a
+  `goto` for a label the unit does not define (`jecxz`/`loop` forms that leave
+  the unit); unresolved functions abort loudly instead of returning silently.
+- A stage exiting cleanly without a result no longer crashes the pipeline.
+- PE32+ inputs are rejected at inspect and recorded as measured rows (score 0)
+  rather than silently skipped.
+
+### Known limitations at 0.1.0
+- PE32 (i386) input only; PE32+ is fail-closed.
+- Every generated function is `LOW_LEVEL_FALLBACK`; high-level reconstruction is
+  not yet wired into the build.
+- Verification reaches launch-level checks only; gameplay/frame/audio oracles
+  are recorded gaps on every run.
+- On the development host, rebuilt PE32 binaries currently abort at dynamic-link
+  time inside Homebrew freetype 2.15.0 (`_HVF_clear_part_cache`), so the honest
+  status is `launch-failed` until the host library is repaired.
+- The Qt 6 desktop GUI is designed (`docs/GUI.md`) but not shipped.
 
 ## [Unreleased]
 
