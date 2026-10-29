@@ -1,9 +1,12 @@
 # Desktop GUI
 
-**Status: not implemented.** The `autorecomp` CLI is the only interface today.
-This page records the stack decision and the contract the GUI must keep when it
-is built, so that the GUI cannot drift into a second, differently-behaving
-pipeline.
+**Status: not implemented, deliberately deferred.** The `autorecomp` CLI is the
+only interface today. The product decision (owner, 2026-10-29) is that the GUI
+comes after the CLI pipeline is demonstrated end to end — it is not built in
+this phase. When it is built it is a native **C++ / Qt 6 Widgets** application,
+not a Python or web front end. This page records the stack decision and the
+contract the GUI must keep when it is built, so that the GUI cannot drift into
+a second, differently-behaving pipeline.
 
 The GUI is a front end over the same backend as the CLI. It does not lift,
 compile, run or verify anything itself: every action maps to an `autorecomp`
@@ -95,6 +98,7 @@ complete. No animated "processing" substitute for real progress.
 | Piece | Status |
 |---|---|
 | Stack decision recorded (Qt 6 Widgets, LGPLv3 dynamic) | done — this page |
+| Scheduling | deferred; CLI pipeline and verification come first |
 | Project wizard | not implemented |
 | Run dashboard with real stage markers and cancel | not implemented |
 | Source explorer with provenance badges | not implemented |
