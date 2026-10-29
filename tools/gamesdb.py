@@ -202,6 +202,10 @@ def record_result(project_dir, relative_path=None, results_path=RESULTS_PATH):
     inspect = _load_json(project_dir / "reports" / "inspect.json", {})
     if not report or "outcome" not in report:
         raise ValueError(f"no completed pipeline report in {project_dir}")
+    if not inspect:
+        # A failed inspect never writes inspect.json; keep its findings anyway.
+        inspect = next((s.get("data") or {} for s in report.get("stages", [])
+                        if s.get("name") == "inspect"), {})
 
     pe_path = Path(report["input"])
     outcome = report.get("outcome") or {}
