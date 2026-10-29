@@ -80,6 +80,12 @@ def build_parser():
 
 
 def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv and argv[0] == "readability":
+        from .readability import main as readability_main  # noqa: PLC0415
+        return readability_main(argv[1:])
+
     args = build_parser().parse_args(argv)
     pe_path = Path(args.pe_file).expanduser()
     if not pe_path.is_file():
