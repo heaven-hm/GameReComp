@@ -453,7 +453,7 @@ class Pipeline:
             "score": self.score(),
             "manifest": "manifest.json",
         }
-        self._write_json("reports/run.json", report)
+        self._write_json("reports/report.json", report)
         html_path = self.project_dir / "reports" / "report.html"
         html_path.write_text(self._render_html(report))
         return f"reports in {self.project_dir / 'reports'}", {"score": report["score"], "html": str(html_path)}

@@ -98,7 +98,7 @@ def main(argv=None):
         print("interrupted", file=sys.stderr)
         return 130
 
-    report_path = pipeline.project_dir / "reports" / "run.json"
+    report_path = pipeline.project_dir / "reports" / "report.json"
     report = {}
     try:
         report = json.loads(report_path.read_text())
@@ -116,7 +116,7 @@ def main(argv=None):
         print(f"failed stages: {', '.join(failed)}")
     print(f"report:       {pipeline.project_dir / 'reports' / 'report.html'}")
 
-    if not args.no_table and (pipeline.project_dir / "reports" / "run.json").exists():
+    if not args.no_table and (pipeline.project_dir / "reports" / "report.json").exists():
         try:
             gamesdb.record_result(pipeline.project_dir,
                                   relative_path=_database_path(pe_path))

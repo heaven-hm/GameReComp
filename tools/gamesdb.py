@@ -198,7 +198,7 @@ def _relative_to_repo(path):
 def record_result(project_dir, relative_path=None, results_path=RESULTS_PATH):
     """Record the completed pipeline report of project_dir as one DB row."""
     project_dir = Path(project_dir).resolve()
-    report = _load_json(project_dir / "reports" / "run.json", None)
+    report = _load_json(project_dir / "reports" / "report.json", None)
     inspect = _load_json(project_dir / "reports" / "inspect.json", {})
     if not report or "outcome" not in report:
         raise ValueError(f"no completed pipeline report in {project_dir}")
