@@ -110,6 +110,7 @@ def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
             f.write(f"/* Address range: 0x{chunk[0].address:08X} - 0x{chunk[-1].address:08X} */\n\n")
             f.write(f'#define RECOMP_GENERATED_CODE\n')
             f.write(f'#include "recomp_types.h"\n')
+            f.write(f'#include "recomp_funcs.h"\n')
             f.write(f'#include <math.h>\n')
             f.write(f'#include <string.h>\n\n')
 
