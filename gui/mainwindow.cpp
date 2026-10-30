@@ -180,6 +180,15 @@ void MainWindow::buildUi()
     m_certified->verticalHeader()->setVisible(false);
     m_tabs->addTab(m_certified, QStringLiteral("Certified"));
 
+    // The reproducibility claim, in the tab a sceptic would open first: which
+    // sources were built, which binary came out, and whether the manifest's own
+    // two digests agree. No re-derivation here -- a second implementation of a
+    // hash is a second answer.
+    m_buildView = new QPlainTextEdit(m_tabs);
+    m_buildView->setReadOnly(true);
+    m_buildView->setPlaceholderText(QStringLiteral("no manifest.json in this project"));
+    m_tabs->addTab(m_buildView, QStringLiteral("Build"));
+
     m_log = new QPlainTextEdit(m_tabs);
     m_log->setReadOnly(true);
     m_log->setPlaceholderText(QStringLiteral("pipeline output appears here as it runs"));
@@ -319,6 +328,41 @@ void MainWindow::refresh()
         item->setText(2, s.detail);
         item->setForeground(1, statusColour(s.status));
     }
+    {
+        const BuildInfo b = m_model.build();
+        QStringList lines;
+        if (!b.present) {
+            lines << QStringLiteral("no manifest.json -- this project has no recorded build.");
+        } else {
+            lines << QStringLiteral("sources built:  %1 file(s)").arg(b.sourceFiles)
+                  << QStringLiteral("source digest:  %1").arg(b.sourceDigest)
+                  << QString();
+            if (b.binaryPath.isEmpty()) {
+                lines << QStringLiteral("binary:         none recorded -- the project has not been built, "
+                                        "so nothing here claims it was.");
+            } else {
+                lines << QStringLiteral("binary:         %1").arg(b.binaryPath)
+                      << QStringLiteral("binary sha256:  %1").arg(b.binarySha256)
+                      << QStringLiteral("binary size:    %1 bytes").arg(b.binarySize)
+                      << QStringLiteral("built from:     %1").arg(b.builtFromDigest)
+                      << QString()
+                      << (b.digestsMatch
+                              ? QStringLiteral("THE CLAIM HOLDS: the binary records the digest of the "
+                                               "source tree that is in this project, so the executable "
+                                               "was built from exactly these files.")
+                              : QStringLiteral("THE CLAIM DOES NOT HOLD HERE: the binary's recorded digest "
+                                               "differs from the project's source digest -- either the "
+                                               "source changed after the build, or the binary came from "
+                                               "somewhere else."))
+                      << QString()
+                      << QStringLiteral("build command:")
+                      << QStringLiteral("  %1").arg(b.buildCommand);
+            }
+        }
+        m_buildView->setPlainText(lines.join(QLatin1Char('\n')));
+        m_buildView->moveCursor(QTextCursor::Start);
+    }
+
     m_stages->resizeColumnToContents(0);
     m_stages->resizeColumnToContents(1);
 

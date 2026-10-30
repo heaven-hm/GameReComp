@@ -52,6 +52,7 @@ private:
     QLineEdit *m_search = nullptr;
     QTableWidget *m_certified = nullptr;
     QPlainTextEdit *m_log = nullptr;
+    QPlainTextEdit *m_buildView = nullptr;
     QTabWidget *m_tabs = nullptr;
     QPushButton *m_runButton = nullptr;
     QLabel *m_peCheck = nullptr;

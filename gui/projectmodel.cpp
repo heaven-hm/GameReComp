@@ -72,9 +72,27 @@ bool ProjectModel::load(const QString &dir, QString *error)
     // The high-level modules the pipeline actually applied, with their
     // provenance. A category without verified_by is shown as it is recorded;
     // the GUI does not upgrade or downgrade it.
+    m_build = BuildInfo{};
     const QJsonObject manifest = readJson(QDir(dir).filePath(QStringLiteral("manifest.json")), &ok);
-    if (ok)
+    if (ok) {
         m_pe = manifest.value(QStringLiteral("pe")).toString();
+        m_build.present = true;
+        m_build.sourceDigest = manifest.value(QStringLiteral("source_digest_sha256")).toString();
+        m_build.sourceFiles = manifest.value(QStringLiteral("source_files")).toArray().size();
+        const QJsonObject bin = manifest.value(QStringLiteral("binary")).toObject();
+        if (!bin.isEmpty()) {
+            m_build.binaryPath = bin.value(QStringLiteral("path")).toString();
+            m_build.binarySha256 = bin.value(QStringLiteral("sha256")).toString();
+            m_build.binarySize = qint64(bin.value(QStringLiteral("size")).toDouble());
+            m_build.buildCommand = bin.value(QStringLiteral("build_command")).toString();
+            m_build.builtFromDigest = bin.value(QStringLiteral("built_from_source_digest")).toString();
+            // The claim, and only the claim: these two strings are equal or they
+            // are not, and a reader deserves the boolean rather than two digests to
+            // compare by eye.
+            m_build.digestsMatch = !m_build.sourceDigest.isEmpty()
+                                   && m_build.sourceDigest == m_build.builtFromDigest;
+        }
+    }
 
     // The provenance of the readable source lives in project.json, written by
     // the project stage: per function, its address, symbol, category and the

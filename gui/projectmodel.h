@@ -29,6 +29,22 @@ struct FunctionRow {
     QStringList evidence; // the instruction lines the name was derived from
 };
 
+// The reproducibility claim, as the manifest records it: which sources were built,
+// which binary came out, and whether the two agree. The GUI shows the manifest's
+// own numbers -- it never re-derives a digest, because a second implementation of
+// a hash is a second answer.
+struct BuildInfo {
+    bool present = false;
+    QString binaryPath;
+    QString binarySha256;
+    qint64 binarySize = 0;
+    QString buildCommand;
+    int sourceFiles = 0;
+    QString sourceDigest;        // digest of the source tree that was built
+    QString builtFromDigest;     // what the binary says it was built from
+    bool digestsMatch = false;   // the claim, stated as a boolean
+};
+
 struct CertifiedRow {
     QString address;
     QString verdict;     // agree / agree-return / agree-frame / diverge / ...
@@ -55,6 +71,7 @@ public:
     QVector<Stage> stages() const { return m_stages; }
     QVector<FunctionRow> functions() const { return m_functions; }
     QVector<CertifiedRow> certified() const { return m_certified; }
+    BuildInfo build() const { return m_build; }
     // The certified index lives in the repository, not the project; it is
     // loaded separately because it is evidence for the pipeline as a whole.
     void loadCertifiedIndex(const QString &repoRoot);
@@ -69,4 +86,5 @@ private:
     QVector<Stage> m_stages, m_unusedStages;
     QVector<FunctionRow> m_functions;
     QVector<CertifiedRow> m_certified;
+    BuildInfo m_build;
 };

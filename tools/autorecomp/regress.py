@@ -246,6 +246,15 @@ def tier_fast(record=False, baseline=None):
                             if ln.startswith(("functions:", "certified:", "SELFTEST"))),
                            (g.stdout or g.stderr).strip()[:200]),
         })
+        # The reproducibility claim, as the GUI shows it: the binary records the
+        # digest of the source tree in the project. A GUI that displayed this
+        # without checking the two would be repeating a claim, not making one.
+        build = next((ln for ln in g.stdout.splitlines() if ln.startswith("build:")), "")
+        results.append({
+            "check": "gui shows the binary/source digest claim",
+            "ok": "MATCH" in build or "no binary" in build,
+            "detail": build.strip() or "no build line in the selftest output",
+        })
         # The wizard promises a build environment; it must look before it says
         # so, and the tools it reports are the ones the runtime actually needs.
         tools = next((ln for ln in g.stdout.splitlines() if ln.startswith("toolchain:")), "")

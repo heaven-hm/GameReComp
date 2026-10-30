@@ -54,6 +54,17 @@ static int selftest(const QString &dir, const QString &repoRoot)
     const bool sdl = !QStandardPaths::findExecutable(QStringLiteral("pkg-config")).isEmpty()
                      && QProcess::execute(QStringLiteral("pkg-config"),
                                           {QStringLiteral("--exists"), QStringLiteral("sdl2")}) == 0;
+    {
+        const BuildInfo b = model.build();
+        out << "build:        ";
+        if (!b.present)
+            out << "no manifest.json\n";
+        else if (b.binaryPath.isEmpty())
+            out << "sources only, no binary recorded\n";
+        else
+            out << (b.digestsMatch ? "digests MATCH (binary built from this source)"
+                                   : "DIGESTS DIFFER") << "\n";
+    }
     out << "toolchain:    " << (present.isEmpty() ? QStringLiteral("none") : present.join(QStringLiteral(", ")))
         << (missing.isEmpty() ? QString() : QStringLiteral(" | missing: ") + missing.join(QStringLiteral(", ")))
         << " | sdl2: " << (sdl ? "present" : "MISSING") << "\n";
