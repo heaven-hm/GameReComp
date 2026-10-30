@@ -70,8 +70,26 @@ enum { S12_QUERY = -1, S12_IGNORE = 0, S12_DISABLE = 0, S12_ENABLE = 1,
 static SDL_Window *g_window;
 static SDL_Renderer *g_renderer;
 static SDL_Texture *g_texture;
+static SDL_GLContext g_glctx;
 static uint32_t g_video;
 static char g_error[256];
+
+/* The GL attributes the guest set before SDL_SetVideoMode (SDL 1.2's SDL_GLattr
+ * 0..15 are SDL2's own; 16 is SDL_GL_SWAP_CONTROL, which SDL 1.2 turns into a
+ * swap-interval request rather than a context attribute). */
+static int g_gl_attr[17];
+static int g_gl_attr_set[17];
+static int g_gl_swap_interval = -1;
+static int g_gl_mode;
+
+/* sdl12.c's OpenGL window and context, for gl32.c.  A host function pointer is
+ * not callable from lifted code, so gl32.c resolves the gl* entry points
+ * through SDL_GL_GetProcAddress (which this file answers with shim VAs) and
+ * only needs the context to exist; these accessors let it check that. */
+void *hle_sdl12_window(void) { return g_window; }
+void *hle_sdl12_glcontext(void) { return g_glctx; }
+int   hle_sdl12_gl_active(void) { return g_glctx != NULL; }
+void  hle_sdl12_gl_swap(void) { if (g_glctx && g_window) SDL_GL_SwapWindow(g_window); }
 
 static void error(const char *s) { snprintf(g_error, sizeof g_error, "%s", s ? s : "SDL error"); }
 static void put16(uint32_t p, uint16_t v) { MEM8(p) = (uint8_t)v; MEM8(p + 1) = (uint8_t)(v >> 8); }
@@ -166,6 +184,11 @@ static void rect(uint32_t r, int *x, int *y, int *w, int *h, uint32_t s) {
 /* Pixel-format helpers, defined with the converters below. */
 static uint32_t map_rgba(uint32_t f, int r, int g, int b, int a);
 static void get_rgba(uint32_t f, uint32_t pixel, int *r, int *g, int *b, int *a);
+/* Keyboard translation, defined with the input shims below (put_event uses it). */
+static int s12_key(SDL_Keycode k);
+static uint16_t unicode_of(SDL_Keycode k, SDL_Keymod mod);
+static void keystate_note(int sym, int down);
+static int g_unicode;
 
 static uint32_t *g_conv; static int g_conv_w, g_conv_h;
 static void present(void) {
@@ -193,7 +216,8 @@ static void present(void) {
 
 static void s_Init(void) { int rc = SDL_Init(A32(0)); if (rc) error(SDL_GetError()); RETC(rc); }
 static void s_InitSubSystem(void) { int rc = SDL_InitSubSystem(A32(0)); if (rc) error(SDL_GetError()); RETC(rc); }
-static void s_Quit(void) { if (g_texture) SDL_DestroyTexture(g_texture), g_texture = NULL; if (g_renderer) SDL_DestroyRenderer(g_renderer), g_renderer = NULL; if (g_window) SDL_DestroyWindow(g_window), g_window = NULL; SDL_Quit(); RETCV(); }
+static void close_video(void);
+static void s_Quit(void) { close_video(); SDL_Quit(); RETCV(); }
 static void s_QuitSubSystem(void) { SDL_QuitSubSystem(A32(0)); RETCV(); }
 static void s_WasInit(void) { RETC(SDL_WasInit(A32(0))); }
 static void s_GetError(void) { RETC(hle_guest_strdup(g_error[0] ? g_error : SDL_GetError())); }
@@ -201,25 +225,107 @@ static void s_ClearError(void) { g_error[0] = 0; SDL_ClearError(); RETCV(); }
 static void s_GetTicks(void) { RETC(SDL_GetTicks()); }
 static void s_Delay(void) { SDL_Delay(A32(0)); RETCV(); }
 
-static void s_SetVideoMode(void) {
-    int w = (int)A32(0), h = (int)A32(1), bpp = (int)A32(2);
-    if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) { error(SDL_GetError()); RETC(0); }
+/* Drop whatever the last mode created. */
+static void close_video(void) {
     if (g_texture) SDL_DestroyTexture(g_texture), g_texture = NULL;
     if (g_renderer) SDL_DestroyRenderer(g_renderer), g_renderer = NULL;
+    if (g_glctx) SDL_GL_DeleteContext(g_glctx), g_glctx = NULL;
     if (g_window) SDL_DestroyWindow(g_window), g_window = NULL;
-    g_window = SDL_CreateWindow("SDL application", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h,
-                                (A32(3) & S12_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-    if (!g_window) { error(SDL_GetError()); RETC(0); }
-    g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE);
-    if (!g_renderer) { error(SDL_GetError()); RETC(0); }
-    uint32_t fmt = bpp == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_ARGB8888;
-    g_texture = SDL_CreateTexture(g_renderer, fmt, SDL_TEXTUREACCESS_STREAMING, w, h);
-    if (!g_texture) { error(SDL_GetError()); RETC(0); }
+    g_gl_mode = 0;
+}
+/* SDL_GL_SetAttribute's effect on the next SDL_SetVideoMode: 0..15 are context
+ * attributes SDL2 also knows, 16 (SDL_GL_SWAP_CONTROL) is a swap-interval wish. */
+static void apply_gl_attrs(void) {
+    for (int a = 0; a <= 15; a++) if (g_gl_attr_set[a]) SDL_GL_SetAttribute((SDL_GLattr)a, g_gl_attr[a]);
+}
+
+static void s_SetVideoMode(void) {
+    int w = (int)A32(0), h = (int)A32(1), bpp = (int)A32(2);
+    uint32_t flags = A32(3);
+    int want_gl = (flags & S12_OPENGL) != 0;
+    if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) { error(SDL_GetError()); RETC(0); }
+    close_video();
+    if (want_gl) {
+        /* SDL_OPENGL: the guest draws with gl*, so the window is an OpenGL one
+         * and there is a context; no software renderer or texture is made. */
+        apply_gl_attrs();
+        g_window = SDL_CreateWindow("SDL application", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h,
+                                    SDL_WINDOW_OPENGL | ((flags & S12_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
+        if (!g_window) { error(SDL_GetError()); RETC(0); }
+        g_glctx = SDL_GL_CreateContext(g_window);
+        if (!g_glctx) { error(SDL_GetError()); close_video(); RETC(0); }
+        if (g_gl_swap_interval >= 0) SDL_GL_SetSwapInterval(g_gl_swap_interval);
+        g_gl_mode = 1;
+    } else {
+        g_window = SDL_CreateWindow("SDL application", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h,
+                                    (flags & S12_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+        if (!g_window) { error(SDL_GetError()); RETC(0); }
+        g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE);
+        if (!g_renderer) { error(SDL_GetError()); RETC(0); }
+        uint32_t fmt = bpp == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_ARGB8888;
+        g_texture = SDL_CreateTexture(g_renderer, fmt, SDL_TEXTUREACCESS_STREAMING, w, h);
+        if (!g_texture) { error(SDL_GetError()); RETC(0); }
+    }
+    /* SDL 1.2 returns a surface for the mode either way; a GL one carries the
+     * SDL_OPENGL flag and its pixels are not what is on screen. */
     g_video = new_surface(w, h, bpp == 16 ? 16 : 32, bpp == 16 ? 0xF800u : 0x00FF0000u,
                           bpp == 16 ? 0x07E0u : 0x0000FF00u, bpp == 16 ? 0x001Fu : 0x000000FFu, bpp == 16 ? 0 : 0xFF000000u, 0, 1);
+    if (g_video) MEM32(g_video + S12_SF_FLAGS) = S12_SWSURFACE | (flags & (S12_FULLSCREEN | S12_OPENGL));
     RETC(g_video);
 }
-static void s_Flip(void) { if (A32(0) == g_video) present(); RETC(0); }
+/* In a GL mode SDL_Flip does nothing: the guest swaps with SDL_GL_SwapBuffers
+ * (SDL 1.2 only blits for SDL_OPENGLBLIT, which we do not offer). */
+static void s_Flip(void) { if (!g_gl_mode && A32(0) == g_video) present(); RETC(0); }
+/* ---- SDL 1.2's OpenGL API ----
+ * SDL_GL_GetProcAddress is the one that needs care: a host function pointer is
+ * not callable from lifted code, so it answers with the VA of our own gl* shim
+ * when we have one (an indirect call to a shim VA goes through
+ * recomp_lookup_import) and 0 - "not available" - when we do not, naming the
+ * symbol on stderr once.  A guest that checks for NULL sees the truth. */
+static void s_GL_SetAttribute(void) {                    /* (attr, value) */
+    int attr = (int)A32(0), value = (int)A32(1);
+    if (attr < 0 || attr > 16) { error("SDL_GL_SetAttribute: unknown attribute"); RETC(-1); }
+    g_gl_attr[attr] = value;
+    g_gl_attr_set[attr] = 1;
+    if (attr == 16) {                                    /* SDL_GL_SWAP_CONTROL */
+        g_gl_swap_interval = value;
+        if (g_glctx && SDL_GL_SetSwapInterval(value) != 0) { error(SDL_GetError()); RETC(-1); }
+    }
+    RETC(0);
+}
+static void s_GL_GetAttribute(void) {                    /* (attr, int *value) */
+    int attr = (int)A32(0);
+    uint32_t out = A32(1);
+    if (attr < 0 || attr > 16 || !out) { error("SDL_GL_GetAttribute: bad argument"); RETC(-1); }
+    if (attr == 16) { MEM32(out) = (uint32_t)(g_gl_swap_interval < 0 ? 0 : g_gl_swap_interval); RETC(0); }
+    if (!g_gl_attr_set[attr]) { error("SDL_GL_GetAttribute: no such attribute set"); RETC(-1); }
+    int value = 0;
+    if (g_glctx && SDL_GL_GetAttribute((SDL_GLattr)attr, &value) != 0) { error(SDL_GetError()); RETC(-1); }
+    else if (!g_glctx) value = g_gl_attr[attr];          /* before a mode: what was asked for */
+    MEM32(out) = (uint32_t)value;
+    RETC(0);
+}
+static void s_GL_GetProcAddress(void) {                  /* (const char *proc) */
+    const char *name = ASTR(0);
+    if (!name || !*name) { error("SDL_GL_GetProcAddress: NULL name"); RETC(0); }
+    uint32_t va = hle_resolve(name);
+    if (va) RETC(va);
+    fprintf(stderr, "[sdl] SDL_GL_GetProcAddress: no shim for %s (returning NULL)\n", name);
+    RETC(0);
+}
+static void s_GL_SwapBuffers(void) { hle_sdl12_gl_swap(); RETCV(); }
+static void s_GL_LoadLibrary(void) {                     /* (const char *path) */
+    if (SDL_GL_LoadLibrary(A32(0) ? ASTR(0) : NULL) != 0) { error(SDL_GetError()); RETC(-1); }
+    RETC(0);
+}
+static void s_GL_UnloadLibrary(void) { SDL_GL_UnloadLibrary(); RETCV(); }
+static void s_GL_SetSwapInterval(void) {                 /* not SDL 1.2, but harmless */
+    g_gl_swap_interval = (int)A32(0);
+    RETC(g_glctx ? SDL_GL_SetSwapInterval((int)A32(0)) : 0);
+}
+static void s_GL_GetSwapInterval(void) {
+    RETC(g_glctx ? SDL_GL_GetSwapInterval() : (g_gl_swap_interval < 0 ? 0 : g_gl_swap_interval));
+}
 static void s_GetVideoSurface(void) { RETC(g_video); }
 static void s_WM_SetCaption(void) { if (g_window && ASTR(0)) SDL_SetWindowTitle(g_window, ASTR(0)); RETCV(); }
 static void s_UpdateRect(void) { if (A32(0) == g_video) present(); RETCV(); }
@@ -510,15 +616,19 @@ static void put_event(uint32_t out, const SDL_Event *e) {
         MEM8(out) = S12_QUIT;
         break;
     case SDL_KEYDOWN:
-    case SDL_KEYUP:
+    case SDL_KEYUP: {
+        SDL_Keymod mod = SDL_GetModState();
+        int sym = s12_key(e->key.keysym.sym);
+        keystate_note(sym, e->type == SDL_KEYDOWN);
         MEM8(out) = (uint8_t)(e->type == SDL_KEYDOWN ? S12_KEYDOWN : S12_KEYUP);
         MEM8(out + 1) = 0;                       /* which: the keyboard device */
         MEM8(out + 2) = e->key.state;            /* SDL_PRESSED / SDL_RELEASED */
-        MEM8(out + 4) = (uint8_t)e->key.keysym.scancode;
-        put16(out + 8, (uint16_t)e->key.keysym.sym);
-        put16(out + 12, (uint16_t)SDL_GetModState());
-        put16(out + 16, e->key.keysym.sym < 128 ? (uint16_t)e->key.keysym.sym : 0);
+        MEM8(out + 4) = (uint8_t)e->key.keysym.scancode;   /* SDL2's scancode: USB usage, not SDL 1.2's set 1 */
+        put16(out + 8, (uint16_t)sym);
+        put16(out + 12, (uint16_t)mod);
+        put16(out + 16, g_unicode ? unicode_of(e->key.keysym.sym, mod) : 0);
         break;
+    }
     case SDL_MOUSEMOTION:
         MEM8(out) = S12_MOUSEMOTION;
         MEM8(out + 1) = 0;
@@ -870,6 +980,245 @@ static void s_PollEvent(void) {
 }
 static void s_PumpEvents(void) { SDL_PumpEvents(); RETCV(); }
 static void s_ShowCursor(void) { RETC(SDL_ShowCursor((int)A32(0))); }
+/* ---- keyboard, mouse and joystick ----
+ * SDL 1.2's Windows driver builds keysym.sym from the virtual key through
+ * VK_keymap (src/video/windib/SDL_dibevents.c): letters are the LOWERCASE
+ * SDLK_a..z, digits and punctuation are unshifted, and the function/navigation
+ * keys take SDL 1.2's own values.  SDL2's keycodes are the same idea but number
+ * the special keys differently, so they are translated here; the translated
+ * character (with Shift applied) goes in keysym.unicode, which is what
+ * SDL_EnableUNICODE controls in SDL 1.2. */
+enum { S12_SDLK_LAST = 323 };                            /* SDL_keysym.h: SDLK_LAST */
+static int g_repeat_delay, g_repeat_interval;
+static uint32_t g_keystate;                              /* the guest's SDLK_LAST bytes */
+static void *g_module_handle;                            /* SDL_SetModuleHandle */
+
+static int s12_key(SDL_Keycode k) {
+    if (k >= 32 && k <= 126) return (int)k;
+    switch (k) {
+    case SDLK_BACKSPACE: return 8;
+    case SDLK_TAB: return 9;
+    case SDLK_RETURN: return 13;
+    case SDLK_ESCAPE: return 27;
+    case SDLK_DELETE: return 127;
+    case SDLK_UP: return 273; case SDLK_DOWN: return 274;
+    case SDLK_RIGHT: return 275; case SDLK_LEFT: return 276;
+    case SDLK_INSERT: return 277; case SDLK_HOME: return 278; case SDLK_END: return 279;
+    case SDLK_PAGEUP: return 280; case SDLK_PAGEDOWN: return 281;
+    case SDLK_F1: return 282; case SDLK_F2: return 283; case SDLK_F3: return 284;
+    case SDLK_F4: return 285; case SDLK_F5: return 286; case SDLK_F6: return 287;
+    case SDLK_F7: return 288; case SDLK_F8: return 289; case SDLK_F9: return 290;
+    case SDLK_F10: return 291; case SDLK_F11: return 292; case SDLK_F12: return 293;
+    case SDLK_F13: return 294; case SDLK_F14: return 295; case SDLK_F15: return 296;
+    case SDLK_KP_0: return 256; case SDLK_KP_1: return 257; case SDLK_KP_2: return 258;
+    case SDLK_KP_3: return 259; case SDLK_KP_4: return 260; case SDLK_KP_5: return 261;
+    case SDLK_KP_6: return 262; case SDLK_KP_7: return 263; case SDLK_KP_8: return 264;
+    case SDLK_KP_9: return 265; case SDLK_KP_PERIOD: return 266; case SDLK_KP_DIVIDE: return 267;
+    case SDLK_KP_MULTIPLY: return 268; case SDLK_KP_MINUS: return 269; case SDLK_KP_PLUS: return 270;
+    case SDLK_KP_ENTER: return 271; case SDLK_KP_EQUALS: return 272;
+    case SDLK_NUMLOCKCLEAR: return 300; case SDLK_CAPSLOCK: return 301; case SDLK_SCROLLLOCK: return 302;
+    case SDLK_RSHIFT: return 303; case SDLK_LSHIFT: return 304;
+    case SDLK_RCTRL: return 305; case SDLK_LCTRL: return 306;
+    case SDLK_RALT: return 307; case SDLK_LALT: return 308;
+    case SDLK_LGUI: return 311; case SDLK_RGUI: return 312;
+    case SDLK_MODE: return 313;
+    case SDLK_HELP: return 315; case SDLK_PRINTSCREEN: return 316; case SDLK_SYSREQ: return 317;
+    case SDLK_PAUSE: return 19;
+    case SDLK_MENU: return 319; case SDLK_POWER: return 320; case SDLK_UNDO: return 322;
+    default: return 0;                                   /* SDLK_UNKNOWN */
+    }
+}
+/* The character a key produces with the modifiers held, for keysym.unicode
+ * (SDL 1.2 asks the OS; this is the US layout the games assume). */
+static int shift_us(int c) {
+    switch (c) {
+    case '1': return '!'; case '2': return '@'; case '3': return '#'; case '4': return '$';
+    case '5': return '%'; case '6': return '^'; case '7': return '&'; case '8': return '*';
+    case '9': return '('; case '0': return ')'; case '-': return '_'; case '=': return '+';
+    case '[': return '{'; case ']': return '}'; case '\\': return '|'; case ';': return ':';
+    case '\'': return '"'; case ',': return '<'; case '.': return '>'; case '/': return '?';
+    case '`': return '~';
+    default: return c;
+    }
+}
+static uint16_t unicode_of(SDL_Keycode k, SDL_Keymod mod) {
+    if (k < 32 || k > 126) return 0;
+    int shift = (mod & KMOD_SHIFT) != 0;
+    if (k >= 'a' && k <= 'z') return (uint16_t)(shift ? k - 32 : k);
+    if (k >= 'A' && k <= 'Z') return (uint16_t)(shift ? k : k + 32);
+    return (uint16_t)(shift ? shift_us((int)k) : (int)k);
+}
+/* Refresh the guest's key-state array.  Two sources, as SDL 1.2 has: SDL2's own
+ * keyboard state (real input) and the key events this shim has delivered - SDL
+ * 1.2's SDL_PrivateKeyboard sets SDL_KeyState as events are processed, so an
+ * event the guest pushed through SDL_PushEvent counts too. */
+static uint8_t g_evt_down[S12_SDLK_LAST];
+static void keystate_note(int sym, int down) { if (sym > 0 && sym < S12_SDLK_LAST) g_evt_down[sym] = down ? 1 : 0; }
+static void refresh_keystate(void) {
+    if (!g_keystate) return;
+    memset(hle_ptr(g_keystate), 0, S12_SDLK_LAST);
+    int n = 0;
+    const Uint8 *ks = SDL_GetKeyboardState(&n);
+    for (int sc = 0; sc < n; sc++) {
+        if (!ks[sc]) continue;
+        int sym = s12_key(SDL_GetKeyFromScancode((SDL_Scancode)sc));
+        if (sym > 0 && sym < S12_SDLK_LAST) MEM8(g_keystate + (uint32_t)sym) = 1;
+    }
+    for (int i = 0; i < S12_SDLK_LAST; i++) if (g_evt_down[i]) MEM8(g_keystate + (uint32_t)i) = 1;
+}
+static void s_GetKeyState(void) {
+    if (!g_keystate) g_keystate = hle_va(hle_alloc(S12_SDLK_LAST));
+    SDL_PumpEvents();
+    refresh_keystate();
+    if (A32(0)) MEM32(A32(0)) = S12_SDLK_LAST;
+    RETC(g_keystate);
+}
+static void s_GetModState(void) { RETC((uint32_t)SDL_GetModState()); }
+static void s_GetMouseState(void) {
+    int x = 0, y = 0;
+    uint32_t b = SDL_GetMouseState(&x, &y);
+    if (A32(0)) MEM32(A32(0)) = (uint32_t)x;
+    if (A32(1)) MEM32(A32(1)) = (uint32_t)y;
+    RETC(b);
+}
+static void s_GetRelativeMouseState(void) {
+    int x = 0, y = 0;
+    uint32_t b = SDL_GetRelativeMouseState(&x, &y);
+    if (A32(0)) MEM32(A32(0)) = (uint32_t)x;
+    if (A32(1)) MEM32(A32(1)) = (uint32_t)y;
+    RETC(b);
+}
+/* SDL_GetKeyName answers SDL 1.2's own names (SDL_keyboard.c's SDL_Keynames):
+ * the character itself for the ASCII keys, lowercase words for the rest.  A key
+ * with no SDL 1.2 name of its own falls back to SDL2's, which is still a real
+ * name for it. */
+static const char *s12_key_name(int sym) {
+    static char one[2];
+    if (sym >= 32 && sym <= 126) { one[0] = (char)sym; one[1] = 0; return one; }
+    switch (sym) {
+    case 8: return "backspace"; case 9: return "tab"; case 12: return "clear";
+    case 13: return "return"; case 19: return "pause"; case 27: return "escape"; case 127: return "delete";
+    case 273: return "up"; case 274: return "down"; case 275: return "right"; case 276: return "left";
+    case 277: return "insert"; case 278: return "home"; case 279: return "end";
+    case 280: return "page up"; case 281: return "page down";
+    case 282: return "f1"; case 283: return "f2"; case 284: return "f3"; case 285: return "f4";
+    case 286: return "f5"; case 287: return "f6"; case 288: return "f7"; case 289: return "f8";
+    case 290: return "f9"; case 291: return "f10"; case 292: return "f11"; case 293: return "f12";
+    case 294: return "f13"; case 295: return "f14"; case 296: return "f15";
+    case 256: return "kp 0"; case 257: return "kp 1"; case 258: return "kp 2"; case 259: return "kp 3";
+    case 260: return "kp 4"; case 261: return "kp 5"; case 262: return "kp 6"; case 263: return "kp 7";
+    case 264: return "kp 8"; case 265: return "kp 9"; case 266: return "kp period"; case 267: return "kp divide";
+    case 268: return "kp multiply"; case 269: return "kp minus"; case 270: return "kp plus";
+    case 271: return "kp enter"; case 272: return "kp equals";
+    case 300: return "num lock"; case 301: return "caps lock"; case 302: return "scroll lock";
+    case 303: return "right shift"; case 304: return "left shift";
+    case 305: return "right ctrl"; case 306: return "left ctrl";
+    case 307: return "right alt"; case 308: return "left alt";
+    case 309: return "right meta"; case 310: return "left meta";
+    case 311: return "left super"; case 312: return "right super";
+    case 313: return "mode"; case 314: return "compose";
+    case 315: return "help"; case 316: return "print screen"; case 317: return "sys req";
+    case 318: return "break"; case 319: return "menu"; case 320: return "power";
+    case 321: return "euro"; case 322: return "undo";
+    default: return NULL;
+    }
+}
+static void s_GetKeyName(void) {
+    int sym = (int)A32(0);
+    const char *n = s12_key_name(sym);
+    if (!n) {
+        SDL_Keycode k = 0;                               /* SDL 1.2 value back to SDL2's for the fallback */
+        for (int c = 0; c < 0x40000100 && !k; c++) if (s12_key((SDL_Keycode)c) == sym) k = (SDL_Keycode)c;
+        n = k ? SDL_GetKeyName(k) : SDL_GetKeyName((SDL_Keycode)sym);
+    }
+    RETC(hle_guest_strdup(n ? n : "unknown"));
+}
+static void s_EnableUNICODE(void) { int was = g_unicode; g_unicode = (int)A32(0); RETC(was); }
+/* SDL_EnableKeyRepeat(delay, interval): SDL 1.2 generates the repeats itself, so
+ * these set how fast.  SDL2 has no such knob - the platform's key repeat
+ * arrives as repeated SDL_KEYDOWN events - so the values are recorded (which is
+ * what a later call reads back as the previous setting) and the repeats
+ * themselves are whatever SDL2 delivers. */
+static void s_EnableKeyRepeat(void) {
+    int was = g_repeat_delay;
+    g_repeat_delay = (int)A32(0);
+    g_repeat_interval = (int)A32(1);
+    RETC(was);
+}
+static void s_StartTextInput(void) { SDL_StartTextInput(); RETCV(); }
+static void s_StopTextInput(void) { SDL_StopTextInput(); RETCV(); }
+
+/* ---- joysticks ----
+ * SDL2's SDL_Joystick * is a host pointer, so the guest gets a handle in guest
+ * memory instead; the slot table maps it back. */
+typedef struct { uint32_t va; SDL_Joystick *joy; int index; } joy_slot;
+static joy_slot g_joy[8];
+static void joy_init(void) { if (!SDL_WasInit(SDL_INIT_JOYSTICK)) SDL_InitSubSystem(SDL_INIT_JOYSTICK); }
+static joy_slot *joy_of(uint32_t va) {
+    if (!va) return NULL;
+    for (int i = 0; i < (int)(sizeof g_joy / sizeof g_joy[0]); i++) if (g_joy[i].va == va && g_joy[i].joy) return &g_joy[i];
+    return NULL;
+}
+static void s_NumJoysticks(void) { joy_init(); RETC((uint32_t)SDL_NumJoysticks()); }
+static void s_JoystickName(void) {
+    joy_init();
+    const char *n = SDL_JoystickNameForIndex((int)A32(0));
+    RETC(n ? hle_guest_strdup(n) : 0);
+}
+static void s_JoystickOpen(void) {
+    joy_init();
+    int index = (int)A32(0);
+    SDL_Joystick *j = SDL_JoystickOpen(index);
+    if (!j) { error(SDL_GetError()); RETC(0); }
+    for (int i = 0; i < (int)(sizeof g_joy / sizeof g_joy[0]); i++)
+        if (!g_joy[i].joy) {
+            uint32_t va = hle_va(hle_alloc(8));
+            if (!va) { SDL_JoystickClose(j); error("out of guest memory"); RETC(0); }
+            MEM32(va) = (uint32_t)index; MEM32(va + 4) = 1;
+            g_joy[i].va = va; g_joy[i].joy = j; g_joy[i].index = index;
+            RETC(va);
+        }
+    SDL_JoystickClose(j);
+    error("SDL_JoystickOpen: too many open joysticks");
+    RETC(0);
+}
+static void s_JoystickOpened(void) {
+    int index = (int)A32(0), open = 0;
+    for (int i = 0; i < (int)(sizeof g_joy / sizeof g_joy[0]); i++) if (g_joy[i].joy && g_joy[i].index == index) open = 1;
+    RETC((uint32_t)open);
+}
+static void s_JoystickIndex(void) { joy_slot *s = joy_of(A32(0)); RETC(s ? (uint32_t)s->index : (uint32_t)-1); }
+static void s_JoystickNumAxes(void)    { joy_slot *s = joy_of(A32(0)); RETC(s ? (uint32_t)SDL_JoystickNumAxes(s->joy) : 0u); }
+static void s_JoystickNumBalls(void)   { joy_slot *s = joy_of(A32(0)); RETC(s ? (uint32_t)SDL_JoystickNumBalls(s->joy) : 0u); }
+static void s_JoystickNumHats(void)    { joy_slot *s = joy_of(A32(0)); RETC(s ? (uint32_t)SDL_JoystickNumHats(s->joy) : 0u); }
+static void s_JoystickNumButtons(void) { joy_slot *s = joy_of(A32(0)); RETC(s ? (uint32_t)SDL_JoystickNumButtons(s->joy) : 0u); }
+static void s_JoystickUpdate(void) { SDL_JoystickUpdate(); RETCV(); }
+static void s_JoystickEventState(void) { RETC((uint32_t)SDL_JoystickEventState((int)A32(0))); }
+static void s_JoystickGetAxis(void) { joy_slot *s = joy_of(A32(0)); RETC(s ? (uint32_t)(int32_t)SDL_JoystickGetAxis(s->joy, (int)A32(1)) : 0u); }
+static void s_JoystickGetHat(void) { joy_slot *s = joy_of(A32(0)); RETC(s ? SDL_JoystickGetHat(s->joy, (int)A32(1)) : 0u); }
+static void s_JoystickGetButton(void) { joy_slot *s = joy_of(A32(0)); RETC(s ? SDL_JoystickGetButton(s->joy, (int)A32(1)) : 0u); }
+static void s_JoystickGetBall(void) {                     /* (joystick, ball, int *dx, int *dy) */
+    joy_slot *s = joy_of(A32(0));
+    if (!s) RETC(-1);
+    int dx = 0, dy = 0;
+    int rc = SDL_JoystickGetBall(s->joy, (int)A32(1), &dx, &dy);
+    if (rc == 0) {
+        if (A32(2)) MEM32(A32(2)) = (uint32_t)dx;
+        if (A32(3)) MEM32(A32(3)) = (uint32_t)dy;
+    }
+    RETC((uint32_t)rc);
+}
+static void s_JoystickClose(void) {
+    joy_slot *s = joy_of(A32(0));
+    if (!s) RETCV();
+    SDL_JoystickClose(s->joy);
+    s->joy = NULL; s->va = 0; s->index = -1;
+    RETCV();
+}
+/* SDL_main.h: "This should be called from your WinMain()".  SDL keeps the
+ * instance handle to find its own resources; nothing in this layer loads SDL's
+ * resources from the guest module, so recording it is the whole of its effect. */
+static void s_SetModuleHandle(void) { g_module_handle = APTR(0); RETCV(); }
 static void s_WarpMouse(void) { SDL_WarpMouseInWindow(g_window,(int)A32(0),(int)A32(1)); RETCV(); }
 
 const win32hle_shim win32hle_sdl12[] = {
@@ -884,5 +1233,20 @@ const win32hle_shim win32hle_sdl12[] = {
     { "SDL_MapRGB", s_MapRGB }, { "SDL_MapRGBA", s_MapRGBA }, { "SDL_GetRGB", s_GetRGB }, { "SDL_GetRGBA", s_GetRGBA },
     { "SDL_DisplayFormat", s_DisplayFormat }, { "SDL_DisplayFormatAlpha", s_DisplayFormatAlpha }, { "SDL_ConvertSurface", s_ConvertSurface },
     { "SDL_SetColorKey", s_SetColorKey }, { "SDL_SetAlpha", s_SetAlpha }, { "SDL_SetPalette", s_SetPalette }, { "SDL_SetColors", s_SetColors },
+    { "SDL_GL_SetAttribute", s_GL_SetAttribute }, { "SDL_GL_GetAttribute", s_GL_GetAttribute }, { "SDL_GL_GetProcAddress", s_GL_GetProcAddress },
+    { "SDL_GL_SwapBuffers", s_GL_SwapBuffers }, { "SDL_GL_LoadLibrary", s_GL_LoadLibrary }, { "SDL_GL_UnloadLibrary", s_GL_UnloadLibrary },
+    { "SDL_GL_SetSwapInterval", s_GL_SetSwapInterval }, { "SDL_GL_GetSwapInterval", s_GL_GetSwapInterval },
+    { "SDL_GetKeyState", s_GetKeyState }, { "SDL_GetModState", s_GetModState }, { "SDL_GetMouseState", s_GetMouseState },
+    { "SDL_GetRelativeMouseState", s_GetRelativeMouseState }, { "SDL_GetKeyName", s_GetKeyName },
+    { "SDL_EnableUNICODE", s_EnableUNICODE }, { "SDL_EnableKeyRepeat", s_EnableKeyRepeat },
+    { "SDL_StartTextInput", s_StartTextInput }, { "SDL_StopTextInput", s_StopTextInput },
+    { "SDL_NumJoysticks", s_NumJoysticks }, { "SDL_JoystickName", s_JoystickName }, { "SDL_JoystickOpen", s_JoystickOpen },
+    { "SDL_JoystickOpened", s_JoystickOpened }, { "SDL_JoystickIndex", s_JoystickIndex },
+    { "SDL_JoystickNumAxes", s_JoystickNumAxes }, { "SDL_JoystickNumBalls", s_JoystickNumBalls },
+    { "SDL_JoystickNumHats", s_JoystickNumHats }, { "SDL_JoystickNumButtons", s_JoystickNumButtons },
+    { "SDL_JoystickUpdate", s_JoystickUpdate }, { "SDL_JoystickEventState", s_JoystickEventState },
+    { "SDL_JoystickGetAxis", s_JoystickGetAxis }, { "SDL_JoystickGetHat", s_JoystickGetHat },
+    { "SDL_JoystickGetButton", s_JoystickGetButton }, { "SDL_JoystickGetBall", s_JoystickGetBall },
+    { "SDL_JoystickClose", s_JoystickClose }, { "SDL_SetModuleHandle", s_SetModuleHandle },
     { 0, 0 }
 };

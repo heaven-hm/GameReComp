@@ -300,7 +300,16 @@ extern const win32hle_shim win32hle_dsound[];         /* DirectSound on SDL audi
 extern const win32hle_shim win32hle_ddraw[];          /* DirectDraw in software (ddraw.c) */
 extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
 extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 audio (sdlmix.c) */
+extern const win32hle_shim win32hle_gl32[];           /* OPENGL32/GLU32 on the host's GL (gl32.c) */
 extern const win32hle_shim win32hle_msvcrt[];         /* the MSVC CRT on the host libc (msvcrt.c) */
+extern const win32hle_shim win32hle_kernel32_atom[];  /* the local atom table (kernel32_atom.c) */
+
+/* The SDL 1.2 window and GL context, for gl32.c. They are sdl12.c's: a GL
+ * context exists only after SDL_SetVideoMode with SDL_OPENGL. */
+void *hle_sdl12_window(void);
+void *hle_sdl12_glcontext(void);
+int   hle_sdl12_gl_active(void);
+void  hle_sdl12_gl_swap(void);
 /* The primary surface, for a presenter: 0 until there is one. seq changes
  * when its pixels or palette may have. */
 int  hle_dd_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bpp, const uint32_t **palette, unsigned *seq);

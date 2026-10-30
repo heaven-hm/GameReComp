@@ -29,6 +29,7 @@
 #define ERROR_NOT_ENOUGH_MEMORY     8u
 #define ERROR_INVALID_PARAMETER    87u
 #define ERROR_CALL_NOT_IMPLEMENTED 120u
+#define ERROR_INSUFFICIENT_BUFFER  122u
 #define ERROR_ALREADY_EXISTS      183u
 #define WAIT_OBJECT_0               0u
 #define WAIT_TIMEOUT              258u
@@ -489,33 +490,73 @@ static void k_WriteConsoleA(void) {                      /* (h, buf, n, &written
 }
 
 /* Atoms: MFC interns its window-class names as global atoms very early in
- * startup. A small intern table numbered from 0xC000 (the Win32 app-atom
- * range); global and local atoms share it, which is all a single guest sees. */
-#define ATOM_BASE 0xC000u
-static struct { char *s; } g_atoms[1024];
-static int g_atom_n;
-static uint32_t atom_intern(const char *s) {
-    if (!s) return 0;
-    for (int i = 0; i < g_atom_n; i++) if (!strcmp(g_atoms[i].s, s)) return ATOM_BASE + (uint32_t)i;
-    if (g_atom_n >= 1024) return 0;
-    g_atoms[g_atom_n].s = strdup(s);
-    return ATOM_BASE + (uint32_t)g_atom_n++;
+ * startup. Windows keeps local (AddAtom) and global (GlobalAddAtom) atoms in
+ * two namespaces -- a string added with one is not found by the other -- so
+ * this is a second table, not a forward into the local one. The behaviour a
+ * caller can observe (case-insensitive interning, a reference count, and
+ * ERROR_INSUFFICIENT_BUFFER instead of a truncated name) is the same on both
+ * sides, because both call the same helpers. */
+#define GATOM_BASE 0xC000u
+#define GATOM_MAX 1024
+typedef struct { uint32_t name; int refs; } gatom_slot;   /* name: guest VA */
+static gatom_slot g_gatom[GATOM_MAX];
+static int g_gatom_n;
+
+static gatom_slot *gatom_lookup(const char *s) {
+    for (int i = 0; i < g_gatom_n; i++)
+        if (g_gatom[i].name && !strcasecmp((const char *)hle_ptr(g_gatom[i].name), s))
+            return &g_gatom[i];
+    return NULL;
 }
-static const char *atom_name(uint32_t a) {
-    uint32_t i = a - ATOM_BASE;
-    return (a >= ATOM_BASE && (int)i < g_atom_n) ? g_atoms[i].s : NULL;
+static void k_GlobalAddAtomA(void) {
+    const char *s = ASTR(0);
+    if (!s || !*s) RET(0, 1);
+    gatom_slot *e = gatom_lookup(s);
+    if (e) { e->refs++; RET(GATOM_BASE + (uint32_t)(e - g_gatom), 1); }
+    for (int i = 0; i < g_gatom_n; i++) if (!g_gatom[i].name) e = &g_gatom[i];
+    if (!e) {
+        if (g_gatom_n >= GATOM_MAX) RET(0, 1);
+        e = &g_gatom[g_gatom_n++];
+    }
+    uint32_t va = hle_guest_strdup(s);
+    if (!va) RET(0, 1);
+    e->name = va, e->refs = 1;
+    RET(GATOM_BASE + (uint32_t)(e - g_gatom), 1);
 }
-static void k_GlobalAddAtomA(void)  { RET(atom_intern(ASTR(0)), 1); }
 static void k_GlobalFindAtomA(void) {
     const char *s = ASTR(0);
-    if (s) for (int i = 0; i < g_atom_n; i++) if (!strcmp(g_atoms[i].s, s)) RET(ATOM_BASE + (uint32_t)i, 1);
+    if (s) {
+        gatom_slot *e = gatom_lookup(s);
+        if (e) RET(GATOM_BASE + (uint32_t)(e - g_gatom), 1);
+    }
     RET(0, 1);
 }
-static void k_GlobalDeleteAtom(void) { RET(0, 1); }   /* kept interned; refcount ignored */
+static void k_GlobalDeleteAtom(void) {
+    uint32_t a = A32(0);
+    if (a >= GATOM_BASE && (uint32_t)(a - GATOM_BASE) < (uint32_t)g_gatom_n) {
+        gatom_slot *e = &g_gatom[a - GATOM_BASE];
+        if (e->name) {
+            if (--e->refs <= 0) { hle_free(hle_ptr(e->name)); e->name = 0, e->refs = 0; }
+            RET(0, 1);
+        }
+    }
+    RET(a, 1);                                        /* not ours: unchanged */
+}
 static void k_GlobalGetAtomNameA(void) {              /* (atom, buf, size) */
-    const char *n = atom_name(A32(0)); char *buf = ASTR(1); uint32_t sz = A32(2);
-    if (buf && sz) { if (n) { strncpy(buf, n, sz - 1); buf[sz - 1] = 0; } else buf[0] = 0; }
-    RET(n && buf ? (uint32_t)strlen(buf) : 0u, 3);
+    uint32_t a = A32(0), buf = A32(1);
+    int size = (int)A32(2);
+    const char *n = (a >= GATOM_BASE && (uint32_t)(a - GATOM_BASE) < (uint32_t)g_gatom_n
+                     && g_gatom[a - GATOM_BASE].name)
+                    ? (const char *)hle_ptr(g_gatom[a - GATOM_BASE].name) : NULL;
+    if (!n) { hle_set_last_error(ERROR_INVALID_HANDLE); RET(0, 3); }
+    if (!buf || size <= 0) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 3); }
+    size_t len = strlen(n);
+    if ((uint64_t)len + 1 > (uint64_t)size) {
+        hle_set_last_error(ERROR_INSUFFICIENT_BUFFER);
+        RET(0, 3);
+    }
+    memcpy(hle_ptr(buf), n, len + 1);
+    RET((uint32_t)len, 3);
 }
 
 /* What a statically linked MFC asks on its way up, answered as Windows does

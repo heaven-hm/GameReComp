@@ -8,6 +8,7 @@ C compiler, CMake, SDL2 and (optionally) FFmpeg.
 import json
 import os
 import shutil
+import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -28,16 +29,25 @@ MAIN_C = """\
  * tools/autorecomp/diagnose.py drives. It is a diagnostic, not a way to run a
  * game: the stub cannot return, so the run always stops at the first
  * unimplemented import.
+ *
+ * RECOMP_TRACE=1 logs every import dispatch, as recomp_host_main does; without
+ * it a crash in lifted code gives no clue which shim ran last.
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "host.h"
+#include "win32hle.h"
 
 static int permissive_requested(void) {
     const char *v = getenv("RECOMP_PERMISSIVE");
     return v != NULL && v[0] != '\\0' && strcmp(v, "0") != 0;
+}
+
+static void honour_trace(void) {
+    const char *v = getenv("RECOMP_TRACE");
+    win32hle_trace = v != NULL && v[0] != '\\0' && v[0] != '0';
 }
 
 int main(int argc, char **argv) {
@@ -46,6 +56,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "usage: %s <image.exe> [args...]\\n", argv[0]);
         return 64;
     }
+    honour_trace();
     recomp_host_init();
     int rc = recomp_host_boot_permissive(argv[1]);
     if (rc) return rc;
@@ -68,6 +79,13 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2 SDL2_ttf)
 pkg_check_modules(FFMPEG IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
 
+# gl32.c dlopen()s the host GLU by its usual names. On Linux that is libdl; on
+# macOS and the BSDs dlopen lives in libc, and linking -ldl there fails.
+include(CheckIncludeFile)
+if(UNIX AND NOT APPLE)
+  find_library(DL_LIBRARY dl)
+endif()
+
 file(GLOB RECOMP_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/recomp/gen/recomp_*.c")
 file(GLOB RUNTIME_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime/win32hle/*.c")
 
@@ -88,6 +106,9 @@ target_include_directories(@NAME@ PRIVATE
 # not actionable and would bury the runtime's.
 target_compile_options(@NAME@ PRIVATE -w)
 target_link_libraries(@NAME@ PRIVATE PkgConfig::SDL2 m pthread)
+if(DL_LIBRARY)
+  target_link_libraries(@NAME@ PRIVATE ${DL_LIBRARY})
+endif()
 
 if(FFMPEG_FOUND)
   target_compile_definitions(@NAME@ PRIVATE HLE_WITH_FFMPEG)
@@ -115,6 +136,49 @@ optional and only enables Bink/MSS movie and audio decoding.
 
 This project does not contain or redistribute the original game's assets.
 """
+
+
+def check_runtime_sources(cc=None, extra_cflags=()):
+    """Syntax-check the runtime sources a generated project will build.
+
+    The runtime is copied into every project, so a single broken file there
+    fails the build of every game with an error that reads like broken
+    *generated* code -- and it fails it after the expensive translate stage has
+    already written hundreds of megabytes. Checking the runtime first turns a
+    confusing late failure into a clear early one.
+
+    Returns (ok, [messages]). A missing compiler is not a failure: the check is
+    a convenience, and the real build reports the truth either way.
+    """
+    cc = cc or os.environ.get("CC") or "cc"
+    if shutil.which(cc) is None:
+        return True, [f"{cc} not found; runtime preflight skipped"]
+    cflags = ["-fsyntax-only"]
+    for pkg in (("sdl2", "SDL2_ttf"),):
+        try:
+            out = subprocess.run(["pkg-config", "--cflags", *pkg],
+                                 capture_output=True, text=True, timeout=30)
+            if out.returncode == 0:
+                cflags.extend(out.stdout.split())
+        except (OSError, subprocess.SubprocessError):
+            pass
+    cflags.extend(extra_cflags)
+    cflags.extend(["-I", str(RECOMP32), "-I", str(WIN32HLE)])
+
+    failures = []
+    for path in sorted(WIN32HLE.glob("*.c")):
+        if path.name.endswith("_selftest.c"):
+            continue
+        try:
+            proc = subprocess.run([cc, *cflags, str(path)],
+                                  capture_output=True, text=True, timeout=120)
+        except (OSError, subprocess.SubprocessError) as exc:
+            return True, [f"runtime preflight skipped ({exc})"]
+        if proc.returncode != 0:
+            first = next((ln for ln in proc.stderr.splitlines() if "error:" in ln),
+                         proc.stderr.strip().splitlines()[0] if proc.stderr.strip() else "?")
+            failures.append(f"{path.name}: {first.strip()}")
+    return (not failures), failures
 
 
 def _copy_runtime(project_dir: Path) -> dict:
