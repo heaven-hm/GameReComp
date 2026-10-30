@@ -46,8 +46,19 @@ def _project_for(exe, corpus):
     return ROOT / "projects" / executable_name(exe)
 
 
-def row_for(exe, corpus, now):
-    """One database row, or None when the run left no record."""
+def row_for(exe, corpus, now, previous=None):
+    """One database row, or None when the run left no record.
+
+    The MEASUREMENTS come from this run and nowhere else. The NAME is carried over
+    from the previous row when there is one, because "Cave Story" is a curated fact
+    about the game and deriving it from a directory called `cavestory` produces
+    "Cavestory" -- repairing a wrong measurement must not cost a right name.
+    """
+    previous = previous or {}
+    # Display names live in ONE place -- gamesdb.TITLES -- because a second naming
+    # scheme is a second set of names, and "Cavestory" is not "Cave Story". Imported
+    # rather than copied so the two cannot drift.
+    from tools.gamesdb import TITLES
     project = _project_for(exe, corpus)
     report = project / "reports" / "report.json"
     try:
@@ -59,13 +70,19 @@ def row_for(exe, corpus, now):
     inspect = (stages.get("inspect") or {}).get("data") or {}
     return {
         "relative_path": str(exe.relative_to(corpus)) if corpus in exe.parents else exe.name,
-        "game": exe.parent.name.replace("-", " ").replace("_", " ").title(),
+        "game": TITLES.get(exe.parent.name) or previous.get("game")
+                or exe.parent.name.replace("_", " ").title(),
         "filename": exe.name,
         "arch": inspect.get("arch") or inspect.get("machine"),
-        "os": "Windows",
+        "os": previous.get("os") or "Windows",
         "score": data.get("score"),
         "verification": (data.get("outcome") or {}).get("status"),
-        "status": (data.get("outcome") or {}).get("status"),
+        # The reason, not the status again: "partial: partial" tells a reader
+        # nothing, while "partial: process launched and stayed alive until the 15s
+        # timeout" tells them what was observed.
+        "status": ((data.get("outcome") or {}).get("reason")
+                   or (data.get("outcome") or {}).get("detail")
+                   or (data.get("outcome") or {}).get("status")),
         "run_status": run.get("status"),
         "exit_code": run.get("exit_code"),
         "host": f"{__import__('platform').system()} {__import__('platform').machine()}",
@@ -92,19 +109,19 @@ def main(argv=None):
 
     sys.path.insert(0, str(ROOT))
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    rows, missing = [], []
-    for exe in sorted(corpus.rglob("*.exe")):
-        row = row_for(exe, corpus, now)
-        if row is None:
-            missing.append(str(exe.relative_to(corpus)))
-        else:
-            rows.append(row)
-
     old = {}
     try:
         old = {r["relative_path"]: r for r in json.loads(Path(args.results).read_text())["runs"]}
     except (OSError, ValueError, KeyError):
         pass
+    rows, missing = [], []
+    for exe in sorted(corpus.rglob("*.exe")):
+        rel = str(exe.relative_to(corpus)) if corpus in exe.parents else exe.name
+        row = row_for(exe, corpus, now, previous=old.get(rel))
+        if row is None:
+            missing.append(str(exe.relative_to(corpus)))
+        else:
+            rows.append(row)
 
     changed = []
     for r in rows:
