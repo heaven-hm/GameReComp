@@ -248,6 +248,40 @@ static void v_VerQueryValueA(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(0, 4); }
 static void s_FindExecutableA(void) { if (A32(2)) MEM8(A32(2)) = 0; RET(31u, 3); }   /* SE_ERR_NOASSOC */
 static void s_ShellExecuteA(void) { fprintf(stderr, "[shell32] ShellExecuteA(%s): not on this host\n", ASTR(2) ? ASTR(2) : ""); RET(31u, 6); }
 
+/* DragAcceptFiles registers a window as a drop target. There is no shell to
+ * drag from on this host, so the call is accepted and no drop will ever
+ * arrive: a program that only enables the feature loses nothing. */
+static void s_DragAcceptFiles(void) { RETV(2); }
+
+/* DragQueryFileA(hDrop, iFile, buf, size) is asked for the count (iFile ==
+ * 0xFFFFFFFF) or for one dropped file's name. No drop can have happened, so
+ * the true answers are 0 files and an empty string -- not a fabricated name. */
+static void s_DragQueryFileA(void) {
+    uint32_t which = A32(1);
+    if (which == 0xFFFFFFFFu) RET(0, 4);
+    char *buf = ASTR(2);
+    if (buf && A32(3)) buf[0] = 0;
+    RET(0, 4);
+}
+static void s_DragFinish(void) { RETV(1); }              /* nothing was allocated */
+
+/* ---- SHLWAPI ---- */
+/* PathRemoveFileSpecA(path): strip the last component, in place. Returns TRUE
+ * when it removed something, FALSE when there was nothing to remove -- the
+ * documented contract, and the reason a caller can use it to walk up a path. */
+static void s_PathRemoveFileSpecA(void) {
+    char *p = ASTR(0);
+    if (!p) RET(0, 1);
+    size_t n = strlen(p);
+    while (n && (p[n - 1] == '\\' || p[n - 1] == '/')) p[--n] = 0;   /* a trailing separator is not a file */
+    char *slash = NULL;
+    for (char *q = p; *q; q++) if (*q == '\\' || *q == '/') slash = q;
+    if (!slash) RET(0, 1);                                /* already a bare name */
+    if (slash == p) { p[1] = 0; RET(1, 1); }              /* "C:\file" -> "C:\" */
+    *slash = 0;
+    RET(1, 1);
+}
+
 const win32hle_shim win32hle_advapi32[] = {
     { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
     { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey },
@@ -262,5 +296,8 @@ const win32hle_shim win32hle_advapi32[] = {
     { "GetFileVersionInfoSizeA", v_GetFileVersionInfoSizeA }, { "GetFileVersionInfoA", v_GetFileVersionInfoA },
     { "VerQueryValueA", v_VerQueryValueA },
     { "FindExecutableA", s_FindExecutableA }, { "ShellExecuteA", s_ShellExecuteA },
+    { "DragAcceptFiles", s_DragAcceptFiles }, { "DragQueryFileA", s_DragQueryFileA },
+    { "DragFinish", s_DragFinish },
+    { "PathRemoveFileSpecA", s_PathRemoveFileSpecA },
     { 0, 0 }
 };
