@@ -182,6 +182,48 @@ Frames captured headless by `RECOMP_SCREENSHOT=DIR` (see
 640×480 with the palette above and they differ frame to frame. What each screen
 *depicts* is not claimed here.
 
+### The source pipeline, measured against the original bytes
+
+This is the part that makes the project a recompiler rather than a translator, and
+it is new. Given the original PE, the pipeline now:
+
+1. decompiles it with **rev.ng** (a real install, reached through a container on this
+   host — rev.ng publishes Linux x86-64 builds only);
+2. extracts **evidence** per function — the imports it calls, the strings it
+   references, format strings, the constants it compares against, the global and
+   struct-field accesses with their widths, its calling convention taken from its
+   own epilogue;
+3. **names** identifiers only where that evidence supports the name, and leaves the
+   rest mechanical with a recorded reason;
+4. emits **typed C** with those names, fusing repeated guest-memory accesses into
+   locals;
+5. **certifies** the result against the original's machine code, run from the same
+   entry state under Unicorn — registers, named memory, and named flags.
+
+Nothing above is a claim that the output is *good* C. It is a claim about what was
+measured, and the measurements are deliberately staged because each stage is a
+strict subset of the one before it:
+
+| Stage | Doukutsu's 955 provider functions |
+| --- | --- |
+| provider bodies that parse and satisfy the module model | 157 |
+| generate typed C | 157 |
+| compile | 36 |
+| **certify against the original bytes** | **7** |
+
+The 7 are real bodies of 2–5 statements, with guest memory named by the original's
+own instructions, agreeing on 8 entry states. Eight more **diverged**, and all eight
+are one class: rev.ng recovered the function as returning `void`, the original
+leaves its last computed value in `eax`, and the adapter invented `0` — a provider
+signature gap the oracle caught rather than a transform bug. Fifteen compared no
+memory at all and are reported as `nothing-compared`, not as passes; five could not
+be driven from a synthetic entry state.
+
+The honest summary: **the pipeline can prove that a generated function equals the
+original's code, on the inputs it drove, for 7 of 955 functions.** Naming is the
+bottleneck, not certification, and the read-this-instead-of-the-assembly goal is
+still ahead of it.
+
 ### Other measured outcomes, kept distinct
 
 These are four different results and flattening them would be dishonest. All
