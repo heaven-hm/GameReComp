@@ -354,3 +354,51 @@ provider bodies: **median closure 1 function, maximum 109** (0x00401D10 reaches 
 0x00422510 reaches 105). No closure reached a 256 cap. So the cap is a guard rather
 than a limit the real call graphs run into, and the report can say a verified caller
 typically linked one function and at most 109.
+
+## The ordering measurement: min over the closure, not class size
+
+A closure is only as usable as its **worst member**, so the metric that decides the
+next piece is *closures-unblocked-per-fix*, not how many bodies a refusal class
+contains. Measured, and re-runnable:
+
+    python3 -m tools.autorecomp.rename_gen --pe <original> --revng <dir> \
+        --revng-c highlevel/doukutsu/doukutsu-revng.c \
+        --header highlevel/doukutsu/types-and-globals.h \
+        --closure-blockers --json reports/closure-blockers.json
+
+Over the 95 call-bearing bodies that generate alone:
+
+| closures blocked | reason |
+|---|---|
+| 14 | `Invalid expression` |
+| 12 | a dereference with no recoverable width |
+| 10 | an unimplemented intrinsic |
+| 9 | an empty body |
+| 9 | an unbounded offset on a VA |
+
+**Sole-blocker members** (fix one function, N closures become multi-function):
+`0x00420640` 10 · `0x004874A7` 5 · `0x00480DC1` 4 · `0x004139A0` 4.
+
+**And `0x00480DC1` must not be chased**: its four closures are blocked by an empty
+provider body — the security-cookie check rev.ng could not decompile — so they are
+blocked by the provider, not by us. That single line is worth more than the ten we
+can fix, because it stops someone spending a day on it.
+
+**The negative result this measurement produced, kept as an asset:** the **124
+struct-returns were the largest class and fixing them moved multi-function closures
+from zero to zero**. Size-based prioritisation was refuted by measurement. It sits
+beside the other two negative results in this report — the 92 functions rev.ng
+over-approximated, and the 0-of-3 certification failure that was a clipped window —
+as facts that stop the next person repeating the work.
+
+## Two semantic results from the same round
+
+- **`va << 2` is a scaled VA; `va >> n` is a number.** An address times a stride is
+  still an address; an address shifted right is not. This was the top blocker at 30
+  occurrences, and the boundary rule now encodes what a *scaled array access* means
+  rather than treating every shift as mixed-kind arithmetic. Oversized or
+  non-constant shifts are still refused.
+- **All 1,877 provider struct sizes are multiples of four**, so the hidden-pointer
+  word copy is sound — and a hypothetical 6-byte struct would now be **refused**
+  rather than copied past its end. The alignment precondition is a check in the code
+  rather than an assumption inherited from the data.
