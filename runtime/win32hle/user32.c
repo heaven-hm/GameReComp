@@ -2005,7 +2005,6 @@ static void u_CharUpperA(void) { uint32_t s = A32(0); if (s < 0x10000u) RET(s >=
 static void u_CharLowerA(void) { uint32_t s = A32(0); if (s < 0x10000u) RET(s >= 'A' && s <= 'Z' ? s + 32 : s, 1); for (char *p = ASTR(0); *p; p++) if (*p >= 'A' && *p <= 'Z') *p += 32; RET(s, 1); }
 static void u_RegisterHotKey(void) { RET(1, 4); }
 static void u_UnregisterHotKey(void) { RET(1, 2); }
-static void u_TranslateAcceleratorA(void) { RET(0, 3); }
 static void u_WinHelpA(void) { RET(0, 4); }
 static void u_WaitForInputIdle(void) { RET(0, 2); }
 static void u_MessageBeep(void) { RET(1, 1); }
@@ -2152,7 +2151,99 @@ static void u_LoadBitmapA(void) {                        /* (hinst, name) */
     uint32_t hb = load_bitmap(A32(0), A32(1), 0);
     RET(hb ? hb : 0x1C000004u, 2);
 }
-static void u_LoadAcceleratorsA(void){ RET(0x1C000005u, 2); }  /* nonzero: games treat NULL as fatal */
+/* ---- accelerator tables (RT_ACCELERATOR) ----
+ * The resource is an array of 8-byte entries - BYTE fVirt, BYTE pad, WORD key,
+ * WORD cmd, WORD pad - ended by an all-zero entry.  LoadAcceleratorsA parses
+ * it into a table we keep and hands out a handle for it; NULL when the module
+ * has no such resource, which is what Windows answers too.  The match and the
+ * message it sends follow ReactOS's ntuser/accelerator.c:
+ *
+ *   FVIRTKEY entry: WM_KEYDOWN/WM_SYSKEYDOWN whose wParam is the key and whose
+ *   SHIFT/CTRL/ALT state is exactly the entry's, else
+ *   char entry:     WM_CHAR/WM_SYSCHAR whose wParam is the char, ALT matching.
+ *
+ * On a hit the window gets WM_COMMAND with 0x10000|cmd (the accelerator
+ * notification code) - or WM_SYSCOMMAND for an SC_* id, which is how an
+ * accelerator for the system menu is written - and the call answers 1; 0 means
+ * "not mine, keep the message".  A disabled window matches but is not sent to,
+ * as Windows does. */
+#define RT_ACCELERATOR_ID 9u
+#define FVIRTKEY   0x01u
+#define FSHIFT     0x04u
+#define FCONTROL   0x08u
+#define FALT       0x10u
+#define VK_SHIFT_  0x10u
+#define VK_CONTROL_ 0x11u
+#define VK_MENU_   0x12u
+#define ERROR_INVALID_ACCEL_HANDLE 1403u
+/* FindResource's failure for a name that is not in the module: 1814 is
+ * ERROR_RESOURCE_NAME_NOT_FOUND (1813 is the type, 1812 the data).  The name is
+ * what the game got wrong here, and module.c's FindResourceA uses 1814 too. */
+#define ERROR_RESOURCE_NOT_FOUND 1814u
+#define ERROR_NOT_ENOUGH_MEMORY 8u
+#define MAX_ACCEL_ENTRIES 512
+typedef struct { uint8_t fVirt; uint16_t key, cmd; } accel_entry;
+typedef struct { uint32_t handle; int n; accel_entry *items; } accel_table;
+static accel_table g_accel[8];
+static int g_naccel;
+static uint32_t g_accel_next = 0x1C000200u;
+
+static void u_LoadAcceleratorsA(void) {                  /* (hinst, name) */
+    uint32_t hinst = A32(0), name = A32(1), size = 0;
+    uint32_t r = hle_find_resource(hinst, name, RT_ACCELERATOR_ID);
+    if (!r && hinst) r = hle_find_resource(0, name, RT_ACCELERATOR_ID);
+    uint32_t data = r ? hle_resource_data(hinst, r, &size) : 0;
+    if (!data || size < 8) { hle_set_last_error(ERROR_RESOURCE_NOT_FOUND); RET(0, 2); }
+    if (g_naccel >= (int)(sizeof g_accel / sizeof g_accel[0])) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+    int n = (int)(size / 8);
+    if (n > MAX_ACCEL_ENTRIES) n = MAX_ACCEL_ENTRIES;
+    accel_entry *items = (accel_entry *)calloc((size_t)n, sizeof *items);
+    if (!items) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+    int used = 0;
+    for (int i = 0; i < n; i++) {
+        uint32_t e = data + (uint32_t)i * 8;
+        uint8_t fVirt = MEM8(e);
+        uint16_t key = (uint16_t)(MEM8(e + 2) | (MEM8(e + 3) << 8));
+        uint16_t cmd = (uint16_t)(MEM8(e + 4) | (MEM8(e + 5) << 8));
+        if (!fVirt && !key && !cmd) break;               /* the terminating entry */
+        items[used].fVirt = fVirt; items[used].key = key; items[used].cmd = cmd; used++;
+    }
+    if (!used) { free(items); hle_set_last_error(ERROR_RESOURCE_NOT_FOUND); RET(0, 2); }
+    g_accel[g_naccel].handle = g_accel_next++;
+    g_accel[g_naccel].n = used;
+    g_accel[g_naccel].items = items;
+    RET(g_accel[g_naccel++].handle, 2);
+}
+static void u_TranslateAcceleratorA(void) {              /* (hwnd, haccel, &msg) */
+    uint32_t hwnd = A32(0), msg = A32(2);
+    if (!hwnd || !msg) RET(0, 3);
+    uint32_t m = MEM32(msg + 4), wparam = MEM32(msg + 8);   /* MSG: hwnd 0, message 4, wParam 8, lParam 12 */
+    if (m != WM_KEYDOWN && m != WM_SYSKEYDOWN && m != WM_CHAR && m != WM_SYSCHAR) RET(0, 3);
+    accel_table *t = NULL;
+    for (int i = 0; i < g_naccel && !t; i++) if (g_accel[i].handle == A32(1)) t = &g_accel[i];
+    if (!t) { hle_set_last_error(ERROR_INVALID_ACCEL_HANDLE); RET(0, 3); }
+    uint32_t mask = 0;
+    if (g_keys[VK_CONTROL_] & 0x80) mask |= FCONTROL;
+    if (g_keys[VK_MENU_] & 0x80) mask |= FALT;
+    if (g_keys[VK_SHIFT_] & 0x80) mask |= FSHIFT;
+    for (int i = 0; i < t->n; i++) {
+        accel_entry *a = &t->items[i];
+        int hit;
+        if (a->fVirt & FVIRTKEY)
+            hit = (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && (uint16_t)wparam == a->key
+               && mask == (a->fVirt & (FSHIFT | FCONTROL | FALT));
+        else
+            hit = (m == WM_CHAR || m == WM_SYSCHAR) && (uint16_t)wparam == a->key
+               && (mask & FALT) == (a->fVirt & FALT);
+        if (!hit) continue;
+        if (!(hle_window_style(hwnd) & WS_DISABLED)) {
+            if (a->cmd >= 0xF000u && a->cmd <= 0xF0FFu) hle_send(hwnd, WM_SYSCOMMAND, a->cmd, 0x00010000u);
+            else hle_send(hwnd, WM_COMMAND, 0x10000u | a->cmd, 0);
+        }
+        RET(1, 3);
+    }
+    RET(0, 3);
+}
 /* ---- menus ----
  * A menu is a flat list of items; a popup item carries a submenu handle. Menus
  * are not drawn (no menu bar on the surface yet), but a game queries and edits
