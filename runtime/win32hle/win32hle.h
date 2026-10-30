@@ -320,6 +320,7 @@ void hle_dd_mode(int *w, int *h, int *bpp);
 extern void (*hle_dd_primary_hook)(void);            /* the primary's pixels or palette changed (a blit, an Unlock, a Flip) */
 int  hle_dd_surface_pixels(uint32_t obj, uint8_t **px, int *w, int *h, int *pitch, int *bpp);   /* 0: not a surface */
 int  hle_dd_surface_is_primary(uint32_t obj);          /* 1 only for the active DirectDraw primary */
+int  hle_dd_surface_is_3d_target(uint32_t obj);        /* 1 when DDSCAPS_3DDEVICE is set */
 int  hle_dd_surface_is_primary_3d_target(uint32_t obj); /* primary with DDSCAPS_3DDEVICE */
 void hle_dsound_set_master(float gain);              /* 0 mutes */
 void hle_dsound_register_com(void);                  /* CoCreateInstance(CLSID_DirectSound) (recomp_host_init) */

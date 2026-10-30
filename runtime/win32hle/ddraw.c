@@ -112,10 +112,13 @@ int hle_dd_surface_pixels(uint32_t obj, uint8_t **px, int *w, int *h, int *pitch
 int hle_dd_surface_is_primary(uint32_t obj) {
     return obj && g_vt_surf && MEM32(obj) == g_vt_surf && S(obj) == g_primary;
 }
-int hle_dd_surface_is_primary_3d_target(uint32_t obj) {
-    if (!hle_dd_surface_is_primary(obj)) return 0;
+int hle_dd_surface_is_3d_target(uint32_t obj) {
+    if (!obj || !g_vt_surf || MEM32(obj) != g_vt_surf) return 0;
     surf_t *s = S(obj);
     return (s->caps & DDSCAPS_3DDEVICE) != 0;
+}
+int hle_dd_surface_is_primary_3d_target(uint32_t obj) {
+    return hle_dd_surface_is_primary(obj) && hle_dd_surface_is_3d_target(obj);
 }
 void hle_dd_mode(int *w, int *h, int *bpp) { *w = g_mode_w, *h = g_mode_h, *bpp = g_mode_bpp; }
 
