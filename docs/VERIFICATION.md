@@ -245,6 +245,49 @@ the harness is right about what it measures and **the thing it measures is not
 enough** — which is why rules that demand proof of an operand are not redundant
 with running the function.
 
+## What a call hides from a certification
+
+A certification drives one function and compares what that function's own bytes
+name: its return value, its absolute-memory operands, and — with `--frame-size` —
+its frame. **A call's effect is inside the call.** The callee's named addresses are
+not in the caller's comparison, and when the module under test is generated the
+callee is not even linked into the harness. So:
+
+> **A module that calls another function cannot certify the call it makes.** The
+> verdict would be `agree` about a function whose most consequential behaviour was
+> never executed.
+
+This is the same shape as the four vacuous comparisons and the retracted pair — a
+verdict implying a wider check than the instrument performed — and it is the reason
+marshal-using modules are `HIGH_LEVEL_UNVERIFIED` rather than certified, however
+many of them generate and compile.
+
+The fix is to widen the instrument, not to narrow the claim:
+
+1. **link the transitive callee closure** into the harness, so the call executes;
+2. **union the named-memory set** over that closure, so the callee's writes are
+   compared;
+3. **seed every frame in the closure**, not just the caller's;
+4. **state the closure size in the verdict** — "compared 3 functions, 14 named
+   words, 2 frames" is a claim a reader can weigh, where a bare `agree` is not.
+
+Cap the closure and refuse beyond the cap with the size in the reason: an
+unbounded closure would make a divergence hard to localise as well as slow to run.
+
+## Provider dependencies we do not have
+
+Separate from the marshal, and measured rather than assumed: some provider bodies
+call LLVM intrinsics whose semantics are declared in `runtime-library.h` but not
+implemented here — 184 `bit_cast`, 59 `bit_parity`, 50 `lshift`, 31
+`llvm_umin_i32`, 18 `llvm_fshl_i32`. A body depending on one of those cannot be
+correct until the semantics exist; unlike the marshal there is no workaround,
+because an unimplemented intrinsic is a function that compiles and computes
+something else.
+
+Together with the 24 bodies carrying 2,331 `undef()` values, this describes how much
+of this binary's decompilation rests on things the provider could not supply or we
+have not implemented. Those counts belong beside the certified count, not behind it.
+
 ## Known limits
 
 - No original-Windows oracle harness exists in this repository; `scenario-pass`
