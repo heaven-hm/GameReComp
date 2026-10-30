@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <SDL2/SDL.h>
 #include "win32hle.h"
 
@@ -58,6 +59,7 @@ typedef void (*gl_begin_fn)(unsigned); typedef void (*gl_end_fn)(void);
 typedef void (*gl_vertex3_fn)(float,float,float); typedef void (*gl_vertex4_fn)(float,float,float,float);
 typedef void (*gl_color4ub_fn)(unsigned char,unsigned char,unsigned char,unsigned char);
 typedef void (*gl_normal3_fn)(float,float,float); typedef void (*gl_tex2_fn)(float,float);
+typedef void (*gl_tex1_fn)(float);
 typedef void (*gl_matrix_mode_fn)(unsigned); typedef void (*gl_load_matrix_fn)(const float *);
 typedef void (*gl_mult_matrix_fn)(const float *);
 typedef void (*gl_enable_fn)(unsigned); typedef void (*gl_disable_fn)(unsigned);
@@ -93,6 +95,7 @@ typedef void (*gl_scissor_fn)(int,int,int,int);
 static gl_begin_fn p_begin; static gl_end_fn p_end;
 static gl_vertex3_fn p_vertex3; static gl_vertex4_fn p_vertex4;
 static gl_color4ub_fn p_color4ub; static gl_normal3_fn p_normal3; static gl_tex2_fn p_tex2;
+static gl_tex1_fn p_tex1;
 static gl_matrix_mode_fn p_matrix_mode; static gl_load_matrix_fn p_load_matrix;
 static gl_mult_matrix_fn p_mult_matrix;
 static gl_enable_fn p_enable; static gl_disable_fn p_disable;
@@ -130,7 +133,8 @@ static int load_gl(void) {
     LOAD_GL(p_begin, gl_begin_fn, "glBegin"); LOAD_GL(p_end, gl_end_fn, "glEnd");
     LOAD_GL(p_vertex3, gl_vertex3_fn, "glVertex3f"); LOAD_GL(p_vertex4, gl_vertex4_fn, "glVertex4f");
     LOAD_GL(p_color4ub, gl_color4ub_fn, "glColor4ub"); LOAD_GL(p_normal3, gl_normal3_fn, "glNormal3f");
-    LOAD_GL(p_tex2, gl_tex2_fn, "glTexCoord2f"); LOAD_GL(p_matrix_mode, gl_matrix_mode_fn, "glMatrixMode");
+    LOAD_GL(p_tex2, gl_tex2_fn, "glTexCoord2f"); LOAD_GL(p_tex1, gl_tex1_fn, "glTexCoord1f");
+    LOAD_GL(p_matrix_mode, gl_matrix_mode_fn, "glMatrixMode");
     LOAD_GL(p_load_matrix, gl_load_matrix_fn, "glLoadMatrixf"); LOAD_GL(p_mult_matrix, gl_mult_matrix_fn, "glMultMatrixf");
     LOAD_GL(p_enable, gl_enable_fn, "glEnable");
     LOAD_GL(p_disable, gl_disable_fn, "glDisable"); LOAD_GL(p_clear_color, gl_clear_color_fn, "glClearColor");
@@ -273,13 +277,16 @@ static unsigned gl_blend(uint32_t v) {
 static uint32_t vertex_stride(uint32_t fvf) {
     uint32_t p=fvf&0x00e, n=(p==4?4:3), s=n*4;
     if (p!=2 && p!=4) return 0;
+    if (p==4 && (fvf&0x010)) return 0;
     if (fvf&0x010) s+=12;
     if (fvf&0x040) s+=4;
     if (fvf&0x080) s+=4;
     uint32_t tc=(fvf>>8)&15;
+    if (tc>1) return 0;
     for (uint32_t i=0;i<tc;i++) {
         uint32_t dimcode=(fvf>>(16+i*2))&3;
-        s+=4*(dimcode==1?1:dimcode==2?3:dimcode==3?4:2);
+        if (dimcode==1 || dimcode==2) return 0;
+        s+=4*(dimcode==3?1:2);
     }
     return s;
 }
@@ -296,12 +303,21 @@ static void emit_vertex(const uint8_t *v, uint32_t fvf, int screen_xy) {
     if(fvf&0x010) { float n[3]; memcpy(n,v+off,12); p_normal3(n[0],n[1],n[2]); off+=12; }
     if(fvf&0x040) { uint32_t c; memcpy(&c,v+off,4); p_color4ub((uint8_t)(c>>16),(uint8_t)(c>>8),(uint8_t)c,(uint8_t)(c>>24)); off+=4; }
     if(fvf&0x080) off+=4;
-    if(((fvf>>8)&15)>0) { float uv[2]={0,0}; memcpy(uv,v+off,8); p_tex2(uv[0],uv[1]); }
+    if(((fvf>>8)&15)>0) {
+        uint32_t dimcode=(fvf>>16)&3;
+        if(dimcode==3) { float u; memcpy(&u,v+off,4); p_tex1(u); }
+        else { float uv[2]; memcpy(uv,v+off,8); p_tex2(uv[0],uv[1]); }
+    }
     if(screen_xy) {
-        int vp[4]={0,0,640,480};
-        p_getint(0x0BA2,(int *)vp);
-        float w=(float)(vp[2]>0?vp[2]:640), h=(float)(vp[3]>0?vp[3]:480);
-        p_vertex4(2.f*x/w-1.f, 1.f-2.f*y/h, z, 1.f);
+        float rhw; memcpy(&rhw,v+12,4);
+        float inv_w=1.f/rhw;
+        float w=(float)g_viewport[2],h=(float)g_viewport[3];
+        float ndc_x=2.f*(x-(float)g_viewport[0])/w-1.f;
+        float ndc_y=1.f-2.f*(y-(float)g_viewport[1])/h;
+        float min_z,max_z; memcpy(&min_z,&g_viewport[4],4); memcpy(&max_z,&g_viewport[5],4);
+        float range=max_z-min_z;
+        float ndc_z=range!=0.f?2.f*(z-min_z)/range-1.f:0.f;
+        p_vertex4(ndc_x*inv_w,ndc_y*inv_w,ndc_z*inv_w,inv_w);
     } else p_vertex3(x,y,z);
 }
 static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
@@ -309,6 +325,18 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
     unsigned mode=gl_primitive(primitive); uint32_t stride=vertex_stride(fvf);
     if(!g_scene_active || !load_gl() || mode==0xffffffffu || !stride || !vertices) return 0;
     if(vertex_count>1000000u || index_count>3000000u) return 0;
+    const uint16_t *idx=indices?(const uint16_t *)hle_ptr(indices):NULL;
+    const uint8_t *base=hle_ptr(vertices);
+    if(idx) {
+        for(uint32_t i=0;i<index_count;i++) if(idx[i]>=vertex_count) return 0;
+    }
+    if((fvf&0x00e)==4) {
+        for(uint32_t i=0;i<(idx?index_count:vertex_count);i++) {
+            uint32_t vi=idx?idx[i]:i; float rhw;
+            memcpy(&rhw,base+(size_t)vi*stride+12,4);
+            if(!isfinite(rhw) || rhw<=0.f || !isfinite(1.f/rhw)) return 0;
+        }
+    }
     if(g_texture_surface && g_stage_state[1]!=1 && ((fvf >> 8) & 15)) {
         uint8_t *pixels; int w,h,pitch,bpp;
         if(!hle_dd_surface_pixels(g_texture_surface,&pixels,&w,&h,&pitch,&bpp) || w<=0 || h<=0) return 0;
@@ -328,9 +356,8 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
         p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0); p_pixel_store_i(GL_UNPACK_ALIGNMENT,4);
         apply_stage0_state();
     } else p_disable(GL_TEXTURE_2D);
-    const uint8_t *base=hle_ptr(vertices); const uint16_t *idx=indices?(const uint16_t *)hle_ptr(indices):NULL;
     p_begin(mode);
-    if(idx) for(uint32_t i=0;i<index_count;i++) { if(idx[i]>=vertex_count){p_end();return 0;} emit_vertex(base+(uint32_t)idx[i]*stride,fvf,(fvf&0x00e)==4); }
+    if(idx) for(uint32_t i=0;i<index_count;i++) emit_vertex(base+(uint32_t)idx[i]*stride,fvf,(fvf&0x00e)==4);
     else for(uint32_t i=0;i<vertex_count;i++) emit_vertex(base+i*stride,fvf,(fvf&0x00e)==4);
     p_end();
     return 1;
