@@ -189,6 +189,39 @@ the frame region itself — the reference machine already has the stack, and the
 is that stack — and to report the frame's extent and the bytes compared, so a reader
 can tell a `agree` that checked the frame from one that did not.
 
+## A certification can be wrong while the oracle agrees
+
+This is the strongest caution in this document and it has a measured example.
+
+Two modules — `0x004258B0` and `0x004258C0` — emit `MEM8((var_0 & 0xFFFFFFFFULL))`
+where `var_0` is a **host byte**. That reads guest memory at a host local's value,
+and it is the inversion the pointer model exists to prevent. Both were retracted.
+
+**Run the oracle on them today and it says `agree-return`.** It will keep saying so.
+The oracle compares **values**, and the wrong read of the wrong address happens to
+produce the number the original produces, so the values agree. What the oracle
+cannot see is the **provenance** of the operand — whether the address it read was a
+guest VA or a host local — and that is exactly the property that was wrong.
+
+So the retraction was made by a **rule**, not by the oracle. The rule — *no `MEMn`
+may be emitted whose operand does not provably denote a guest VA* — is the only
+reason those two are not in the certified count, and no amount of oracle running
+would ever have removed them.
+
+The general statement, which is why this section exists:
+
+> **A pass at the oracle is evidence, not proof.** It attests that the value which
+> came out matched, on the inputs driven, for an instrument that can see outputs and
+> cannot see how they were produced. A transform that produces the right answer for
+> the wrong reason passes it forever.
+
+This is a different failure from the four vacuous comparisons this project has
+already corrected (a constant EFLAGS, a clipped 256 KB window, an empty
+named-memory set, an uncompared stack frame). In those the harness was wrong. Here
+the harness is right about what it measures and **the thing it measures is not
+enough** — which is why rules that demand proof of an operand are not redundant
+with running the function.
+
 ## Known limits
 
 - No original-Windows oracle harness exists in this repository; `scenario-pass`
