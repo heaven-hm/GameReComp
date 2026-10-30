@@ -96,3 +96,26 @@ int main(void)
     assert cc.returncode == 0, cc.stderr
     run = subprocess.run([str(exe)], capture_output=True, text=True)
     assert run.returncode == 0, "the implemented funnel shift disagrees with its definition"
+
+
+def test_generate_emits_the_definition_of_every_intrinsic_it_calls():
+    """A generated module must DEFINE the helpers it calls, not assume them.
+
+    This is the implicit-int defect class exactly: a call to an undeclared function
+    compiles, takes its arguments wrongly, and fails somewhere else entirely. The
+    generator emitted no definitions until this test existed, so every module using
+    an intrinsic was one link away from that failure.
+    """
+    from tools.autorecomp import rename_ast as R
+    from pathlib import Path
+    import inspect
+
+    src = inspect.getsource(
+        __import__("tools.autorecomp.rename_gen", fromlist=["generate"]).generate)
+    assert "intrinsic_definitions" in src, (
+        "generate() does not emit the intrinsic definitions it relies on")
+
+    body = "void f(void){ g = bit_parity(x) + lshift(a, b); }\n"
+    defs = R.intrinsic_definitions(body)
+    assert "bit_parity" in defs and "lshift" in defs
+    assert "static inline" in defs
