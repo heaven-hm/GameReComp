@@ -572,6 +572,41 @@ def write_main_c(project_dir):
     return True
 
 
+def sync_runtime(project_dir, runtime_root):
+    """Replace a project's pinned runtime with a copy from `runtime_root`.
+
+    A project carries its own copy of the runtime, so rows measured against
+    different copies are not comparable. Copying from one directory - a git
+    checkout of a named commit - makes every row provably the same runtime.
+    Selftest sources are skipped, as projectgen's own copy step does.
+    """
+    import hashlib
+    runtime_root = Path(runtime_root)
+    win_src = runtime_root / "win32hle"
+    rec_src = runtime_root / "recomp32"
+    win_dst = Path(project_dir) / "src" / "runtime" / "win32hle"
+    rec_dst = Path(project_dir) / "src" / "runtime" / "recomp32"
+    if not win_src.is_dir() or not win_dst.is_dir():
+        return None
+    copied = 0
+    for path in sorted(win_src.iterdir()):
+        if path.suffix not in (".c", ".h") or path.name.endswith("_selftest.c"):
+            continue
+        shutil.copy2(path, win_dst / path.name)
+        copied += 1
+    for path in sorted(rec_src.iterdir()):
+        if path.suffix in (".c", ".h"):
+            shutil.copy2(path, rec_dst / path.name)
+            copied += 1
+    host = win_dst / "host.c"
+    return {
+        "source": str(runtime_root),
+        "files_copied": copied,
+        "host_c_sha256": (hashlib.sha256(host.read_bytes()).hexdigest()
+                          if host.exists() else None),
+    }
+
+
 def rank_imports(rows):
     """Imports ranked by how many games each one blocks, then by name."""
     counts = {}
@@ -589,7 +624,8 @@ def rank_imports(rows):
     return ranked
 
 
-def build_report(rows, generated_at, command, timeout, duplicates=None):
+def build_report(rows, generated_at, command, timeout, duplicates=None,
+                 runtime_source=None):
     """The JSON document: measured rows plus the ranked blocker table."""
     return {
         "schema": 1,
@@ -611,6 +647,7 @@ def build_report(rows, generated_at, command, timeout, duplicates=None):
         "projects_reaching_import": sum(1 for r in rows if r.get("first_import")),
         "outcomes": {o: sum(1 for r in rows if r["outcome"] == o)
                      for o in sorted({r["outcome"] for r in rows})},
+        "runtime_source": runtime_source,
         "duplicate_project_dirs": duplicates or [],
         "ranked_first_imports": rank_imports(rows),
         "runs": rows,
@@ -768,6 +805,11 @@ def main(argv=None):
                              "and rebuild each project before measuring")
     parser.add_argument("--jobs", type=int, default=None,
                         help="parallel compile jobs for --build")
+    parser.add_argument("--runtime-source", default=None,
+                        help="with --build: replace each project's pinned "
+                             "runtime with a copy from this directory (a "
+                             "checkout of one commit), so every row is "
+                             "measured against the same runtime")
     parser.add_argument("--build-timeout", type=float, default=900.0,
                         help="seconds allowed per project build")
     parser.add_argument("--quiet", action="store_true",
@@ -800,6 +842,12 @@ def main(argv=None):
     rows = []
     for project_dir in projects:
         if args.build:
+            if args.runtime_source:
+                synced = sync_runtime(project_dir, args.runtime_source)
+                if synced is None:
+                    print(f"[skip] {project_dir.name}: cannot sync runtime",
+                          file=sys.stderr)
+                    continue
             if not write_main_c(project_dir):
                 print(f"[skip] {project_dir.name}: no src/ tree", file=sys.stderr)
                 continue
@@ -834,8 +882,17 @@ def main(argv=None):
         "%Y-%m-%dT%H:%M:%SZ")
     command = "python3 tools/autorecomp/diagnose.py --timeout " \
               f"{args.timeout:g}" + (" --build" if args.build else "")
+    runtime_source = None
+    if args.runtime_source:
+        import hashlib
+        host = Path(args.runtime_source) / "win32hle" / "host.c"
+        runtime_source = {
+            "path": str(args.runtime_source),
+            "host_c_sha256": (hashlib.sha256(host.read_bytes()).hexdigest()
+                              if host.exists() else None),
+        }
     report = build_report(rows, generated_at, command, args.timeout,
-                          duplicates=duplicates)
+                          duplicates=duplicates, runtime_source=runtime_source)
 
     json_path = Path(args.json)
     json_path.parent.mkdir(parents=True, exist_ok=True)

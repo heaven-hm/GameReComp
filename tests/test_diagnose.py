@@ -149,6 +149,49 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(diagnose.classify(-11, False, None), "crashed")
 
 
+class RuntimeSyncTest(unittest.TestCase):
+    """Every row must be measurable against one named runtime."""
+
+    def test_copies_the_runtime_and_skips_selftests(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src_win = root / "head" / "win32hle"
+            src_rec = root / "head" / "recomp32"
+            src_win.mkdir(parents=True)
+            src_rec.mkdir(parents=True)
+            (src_win / "host.c").write_text("/* head host */\n")
+            (src_win / "sdl12.c").write_text("/* head sdl12 */\n")
+            (src_win / "storage_selftest.c").write_text("/* not shipped */\n")
+            (src_rec / "recomp_types.h").write_text("/* head types */\n")
+
+            project = root / "projects" / "game"
+            (project / "src" / "runtime" / "win32hle").mkdir(parents=True)
+            (project / "src" / "runtime" / "recomp32").mkdir(parents=True)
+            (project / "src" / "runtime" / "win32hle" / "host.c").write_text(
+                "/* stale host */\n")
+
+            info = diagnose.sync_runtime(project, root / "head")
+            self.assertIsNotNone(info)
+            self.assertEqual(info["files_copied"], 3)
+            self.assertEqual(
+                (project / "src" / "runtime" / "win32hle" / "host.c").read_text(),
+                "/* head host */\n")
+            self.assertFalse(
+                (project / "src" / "runtime" / "win32hle"
+                 / "storage_selftest.c").exists())
+            self.assertTrue(info["host_c_sha256"])
+
+    def test_missing_source_is_reported_not_guessed(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "projects" / "game"
+            (project / "src" / "runtime" / "win32hle").mkdir(parents=True)
+            self.assertIsNone(
+                diagnose.sync_runtime(project, root / "does-not-exist"))
+
+
 class RankImportsTest(unittest.TestCase):
     def test_ranks_by_games_blocked_then_name(self):
         rows = [
