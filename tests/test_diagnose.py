@@ -199,6 +199,31 @@ class DiscoveryTest(unittest.TestCase):
             found, _dup = diagnose.discover_projects(root, canonical={})
             self.assertEqual([d.name for d in found], ["warning-forever"])
 
+    def test_prefers_a_sibling_that_is_actually_built(self):
+        # The corpus record names one tree, but if that tree has no binary and
+        # a duplicate does, the game is still measurable.
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._make(root, "wf", "/games/wf/wf.exe", "aa", "wf")
+            self._make(root, "warning-forever", "/games/wf/wf.exe", "aa", "wf")
+            build = root / "warning-forever" / "build"
+            build.mkdir()
+            (build / "wf").write_text("#!/bin/sh\n")
+            found, duplicates = diagnose.discover_projects(
+                root, canonical={"aa": "warning-forever"})
+            self.assertEqual([d.name for d in found], ["warning-forever"])
+            self.assertEqual(duplicates[0]["chosen_because"], "corpus-record")
+
+            # Now the other way round: the recorded tree is the unbuilt one.
+            (build / "wf").unlink()
+            (root / "wf" / "build").mkdir()
+            (root / "wf" / "build" / "wf").write_text("#!/bin/sh\n")
+            found, duplicates = diagnose.discover_projects(
+                root, canonical={"aa": "warning-forever"})
+            self.assertEqual([d.name for d in found], ["wf"])
+            self.assertIn("no binary", duplicates[0]["chosen_because"])
+
     def test_keeps_distinct_games_and_skips_non_pe32(self):
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:

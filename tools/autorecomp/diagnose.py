@@ -143,6 +143,31 @@ def strict_measurement(binary, pe_path, timeout=10.0):
 TRACE_RE = re.compile(r"^\[hle\]\s+(\S+)", re.MULTILINE)
 
 
+def pinned_runtime(project_dir):
+    """Which runtime snapshot this project carries.
+
+    A project has its own copy of the runtime, taken when it was generated or
+    last re-synced. Rows measured against different snapshots are not directly
+    comparable, so each row records the one it used.
+    """
+    rt = Path(project_dir) / "src" / "runtime" / "win32hle"
+    if not rt.is_dir():
+        return None
+    host = rt / "host.c"
+    digest = None
+    if host.exists():
+        import hashlib
+        digest = hashlib.sha256(host.read_bytes()).hexdigest()
+    return {
+        "files": len([p for p in rt.iterdir() if p.suffix in (".c", ".h")]),
+        "host_c_sha256": digest,
+        "has_msvcrt": (rt / "msvcrt.c").exists(),
+        "has_gl32": (rt / "gl32.c").exists(),
+        "has_sdlmix": (rt / "sdlmix.c").exists(),
+        "has_sdl12": (rt / "sdl12.c").exists(),
+    }
+
+
 def trace_crash(binary, pe_path, timeout=10.0, tail=12):
     """Re-run a crashed game with RECOMP_TRACE=1 and list the last dispatches.
 
@@ -266,22 +291,34 @@ def discover_projects(projects_dir, only=None, canonical=None, dedupe=True,
         if len(dirs) == 1 or not dedupe:
             found.extend(dirs)
             continue
-        chosen = None
+        descriptive = [d for d in dirs
+                       if not _is_stem_name(d, project_pe_info(d)["path"])]
+        built = [d for d in dirs if binary_path(d).exists()]
+
+        chosen, reason = None, None
         if canonical:
             for candidate in dirs:
                 info = project_pe_info(candidate)
                 if info and canonical.get(info["sha256"]) == candidate.name:
-                    chosen = candidate
+                    chosen, reason = candidate, "corpus-record"
                     break
+        if chosen is not None and not binary_path(chosen).exists() and built:
+            # The record names a tree that is not built right now; measuring
+            # the sibling that is beats reporting no result for the game.
+            chosen = sorted(built)[0]
+            reason = "corpus-record tree has no binary; used the built sibling"
         if chosen is None:
-            descriptive = [d for d in dirs
-                           if not _is_stem_name(d, project_pe_info(d)["path"])]
-            chosen = sorted(descriptive or dirs)[0]
+            if built:
+                chosen, reason = sorted(built)[0], "built sibling"
+            else:
+                chosen = sorted(descriptive or dirs)[0]
+                reason = "descriptive name (no binary in any duplicate)"
         found.append(chosen)
         duplicates.append({
             "project": chosen.name,
             "pe": project_pe_info(chosen)["path"],
             "chosen": chosen.name,
+            "chosen_because": reason,
             "also_present": sorted(d.name for d in dirs if d != chosen),
         })
     found.sort(key=lambda d: d.name)
@@ -393,6 +430,7 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
         "boot_line": None,
         "iat_bind": None,
         "strict": None,
+        "runtime": pinned_runtime(project_dir),
         "crash_trace": None,
         "raw_error": None,
         "stderr_tail": "",
@@ -630,9 +668,9 @@ def render_markdown(report):
                "meaningful unresolved-import count.")
     out.append("")
     out.append("| project | outcome | exit | first import | stub VA | caller "
-               "| strict exit | strict unresolved |")
+               "| strict exit | strict unresolved | pinned runtime |")
     out.append("|---------|---------|------|--------------|---------|--------"
-               "|-------------|-------------------|")
+               "|-------------|-------------------|----------------|")
     for row in rows:
         exit_code = row["exit_code"]
         if row["timed_out"]:
@@ -647,7 +685,8 @@ def render_markdown(report):
                    f"{('`' + row['first_import'] + '`') if row['first_import'] else '-'} | "
                    f"{row['stub_va'] or '-'} | {row['caller'] or '-'} | "
                    f"{strict_exit if strict_exit is not None else '-'} | "
-                   f"{strict_unresolved if strict_unresolved is not None else '-'} |")
+                   f"{strict_unresolved if strict_unresolved is not None else '-'} | "
+                   f"{(row.get('runtime') or {}).get('host_c_sha256', '?')[:8]} |")
     out.append("")
 
     unmeasured = [r for r in rows
