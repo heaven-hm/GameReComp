@@ -33,7 +33,7 @@ Windows PE32 game + user-supplied assets
   report     report.json + report.html with hashes, timings and oracle gaps
 ```
 
-- One command: `./autorecomp path/to/game.exe`
+- One command: `./RevEng path/to/game.exe`
 - Byte-capped source units (default 1000 functions or 8 MiB per unit, whichever
   closes first) with `recomp_units.json` mapping address → function → source unit
 - Adaptive build deadline: `600 s + 5 s/MiB` of generated source, capped at 3600 s,
@@ -87,11 +87,11 @@ step-by-step newcomer guide.
 # point the tools at your own legally obtained corpus (never committed)
 export SMALL_GAMES_PATH=/path/to/your/games
 
-./autorecomp "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
-./autorecomp game.exe --assets-dir /path/to/game/files   # where the game reads data
-./autorecomp game.exe --timeout 60 --json                # longer run, machine output
-./autorecomp game.exe --no-build                         # stop after source generation
-./autorecomp game.exe --interactive                      # real window/audio, not dummy SDL
+./RevEng "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
+./RevEng game.exe --assets-dir /path/to/game/files   # where the game reads data
+./RevEng game.exe --timeout 60 --json                # longer run, machine output
+./RevEng game.exe --no-build                         # stop after source generation
+./RevEng game.exe --interactive                      # real window/audio, not dummy SDL
 ```
 
 Each run writes a self-contained project:

@@ -1,6 +1,6 @@
 # Benchmarks
 
-Measured results for the PCRecomp-first pipeline (`./autorecomp`). This file is
+Measured results for the PCRecomp-first pipeline (`./RevEng`). This file is
 generated from the run database and per-project stage reports; regenerate it with
 
 ```sh
@@ -80,7 +80,7 @@ translation: every input here already reaches a built binary.
 
 ## Method
 
-- Command: `./autorecomp <binary> --project-dir projects/<game> --timeout 20`
+- Command: `./RevEng <binary> --project-dir projects/<game> --timeout 20`
 - Per-function source units are capped at 1,000 functions or 8 MiB of C, whichever
   closes first, so one oversized function cannot defeat the compiler.
 - The compile deadline is adaptive: `min(3600, 600 + 5.0 * source MiB)`

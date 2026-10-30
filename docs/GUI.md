@@ -35,9 +35,9 @@ readability is configured through `REVENG_AI_CMD` (see
 
 | GUI action | Backing invocation / file |
 |---|---|
-| Run the pipeline | `./autorecomp <input.exe> --project-dir <dir> [--timeout N] [--oracle JSON]` |
+| Run the pipeline | `./RevEng <input.exe> --project-dir <dir> [--timeout N] [--oracle JSON]` |
 | Resume an existing project | the same command against the existing project directory |
-| Readability pass | `./autorecomp readability <project>` |
+| Readability pass | `./RevEng readability <project>` |
 | Stage progress | the `==> <stage>` markers the CLI writes to stdout/stderr |
 | Stage results | `<project>/reports/run.json` |
 | Function inventory and provenance | `<project>/reports/functions.json` |

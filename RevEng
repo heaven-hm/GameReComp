@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""RevEng: Windows PE -> readable C source -> native executable, one command.
+
+    export SMALL_GAMES_PATH=/path/to/your/games
+    ./RevEng "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
+
+The pipeline behind this entry point lives in tools/autorecomp/; the name of the
+command is the product's, the name of the package is the pipeline's.
+"""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from tools.autorecomp.cli import main  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(main())

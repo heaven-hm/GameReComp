@@ -49,7 +49,7 @@ def _progress(evt):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="autorecomp",
+        prog="RevEng",
         description="Windows PE -> PCRecomp C -> native executable -> run -> "
                     "verification reports. Game data stays where the user "
                     "supplied it; nothing is downloaded.")
@@ -87,7 +87,7 @@ def build_parser():
     parser.add_argument("--json", action="store_true",
                         help="print the final report JSON")
     parser.add_argument("--version", action="version",
-                        version=f"autorecomp {__version__}")
+                        version=f"RevEng {__version__}")
     return parser
 
 

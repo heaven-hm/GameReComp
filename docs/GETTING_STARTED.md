@@ -94,20 +94,20 @@ variables only tell the database how to record the path relative to your corpus.
 ## 4. First run
 
 ```sh
-./autorecomp "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
+./RevEng "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
 ```
 
 Useful variants:
 
 ```sh
-./autorecomp game.exe --assets-dir /path/to/game   # where the game reads its data
-./autorecomp game.exe --project-dir projects/mygame
-./autorecomp game.exe --timeout 60                 # allow a longer run (default 30 s)
-./autorecomp game.exe --json                       # machine-readable final report
-./autorecomp game.exe --no-build --no-run          # stop after source generation
-./autorecomp game.exe --interactive                # real SDL window/audio
-./autorecomp game.exe --split 2000 --split-bytes 16777216   # larger source units
-./autorecomp game.exe --jobs 8                     # parallel build
+./RevEng game.exe --assets-dir /path/to/game   # where the game reads its data
+./RevEng game.exe --project-dir projects/mygame
+./RevEng game.exe --timeout 60                 # allow a longer run (default 30 s)
+./RevEng game.exe --json                       # machine-readable final report
+./RevEng game.exe --no-build --no-run          # stop after source generation
+./RevEng game.exe --interactive                # real SDL window/audio
+./RevEng game.exe --split 2000 --split-bytes 16777216   # larger source units
+./RevEng game.exe --jobs 8                     # parallel build
 ```
 
 Exit codes:
@@ -210,8 +210,8 @@ measured 375 MiB build used about 4.6 s/MiB wall clock with `--jobs 8`, so the
 budget is deliberately above that. Override it explicitly if you know better:
 
 ```sh
-./autorecomp game.exe --build-timeout 900     # seconds
-./autorecomp game.exe --build-timeout 0       # disable the deadline
+./RevEng game.exe --build-timeout 900     # seconds
+./RevEng game.exe --build-timeout 0       # disable the deadline
 ```
 
 On expiry the whole configure/build process group is killed (not just the direct
@@ -222,12 +222,12 @@ generated-source size. Nothing is silently retried.
 
 ## 8. Readability pass (optional)
 
-`autorecomp readability` improves the generated source *after* the pipeline has
+`RevEng readability` improves the generated source *after* the pipeline has
 proved the project, never before. It is a separate, gated step:
 
 ```sh
-./autorecomp readability projects/noiz2sa --providers revng
-./autorecomp readability projects/noiz2sa --providers all --max-units 1 \
+./RevEng readability projects/noiz2sa --providers revng
+./RevEng readability projects/noiz2sa --providers all --max-units 1 \
     --max-attempts 3 --max-seconds 900 --provider-timeout 300
 ```
 

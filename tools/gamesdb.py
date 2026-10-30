@@ -385,7 +385,7 @@ def render_table(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
         out.append(_table(measured))
     else:
         out.append("No autorecomp runs recorded yet. Run "
-                   "`./autorecomp <game.exe>` to add the first row.")
+                   "`./RevEng <game.exe>` to add the first row.")
     out.append("")
     out.append("## Local corpus (not yet measured)")
     out.append("")
