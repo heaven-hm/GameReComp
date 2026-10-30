@@ -246,11 +246,24 @@ def tier_fast(record=False, baseline=None):
                             if ln.startswith(("functions:", "certified:", "SELFTEST"))),
                            (g.stdout or g.stderr).strip()[:200]),
         })
+        # The wizard's architecture gate: a supported target must be accepted and
+        # a non-PE must be refused. A GUI that offered to recompile a 64-bit
+        # binary would be making a claim this pipeline cannot back.
+        good = _run([str(gui), "--selftest-pe", "tests/fixtures/pe32-minimal.exe"],
+                    timeout=60, env=env)
+        bad = _run([str(gui), "--selftest-pe", "README.md"], timeout=60, env=env)
+        results.append({
+            "check": "gui gates the executable architecture",
+            "ok": good.returncode == 0 and bad.returncode == 1,
+            "detail": f"supported rc={good.returncode}, non-PE rc={bad.returncode}",
+        })
     else:
         results.append({
             "check": "gui reads a real project headlessly", "ok": None,
             "detail": "gui/build/reveng-studio not built (cmake -S gui -B gui/build)",
         })
+        results.append({"check": "gui gates the executable architecture", "ok": None,
+                        "detail": "gui not built"})
 
     # The high-level bridge: a module for another binary must be refused, not
     # applied. This is the bug that replaced the fixture's entry point.

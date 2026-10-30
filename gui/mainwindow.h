@@ -34,6 +34,7 @@ private:
     void buildUi();
     void refresh();
     void showFunction(int row);
+    void validatePe();
 
     ProjectModel m_model;
     QProcess *m_proc = nullptr;
@@ -52,4 +53,5 @@ private:
     QPlainTextEdit *m_log = nullptr;
     QTabWidget *m_tabs = nullptr;
     QPushButton *m_runButton = nullptr;
+    QLabel *m_peCheck = nullptr;
 };

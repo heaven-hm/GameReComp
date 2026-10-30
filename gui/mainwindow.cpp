@@ -1,5 +1,6 @@
 // mainwindow.cpp
 #include "mainwindow.h"
+#include "peinfo.h"
 
 #include <QApplication>
 #include <QDir>
@@ -84,6 +85,13 @@ void MainWindow::buildUi()
 
     m_assets = new QLineEdit(paths);
     form->addRow(QStringLiteral("Asset directory"), m_assets);
+
+    // The architecture is validated here rather than left to the pipeline's
+    // inspect stage, so the user learns before a run that this build targets
+    // 32-bit x86 Windows games and nothing else.
+    m_peCheck = new QLabel(paths);
+    m_peCheck->setWordWrap(true);
+    form->addRow(QStringLiteral("Executable check"), m_peCheck);
 
     auto *runRow = new QHBoxLayout;
     m_runButton = new QPushButton(QStringLiteral("Run pipeline"), paths);
@@ -171,6 +179,35 @@ void MainWindow::buildUi()
     connect(m_functions, &QTableWidget::cellClicked, this,
             [this](int row, int) { showFunction(row); });
     connect(m_search, &QLineEdit::textChanged, this, [this](const QString &) { refresh(); });
+    connect(m_pePath, &QLineEdit::editingFinished, this, &MainWindow::validatePe);
+}
+
+void MainWindow::validatePe()
+{
+    const QString pe = m_pePath->text().trimmed();
+    if (pe.isEmpty()) {
+        m_peCheck->setText(QStringLiteral("no executable selected"));
+        m_peCheck->setStyleSheet(QString());
+        return;
+    }
+    const PeInfo info = inspectPe(pe);
+    if (!info.ok) {
+        m_peCheck->setText(QStringLiteral("not usable: %1").arg(info.error));
+        m_peCheck->setStyleSheet(QStringLiteral("color:#c62828;"));
+        return;
+    }
+    if (info.pe32x86) {
+        m_peCheck->setText(QStringLiteral("%1 %2 (i386), image base 0x%3 -- supported target")
+                               .arg(info.magic, info.machine)
+                               .arg(info.imageBase, 8, 16, QLatin1Char('0')).toUpper());
+        m_peCheck->setStyleSheet(QStringLiteral("color:#2e7d32;"));
+    } else {
+        m_peCheck->setText(QStringLiteral("%1 %2 -- NOT a supported target: this pipeline "
+                                          "recompiles 32-bit x86 Windows games. A build here would "
+                                          "not mean what the project's claims mean.")
+                               .arg(info.magic, info.machine));
+        m_peCheck->setStyleSheet(QStringLiteral("color:#a15c00;"));
+    }
 }
 
 void MainWindow::browseProject()
@@ -188,8 +225,10 @@ void MainWindow::browsePe()
     const QString f = QFileDialog::getOpenFileName(this, QStringLiteral("Original executable"),
                                                    QFileInfo(m_pePath->text()).absolutePath(),
                                                    QStringLiteral("Windows executables (*.exe);;All files (*)"));
-    if (!f.isEmpty())
+    if (!f.isEmpty()) {
         m_pePath->setText(f);
+        validatePe();
+    }
 }
 
 void MainWindow::reloadProject()

@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QTextStream>
 #include "projectmodel.h"
+#include "peinfo.h"
 
 // Headless parity: the same model the window uses, printed and exited. A GUI
 // whose data path cannot be exercised without a display is a GUI nobody can
@@ -66,10 +67,28 @@ int main(int argc, char *argv[])
                                      QStringLiteral("Repository root, for reports/certified/."),
                                      QStringLiteral("dir"));
     parser.addOption(repoOpt);
+    const QCommandLineOption peOpt(QStringLiteral("selftest-pe"),
+                                   QStringLiteral("Inspect an executable headlessly and print the verdict."),
+                                   QStringLiteral("file"));
+    parser.addOption(peOpt);
     parser.process(app);
 
     if (parser.isSet(selftestOpt))
         return selftest(parser.value(selftestOpt), parser.value(repoOpt));
+
+    if (parser.isSet(peOpt)) {
+        const PeInfo info = inspectPe(parser.value(peOpt));
+        QTextStream out(stdout);
+        if (!info.ok) {
+            out << "PE: not usable: " << info.error << "\n";
+            return 1;
+        }
+        out << "PE: " << info.magic << " " << info.machine
+            << " image base 0x" << QString::number(info.imageBase, 16)
+            << (info.pe32x86 ? " -- supported target" : " -- NOT a supported target") << "\n";
+        out.flush();
+        return info.pe32x86 ? 0 : 2;
+    }
 
     MainWindow w;
     if (parser.isSet(openOpt))

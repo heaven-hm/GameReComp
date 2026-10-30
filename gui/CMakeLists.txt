@@ -12,6 +12,7 @@ qt_standard_project_setup()
 qt_add_executable(reveng-studio
     main.cpp
     projectmodel.cpp projectmodel.h
+    peinfo.cpp peinfo.h
     mainwindow.cpp mainwindow.h
 )
 target_link_libraries(reveng-studio PRIVATE Qt6::Widgets)
