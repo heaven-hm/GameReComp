@@ -101,6 +101,38 @@ Not here: guest SEH and C++ exceptions (`RaiseException` ends the run),
 DirectX past DirectDraw 2 and DirectSound 1, and drawing anything through
 GDI but text.
 
+## Deliberate non-goals
+
+Two clusters of unresolved imports across the game corpus are **decisions, not
+gaps**. They are left unbound on purpose, so the loader keeps naming them rather
+than this layer binding something that cannot be true.
+
+**`bulletml.dll`** (88 names, five games). The four AGC titles that ship it
+import it two different ways: `noiz2sa` imports the C++ members mangled
+(`_ZN14BulletMLRunner3runEv`), while `parsec47`, `rrootage`, `torus-trooper` and
+`tumiki-fighters` import a `_BulletMLRunner_new`-style C wrapper set. A
+"forwarding" shim is impossible here — there is nothing to forward to, because
+the library is not on the host and its behaviour *is* the game's bullet
+patterns. Implementing it truthfully means implementing BulletML, in the ABI
+each game was compiled against: that is a port of a third-party library, not
+runtime coverage, and it belongs in a task of its own with the library's source
+and a differential test against the original DLL.
+
+**`msvcp140.dll`** (52 names) and the other MSVC C++ runtime imports
+(`vcruntime140.dll`: `_CxxThrowException`, `_except_handler4_common`). This is
+the MSVC C++ standard library and its exception machinery. The exception half
+cannot be answered at all without guest SEH, which this layer does not have
+(`RaiseException` ends the run); the container/string half is a library ABI, so
+a shim would have to be a reimplementation of `std::string`, `std::ios` and
+friends in the guest's layout — the same "port a library" problem as BulletML,
+with the added trap that a wrong layout corrupts the guest silently instead of
+failing.
+
+Both are worth revisiting only with that shape of task. What they are *not* is
+a reason to add a stub: a game that needs BulletML to build its bullet patterns,
+or msvcp140 to construct a `std::string`, is not helped by a function that
+returns success and does nothing.
+
 ## A blocking shim must give the machine up
 
 The machine lock (`mach_enter`/`mach_leave`) serialises the global register
