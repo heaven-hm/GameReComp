@@ -79,6 +79,11 @@ def build_parser():
                              "recorded source digest matches the freshly "
                              "generated source, skipping recompilation; "
                              "refuses (fail-closed) on any mismatch")
+    parser.add_argument("--fresh-build", action="store_true",
+                        help="delete build/ before configuring, so a cached "
+                             "CMakeCache.txt cannot pin paths from an "
+                             "uninstalled or moved dependency (Homebrew keg "
+                             "moves are the common case)")
     parser.add_argument("--no-build", action="store_true")
     parser.add_argument("--no-run", action="store_true",
                         help="build but do not execute the rebuilt binary")
@@ -110,7 +115,8 @@ def main(argv=None):
         oracle=args.oracle, jobs=args.jobs, split=args.split,
         split_bytes=args.split_bytes, build_timeout=args.build_timeout,
         build=not args.no_build, run_binary=not args.no_run,
-        reuse_build=args.reuse_build, on_event=_progress)
+        reuse_build=args.reuse_build, fresh_build=args.fresh_build,
+        on_event=_progress)
     try:
         run_pipeline(pipeline)
     except KeyboardInterrupt:

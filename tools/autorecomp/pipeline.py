@@ -114,7 +114,7 @@ class Pipeline:
                  timeout=30.0, headless=True, oracle=None, jobs=None,
                  split=1000, build=True, run_binary=True, on_event=None,
                  split_bytes=MAX_UNIT_BYTES, build_timeout=None,
-                 reuse_build=False):
+                 reuse_build=False, fresh_build=False):
         self.pe_path = Path(pe_path).expanduser().resolve()
         self.project_dir = Path(project_dir or projectgen.default_project_dir(self.pe_path)).resolve()
         self.assets_dir = Path(assets_dir).expanduser().resolve() if assets_dir else self.pe_path.parent
@@ -128,6 +128,7 @@ class Pipeline:
         self.do_build = build
         self.do_run = run_binary
         self.reuse_build = reuse_build
+        self.fresh_build = fresh_build
         self.on_event = on_event
 
         self.info = None
@@ -325,6 +326,14 @@ class Pipeline:
         if not self.do_build:
             return "build skipped (--no-build)", {"skipped": True}
         build_dir = self.project_dir / "build"
+        # A cached CMakeCache.txt pins absolute paths from whatever was
+        # installed when it was written. Homebrew moving a keg (ffmpeg 9.0.2
+        # was deleted out from under a configured tree) then fails the
+        # generate step with a non-existent include path, which looks like a
+        # source error and is not. --fresh-build discards the cache and lets
+        # cmake re-derive every path from pkg-config.
+        if self.fresh_build and build_dir.exists():
+            shutil.rmtree(build_dir)
         build_dir.mkdir(parents=True, exist_ok=True)
         log_path = self.project_dir / "logs" / "compile.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
