@@ -261,7 +261,27 @@ def main(argv=None):
                         help="0xADDRESS to verify; repeatable. Default: every "
                              "address in the project's high_level_functions")
     parser.add_argument("--cases", type=int, default=8)
+    parser.add_argument("--compare", nargs=2, metavar=("BASELINE", "HIGHLEVEL"),
+                        help="compare two whole runs of the same game instead of "
+                             "verifying single functions: the baseline built "
+                             "without the replacements, the other with them")
     args = parser.parse_args(argv)
+
+    if args.compare:
+        result = compare_runs(args.compare[0], args.compare[1])
+        print(f"regression: {'PASS' if result['ok'] else 'FAIL'} -- "
+              f"{result['profile_entries']['baseline']} vs "
+              f"{result['profile_entries']['high_level']} profile entries, "
+              f"{len(result['differing_fields'])} differing field(s), "
+              f"{len(result['differing_imports'])} differing import(s)")
+        for d in result["differing_fields"]:
+            print(f"  {d['field']}: {d['baseline']} -> {d['high_level']}")
+        for d in result["differing_imports"][:10]:
+            print(f"  {d['import']}: {d['baseline']} -> {d['high_level']}")
+        out = Path(args.compare[1]) / "reports" / "highlevel-regression.json"
+        out.write_text(json.dumps({"schema": 1, **result}, indent=2) + "\n")
+        print(f"wrote {out}")
+        return 0 if result["ok"] else 1
 
     project_dir = Path(args.project_dir)
     addresses = [int(a, 16) for a in args.address]
@@ -290,3 +310,58 @@ def main(argv=None):
     (project_dir / "reports" / "highlevel-verification.json").write_text(
         json.dumps({"schema": 1, "results": results}, indent=2) + "\n")
     return 1 if failed else 0
+
+
+def compare_runs(baseline_project, highlevel_project):
+    """The gameplay regression: did replacing functions change the game?
+
+    The differential harness proves one function equals its mechanical body.
+    That is necessary and not sufficient: a replacement could be locally
+    equivalent and still be wired in wrongly -- the dispatch entry pointing at
+    the wrong address, the adapter popping the wrong number of words, the unit
+    not linked at all. This compares two whole runs of the same game, one built
+    with the replacements and one without, on the observables a run exposes.
+
+    It cannot prove gameplay equivalence -- there is no original-game oracle --
+    so it claims only what it measures: the process outcome and the import-call
+    profile. A difference there means the swap changed the game's behaviour;
+    sameness means it did not change which library calls the game makes, which
+    is the strongest statement available without the oracle.
+    """
+    def load(project):
+        report = json.loads((Path(project) / "reports" / "report.json").read_text())
+        stages = {s["name"]: s for s in report.get("stages", [])}
+        return report, (stages.get("run") or {}).get("data") or {}
+
+    base, brun = load(baseline_project)
+    high, hrun = load(highlevel_project)
+
+    fields = [
+        ("verification", (base.get("outcome") or {}).get("status"),
+         (high.get("outcome") or {}).get("status")),
+        ("run_status", brun.get("status"), hrun.get("status")),
+        ("exit_code", brun.get("exit_code"), hrun.get("exit_code")),
+        ("unresolved", brun.get("unresolved_import_count"),
+         hrun.get("unresolved_import_count")),
+        ("dispatches", brun.get("import_calls_total"), hrun.get("import_calls_total")),
+    ]
+    differing = [{"field": n, "baseline": a, "high_level": b}
+                 for n, a, b in fields if a != b]
+
+    pa = {e["import"]: e["calls"] for e in (brun.get("import_profile") or [])}
+    pb = {e["import"]: e["calls"] for e in (hrun.get("import_profile") or [])}
+    profile_diffs = [{"import": k, "baseline": pa.get(k, 0), "high_level": pb.get(k, 0)}
+                     for k in sorted(set(pa) | set(pb)) if pa.get(k) != pb.get(k)]
+
+    return {
+        "ok": not differing and not profile_diffs,
+        "fields": {n: {"baseline": a, "high_level": b} for n, a, b in fields},
+        "differing_fields": differing,
+        "profile_entries": {"baseline": len(pa), "high_level": len(pb)},
+        "differing_imports": profile_diffs,
+        "scope": "process outcome and import-call profile of two whole runs of "
+                 "the same game, one built with the replacements and one without",
+        "not_proven": "gameplay equivalence. There is no original-game oracle, "
+                      "so this says the swap did not change the observed "
+                      "behaviour, not that the game matches the original.",
+    }
