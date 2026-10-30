@@ -478,3 +478,40 @@ effect stated as a number: **74 call-bearing bodies generate cleanly and are blo
 only by a member of their closure.** Each refusal class that sits on a *callee* is
 worth far more than its raw count, which is what the closure-weighted ordering
 measures and a flat body census cannot.
+
+## The first cross-function call that generates, and what unlocked it
+
+**`*(p + k)` has p's pointee width.** The provider writes `*((generic32_t *) x + 10989U)`
+constantly, and the width-recovery loop only peeled `Cast` nodes -- so the cast sat one
+level down inside a `BinaryOp` and 174 bodies were refused as "a dereference with no
+recoverable width". The width was written right there in the expression. Following
+pointer arithmetic through the peel fixes that class rather than guessing at it:
+
+    bodies generating             269  ->  356   (+87)
+    "no recoverable width"        174  ->   22
+    generating call-bearing         98  ->  126   (+28)
+    MULTI-FUNCTION closures           0  ->   37   (35 of size 2, 2 of size 3)
+
+**37 closures now link a real call.** This is the number that has been zero since the
+marshal was built, and it is what makes the first certified call possible. The first
+one, `0x0041F9E0` over a two-function closure:
+
+```c
+uint32_t function_0x41f9e0_Code_x86(void) {
+    MEM32(0x004A5550U) = 0U;
+    uint32_t var_0 = (MEM32(0x00499C68U) * 20U);
+    if ((MEM32((var_0 + 0x00499BC8U)) == 13U)) { function_00419890(); }
+    return var_0;
+}
+```
+
+That compiles with `cc`, and the call to `function_00419890` is the marshal crossing a
+function boundary in generated source.
+
+**It is still not certified.** `--closure` takes the union of the callees' named memory
+and the sum of their frames and compares them against the ORIGINAL's bytes; until that
+runs over one of these 37 and returns `agree`, every one of them is
+`HIGH_LEVEL_UNVERIFIED` by rule. The chain reads 446 call-bearing -> 24 generated ->
+5 compiled -> 0 certified, and "37 closures generate" is the precondition for moving
+the last number, not movement of it.
+

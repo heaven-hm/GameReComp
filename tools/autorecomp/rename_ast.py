@@ -544,6 +544,16 @@ class Model:
                             width = w
                     src = src.expr
                     continue
+                # `*(p + k)` and `*(p - k)` keep p's pointee: the offset moves
+                # within the array, it does not change the element width. The
+                # provider writes this constantly and the cast sits one level
+                # down, so a peel that only followed Cast nodes reported "no
+                # recoverable width" for 174 bodies -- the largest addressable
+                # class in the census -- while the width was written right there.
+                if isinstance(src, c_ast.BinaryOp) and src.op in ("+", "-"):
+                    if width is None:
+                        src = src.left
+                        continue
                 break
             if width is None and isinstance(src, c_ast.ID):
                 width = self.va_locals.get(src.name)

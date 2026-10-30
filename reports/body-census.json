@@ -2,14 +2,15 @@
  "schema": 1,
  "binary": "Doukutsu.exe",
  "bodies": 955,
- "path": "rename_ast.rewrite with the generator's own layouts, signatures, frames, callee names and data span",
  "by_class": {
-  "other transform": 413,
-  "generates": 269,
+  "generates": 356,
+  "other transform": 177,
+  "transform: not a guest VA": 89,
+  "transform: StructRef": 87,
   "provider: nothing to decompile": 78,
   "provider: unimplemented intrinsic": 77,
-  "transform: not a guest VA": 49,
   "parse: other": 31,
+  "transform: no recoverable width": 22,
   "provider: undef()": 22,
   "parse: Invalid expression": 16
  },
@@ -31,12 +32,12 @@
   },
   {
    "address": "0x00401160",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x00401160 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00401220",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -52,16 +53,16 @@
   {
    "address": "0x00401D10",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "0x00401D10: calls 0x004218E0, which returns struct_7093 BY VALUE - the hidden-pointer return is a crossing this marshal does not express"
   },
   {
    "address": "0x00401F20",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00401F20 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00401F60",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00401F60 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -81,23 +82,23 @@
   },
   {
    "address": "0x004020E0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004020E0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00402190",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x00402240",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00402240 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00402830",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "local var_8: union_6334 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x00402B30",
@@ -116,7 +117,7 @@
   },
   {
    "address": "0x00403740",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00403740 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -131,7 +132,7 @@
   },
   {
    "address": "0x00403CB0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00403CB0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -141,7 +142,7 @@
   },
   {
    "address": "0x00403DC0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00403DC0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -151,7 +152,7 @@
   },
   {
    "address": "0x00404160",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00404160 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -176,12 +177,12 @@
   },
   {
    "address": "0x00404B30",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00404B30 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00405120",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00405120 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -201,7 +202,7 @@
   },
   {
    "address": "0x004068B0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004068B0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -231,8 +232,8 @@
   },
   {
    "address": "0x00408045",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00408045: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00408710",
@@ -261,12 +262,12 @@
   },
   {
    "address": "0x00408FC0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00408FC0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x004095C0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004095C0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -286,23 +287,23 @@
   },
   {
    "address": "0x00409B80",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00409C70",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00409E00",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00409F60",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0040A120",
@@ -326,13 +327,13 @@
   },
   {
    "address": "0x0040A5A0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0040A7E0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0040A8EF",
@@ -341,8 +342,8 @@
   },
   {
    "address": "0x0040A9E0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0040AAA0",
@@ -351,12 +352,12 @@
   },
   {
    "address": "0x0040AB50",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0040AB50 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0040ABC0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0040ABC0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -446,17 +447,17 @@
   },
   {
    "address": "0x0040CF90",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0040CF90 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0040D010",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0040D010 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0040D240",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0040D240 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -516,7 +517,7 @@
   },
   {
    "address": "0x0040DD70",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0040DD70 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -601,12 +602,12 @@
   },
   {
    "address": "0x0040EA50",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0040EA50 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0040EA70",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0040EA70 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -651,8 +652,8 @@
   },
   {
    "address": "0x0040F250",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x0040F250 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0040F2D0",
@@ -677,7 +678,7 @@
   {
    "address": "0x0040F380",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "local var_11: union_6334 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x00410000",
@@ -717,12 +718,12 @@
   {
    "address": "0x004111F0",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "0x004111F0 field base: 'var_2' is neither a VA nor a scalar (unrecovered local)"
   },
   {
    "address": "0x00411EF0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00411EF0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00411FC0",
@@ -741,7 +742,7 @@
   },
   {
    "address": "0x004122E0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004122E0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -756,7 +757,7 @@
   },
   {
    "address": "0x004123A0",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -787,7 +788,7 @@
   {
    "address": "0x00413570",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "0x00413570 field base: 'var_3' is neither a VA nor a scalar (unrecovered local)"
   },
   {
    "address": "0x004135E0",
@@ -796,7 +797,7 @@
   },
   {
    "address": "0x00413750",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00413750 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -806,12 +807,12 @@
   },
   {
    "address": "0x004139A0",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x00413A20",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00413A20 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -876,7 +877,7 @@
   },
   {
    "address": "0x00414B40",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -886,7 +887,7 @@
   },
   {
    "address": "0x00414BF0",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -921,7 +922,7 @@
   },
   {
    "address": "0x00416AC0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00416AC0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -946,12 +947,12 @@
   },
   {
    "address": "0x00416C70",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x00416CC0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00416CC0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -961,7 +962,7 @@
   },
   {
    "address": "0x00416D80",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00416D80 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1031,18 +1032,18 @@
   },
   {
    "address": "0x00419030",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00419030 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00419450",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00419450 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x004196F0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x004196F0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00419890",
@@ -1051,7 +1052,7 @@
   },
   {
    "address": "0x004198C0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004198C0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1061,12 +1062,12 @@
   },
   {
    "address": "0x00419B50",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00419B50 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00419BA0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00419BA0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1082,12 +1083,12 @@
   {
    "address": "0x00419D10",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "local var_6: union_6334 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x0041A0B0",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "local var_10: union_6334 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x0041A1D0",
@@ -1096,13 +1097,13 @@
   },
   {
    "address": "0x0041A350",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0041A350: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0041A430",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "local var_6: union_6334 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x0041A5D0",
@@ -1116,7 +1117,7 @@
   },
   {
    "address": "0x0041B2A0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0041B2A0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1141,18 +1142,18 @@
   },
   {
    "address": "0x0041B650",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0041B650: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0041B730",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0041B730: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0041B890",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0041B890: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0041BA70",
@@ -1186,8 +1187,8 @@
   },
   {
    "address": "0x0041C2B0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0041C2B0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0041C630",
@@ -1196,7 +1197,7 @@
   },
   {
    "address": "0x0041C6C0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0041C6C0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1216,7 +1217,7 @@
   },
   {
    "address": "0x0041C790",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0041C790 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1251,12 +1252,12 @@
   },
   {
    "address": "0x0041D630",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0041D630 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0041D740",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0041D740 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1266,7 +1267,7 @@
   },
   {
    "address": "0x0041E7B0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0041E7B0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1301,7 +1302,7 @@
   },
   {
    "address": "0x00420640",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00420640 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1356,12 +1357,12 @@
   },
   {
    "address": "0x00421900",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00421900 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00421990",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00421990 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1387,7 +1388,7 @@
   {
    "address": "0x00421F10",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "local var_4: union_6334 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x00422510",
@@ -1476,8 +1477,8 @@
   },
   {
    "address": "0x00429940",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00429A30",
@@ -1491,8 +1492,8 @@
   },
   {
    "address": "0x00429E00",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0042A0B0",
@@ -1511,7 +1512,7 @@
   },
   {
    "address": "0x0042A830",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -1521,23 +1522,23 @@
   },
   {
    "address": "0x0042A9C0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0042AA70",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0042ABD0",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x0042B280",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0042B5CC",
@@ -1551,12 +1552,12 @@
   },
   {
    "address": "0x0042BA90",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0042BAE0",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -1576,8 +1577,8 @@
   },
   {
    "address": "0x0042CA10",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0042CAC0",
@@ -1601,8 +1602,8 @@
   },
   {
    "address": "0x0042D760",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0042D810",
@@ -1611,8 +1612,8 @@
   },
   {
    "address": "0x0042D960",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0042D9F0",
@@ -1686,8 +1687,8 @@
   },
   {
    "address": "0x004307D0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x004307D0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00430B00",
@@ -1716,7 +1717,7 @@
   },
   {
    "address": "0x004321F0",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -1731,8 +1732,8 @@
   },
   {
    "address": "0x004334C0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004336C0",
@@ -1751,8 +1752,8 @@
   },
   {
    "address": "0x004342B0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004345E0",
@@ -1771,8 +1772,8 @@
   },
   {
    "address": "0x00435AB0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00435BA0",
@@ -1791,8 +1792,8 @@
   },
   {
    "address": "0x00436540",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00436650",
@@ -1801,7 +1802,7 @@
   },
   {
    "address": "0x00436690",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -1866,8 +1867,8 @@
   },
   {
    "address": "0x00439BC0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00439DC0",
@@ -1881,18 +1882,18 @@
   },
   {
    "address": "0x0043A680",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x0043AAF0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043AD10",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043AF20",
@@ -1901,8 +1902,8 @@
   },
   {
    "address": "0x0043B140",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043B350",
@@ -1911,17 +1912,17 @@
   },
   {
    "address": "0x0043B410",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043B4E0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043B5F0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0043B5F0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1931,8 +1932,8 @@
   },
   {
    "address": "0x0043BD00",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043BDB0",
@@ -1941,8 +1942,8 @@
   },
   {
    "address": "0x0043BE00",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043C4B0",
@@ -1966,7 +1967,7 @@
   },
   {
    "address": "0x0043D0A0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0043D0A0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -1976,8 +1977,8 @@
   },
   {
    "address": "0x0043D860",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043DAE0",
@@ -2016,8 +2017,8 @@
   },
   {
    "address": "0x0043F310",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x0043F310 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0043F4A0",
@@ -2036,8 +2037,8 @@
   },
   {
    "address": "0x0043FEF0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004400D0",
@@ -2066,8 +2067,8 @@
   },
   {
    "address": "0x00440CF0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00441000",
@@ -2121,8 +2122,8 @@
   },
   {
    "address": "0x00442590",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00442790",
@@ -2131,13 +2132,13 @@
   },
   {
    "address": "0x00443AC0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00443EC0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0044417E",
@@ -2156,8 +2157,8 @@
   },
   {
    "address": "0x00444620",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00444620: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00444644",
@@ -2166,13 +2167,13 @@
   },
   {
    "address": "0x00444780",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00445050",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "0x00445050: calls 0x0040AC90, which returns struct_6766 BY VALUE - the hidden-pointer return is a crossing this marshal does not express"
   },
   {
    "address": "0x00445170",
@@ -2207,7 +2208,7 @@
   {
    "address": "0x00446B60",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "0x00446B60: calls 0x0040AC90, which returns struct_6766 BY VALUE - the hidden-pointer return is a crossing this marshal does not express"
   },
   {
    "address": "0x00446CA0",
@@ -2256,18 +2257,18 @@
   },
   {
    "address": "0x00448580",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x004486E0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004487F0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00448A10",
@@ -2286,8 +2287,8 @@
   },
   {
    "address": "0x00449C10",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x00449C10 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00449D70",
@@ -2311,7 +2312,7 @@
   },
   {
    "address": "0x0044ABB0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0044ABB0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -2331,13 +2332,13 @@
   },
   {
    "address": "0x0044C630",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0044C630: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0044C7A0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0044CA60",
@@ -2346,8 +2347,8 @@
   },
   {
    "address": "0x0044CBE0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0044CDB0",
@@ -2401,13 +2402,13 @@
   },
   {
    "address": "0x0044E020",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0044E260",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x0044E260 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0044E400",
@@ -2441,8 +2442,8 @@
   },
   {
    "address": "0x0044FB40",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0044FCB0",
@@ -2461,28 +2462,28 @@
   },
   {
    "address": "0x00450760",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00450810",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x00450810 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00450BF0",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x004512A0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00451430",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004517F0",
@@ -2491,13 +2492,13 @@
   },
   {
    "address": "0x00451840",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00451CA0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00451E90",
@@ -2531,8 +2532,8 @@
   },
   {
    "address": "0x00452A50",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00452D10",
@@ -2556,8 +2557,8 @@
   },
   {
    "address": "0x00453260",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004536F0",
@@ -2586,13 +2587,13 @@
   },
   {
    "address": "0x004548B0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x004548B0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00454A00",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00454DF0",
@@ -2626,18 +2627,18 @@
   },
   {
    "address": "0x00455AB0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00455AB0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00455C10",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x00455E00",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00456F50",
@@ -2651,13 +2652,13 @@
   },
   {
    "address": "0x00457180",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00457470",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00457570",
@@ -2676,18 +2677,18 @@
   },
   {
    "address": "0x00457D70",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00457D70: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00458010",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00458360",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004585A0",
@@ -2721,18 +2722,18 @@
   },
   {
    "address": "0x00459950",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00459950 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00459B30",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00459C00",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x00459C00 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0045B324",
@@ -2771,8 +2772,8 @@
   },
   {
    "address": "0x0045CC80",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0045CEA0",
@@ -2796,8 +2797,8 @@
   },
   {
    "address": "0x0045DCF0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0045E110",
@@ -2811,12 +2812,12 @@
   },
   {
    "address": "0x0045E4C0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0045E950",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -2826,18 +2827,18 @@
   },
   {
    "address": "0x0045F8FF",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x0045F910",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x00460001",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00460001: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00460007",
@@ -2856,18 +2857,18 @@
   },
   {
    "address": "0x00460910",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00460910 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00460AE0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00460D70",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004610D0",
@@ -2876,8 +2877,8 @@
   },
   {
    "address": "0x004614A0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x004614A0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00461800",
@@ -2891,8 +2892,8 @@
   },
   {
    "address": "0x004618C0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004619E0",
@@ -2901,8 +2902,8 @@
   },
   {
    "address": "0x00461B90",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00461E15",
@@ -2916,13 +2917,13 @@
   },
   {
    "address": "0x00461FD0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00461FD0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00462050",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004624E0",
@@ -2946,13 +2947,13 @@
   },
   {
    "address": "0x00462AF0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00462AF0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00462C80",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00462E00",
@@ -3006,8 +3007,8 @@
   },
   {
    "address": "0x00465CC0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00465F60",
@@ -3026,8 +3027,8 @@
   },
   {
    "address": "0x00466E50",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x00466E50 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x004670C0",
@@ -3036,8 +3037,8 @@
   },
   {
    "address": "0x004673F0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x004673F0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x004676D0",
@@ -3051,8 +3052,8 @@
   },
   {
    "address": "0x00467FE0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00468230",
@@ -3061,8 +3062,8 @@
   },
   {
    "address": "0x00468830",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00468990",
@@ -3076,18 +3077,18 @@
   },
   {
    "address": "0x00468A90",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00468D70",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00469140",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00469290",
@@ -3096,8 +3097,8 @@
   },
   {
    "address": "0x00469430",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00469610",
@@ -3106,12 +3107,12 @@
   },
   {
    "address": "0x004696B0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00469800",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00469800 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3121,33 +3122,33 @@
   },
   {
    "address": "0x0046B240",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0046B240: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0046B340",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0046B340: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0046BD80",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0046BD80: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0046BE10",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0046BE10: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0046BF00",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0046C1D0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0046C1D0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0046C6E9",
@@ -3156,13 +3157,13 @@
   },
   {
    "address": "0x0046C710",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0046C9B0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0046CAC0",
@@ -3176,8 +3177,8 @@
   },
   {
    "address": "0x0046D340",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0046DBE0",
@@ -3191,13 +3192,13 @@
   },
   {
    "address": "0x0046E280",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0046E280: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0046E480",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0046E730",
@@ -3206,8 +3207,8 @@
   },
   {
    "address": "0x0046E870",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0046E9E0",
@@ -3226,8 +3227,8 @@
   },
   {
    "address": "0x0046EE50",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0046EE50: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0046EFD0",
@@ -3262,31 +3263,31 @@
   {
    "address": "0x0046F760",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "local var_3: union_6338 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x0046F810",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0046F810 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0046FA00",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0046FA00 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0046FAB0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0046FAB0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0046FD10",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0046FD10 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0046FF90",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0046FF90 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3296,12 +3297,12 @@
   },
   {
    "address": "0x00470150",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00470150 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00470250",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00470250 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3311,17 +3312,17 @@
   },
   {
    "address": "0x00470490",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00470490 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x004704F0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004704F0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00471160",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00471160 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3331,7 +3332,7 @@
   },
   {
    "address": "0x00471D50",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00471D50 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3346,7 +3347,7 @@
   },
   {
    "address": "0x00472770",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00472770 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3356,7 +3357,7 @@
   },
   {
    "address": "0x00472950",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00472950 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3376,18 +3377,18 @@
   },
   {
    "address": "0x004739B0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00473B74",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00473BD0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00473DE0",
@@ -3401,8 +3402,8 @@
   },
   {
    "address": "0x00474400",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00474400: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00476659",
@@ -3416,13 +3417,13 @@
   },
   {
    "address": "0x00476790",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004769A0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00476B90",
@@ -3431,8 +3432,8 @@
   },
   {
    "address": "0x00476E50",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00476E50: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00477230",
@@ -3441,8 +3442,8 @@
   },
   {
    "address": "0x004772F0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x004772F0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00478AA0",
@@ -3451,8 +3452,8 @@
   },
   {
    "address": "0x00478F20",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00478FE0",
@@ -3466,8 +3467,8 @@
   },
   {
    "address": "0x00479030",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00479030: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0047A596",
@@ -3481,13 +3482,13 @@
   },
   {
    "address": "0x0047A800",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0047A800: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0047A8A0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0047A8A0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0047B450",
@@ -3511,8 +3512,8 @@
   },
   {
    "address": "0x0047B6F0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: StructRef",
+   "reason": "0x0047B6F0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0047C380",
@@ -3531,13 +3532,13 @@
   },
   {
    "address": "0x0047C820",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0047C820: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0047D170",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0047D170: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0047DAA0",
@@ -3561,13 +3562,13 @@
   },
   {
    "address": "0x0047F710",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x00480090",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004802A0",
@@ -3576,8 +3577,8 @@
   },
   {
    "address": "0x00480550",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004808AD",
@@ -3586,8 +3587,8 @@
   },
   {
    "address": "0x004808C0",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00480A50",
@@ -3661,12 +3662,12 @@
   },
   {
    "address": "0x00481110",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00481110 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00481200",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00481200 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3776,8 +3777,8 @@
   },
   {
    "address": "0x0048170A",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0048170A: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00481730",
@@ -3871,7 +3872,7 @@
   },
   {
    "address": "0x004823A7",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004823A7 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3911,7 +3912,7 @@
   },
   {
    "address": "0x00482614",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00482614 field base: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -3936,7 +3937,7 @@
   },
   {
    "address": "0x00482AEC",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00482AEC memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -4071,12 +4072,12 @@
   },
   {
    "address": "0x004853B7",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004853B7 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0048543F",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x0048543F field base: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -4131,7 +4132,7 @@
   },
   {
    "address": "0x00485A42",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00485A42 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -4206,7 +4207,7 @@
   },
   {
    "address": "0x004866CB",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x004866CB memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -4236,12 +4237,12 @@
   },
   {
    "address": "0x00486E90",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00486E90 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00486FD4",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -4262,7 +4263,7 @@
   {
    "address": "0x004873C6",
    "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "reason": "0x004873C6 memory operand: a partial bit-mask on a VA does not preserve VA-ness - refusing rather than guessing"
   },
   {
    "address": "0x0048749B",
@@ -4321,7 +4322,7 @@
   },
   {
    "address": "0x00487857",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00487857 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -4346,8 +4347,8 @@
   },
   {
    "address": "0x00487C72",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00487C72: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00487DD0",
@@ -4476,18 +4477,18 @@
   },
   {
    "address": "0x004887BB",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x004887BB: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x004887F5",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x004887F5: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00488834",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00488834: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0048886E",
@@ -4501,17 +4502,17 @@
   },
   {
    "address": "0x0048899A",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0048899A: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00488AB0",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00488AB0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00488AE4",
-   "class": "other transform",
+   "class": "transform: no recoverable width",
    "reason": "a dereference with no recoverable width"
   },
   {
@@ -4521,8 +4522,8 @@
   },
   {
    "address": "0x00488C2F",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x00488C2F: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00488C51",
@@ -4601,7 +4602,7 @@
   },
   {
    "address": "0x00489475",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00489475 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -4631,8 +4632,8 @@
   },
   {
    "address": "0x0048985B",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0048985B: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00489A5F",
@@ -4661,7 +4662,7 @@
   },
   {
    "address": "0x00489FF3",
-   "class": "other transform",
+   "class": "transform: StructRef",
    "reason": "0x00489FF3 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
@@ -4746,13 +4747,13 @@
   },
   {
    "address": "0x0048B015",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0048B015: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0048B0DE",
-   "class": "other transform",
-   "reason": "a dereference with no recoverable width"
+   "class": "transform: not a guest VA",
+   "reason": "0x0048B0DE: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0048B166",
