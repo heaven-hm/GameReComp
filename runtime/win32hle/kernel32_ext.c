@@ -247,23 +247,37 @@ static void put_systemtime(uint32_t st, const struct tm *t, int ms) {
     w[6] = (uint16_t)t->tm_sec, w[7] = (uint16_t)ms;
 }
 
+/* These three return a time, so with the virtual clock on they report the
+ * replay's time rather than the host's - otherwise two runs of the same input
+ * still differ.  With it off they are the real clock, untouched: hle_clock
+ * speaks milliseconds, and truncating the real reading to 32 bits would turn
+ * "now" into 1970. */
 static void k_GetSystemTime(void) {
     struct timespec ts; struct tm t;
     clock_gettime(CLOCK_REALTIME, &ts);
+    long ms = ts.tv_nsec / 1000000;
+    if (hle_clock_virtual()) { ts.tv_sec = (time_t)(hle_clock_ms() / 1000u); ms = (long)(hle_clock_ms() % 1000u); }
     gmtime_r(&ts.tv_sec, &t);
-    put_systemtime(A32(0), &t, (int)(ts.tv_nsec / 1000000));
+    put_systemtime(A32(0), &t, (int)ms);
     RETV(1);
 }
 static void k_GetLocalTime(void) {
     struct timespec ts; struct tm t;
     clock_gettime(CLOCK_REALTIME, &ts);
+    long ms = ts.tv_nsec / 1000000;
+    if (hle_clock_virtual()) { ts.tv_sec = (time_t)(hle_clock_ms() / 1000u); ms = (long)(hle_clock_ms() % 1000u); }
     localtime_r(&ts.tv_sec, &t);
-    put_systemtime(A32(0), &t, (int)(ts.tv_nsec / 1000000));
+    put_systemtime(A32(0), &t, (int)ms);
     RETV(1);
 }
 static void k_GetSystemTimeAsFileTime(void) {
     struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts);
-    put_ft(A32(0), unix_to_ft(ts.tv_sec, ts.tv_nsec));
+    if (hle_clock_virtual()) {
+        uint32_t ms = hle_clock_ms();
+        put_ft(A32(0), unix_to_ft((time_t)(ms / 1000u), (long)(ms % 1000u) * 1000000L));
+    } else {
+        put_ft(A32(0), unix_to_ft(ts.tv_sec, ts.tv_nsec));
+    }
     RETV(1);
 }
 static void k_FileTimeToSystemTime(void) {               /* (&ft, &st) */

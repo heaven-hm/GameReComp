@@ -223,10 +223,16 @@ static void s_QuitSubSystem(void) { SDL_QuitSubSystem(A32(0)); RETCV(); }
 static void s_WasInit(void) { RETC(SDL_WasInit(A32(0))); }
 static void s_GetError(void) { RETC(hle_guest_strdup(g_error[0] ? g_error : SDL_GetError())); }
 static void s_ClearError(void) { g_error[0] = 0; SDL_ClearError(); RETCV(); }
-static void s_GetTicks(void) { RETC(SDL_GetTicks()); }
+static void s_GetTicks(void) { RETC(hle_clock_ms()); }
 /* SDL_Delay must let other guest threads run: the machine is given up around
  * the sleep (hle_block_begin/end), as kernel32's Sleep does. */
-static void s_Delay(void) { uint32_t ms = A32(0); hle_block_begin(); SDL_Delay(ms); hle_block_end(); RETCV(); }
+static void s_Delay(void) {
+    uint32_t ms = A32(0);
+    hle_block_begin();
+    SDL_Delay(hle_clock_virtual() ? 0u : ms);   /* virtual time passes by itself */
+    hle_block_end();
+    RETCV();
+}
 
 /* Drop whatever the last mode created. */
 static void close_video(void) {

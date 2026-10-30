@@ -1133,7 +1133,8 @@ static void c_finite(void)  { ms_init(); RETC(isfinite(ms_argd(0)) ? 1u : 0u); }
 /* ============================================================ time/locale */
 static void c_time(void) {                           /* (time_t *t or NULL) */
     ms_init();
-    time_t now = time(NULL);
+    /* the virtual clock when it is on, the real one otherwise */
+    time_t now = hle_clock_virtual() ? (time_t)(hle_clock_ms() / 1000u) : time(NULL);
     if (A32(0)) MEM32(A32(0)) = (uint32_t)now;       /* MSVC's time_t is 32-bit */
     RETC((uint32_t)now);
 }
@@ -1359,7 +1360,7 @@ static void u_fseeki64(void) {
 /* _time64(&t): the 64-bit time, in edx:eax and in the caller's cell. */
 static void u_time64(void) {
     ms_init();
-    int64_t now = (int64_t)time(NULL);
+    int64_t now = (int64_t)(hle_clock_virtual() ? (time_t)(hle_clock_ms() / 1000u) : time(NULL));
     if (A32(0)) { MEM32(A32(0)) = (uint32_t)now; MEM32(A32(0) + 4) = (uint32_t)((uint64_t)now >> 32); }
     g_eax = (uint32_t)now;
     g_edx = (uint32_t)((uint64_t)now >> 32);

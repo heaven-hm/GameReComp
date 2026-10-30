@@ -201,17 +201,38 @@ def _copy_runtime(project_dir: Path) -> dict:
     win_dst.mkdir(parents=True, exist_ok=True)
     rec_dst.mkdir(parents=True, exist_ok=True)
 
+    # MIRROR, do not merely add. A runtime file that was removed or renamed
+    # upstream stayed in every generated project and kept being compiled: a
+    # deleted clock.c lived on in projects/*/src/runtime/win32hle/, where it
+    # collided with the file that replaced it. What is delivered must be what
+    # the runtime directory holds, and nothing else.
+    wanted = {p.name for p in WIN32HLE.iterdir()
+              if p.suffix in (".c", ".h") and not p.name.endswith("_selftest.c")}
+    for stale in sorted(win_dst.iterdir()):
+        if stale.is_file() and stale.name not in wanted:
+            stale.unlink()
+
     runtime_files = []
     for path in sorted(WIN32HLE.iterdir()):
         if path.suffix not in (".c", ".h"):
             continue
         if path.name.endswith("_selftest.c"):
             continue
-        shutil.copy2(path, win_dst / path.name)
+        dst = win_dst / path.name
+        # copy2 preserves the source mtime, and make decides by mtime: a
+        # runtime file that changed but kept an older timestamp than the last
+        # build was silently NOT recompiled, so a project could link a stale
+        # runtime and a fix would appear not to work. Measured: a new
+        # RECOMP_CALL_CAP had no effect on a rebuilt project for exactly this
+        # reason. Copy the content, then stamp it now.
+        shutil.copyfile(path, dst)
+        os.utime(dst, None)
         runtime_files.append(f"src/runtime/win32hle/{path.name}")
 
     for name in ("recomp_types.h",):
-        shutil.copy2(RECOMP32 / name, rec_dst / name)
+        dst = rec_dst / name
+        shutil.copyfile(RECOMP32 / name, dst)
+        os.utime(dst, None)
         runtime_files.append(f"src/runtime/recomp32/{name}")
     return {"files": runtime_files}
 
@@ -240,7 +261,9 @@ def write_project(project_dir, name, exe_name, pe_info, extra=None,
         hl_src.mkdir(parents=True, exist_ok=True)
         for module in highlevel_modules:
             for source in module["sources"]:
-                shutil.copy2(source, hl_src / source.name)
+                dst = hl_src / source.name
+                shutil.copyfile(source, dst)
+                os.utime(dst, None)          # see the mtime note in _copy_runtime
                 highlevel_files.append(f"src/highlevel/{source.name}")
         # The adapters and the declarations are generated, never authored: the
         # guest ABI marshalling lives in exactly one place.

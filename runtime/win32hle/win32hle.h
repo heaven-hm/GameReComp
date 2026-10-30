@@ -267,6 +267,31 @@ int      hle_load_string(uint32_t hmod, uint32_t id, char *buf, int n);
 uint32_t hle_dialog_resource_id(uint32_t tmpl);   /* the RT_DIALOG id a template came from, or 0 */
 void  hle_fatal(const char *fmt, ...);   /* print + abort: an unimplemented path */
 extern int win32hle_trace;
+
+/* ---- the clock (clock.c) ----
+ * Every shim that reports a time must go through these, or virtual time is
+ * only half applied and a run is still not reproducible. `hle_clock_virtual`
+ * is a FUNCTION, not a flag: an earlier version of this header declared an int
+ * of the same name and the linker happily bound the call to it, so the flag
+ * read as the function's address and was always true. One name, one kind.
+ *
+ *   RECOMP_CLOCK=virtual        virtual time, 1 ms per read
+ *   RECOMP_CLOCK=virtual:16     virtual time, 16 ms per read
+ *   RECOMP_CLOCK_EPOCH=<ms>     start at ms (default 0)
+ *   unset                       the real monotonic clock, unchanged */
+int      hle_clock_virtual(void);
+uint32_t hle_clock_ms(void);
+uint32_t hle_clock_sleep(uint32_t ms);   /* what the host should really sleep */
+uint64_t hle_clock_us(void);             /* monotonic microseconds, for QPC */
+void     hle_clock_reset(void);          /* for probes: re-read the environment */
+
+/* ---- a run that stops at a known point (host_lite.c) ----
+ * Bisecting a replay means running the same input to checkpoint N and then
+ * N/2, which needs a run that ends on a call count rather than a wall clock.
+ *   RECOMP_CALL_CAP=<n>   stop after n shim dispatches, print a marker, exit 70
+ * Off unless the environment asks. */
+extern uint32_t hle_call_count;      /* shim dispatches since start */
+extern uint32_t hle_call_cap;        /* 0 = no cap */
 extern const char *g_cur_import;          /* the last import entered (fault reports) */               /* env SC2K/HLE trace: one line per shim call */
 
 /* Each module's shim table (defined in its .c, registered by the host). */

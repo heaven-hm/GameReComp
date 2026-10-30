@@ -285,11 +285,15 @@ static uint32_t ticks_ms(void) {
     return (uint32_t)((uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u);
 }
 uint32_t hle_ticks_ms(void) { return ticks_ms(); }
-static void k_GetTickCount(void) { RET(ticks_ms(), 0); }
+static void k_GetTickCount(void) { RET(hle_clock_ms(), 0); }
 static void k_QueryPerformanceFrequency(void) { if (A32(0)) MEM32(A32(0)) = 1000000u, MEM32(A32(0) + 4) = 0; RET(1, 1); }
 static void k_QueryPerformanceCounter(void) {
     struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
     uint64_t us = (uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u;
+    /* hle_clock speaks milliseconds, so it can only carry the virtual clock;
+     * with it off the real microsecond reading is returned untouched, which
+     * keeps this counter's resolution. */
+    if (hle_clock_virtual()) us = (uint64_t)hle_clock_ms() * 1000u;
     if (A32(0)) MEM32(A32(0)) = (uint32_t)us, MEM32(A32(0) + 4) = (uint32_t)(us >> 32);
     RET(1, 1);
 }
@@ -298,7 +302,12 @@ static void k_QueryPerformanceCounter(void) {
 static void k_Sleep(void) {
     uint32_t ms = A32(0);
     hle_block_begin();
-    if (ms) usleep(ms * 1000u); else sched_yield();
+    /* With the virtual clock the time passes by itself (it is a function of the
+     * shim call count), so sleeping for real would only make the run slower
+     * without changing what the guest sees. */
+    if (hle_clock_virtual()) sched_yield();
+    else if (ms) usleep(ms * 1000u);
+    else sched_yield();
     hle_block_end();
     RETV(1);
 }

@@ -42,6 +42,30 @@ uint32_t  g_icall_trace_idx, g_icall_count;
 
 int win32hle_trace;
 
+/* ---------------------------------------------------------- call cap
+ *
+ * A run that stops at a known point, which is what bisecting a replay needs:
+ * run the same input to checkpoint N, then N/2, and so on. Off unless
+ * RECOMP_CALL_CAP asks for it.
+ *
+ * The clock lives in clock.c and is the coder's, not this file's. An earlier
+ * version of this file carried a second, incompatible clock -- including an int
+ * named `hle_clock_virtual` where clock.c has a function of that name -- and
+ * the linker bound the two together, so the flag read as the function's address
+ * and was always true. Two implementations of one idea is how that happens.
+ */
+uint32_t hle_call_count;             /* shim dispatches since start */
+uint32_t hle_call_cap;               /* 0 = no cap */
+static int g_cap_read;
+
+static void cap_init(void) {
+    const char *cap = getenv("RECOMP_CALL_CAP");
+    if (cap) hle_call_cap = (uint32_t)strtoul(cap, NULL, 0);
+    if (hle_call_cap)
+        fprintf(stderr, "[determinism] call cap %u\n", hle_call_cap);
+    g_cap_read = 1;
+}
+
 void hle_fatal(const char *fmt, ...) {
     va_list ap; va_start(ap, fmt);
     fprintf(stderr, "[win32hle] FATAL: ");
@@ -224,6 +248,17 @@ static void shim_entry(void) {
     if (g_waiters) hle_yield();
     g_last_import_va = g_shim[i].va;                     /* again: the thread that ran meanwhile set its own */
     g_cur_import = g_shim[i].name;
+    /* The call count is what the virtual clock advances on and what a capped
+     * run stops at, so it counts every dispatch whether or not tracing is on.
+     * cap_init is called here, not from the clock: the cap has to work even
+     * when no shim has read the clock yet, and a cap that silently does nothing
+     * is the kind of thing that makes a bisector produce confident nonsense. */
+    if (!g_cap_read) cap_init();
+    hle_call_count++;
+    if (hle_call_cap && hle_call_count > hle_call_cap) {
+        fprintf(stderr, "[determinism] call cap %u reached\n", hle_call_cap);
+        hle_exit(70);
+    }
     /* A shim must return with esp ABOVE where it entered and on a word
      * boundary: it always pops at least the synthetic return address, plus its
      * own arguments for stdcall. esp must never come back below the entry
