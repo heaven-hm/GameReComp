@@ -688,14 +688,16 @@ class Pipeline:
                 # The run stage returns ok for every classified outcome -- a
                 # process that never booted, a crash, and a clean exit all end
                 # the stage cleanly. Award its points for what actually
-                # happened: full for a process that launched and exited on its
-                # own, half for one that launched and then faulted, none for
-                # one that never reached its entry point.
+                # happened: full for a process that launched and either exited
+                # on its own or was still running when the deadline stopped it
+                # (a game loop does not end by itself), half for one that
+                # launched and then faulted, none for one that never reached
+                # its entry point.
                 if st.get("data", {}).get("skipped") or not run_status:
                     continue
-                if run_status == "exited":
+                if run_status in ("exited", "timeout"):
                     total += STAGE_WEIGHTS["run"]
-                elif run_status in ("crashed", "timed-out", "signalled"):
+                elif run_status in ("crashed", "signalled"):
                     total += STAGE_WEIGHTS["run"] // 2
                 # boot-failed earns nothing: the rebuilt binary never started.
             elif st["name"] == "compile" and st.get("data", {}).get("skipped"):

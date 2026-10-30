@@ -141,11 +141,15 @@ static int dev_index(uint32_t obj) {
 /* ---- IDirectInputDevice ---- */
 static void dev_Release(void);
 static void dev_QueryInterface(void) {
-    /* (this, iid, &out): the only interfaces are ours, and asking for one of
-     * them returns this object again. */
-    uint32_t out = A32(2);
+    /* (this, iid, &out): the only interfaces are ours, so asking for one of
+     * them returns this object again -- with the AddRef the COM contract
+     * requires. Without it the caller's Release frees an object it is still
+     * using: Cave Story's Doukutsu does exactly QueryInterface-then-Release on
+     * its keyboard device, and freeing it there crashed the game at startup. */
+    uint32_t self = A32(0), out = A32(2);
     if (!out) RET(E_POINTER, 3);
-    MEM32(out) = A32(0);
+    MEM32(out) = self;
+    MEM32(self + 4)++;
     RET(DI_OK, 3);
 }
 static void dev_GetCapabilities(void) {
@@ -280,24 +284,35 @@ static void dev_GetDeviceInfo(void) {
 static void dev_Initialize(void) { RET(DIERR_UNSUPPORTED, 4); }
 static void dev_RunControlPanel(void) { RET(DIERR_UNSUPPORTED, 3); }
 static void dev_Release(void) {
-    int i = dev_index(A32(0));
+    uint32_t self = A32(0);
+    int i = dev_index(self);
     if (i < 0) RET(0, 1);
-    /* Keep the slots dense: the last device closes the gap. */
-    hle_com_free(g_dev[i].obj);
+    /* The object carries its own reference count at +4 (hle_com_new), and a
+     * QueryInterface handed out an extra one. Free only at zero, then keep the
+     * slots dense: the last device closes the gap. */
+    uint32_t n = MEM32(self + 4) ? --MEM32(self + 4) : 0;
+    if (n) RET(n, 1);
+    hle_com_free(self);
     g_dev[i] = g_dev[--g_ndev];
     RET(0, 1);
 }
 
 /* ---- IDirectInput ---- */
 static void di_QueryInterface(void) {
-    uint32_t out = A32(2);
+    uint32_t self = A32(0), out = A32(2);
     if (!out) RET(E_POINTER, 3);
-    MEM32(out) = A32(0);
+    MEM32(out) = self;
+    MEM32(self + 4)++;
+    g_di_refs++;
     RET(DI_OK, 3);
 }
-static void di_AddRef(void) { RET(++g_di_refs, 1); }
+static void di_AddRef(void) { g_di_refs++; RET(++MEM32(A32(0) + 4), 1); }
 static void di_Release(void) {
-    if (--g_di_refs == 0) { hle_com_free(g_di); g_di = 0; RET(0, 1); }
+    uint32_t self = A32(0);
+    uint32_t n = MEM32(self + 4) ? --MEM32(self + 4) : 0;
+    if (n) RET(n, 1);
+    if (g_di_refs) g_di_refs--;
+    if (g_di == self) { hle_com_free(self); g_di = 0; }
     RET(0, 1);
 }
 static void di_CreateDevice(void) {
