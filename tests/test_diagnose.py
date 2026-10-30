@@ -192,6 +192,55 @@ class RuntimeSyncTest(unittest.TestCase):
                 diagnose.sync_runtime(project, root / "does-not-exist"))
 
 
+class BaselineCompareTest(unittest.TestCase):
+    """Before/after is keyed by PE hash, not by project directory name."""
+
+    BASELINE = {"source": "run.json", "captured_at": "2026-10-29T22:47:03Z",
+                "by_pe_sha256": {"aa": {"project_dir": "generally",
+                                        "unresolved_import_count": 179,
+                                        "recorded_at": "2026-10-29T22:47:03Z"}}}
+
+    def _row(self, name, sha, now):
+        return {"project": name, "pe": f"/games/{name}.exe", "pe_sha256": sha,
+                "outcome": "reached-unimplemented-import",
+                "strict": {"unresolved_iat_imports": now}}
+
+    def test_delta_is_computed_for_a_matching_executable(self):
+        rows = [self._row("GeneRally", "aa", 7)]
+        out = diagnose.compare_baseline(rows, self.BASELINE)
+        self.assertEqual(out[0]["baseline_unresolved"], 179)
+        self.assertEqual(out[0]["now_unresolved"], 7)
+        self.assertEqual(out[0]["delta"], -172)
+
+    def test_a_renamed_directory_still_matches_on_the_pe_hash(self):
+        # The measured tree is named differently from the baseline's tree.
+        rows = [self._row("generally", "aa", 0)]
+        out = diagnose.compare_baseline(rows, self.BASELINE)
+        self.assertEqual(out[0]["baseline_unresolved"], 179)
+
+    def test_an_unknown_executable_reports_no_baseline_not_a_zero(self):
+        rows = [self._row("other", "zz", 5)]
+        out = diagnose.compare_baseline(rows, self.BASELINE)
+        self.assertIsNone(out[0]["baseline_unresolved"])
+        self.assertIsNone(out[0]["delta"])
+
+    def test_no_baseline_yields_no_comparison(self):
+        self.assertEqual(diagnose.compare_baseline([self._row("x", "aa", 1)], None), [])
+        self.assertIsNone(diagnose.load_baseline(None))
+
+    def test_zero_unresolved_is_marked_for_the_next_slice_decision(self):
+        rows = [self._row("orgview", "aa", 0), self._row("other", "zz", 3)]
+        out = {e["project"]: e for e in
+               diagnose.compare_baseline(rows, self.BASELINE)}
+        self.assertTrue(out["orgview"]["at_zero_unresolved"])
+        self.assertFalse(out["other"]["at_zero_unresolved"])
+        # A missing strict measurement is not a zero.
+        rows = [{"project": "p", "pe": "/p.exe", "pe_sha256": "aa",
+                 "outcome": "no-binary", "strict": None}]
+        self.assertFalse(
+            diagnose.compare_baseline(rows, self.BASELINE)[0]["at_zero_unresolved"])
+
+
 class RankImportsTest(unittest.TestCase):
     def test_ranks_by_games_blocked_then_name(self):
         rows = [

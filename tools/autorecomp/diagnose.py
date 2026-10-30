@@ -188,6 +188,48 @@ def trace_crash(binary, pe_path, timeout=10.0, tail=12):
     }
 
 
+def load_baseline(path):
+    """Per-executable unresolved counts recorded before the current work.
+
+    Keyed by PE sha256, not by directory name, because the same game can be
+    measured from differently named project directories.
+    """
+    if not path:
+        return None
+    try:
+        record = json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return None
+    by_sha = record.get("by_pe_sha256") or {}
+    return {"source": record.get("source"), "captured_at": record.get("captured_at"),
+            "by_pe_sha256": by_sha}
+
+
+def compare_baseline(rows, baseline):
+    """Per game: recorded unresolved count, the strict count now, the delta."""
+    if not baseline:
+        return []
+    by_sha = baseline["by_pe_sha256"]
+    out = []
+    for row in rows:
+        entry = by_sha.get(row.get("pe_sha256"))
+        strict = row.get("strict") or {}
+        now = strict.get("unresolved_iat_imports")
+        before = entry.get("unresolved_import_count") if entry else None
+        out.append({
+            "project": row["project"],
+            "pe": row.get("pe"),
+            "baseline_unresolved": before,
+            "baseline_recorded_at": entry.get("recorded_at") if entry else None,
+            "baseline_provenance": entry.get("provenance") if entry else None,
+            "now_unresolved": now,
+            "delta": (now - before) if (before is not None and now is not None) else None,
+            "at_zero_unresolved": now == 0,
+            "outcome": row["outcome"],
+        })
+    return out
+
+
 def project_pe_path(project_dir):
     """The original PE a project was generated from, from project.json."""
     cfg = project_dir / "project.json"
@@ -417,6 +459,7 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
         "project": project_dir.name,
         "name": name,
         "pe": pe_path,
+        "pe_sha256": (project_pe_info(project_dir) or {}).get("sha256"),
         "binary": None,
         "binary_exists": False,
         "outcome": "no-binary",
@@ -625,7 +668,7 @@ def rank_imports(rows):
 
 
 def build_report(rows, generated_at, command, timeout, duplicates=None,
-                 runtime_source=None):
+                 runtime_source=None, baseline=None):
     """The JSON document: measured rows plus the ranked blocker table."""
     return {
         "schema": 1,
@@ -648,6 +691,8 @@ def build_report(rows, generated_at, command, timeout, duplicates=None,
         "outcomes": {o: sum(1 for r in rows if r["outcome"] == o)
                      for o in sorted({r["outcome"] for r in rows})},
         "runtime_source": runtime_source,
+        "baseline": baseline,
+        "before_after": compare_baseline(rows, baseline),
         "duplicate_project_dirs": duplicates or [],
         "ranked_first_imports": rank_imports(rows),
         "runs": rows,
@@ -746,6 +791,49 @@ def render_markdown(report):
                        + (f" - {row['raw_error']}" if row["raw_error"] else ""))
         out.append("")
 
+    before_after = report.get("before_after") or []
+    if before_after:
+        baseline = report.get("baseline") or {}
+        out.append("## Before / after")
+        out.append("")
+        out.append(f"Baseline: {baseline.get('source') or 'unspecified'}"
+                   + (f" (captured {baseline['captured_at']})"
+                      if baseline.get("captured_at") else "") + ".")
+        out.append("")
+        out.append("| project | baseline unresolved | now (strict) | delta "
+                   "| 0 unresolved | permissive outcome |")
+        out.append("|---------|--------------------:|-------------:|------:"
+                   "|:------------:|--------------------|")
+        for entry in before_after:
+            delta = entry["delta"]
+            delta_text = "-" if delta is None else (f"{delta:+d}" if delta else "0")
+            out.append(f"| {entry['project']} | "
+                       f"{entry['baseline_unresolved'] if entry['baseline_unresolved'] is not None else '-'} | "
+                       f"{entry['now_unresolved'] if entry['now_unresolved'] is not None else '-'} | "
+                       f"{delta_text} | "
+                       f"{'yes' if entry.get('at_zero_unresolved') else ''} | "
+                       f"{entry['outcome']} |")
+        out.append("")
+
+        # The rows closest to actually running are the ones with nothing left
+        # unresolved; list them by count so the next slice can be picked.
+        ranked_rows = [e for e in before_after if e["now_unresolved"] is not None]
+        ranked_rows.sort(key=lambda e: e["now_unresolved"])
+        out.append("### Closest to a real boot (by unresolved count now)")
+        out.append("")
+        for entry in ranked_rows:
+            mark = " **0 unresolved**" if entry.get("at_zero_unresolved") else ""
+            out.append(f"- `{entry['project']}`: {entry['now_unresolved']} "
+                       f"unresolved, permissive outcome {entry['outcome']}{mark}")
+        out.append("")
+        noted = [e for e in before_after if e.get("baseline_provenance")]
+        if noted:
+            out.append("Baseline provenance notes:")
+            out.append("")
+            for entry in noted:
+                out.append(f"- **{entry['project']}**: {entry['baseline_provenance']}")
+            out.append("")
+
     traced = [r for r in rows if r.get("crash_trace")]
     if traced:
         out.append("## Crashed games: last imports the guest reached")
@@ -805,6 +893,10 @@ def main(argv=None):
                              "and rebuild each project before measuring")
     parser.add_argument("--jobs", type=int, default=None,
                         help="parallel compile jobs for --build")
+    parser.add_argument("--baseline", default=None,
+                        help="JSON snapshot of per-executable unresolved counts "
+                             "recorded before this work (keyed by PE sha256); "
+                             "adds a before/after section")
     parser.add_argument("--runtime-source", default=None,
                         help="with --build: replace each project's pinned "
                              "runtime with a copy from this directory (a "
@@ -892,7 +984,8 @@ def main(argv=None):
                               if host.exists() else None),
         }
     report = build_report(rows, generated_at, command, args.timeout,
-                          duplicates=duplicates, runtime_source=runtime_source)
+                          duplicates=duplicates, runtime_source=runtime_source,
+                          baseline=load_baseline(args.baseline))
 
     json_path = Path(args.json)
     json_path.parent.mkdir(parents=True, exist_ok=True)
