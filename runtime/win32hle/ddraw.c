@@ -108,6 +108,9 @@ int hle_dd_surface_pixels(uint32_t obj, uint8_t **px, int *w, int *h, int *pitch
     *px = s->px, *w = s->w, *h = s->h, *pitch = s->pitch, *bpp = s->bpp;
     return 1;
 }
+int hle_dd_surface_is_primary(uint32_t obj) {
+    return obj && g_vt_surf && MEM32(obj) == g_vt_surf && S(obj) == g_primary;
+}
 void hle_dd_mode(int *w, int *h, int *bpp) { *w = g_mode_w, *h = g_mode_h, *bpp = g_mode_bpp; }
 
 static void masks(int bpp, uint32_t *r, uint32_t *g, uint32_t *b) {
