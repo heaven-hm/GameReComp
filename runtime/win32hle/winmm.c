@@ -21,6 +21,7 @@
 #define JOYERR_UNPLUGGED  167u
 #define WHDR_DONE         0x00000001u
 #define WHDR_INQUEUE      0x00000010u
+#define MCIERR_UNSUPPORTED_FUNCTION 274u
 
 /* --- multimedia timer --- */
 static void m_timeGetTime(void) {
@@ -142,6 +143,8 @@ static void m_badhandle3(void)  { RET(MMSYSERR_INVALHANDLE, 3); }     /* (h, str
 /* --- MCI (CD audio / command strings): not available --- */
 static void m_mciSendStringA(void)     { RET(MMSYSERR_ERROR, 4); }
 static void m_mciGetErrorStringA(void) { RET(0, 3); }          /* FALSE: no string */
+static void m_mciSendCommandA(void)    { RET(MCIERR_UNSUPPORTED_FUNCTION, 4); }
+static void m_mixerGetDevCapsA(void)   { RET(MMSYSERR_BADDEVICEID, 3); }
 
 /* --- mmio: RIFF files (WAVs) for reading ---
  * A file is read whole into memory at mmioOpenA, or a caller's buffer is
@@ -322,5 +325,7 @@ const win32hle_shim win32hle_winmm[] = {
     { "waveInGetPosition",      m_badhandle3 },
     { "mciSendStringA",         m_mciSendStringA },
     { "mciGetErrorStringA",     m_mciGetErrorStringA },
+    { "mciSendCommandA",        m_mciSendCommandA },
+    { "mixerGetDevCapsA",       m_mixerGetDevCapsA },
     { 0, 0 }
 };
