@@ -259,7 +259,10 @@ class Model:
         self.frames_enabled = False
         self.address = 0
         self.pointer_types = {}     # pointer local -> provider struct it points at
+        self.local_slots = {}       # local struct var -> (struct name, va offset below frame)
+        self.slot_cursor = 0        # bytes reserved below the frame so far
         self.signatures = {}        # callee VA -> declared contract
+        self.hidden_return = None   # a struct return: the caller supplies the storage
         self.image_lo, self.image_hi = 0x00400000, 0x80000000
         self.callee_names = {}      # callee VA -> generated function name
         self.segment_base = segment_base
@@ -275,6 +278,16 @@ class Model:
         # host local by the provider. Its address must become a guest VA (the
         # frame), never a host pointer.
         tname = _type_of(ty) or ""
+        if name and tname.startswith(("struct_", "union_")) and not _RE_FRAME.search(name or ""):
+            # a local struct is a guest object: reserve it below the frame
+            size = struct_size(tname) or 0
+            if not size:
+                raise Unsupportable(f"local {name}: {tname} has no declared size, so its "
+                                    f"guest storage cannot be placed")
+            self.slot_cursor += size
+            self.local_slots[name] = (tname, self.slot_cursor)
+            self.notes.append(f"{name}: local {tname} -> guest slot frame-{self.slot_cursor}")
+            return None
         if name and tname.startswith(("struct_", "union_")) and _RE_FRAME.search(name or ""):
             if not getattr(self, "frames_enabled", False):
                 return decl        # frames not modelled here: the host local stays
@@ -334,7 +347,7 @@ class Model:
                 return VA
             if node.name == "frame":
                 return VA
-            if node.name in self.va_locals:
+            if node.name in self.va_locals or node.name in self.local_slots:
                 return VA
             if node.name in self.scalar_locals:
                 return SCALAR
@@ -515,7 +528,7 @@ class Model:
                 # the guest stack frame: its address IS a guest VA
                 return c_ast.ID("frame")
             if isinstance(inner, c_ast.ID) and inner.name not in self.va_locals \
-                    and inner.name != "segment_2":
+                    and inner.name not in self.local_slots and inner.name != "segment_2":
                 # `&stack`, `&var_7`: the address of a HOST object. Emitting it as
                 # a MEMn operand would read guest memory at a host address - the
                 # exact inversion of what the pointer model exists to prevent.
@@ -539,6 +552,10 @@ class Model:
         if isinstance(node, c_ast.ID) and node.name == "segment_2":
             # the data base itself is a constant VA, never a host symbol
             return c_ast.Constant(type="unsigned int", value=f"0x{self.segment_base:08X}U")
+        if isinstance(node, c_ast.ID) and node.name in self.local_slots:
+            _, off = self.local_slots[node.name]
+            return c_ast.BinaryOp(op="-", left=c_ast.ID("frame"),
+                                  right=c_ast.Constant(type="unsigned int", value=f"{off}U"))
         if isinstance(node, c_ast.ID) and node.name in self.va_locals:
             return node
         return node
@@ -625,6 +642,9 @@ class Model:
                 cur = cur.expr
                 continue
             if isinstance(cur, c_ast.ID):
+                if cur.name in self.local_slots:
+                    # a local struct: a guest object below the frame
+                    return self.local_slots[cur.name][0], True
                 # class 3: the struct comes from the local's own declaration when
                 # no cast supplies it
                 nm = self.pointer_types.get(cur.name) or getattr(cur, "_struct", None)
@@ -650,6 +670,11 @@ class Model:
             return self.address_of(node.expr)
         if isinstance(node, c_ast.UnaryOp) and node.op == "&":
             return self.address_of(node.expr)
+        if isinstance(node, c_ast.ID) and node.name in self.local_slots:
+            # a local struct's slot below the frame IS its guest VA
+            _, off = self.local_slots[node.name]
+            return c_ast.BinaryOp(op="-", left=c_ast.ID("frame"),
+                                  right=c_ast.Constant(type="unsigned int", value=f"{off}U"))
         if isinstance(node, c_ast.ID) and node.name == "segment_2":
             return c_ast.Constant(type="unsigned int", value=f"0x{self.segment_base:08X}U")
         # (&segment_2 + off) is one constant address: fold it
@@ -678,6 +703,20 @@ class Model:
             return d
         if isinstance(node, c_ast.Assignment):
             return self.expr(node)
+        if isinstance(node, c_ast.Return) and self.hidden_return and node.expr is not None:
+            # the object is copied to the caller's slot through `out`
+            src_va = self.expr(node.expr)
+            size = struct_size(self.hidden_return) or 0
+            stmts = []
+            for k in range(0, size, 4):
+                dst = c_ast.FuncCall(name=c_ast.ID("MEM32"), args=c_ast.ExprList([
+                    c_ast.BinaryOp(op="+", left=c_ast.ID("out"),
+                                   right=c_ast.Constant(type="unsigned int", value=f"{k}U"))]))
+                srcm = c_ast.FuncCall(name=c_ast.ID("MEM32"), args=c_ast.ExprList([
+                    c_ast.BinaryOp(op="+", left=src_va,
+                                   right=c_ast.Constant(type="unsigned int", value=f"{k}U"))]))
+                stmts.append(c_ast.Assignment(op="=", lvalue=dst, rvalue=srcm))
+            return c_ast.Compound(block_items=stmts) if stmts else c_ast.Return(expr=None)
         if isinstance(node, c_ast.Return):
             return c_ast.Return(expr=self.expr(node.expr) if node.expr else None)
         if isinstance(node, c_ast.If):
@@ -751,9 +790,10 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False,
     # scope refusals, with reasons
     import re as _re
     ret_type = _type_of(fn.decl.type.type) or ""
+    hidden_return = None
     if _re.match(r"(struct|union)_\d+", ret_type):
-        raise Unsupportable("returns a provider struct BY VALUE: the hidden-pointer return "
-                            "convention is not expressible in this module model")
+        # the caller supplies the storage; the callee writes through it
+        hidden_return = ret_type
     # a CALL to another lifted function, not this function's own declaration:
     # the declaration is the first match and carries the return type before it
     calls = _re.findall(r"(?<![A-Za-z_0-9])(function_0x([0-9a-f]+)_Code_x86)\s*\(", body)
@@ -787,6 +827,7 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False,
     model = Model(segment_base, layouts)
     model.address = own_va or 0
     model.signatures = signatures or {}
+    model.hidden_return = hidden_return
     model.callee_names = callee_names or {}
     model.frames_enabled = frames
     new_body = model.function(fn)
@@ -795,10 +836,12 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False,
     ret = fn.decl.type.type
     params = fn.decl.type.args.params if fn.decl.type.args else []
     ret_text = "void"
-    if isinstance(ret, c_ast.PtrDecl):
+    if hidden_return:
+        ret_text = "void"          # the object goes through `out`, not the return
+    elif isinstance(ret, c_ast.PtrDecl):
         w = width_of_type(str(_type_of(ret)).replace("ptr:", ""))
         ret_text = SCALAR_OF_WIDTH[w]
-    elif _type_of(ret):
+    elif not hidden_return and _type_of(ret):
         ret_text = c_type(_type_of(ret))
     arg_text = []
     for p in params:
@@ -811,6 +854,8 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False,
         else:
             arg_text.append(f"{c_type(ty) or 'uint32_t'} {p.name}")
     new_body.block_items = [_fold_stmt(i) for i in (new_body.block_items or [])]
+    if model.hidden_return:
+        arg_text.append("uint32_t out")
     if model.frame_name:
         arg_text.append("uint32_t frame")
     body_text = new_body_to_text(new_body)

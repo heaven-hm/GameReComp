@@ -122,3 +122,24 @@ def test_the_closure_is_capped_and_says_so():
     order, capped = closure_of(1, sigs, cap=5)
     assert len(order) == 5
     assert capped is True
+
+
+# ---- the hidden-pointer return: the caller supplies the storage
+def test_a_struct_returning_callee_writes_through_the_callers_pointer():
+    from tools.autorecomp.rename_ast import parse_layouts
+    from pathlib import Path
+    header = Path("highlevel/doukutsu/types-and-globals.h")
+    if not header.is_file():
+        pytest.skip("the provider header is not present")
+    layouts = parse_layouts(header.read_text(errors="replace"))
+    src, _ = rewrite("""
+struct_1 function_0x1000_Code_x86(generic32_t argument_0) {
+    struct struct_1 var_1;
+    *(generic32_t *) (generic32_t) ((generic32_t) &var_1 & 0xFFFFFFFFULL) = argument_0;
+    return var_1;
+}
+""", BASE, own_va=CALLER, layouts=layouts)
+    # the object goes through `out`, not the return value: the signature is void
+    assert src.startswith("void function_0x1000_Code_x86(")
+    assert "uint32_t out" in src
+    assert "MEM32((out + 0U)) = MEM32(" in src
