@@ -45,7 +45,7 @@ enum { GL_LIGHTING=0x0B50, GL_COLOR_MATERIAL=0x0B57, GL_LIGHT0=0x4000,
        GL_LIGHT_MODEL_LOCAL_VIEWER=0x0B51, GL_NORMALIZE=0x0BA1,
        GL_DEPTH_BITS=0x0D56, GL_STENCIL_BITS=0x0D57,
        GL_MAX_TEXTURE_SIZE=0x0D33,
-       GL_AMBIENT_AND_DIFFUSE=0x1602 };
+       GL_AMBIENT_AND_DIFFUSE=0x1602, GL_COLOR_SUM=0x8458 };
 enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_MODULATE=0x2100, GL_REPLACE=0x1E01, GL_RGB=0x1907, GL_RGBA=0x1908,
        GL_BGR=0x80E0, GL_BGRA=0x80E1, GL_UNSIGNED_BYTE=0x1401,
@@ -58,6 +58,7 @@ enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
 typedef void (*gl_begin_fn)(unsigned); typedef void (*gl_end_fn)(void);
 typedef void (*gl_vertex3_fn)(float,float,float); typedef void (*gl_vertex4_fn)(float,float,float,float);
 typedef void (*gl_color4ub_fn)(unsigned char,unsigned char,unsigned char,unsigned char);
+typedef void (*gl_secondary_color3ub_fn)(unsigned char,unsigned char,unsigned char);
 typedef void (*gl_normal3_fn)(float,float,float); typedef void (*gl_tex2_fn)(float,float);
 typedef void (*gl_tex1_fn)(float);
 typedef void (*gl_matrix_mode_fn)(unsigned); typedef void (*gl_load_matrix_fn)(const float *);
@@ -95,6 +96,7 @@ typedef void (*gl_scissor_fn)(int,int,int,int);
 static gl_begin_fn p_begin; static gl_end_fn p_end;
 static gl_vertex3_fn p_vertex3; static gl_vertex4_fn p_vertex4;
 static gl_color4ub_fn p_color4ub; static gl_normal3_fn p_normal3; static gl_tex2_fn p_tex2;
+static gl_secondary_color3ub_fn p_secondary_color3ub;
 static gl_tex1_fn p_tex1;
 static gl_matrix_mode_fn p_matrix_mode; static gl_load_matrix_fn p_load_matrix;
 static gl_mult_matrix_fn p_mult_matrix;
@@ -165,6 +167,7 @@ static int load_gl(void) {
     LOAD_GL(p_light_modeli, gl_light_modeli_fn, "glLightModeli");
     LOAD_GL(p_is_enabled, gl_is_enabled_fn, "glIsEnabled");
     LOAD_GL(p_scissor, gl_scissor_fn, "glScissor");
+    *(void **)(&p_secondary_color3ub)=SDL_GL_GetProcAddress("glSecondaryColor3ub");
     g_gl_loaded = 1;
     return 1;
 }
@@ -302,7 +305,12 @@ static void emit_vertex(const uint8_t *v, uint32_t fvf, int screen_xy) {
     memcpy(&x,v,4); memcpy(&y,v+4,4); memcpy(&z,v+8,4);
     if(fvf&0x010) { float n[3]; memcpy(n,v+off,12); p_normal3(n[0],n[1],n[2]); off+=12; }
     if(fvf&0x040) { uint32_t c; memcpy(&c,v+off,4); p_color4ub((uint8_t)(c>>16),(uint8_t)(c>>8),(uint8_t)c,(uint8_t)(c>>24)); off+=4; }
-    if(fvf&0x080) off+=4;
+    if(fvf&0x080) {
+        uint32_t specular; memcpy(&specular,v+off,4);
+        if(g_render[29]) p_secondary_color3ub((uint8_t)(specular>>16),(uint8_t)(specular>>8),(uint8_t)specular);
+        else p_secondary_color3ub(0,0,0);
+        off+=4;
+    }
     if(((fvf>>8)&15)>0) {
         uint32_t dimcode=(fvf>>16)&3;
         if(dimcode==3) { float u; memcpy(&u,v+off,4); p_tex1(u); }
@@ -337,6 +345,8 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
             if(!isfinite(rhw) || rhw<=0.f || !isfinite(1.f/rhw)) return 0;
         }
     }
+    int has_secondary=(fvf&0x080)!=0, color_sum_was_enabled=0;
+    if(has_secondary && !p_secondary_color3ub) return 0;
     if(g_texture_surface && g_stage_state[1]!=1 && ((fvf >> 8) & 15)) {
         uint8_t *pixels; int w,h,pitch,bpp;
         if(!hle_dd_surface_pixels(g_texture_surface,&pixels,&w,&h,&pitch,&bpp) || w<=0 || h<=0) return 0;
@@ -356,10 +366,17 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
         p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0); p_pixel_store_i(GL_UNPACK_ALIGNMENT,4);
         apply_stage0_state();
     } else p_disable(GL_TEXTURE_2D);
+    if(p_secondary_color3ub) {
+        color_sum_was_enabled=p_is_enabled(GL_COLOR_SUM)!=0;
+        if(has_secondary) p_enable(GL_COLOR_SUM); else p_disable(GL_COLOR_SUM);
+    }
     p_begin(mode);
     if(idx) for(uint32_t i=0;i<index_count;i++) emit_vertex(base+(uint32_t)idx[i]*stride,fvf,(fvf&0x00e)==4);
     else for(uint32_t i=0;i<vertex_count;i++) emit_vertex(base+i*stride,fvf,(fvf&0x00e)==4);
     p_end();
+    if(p_secondary_color3ub) {
+        if(color_sum_was_enabled) p_enable(GL_COLOR_SUM); else p_disable(GL_COLOR_SUM);
+    }
     return 1;
 }
 
