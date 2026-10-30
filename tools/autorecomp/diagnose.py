@@ -702,7 +702,7 @@ def rank_imports(rows):
 
 
 def build_report(rows, generated_at, command, timeout, duplicates=None,
-                 runtime_source=None, baseline=None):
+                 runtime_source=None, baseline=None, commit=None):
     """The JSON document: measured rows plus the ranked blocker table."""
     return {
         "schema": 1,
@@ -732,6 +732,7 @@ def build_report(rows, generated_at, command, timeout, duplicates=None,
                      for o in sorted({r["outcome"] for r in rows})},
         "run_statuses": {st: sum(1 for r in rows if r.get("run_status") == st)
                          for st in sorted({r.get("run_status") for r in rows})},
+        "commit": commit,
         "runtime_source": runtime_source,
         "baseline": baseline,
         "before_after": compare_baseline(rows, baseline),
@@ -749,6 +750,10 @@ def render_markdown(report):
     out.append(f"Generated {report['generated_at']} by "
                f"`{report['command']}` (timeout "
                f"{report['timeout_seconds']:g}s per game).")
+    if report.get("commit"):
+        out.append("")
+        out.append(f"Measured against the runtime at commit "
+                   f"`{report['commit']}`.")
     out.append("")
     out.append("Each rebuilt binary is started with `RECOMP_PERMISSIVE=1`, "
                "which binds unresolved imports to the runtime's self-naming "
@@ -955,6 +960,9 @@ def main(argv=None):
                              "and rebuild each project before measuring")
     parser.add_argument("--jobs", type=int, default=None,
                         help="parallel compile jobs for --build")
+    parser.add_argument("--commit", default=None,
+                        help="the commit the frozen runtime came from; recorded "
+                             "in the report so every row names its provenance")
     parser.add_argument("--baseline", default=None,
                         help="JSON snapshot of per-executable unresolved counts "
                              "recorded before this work (keyed by PE sha256); "
@@ -1035,7 +1043,8 @@ def main(argv=None):
     generated_at = datetime.datetime.now(datetime.timezone.utc).strftime(
         "%Y-%m-%dT%H:%M:%SZ")
     command = "python3 tools/autorecomp/diagnose.py --timeout " \
-              f"{args.timeout:g}" + (" --build" if args.build else "")
+              f"{args.timeout:g}" + (" --build" if args.build else "") \
+              + (f" --commit {args.commit}" if args.commit else "")
     runtime_source = None
     if args.runtime_source:
         import hashlib
@@ -1047,7 +1056,8 @@ def main(argv=None):
         }
     report = build_report(rows, generated_at, command, args.timeout,
                           duplicates=duplicates, runtime_source=runtime_source,
-                          baseline=load_baseline(args.baseline))
+                          baseline=load_baseline(args.baseline),
+                          commit=args.commit)
 
     json_path = Path(args.json)
     json_path.parent.mkdir(parents=True, exist_ok=True)
