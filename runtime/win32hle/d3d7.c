@@ -20,7 +20,11 @@ enum { GL_POINTS=0x0000, GL_LINES=0x0001, GL_LINE_STRIP=0x0003,
        GL_DEPTH_BUFFER_BIT=0x0100, GL_STENCIL_BUFFER_BIT=0x0400,
        GL_MODELVIEW=0x1700, GL_PROJECTION=0x1701, GL_TEXTURE=0x1702,
        GL_DEPTH_TEST=0x0B71, GL_BLEND=0x0BE2, GL_CULL_FACE=0x0B44,
-       GL_ALPHA_TEST=0x0BC0, GL_FOG=0x0B60, GL_LESS=0x0201,
+       GL_ALPHA_TEST=0x0BC0, GL_FOG=0x0B60, GL_SCISSOR_TEST=0x0C11,
+       GL_SCISSOR_BOX=0x0C10, GL_VIEWPORT=0x0BA2, GL_LESS=0x0201,
+       GL_COLOR_WRITEMASK=0x0C23, GL_DEPTH_WRITEMASK=0x0B72,
+       GL_STENCIL_WRITEMASK=0x0B98, GL_COLOR_CLEAR_VALUE=0x0C22,
+       GL_DEPTH_CLEAR_VALUE=0x0B73, GL_STENCIL_CLEAR_VALUE=0x0B91,
        GL_LEQUAL=0x0203, GL_GREATER=0x0204, GL_GEQUAL=0x0206,
        GL_EQUAL=0x0202, GL_NOTEQUAL=0x0205, GL_ALWAYS=0x0207,
        GL_NEVER=0x0200, GL_ZERO=0, GL_ONE=1, GL_SRC_ALPHA=0x0302,
@@ -60,11 +64,14 @@ typedef void (*gl_enable_fn)(unsigned); typedef void (*gl_disable_fn)(unsigned);
 typedef void (*gl_clear_color_fn)(float,float,float,float); typedef void (*gl_clear_depth_fn)(double);
 typedef void (*gl_clear_fn)(unsigned); typedef void (*gl_depth_func_fn)(unsigned);
 typedef void (*gl_depth_mask_fn)(unsigned char); typedef void (*gl_blend_fn)(unsigned,unsigned);
+typedef void (*gl_clear_stencil_fn)(int); typedef void (*gl_color_mask_fn)(unsigned char,unsigned char,unsigned char,unsigned char);
+typedef void (*gl_stencil_mask_fn)(unsigned);
 typedef void (*gl_alpha_fn)(unsigned,float); typedef void (*gl_cull_fn)(unsigned);
 typedef void (*gl_front_fn)(unsigned); typedef void (*gl_polygon_fn)(unsigned,unsigned);
 typedef void (*gl_shade_fn)(unsigned); typedef void (*gl_fogfv_fn)(unsigned,const float *);
 typedef void (*gl_fogi_fn)(unsigned,int); typedef void (*gl_fogf_fn)(unsigned,float);
 typedef void (*gl_getint_fn)(unsigned,int *);
+typedef void (*gl_getfloat_fn)(unsigned,float *);
 typedef void (*gl_bind_texture_fn)(unsigned,unsigned);
 typedef void (*gl_gen_textures_fn)(int,unsigned *);
 typedef void (*gl_tex_image_2d_fn)(unsigned,int,int,int,int,int,unsigned,unsigned,const void *);
@@ -79,6 +86,8 @@ typedef void (*gl_lightf_fn)(unsigned,unsigned,float);
 typedef void (*gl_color_material_fn)(unsigned,unsigned);
 typedef void (*gl_light_modelfv_fn)(unsigned,const float *);
 typedef void (*gl_light_modeli_fn)(unsigned,int);
+typedef unsigned char (*gl_is_enabled_fn)(unsigned);
+typedef void (*gl_scissor_fn)(int,int,int,int);
 
 static gl_begin_fn p_begin; static gl_end_fn p_end;
 static gl_vertex3_fn p_vertex3; static gl_vertex4_fn p_vertex4;
@@ -89,10 +98,13 @@ static gl_enable_fn p_enable; static gl_disable_fn p_disable;
 static gl_clear_color_fn p_clear_color; static gl_clear_depth_fn p_clear_depth;
 static gl_clear_fn p_clear; static gl_depth_func_fn p_depth_func;
 static gl_depth_mask_fn p_depth_mask; static gl_blend_fn p_blend;
+static gl_clear_stencil_fn p_clear_stencil; static gl_color_mask_fn p_color_mask;
+static gl_stencil_mask_fn p_stencil_mask;
 static gl_alpha_fn p_alpha; static gl_cull_fn p_cull; static gl_front_fn p_front;
 static gl_polygon_fn p_polygon; static gl_shade_fn p_shade;
 static gl_fogfv_fn p_fogfv; static gl_fogi_fn p_fogi; static gl_fogf_fn p_fogf;
 static gl_getint_fn p_getint;
+static gl_getfloat_fn p_getfloat;
 static gl_bind_texture_fn p_bind_texture;
 static gl_gen_textures_fn p_gen_textures;
 static gl_tex_image_2d_fn p_tex_image_2d;
@@ -105,6 +117,8 @@ static gl_lightfv_fn p_lightfv; static gl_lightf_fn p_lightf;
 static gl_color_material_fn p_color_material;
 static gl_light_modelfv_fn p_light_modelfv;
 static gl_light_modeli_fn p_light_modeli;
+static gl_is_enabled_fn p_is_enabled;
+static gl_scissor_fn p_scissor;
 static int g_gl_loaded;
 
 #define LOAD_GL(field, type, symbol) do { *(void **)(&(field)) = SDL_GL_GetProcAddress(symbol); if (!(field)) return 0; } while (0)
@@ -120,11 +134,14 @@ static int load_gl(void) {
     LOAD_GL(p_disable, gl_disable_fn, "glDisable"); LOAD_GL(p_clear_color, gl_clear_color_fn, "glClearColor");
     LOAD_GL(p_clear_depth, gl_clear_depth_fn, "glClearDepth"); LOAD_GL(p_clear, gl_clear_fn, "glClear");
     LOAD_GL(p_depth_func, gl_depth_func_fn, "glDepthFunc"); LOAD_GL(p_depth_mask, gl_depth_mask_fn, "glDepthMask");
+    LOAD_GL(p_clear_stencil, gl_clear_stencil_fn, "glClearStencil");
+    LOAD_GL(p_color_mask, gl_color_mask_fn, "glColorMask"); LOAD_GL(p_stencil_mask, gl_stencil_mask_fn, "glStencilMask");
     LOAD_GL(p_blend, gl_blend_fn, "glBlendFunc"); LOAD_GL(p_alpha, gl_alpha_fn, "glAlphaFunc");
     LOAD_GL(p_cull, gl_cull_fn, "glCullFace"); LOAD_GL(p_front, gl_front_fn, "glFrontFace");
     LOAD_GL(p_polygon, gl_polygon_fn, "glPolygonMode"); LOAD_GL(p_shade, gl_shade_fn, "glShadeModel");
     LOAD_GL(p_fogfv, gl_fogfv_fn, "glFogfv"); LOAD_GL(p_fogi, gl_fogi_fn, "glFogi");
     LOAD_GL(p_fogf, gl_fogf_fn, "glFogf"); LOAD_GL(p_getint, gl_getint_fn, "glGetIntegerv");
+    LOAD_GL(p_getfloat, gl_getfloat_fn, "glGetFloatv");
     LOAD_GL(p_bind_texture, gl_bind_texture_fn, "glBindTexture");
     LOAD_GL(p_gen_textures, gl_gen_textures_fn, "glGenTextures");
     LOAD_GL(p_tex_image_2d, gl_tex_image_2d_fn, "glTexImage2D");
@@ -139,6 +156,8 @@ static int load_gl(void) {
     LOAD_GL(p_color_material, gl_color_material_fn, "glColorMaterial");
     LOAD_GL(p_light_modelfv, gl_light_modelfv_fn, "glLightModelfv");
     LOAD_GL(p_light_modeli, gl_light_modeli_fn, "glLightModeli");
+    LOAD_GL(p_is_enabled, gl_is_enabled_fn, "glIsEnabled");
+    LOAD_GL(p_scissor, gl_scissor_fn, "glScissor");
     g_gl_loaded = 1;
     return 1;
 }
@@ -475,7 +494,9 @@ static void d3d_create_device(void) {
         g_max_lights=max_lights<0?0u:max_lights>8?8u:(unsigned)max_lights;
         memset(g_stage_state,0,sizeof g_stage_state); g_stage_state[1]=4; g_stage_state[2]=2; g_stage_state[3]=1;
         g_stage_state[5]=2; g_stage_state[6]=2; g_stage_state[13]=1; g_stage_state[14]=1;
-        g_viewport[2]=640;g_viewport[3]=480;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
+        int mode_w=640,mode_h=480,mode_bpp=0; hle_dd_mode(&mode_w,&mode_h,&mode_bpp);
+        g_viewport[0]=g_viewport[1]=0;g_viewport[2]=(uint32_t)mode_w;g_viewport[3]=(uint32_t)mode_h;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
+        hle_screen_gl_viewport(0,0,mode_w,mode_h);
         float ambient[4]={0,0,0,1}; p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,ambient);
         p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,0); p_enable(GL_LIGHTING);
         apply_color_material_state();
@@ -582,15 +603,78 @@ static void dev_set_tss(void) {
 static void dev_get_direct3d(void) { uint32_t out=A32(1);if(!out)RET(E_POINTER,2);MEM32(out)=g_d3d;MEM32(g_d3d+4)++;RET(D3D_OK,2); }
 static void dev_begin_scene(void) { RET(load_gl()?D3D_OK:D3DERR_NOTAVAILABLE,1); }
 static void dev_end_scene(void) { hle_screen_gl_swap(); RET(D3D_OK,1); }
-static void dev_clear(void) { uint32_t flags=A32(3),c=A32(4),zb=A32(5); float z;memcpy(&z,&zb,4); if(!load_gl())RET(D3DERR_NOTAVAILABLE,7);
-    if(flags&1){p_clear_color((float)((c>>16)&255)/255.f,(float)((c>>8)&255)/255.f,(float)(c&255)/255.f,(float)(c>>24)/255.f);}
-    if(flags&2)p_clear_depth((double)z); unsigned m=0;if(flags&1)m|=0x4000;if(flags&2)m|=0x0100;if(flags&4)m|=0x0400;p_clear(m);RET(D3D_OK,7); }
+static void dev_clear(void) {
+    uint32_t count=A32(1),rects=A32(2),flags=A32(3),c=A32(4),zb=A32(5),stencil=A32(6);
+    float z,old_clear_color[4],old_clear_depth; int depth_bits=0,stencil_bits=0,glvp[4],old_scissor[4];
+    int old_color_mask[4],old_depth_mask,old_stencil_mask,old_clear_stencil;
+    unsigned mask=0; int scissor_was_enabled;
+    int64_t vx=(int64_t)(int32_t)g_viewport[0],vy=(int64_t)(int32_t)g_viewport[1];
+    int64_t vw=(int64_t)g_viewport[2],vh=(int64_t)g_viewport[3];
+    if(!flags || (flags&~7u) || count>4096 || ((count==0)!=(rects==0)) ||
+       (count && rects>UINT32_MAX-count*16u) || vw<=0 || vh<=0)
+        RET(D3DERR_INVALIDCALL,7);
+    if(!load_gl()) RET(D3DERR_NOTAVAILABLE,7);
+    p_getint(GL_DEPTH_BITS,&depth_bits); p_getint(GL_STENCIL_BITS,&stencil_bits);
+    if((flags&2) && depth_bits<=0) RET(D3DERR_INVALIDCALL,7);
+    if((flags&4) && stencil_bits<=0) RET(D3DERR_INVALIDCALL,7);
+    p_getint(GL_VIEWPORT,glvp);
+    if(glvp[2]<=0 || glvp[3]<=0) RET(D3DERR_INVALIDCALL,7);
+    p_getint(GL_COLOR_WRITEMASK,old_color_mask); p_getint(GL_DEPTH_WRITEMASK,&old_depth_mask);
+    p_getint(GL_STENCIL_WRITEMASK,&old_stencil_mask);
+    scissor_was_enabled=p_is_enabled(GL_SCISSOR_TEST)!=0;
+    p_getint(GL_SCISSOR_BOX,old_scissor);
+    if(flags&1) { p_getfloat(GL_COLOR_CLEAR_VALUE,old_clear_color); p_clear_color((float)((c>>16)&255)/255.f,(float)((c>>8)&255)/255.f,(float)(c&255)/255.f,(float)(c>>24)/255.f); mask|=GL_COLOR_BUFFER_BIT; }
+    if(flags&2) { p_getfloat(GL_DEPTH_CLEAR_VALUE,&old_clear_depth); memcpy(&z,&zb,sizeof z); p_clear_depth((double)z); mask|=GL_DEPTH_BUFFER_BIT; }
+    if(flags&4) { p_getint(GL_STENCIL_CLEAR_VALUE,&old_clear_stencil); p_clear_stencil((int)stencil); mask|=GL_STENCIL_BUFFER_BIT; }
+    if(flags&1) p_color_mask(1,1,1,1);
+    if(flags&2) p_depth_mask(1);
+    if(flags&4) p_stencil_mask(~0u);
+    p_enable(GL_SCISSOR_TEST);
+    for(uint32_t i=0;i<(count?count:1);i++) {
+        int64_t left=vx,top=vy,right=vx+vw,bottom=vy+vh;
+        if(count) {
+            uint32_t r=rects+i*16u;
+            int32_t x1=(int32_t)MEM32(r),y1=(int32_t)MEM32(r+4),x2=(int32_t)MEM32(r+8),y2=(int32_t)MEM32(r+12);
+            if(x1>left)left=x1; if(y1>top)top=y1;
+            if(x2<right)right=x2; if(y2<bottom)bottom=y2;
+        }
+        if(right<=left || bottom<=top) continue;
+        int64_t rel_left=left-vx,rel_top=top-vy,rel_right=right-vx,rel_bottom=bottom-vy;
+        int64_t sx0=(rel_left*glvp[2])/vw;
+        int64_t sx1=(rel_right*glvp[2]+vw-1)/vw;
+        int64_t sy0=((vh-rel_bottom)*glvp[3])/vh;
+        int64_t sy1=((vh-rel_top)*glvp[3]+vh-1)/vh;
+        p_scissor(glvp[0]+(int)sx0,glvp[1]+(int)sy0,(int)(sx1-sx0),(int)(sy1-sy0));
+        p_clear(mask);
+    }
+    if(flags&1) p_color_mask((unsigned char)old_color_mask[0],(unsigned char)old_color_mask[1],(unsigned char)old_color_mask[2],(unsigned char)old_color_mask[3]);
+    if(flags&2) p_depth_mask((unsigned char)old_depth_mask);
+    if(flags&4) p_stencil_mask((unsigned)old_stencil_mask);
+    if(flags&1) p_clear_color(old_clear_color[0],old_clear_color[1],old_clear_color[2],old_clear_color[3]);
+    if(flags&2) p_clear_depth((double)old_clear_depth);
+    if(flags&4) p_clear_stencil(old_clear_stencil);
+    p_scissor(old_scissor[0],old_scissor[1],old_scissor[2],old_scissor[3]);
+    if(!scissor_was_enabled) p_disable(GL_SCISSOR_TEST);
+    RET(D3D_OK,7);
+}
 
 static float *transform_for(uint32_t state) { if(state==1)return g_world;if(state==2)return g_view;if(state==3)return g_projection;return NULL; }
 static void dev_set_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);memcpy(to,hle_ptr(m),64);if(st==1||st==2){refresh_modelview();if(st==2)refresh_lights();}if(st==3)load_projection();RET(D3D_OK,3); }
 static void dev_get_transform(void) { uint32_t st=A32(1),m=A32(2);float *from=transform_for(st);if(!from||!m)RET(D3DERR_INVALIDCALL,3);memcpy(hle_ptr(m),from,64);RET(D3D_OK,3); }
 static void dev_multiply_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);float a[16],b[16],r[16];memcpy(a,to,64);memcpy(b,hle_ptr(m),64);for(int i=0;i<4;i++)for(int j=0;j<4;j++){r[i*4+j]=0;for(int k=0;k<4;k++)r[i*4+j]+=a[i*4+k]*b[k*4+j];}memcpy(to,r,64);if(st==1||st==2){refresh_modelview();if(st==2)refresh_lights();}if(st==3)load_projection();RET(D3D_OK,3); }
-static void dev_set_viewport(void) { uint32_t p=A32(1);if(!p)RET(E_POINTER,2);for(int i=0;i<6;i++)g_viewport[i]=MEM32(p+i*4);if(load_gl())hle_screen_gl_viewport((int)g_viewport[0],(int)g_viewport[1],(int)g_viewport[2],(int)g_viewport[3]);RET(D3D_OK,2); }
+static void dev_set_viewport(void) {
+    uint32_t p=A32(1),x,y,w,h; int mode_w=0,mode_h=0,mode_bpp=0; float min_z,max_z;
+    if(!p) RET(E_POINTER,2);
+    x=MEM32(p);y=MEM32(p+4);w=MEM32(p+8);h=MEM32(p+12);
+    memcpy(&min_z,hle_ptr(p+16),sizeof min_z);memcpy(&max_z,hle_ptr(p+20),sizeof max_z);
+    hle_dd_mode(&mode_w,&mode_h,&mode_bpp);
+    if(!w || !h || (uint64_t)x+w>(uint32_t)mode_w || (uint64_t)y+h>(uint32_t)mode_h ||
+       !(min_z>=0.f && max_z<=1.f && min_z<=max_z)) RET(D3DERR_INVALIDCALL,2);
+    if(!load_gl()) RET(D3DERR_NOTAVAILABLE,2);
+    for(int i=0;i<6;i++)g_viewport[i]=MEM32(p+i*4);
+    hle_screen_gl_viewport((int)x,(int)y,(int)w,(int)h);
+    RET(D3D_OK,2);
+}
 static void dev_get_viewport(void) { uint32_t p=A32(1);if(!p)RET(E_POINTER,2);for(int i=0;i<6;i++)MEM32(p+i*4)=g_viewport[i];RET(D3D_OK,2); }
 
 /* D3DMATERIAL7 is four RGBA float vectors followed by power (68 bytes).
