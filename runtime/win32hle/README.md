@@ -118,15 +118,19 @@ each game was compiled against: that is a port of a third-party library, not
 runtime coverage, and it belongs in a task of its own with the library's source
 and a differential test against the original DLL.
 
-**`msvcp140.dll`** (52 names) and the other MSVC C++ runtime imports
-(`vcruntime140.dll`: `_CxxThrowException`, `_except_handler4_common`). This is
-the MSVC C++ standard library and its exception machinery. The exception half
+**`msvcp140.dll`** (52 names) and the exception machinery of
+`vcruntime140.dll` (`_CxxThrowException`, `_except_handler4_common`). This is
+the MSVC C++ standard library and its exception handling. The exception half
 cannot be answered at all without guest SEH, which this layer does not have
 (`RaiseException` ends the run); the container/string half is a library ABI, so
 a shim would have to be a reimplementation of `std::string`, `std::ios` and
 friends in the guest's layout — the same "port a library" problem as BulletML,
 with the added trap that a wrong layout corrupts the guest silently instead of
-failing.
+failing. Note the boundary: the *other* vcruntime140 names are not part of this
+non-goal and are implemented in msvcrt.c (`__std_exception_copy`/`_destroy`,
+`__vcrt_InitializeCriticalSectionEx`, the two telemetry triggers), because each
+of those is a small CRT helper with a documented behaviour rather than the
+exception machinery or the C++ library.
 
 Both are worth revisiting only with that shape of task. What they are *not* is
 a reason to add a stub: a game that needs BulletML to build its bullet patterns,
