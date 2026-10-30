@@ -58,6 +58,80 @@ uint32_t hle_call_count;             /* shim dispatches since start */
 uint32_t hle_call_cap;               /* 0 = no cap */
 static int g_cap_read;
 
+/* ------------------------------------------------------- state fingerprint
+ *
+ * A call count is not a state. Bisecting on call sequences proves the two runs
+ * made different calls; bisecting on state proves they are in different states,
+ * which is the stronger claim and the one a divergence report should rest on.
+ *
+ * FNV-1a over the eight general-purpose registers, the lazy flag state, and the
+ * guest memory ranges named by RECOMP_STATE_RANGE -- a comma-separated list of
+ * base:length pairs in any C integer notation:
+ *
+ *   RECOMP_STATE_RANGE=0x00400000:0x40000,0x10500000:0x100000
+ *
+ * With no range named it hashes the registers and flags only, and says so in
+ * the cap line's `ranges 0`. A registers-only fingerprint that looked like a
+ * state comparison and was not one would be worse than no fingerprint.
+ *
+ * This cannot enumerate committed memory -- the runtime has no region
+ * accessor -- so a range has to be named. What to name is the caller's
+ * knowledge, and naming it explicitly is honest about the fact that the
+ * fingerprint covers what it was told to cover and nothing else.
+ */
+enum { HLE_STATE_REGS = 13 };          /* 8 general purpose + 4 flag words + eip */
+static struct { uint32_t base, len; } g_state_range[16];
+static int g_n_state_range = -1;
+
+static void state_ranges_init(void) {
+    const char *spec = getenv("RECOMP_STATE_RANGE");
+    g_n_state_range = 0;
+    if (!spec || !*spec) return;
+    const char *p = spec;
+    while (*p && g_n_state_range < (int)(sizeof g_state_range / sizeof *g_state_range)) {
+        char *end;
+        uint32_t base = (uint32_t)strtoul(p, &end, 0);
+        if (end == p) break;
+        p = end;
+        if (*p != ':') break;
+        p++;
+        uint32_t len = (uint32_t)strtoul(p, &end, 0);
+        if (end == p) break;
+        p = end;
+        if (*p == ',') p++;
+        if (len) {
+            g_state_range[g_n_state_range].base = base;
+            g_state_range[g_n_state_range].len = len;
+            g_n_state_range++;
+        }
+    }
+}
+
+static uint64_t fnv1a(uint64_t h, const void *data, size_t n) {
+    const uint8_t *p = data;
+    for (size_t i = 0; i < n; i++) { h ^= p[i]; h *= 1099511628211ull; }
+    return h;
+}
+
+int hle_state_ranges(void) {
+    if (g_n_state_range < 0) state_ranges_init();
+    return g_n_state_range;
+}
+
+uint64_t hle_state_fingerprint(uint32_t *regs_out) {
+    uint32_t regs[HLE_STATE_REGS] = {
+        g_eax, g_ebx, g_ecx, g_edx, g_esi, g_edi, g_ebp, g_esp,
+        g_flag_k, g_flag_a, g_flag_b, g_flag_cf, g_cur_func,
+    };
+    if (regs_out) memcpy(regs_out, regs, sizeof regs);
+    uint64_t h = 1469598103934665603ull;
+    h = fnv1a(h, regs, sizeof regs);
+    if (hle_state_ranges() > 0)
+        for (int i = 0; i < g_n_state_range; i++)
+            h = fnv1a(h, hle_ptr(g_state_range[i].base), g_state_range[i].len);
+    return h;
+}
+
 static void cap_init(void) {
     const char *cap = getenv("RECOMP_CALL_CAP");
     if (cap) hle_call_cap = (uint32_t)strtoul(cap, NULL, 0);
@@ -256,7 +330,12 @@ static void shim_entry(void) {
     if (!g_cap_read) cap_init();
     hle_call_count++;
     if (hle_call_cap && hle_call_count > hle_call_cap) {
-        fprintf(stderr, "[determinism] call cap %u reached\n", hle_call_cap);
+        /* The cap is a checkpoint: report the STATE, not just the count, so a
+         * bisector can compare states rather than call sequences. */
+        uint32_t regs[HLE_STATE_REGS];
+        uint64_t fp = hle_state_fingerprint(regs);
+        fprintf(stderr, "[determinism] state %016llx cap %u ranges %d\n",
+                (unsigned long long)fp, hle_call_cap, hle_state_ranges());
         hle_exit(70);
     }
     /* A shim must return with esp ABOVE where it entered and on a word

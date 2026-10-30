@@ -293,6 +293,16 @@ void     hle_clock_reset(void);          /* for probes: re-read the environment 
 extern uint32_t hle_call_count;      /* shim dispatches since start */
 extern uint32_t hle_call_cap;        /* 0 = no cap */
 
+/* A checkpoint's STATE, not just its call count. Bisecting on call sequences
+ * proves two runs made different calls; bisecting on state proves they are in
+ * different states, which is the stronger claim. FNV-1a over the eight
+ * general-purpose registers, the four lazy-flag words and g_cur_func, plus any
+ * guest memory ranges named by RECOMP_STATE_RANGE (base:length,...). With no
+ * range named it covers the registers only and says so -- a registers-only
+ * fingerprint that looked like a state comparison would be worse than none. */
+uint64_t hle_state_fingerprint(uint32_t *regs_out);   /* regs_out: 13 words */
+int      hle_state_ranges(void);                      /* how many were named */
+
 /* RECOMP_TRACE_TID=1 tags each dispatch line with the guest thread id:
  *   [hle] <tid> Name
  * The log is one global sequence across every thread, and a frame-loop game's
