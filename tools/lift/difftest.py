@@ -1488,16 +1488,22 @@ def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, sou
 
 
 def has_memory_observable(pe_path, va):
-    """Does the ORIGINAL at `va` write guest data or call anything?
+    """Does the ORIGINAL at `va` write guest data, call anything, or touch memory
+    in a way this check cannot account for?
 
-    A pure function's only observable IS its return value, so a comparison that
-    finds no named memory has not compared nothing - it compared the one thing
-    the function produces. Refusing those is the guard mistaking "narrow" for
-    "vacuous". A function that writes memory the extractor failed to name is a
-    different case: then the comparison really is missing a subject."""
+    A pure function's only observable IS its return value, so "no named memory" does
+    not mean "no subject". But the rule has to DEMAND PROOF of purity rather than
+    recognise the shapes of impurity already known: the previous version missed a
+    write through `[index*scale+disp]` entirely, and the auditor found two functions
+    in this very population with that shape. A function is pure only if EVERY memory
+    operand it reaches is accounted for - absolute, base+disp, or index*scale+disp -
+    and none of them is a write outside the stack frame. An operand this cannot
+    classify is not pure: it is unknown, and unknown is a refusal.
+
+    (The stack frame is not guest data: `mov [ebp+8], al` writes an argument slot and
+    was a false positive on 0x004258C0.)"""
     from capstone import Cs, CS_ARCH_X86, CS_MODE_32
-    from capstone.x86 import X86_REG_EBP, X86_REG_ESP
-    import struct as _struct
+    from capstone.x86 import X86_REG_EBP, X86_REG_ESP, X86_REG_EIP
     data = Path(pe_path).read_bytes()
     _, secs = pe_sections(pe_path)
     data_lo = min(sva for _, sva, _, _, _ in secs if sva >= BASE)
@@ -1505,26 +1511,39 @@ def has_memory_observable(pe_path, va):
     blob, section = pe_bytes_at(pe_path, va, 4096)
     md = Cs(CS_ARCH_X86, CS_MODE_32)
     md.detail = True
+
+    def stack_frame(m):
+        return m.base in (X86_REG_EBP, X86_REG_ESP)
+
+    def accounted_for(m):
+        """Can this operand be classified at all? Absolute, base+disp, or
+        index*scale+disp; anything else is unknown."""
+        if m.segment != 0:
+            return False
+        if m.base == 0 and m.index == 0:
+            return True                      # absolute
+        if m.index == 0 and m.base != 0:
+            return True                      # [reg + disp]
+        if m.base == 0 and m.index != 0:
+            return True                      # [index*scale + disp]
+        return True                          # [base + index*scale + disp]
+
     for insn in md.disasm(blob, va):
         if insn.mnemonic in ("call", "callf"):
             return True
-        for op in insn.operands:
-            if op.type == 3 and op.mem.base == 0 and op.mem.index == 0:
-                addr = op.mem.disp & 0xFFFFFFFF
-                if data_lo <= addr < data_hi and insn.mnemonic.startswith(("mov", "and", "or",
-                                                                          "xor", "add", "sub",
-                                                                          "inc", "dec", "not")):
-                    if insn.operands[0].type == 3:   # the destination is memory
-                        return True
-            if op.type == 3 and insn.operands[0].type == 3 and insn.operands[0].mem.base not in (0,):
-                # a write through a register: [reg+off] as destination. The STACK
-                # frame is not a guest-data observable - `mov [ebp+8], al` writes
-                # an argument slot and was a false positive on 0x004258C0.
-                base = op.mem.base
-                if base in (X86_REG_EBP, X86_REG_ESP):
-                    continue
-                if insn.mnemonic.startswith(("mov", "and", "or", "xor", "add", "sub")):
-                    return True
+        ops = insn.operands
+        for i, op in enumerate(ops):
+            if op.type != 3:                 # not a memory operand
+                continue
+            m = op.mem
+            writes = getattr(op, "access", 0) & 2 or (i == 0 and insn.mnemonic.startswith(
+                ("mov", "and", "or", "xor", "add", "sub", "inc", "dec", "not", "shl", "shr",
+                 "sar", "rol", "ror", "xchg")))
+            if not accounted_for(m):
+                return True                  # unknown operand: not pure
+            if writes and not stack_frame(m):
+                # a write to guest data: absolute, [reg+disp] or [index*scale+disp]
+                return True
         if insn.mnemonic in ("ret", "retn", "retf"):
             break
     return False
