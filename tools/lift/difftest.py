@@ -1356,12 +1356,27 @@ PAGES_
     for (cases = 0; cases < NCASES_ && cases < 64; cases++) {
         MEM32(STACK_) = SENTINEL_;                  /* the ret lands here and is not taken */
         @FOREACH@
-        g_eax = (uint32_t)(0x11111111u * (uint32_t)(cases + 1));
-        g_ecx = (uint32_t)(0x22222222u * (uint32_t)(cases + 1));
-        g_edx = (uint32_t)(0x33333333u * (uint32_t)(cases + 1));
-        g_ebx = (uint32_t)(0x44444444u * (uint32_t)(cases + 1));
-        g_esi = (uint32_t)(0x55555555u * (uint32_t)(cases + 1));
-        g_edi = (uint32_t)(0x66666666u * (uint32_t)(cases + 1));
+        /* ONE seed per case, in every register, matching the reference side.
+         *
+         * These used to be six per-register patterns (0x11111111, 0x22222222,
+         * ...). The reference side was later made COHERENT - every register the
+         * same value - because a function that compares one register against a
+         * global (__security_check_cookie compares ecx against a cookie in
+         * .data) always took the failure path under unrelated seeds. That fix
+         * was applied to the Unicorn side only, so for a while the two machines
+         * were entered in DIFFERENT states and the register comparison was
+         * meaningless: every lifted body "diverged" on ebx/esi/edi/edx simply
+         * because the seeds disagreed. It went unnoticed because the generated
+         * modules are compared on eax and named memory only, and those happen to
+         * survive a mismatched scratch register.
+         *
+         * Both sides now use seed_of(case), the same value the reference side
+         * writes into the named memory. */
+        {
+            uint32_t one_ = (uint32_t)(cases + 1);
+            g_eax = one_; g_ecx = one_; g_edx = one_;
+            g_ebx = one_; g_esi = one_; g_edi = one_;
+        }
         g_ebp = 0u;
         g_esp = STACK_;
         ADDR_();
@@ -1653,9 +1668,27 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
                 diverged += 1
             rows.append({"case": i, "seed": f"0x{seed_of(i):08X}", "agree": not fields,
                          "fields": [{"field": n, "project": a, "original": b} for n, a, b in fields]})
+        # A provider body recovered as `void` loses the return value: rev.ng's
+        # type inference is an INPUT, not a verdict, so a function the provider
+        # called void is not evidence that it returns nothing. When the only
+        # difference is eax and the module's function is void, the honest verdict
+        # is memory agreement - reported separately, never as full agreement.
+        # `source` is the module's PATH here, not its text
+        _src_text = ""
+        if source:
+            try:
+                _src_text = Path(source).read_text(errors="replace")
+            except OSError:
+                _src_text = ""
+        void_body = re.search(r"\nvoid\s+\w+\s*\(", _src_text) is not None
+        eax_only = bool(rows) and all(
+            {fl["field"] for fl in r["fields"]} == {"eax"} for r in rows if r["fields"])
+        verdict = "agree" if diverged == 0 else "diverge"
+        if diverged and void_body and eax_only:
+            verdict = "agree-memory"
         out.append({
             "address": f"0x{address:08X}",
-            "verdict": "agree" if diverged == 0 else "diverge",
+            "verdict": verdict,
             "pe": str(pe_path), "pe_sha256": pe_sha, "section": section,
             "bytes_sha256": hashlib.sha256(blob).hexdigest(), "bytes_read": len(blob),
             "generated_unit": unit, "symbol_compared": target,
@@ -1668,6 +1701,15 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
                                  if not compare_flags else
                                  "DF only: the body publishes g_flag_k/a/b/cf and recomp_eflags() "
                                  "derives the rest, but the direction flag is not among them"),
+            "verdict_meaning": {
+                "agree": "eax (for a generated module) and the named memory both match",
+                "agree-memory": "the named memory matches; eax is NOT comparable because the "
+                                "provider recovered the function as returning nothing",
+                "diverge": "a real difference in the compared state",
+                "nothing-compared": "no subject to compare - never a pass",
+                "original-faulted": "the reference machine could not drive the function from "
+                                    "the seeded entry state",
+            }.get(verdict, verdict),
             "input_set": {"cases": cases, "named_addresses": [f"0x{a:08X}" for a in named],
                           "seeded": "each named address holds (case+1) on both sides - small "
                                     "values so a table index stays inside the mapped window and the "
