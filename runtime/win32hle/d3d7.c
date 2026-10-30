@@ -354,7 +354,11 @@ static void set_target_viewport(uint32_t surface,int x,int y,int w,int h) {
 }
 
 static const uint8_t IID_IUNKNOWN[16] = {0,0,0,0,0,0,0,0,0xC0,0,0,0,0,0,0,0x46};
-static const uint8_t IID_IDIRECT3D7[16] = {0x78,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
+/* IID_IDirect3D7 is {f5049e77-4861-11d2-a407-00a0c90629a8}. The 0x78 form is
+ * the one this layer used to accept; both are served so a title holding the
+ * documented GUID resolves. */
+static const uint8_t IID_IDIRECT3D7[16] = {0x77,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
+static const uint8_t IID_IDIRECT3D7_ALT[16] = {0x78,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
 static const uint8_t IID_IDIRECT3DDEVICE7[16] = {0x79,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
 static const uint8_t IID_IDIRECT3DVERTEXBUFFER7[16] = {0x7D,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
 static uint32_t g_d3d_vt, g_d3d;
@@ -673,7 +677,7 @@ static void d3d_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!out) RET
     /* A NULL iid is a pointer error; an all-zero iid is IID_IUnknown, which is
      * compared, not tested for truth. */
     if(!iid) { MEM32(out)=0; RET(E_POINTER,3); }
-    const uint8_t *g=hle_ptr(iid); if(!memcmp(g,IID_IUNKNOWN,16)||!memcmp(g,IID_IDIRECT3D7,16)) { MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
+    const uint8_t *g=hle_ptr(iid); if(!memcmp(g,IID_IUNKNOWN,16)||!memcmp(g,IID_IDIRECT3D7,16)||!memcmp(g,IID_IDIRECT3D7_ALT,16)) { MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
     MEM32(out)=0; RET(E_NOINTERFACE,3); }
 static void d3d_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void d3d_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){hle_com_free(s);if(g_d3d==s)g_d3d=0;} RET(r,1); }

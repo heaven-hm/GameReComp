@@ -177,7 +177,10 @@ static void dd_QueryInterface(void) {                    /* (this, iid, &out) */
     char s[40];
     hle_guid_string(iid, s);
     if (trace()) fprintf(stderr, "[ddraw] IDirectDraw::QueryInterface %s\n", s);
-    if (d1 == 0xF5049E78u) {
+    /* IID_IDirect3D7 is {f5049e77-...}. A title asks for it after creating
+     * DirectDraw7; answering E_NOINTERFACE there leaves the 3D path dead. The
+     * 0x78 form is the id this layer used to accept, kept for older callers. */
+    if (d1 == 0xF5049E77u || d1 == 0xF5049E78u) {
         /* get returns the object, creating it on first use; QueryInterface
          * hands the caller a reference, so take one here, once. */
         uint32_t d3d = hle_d3d7_get();

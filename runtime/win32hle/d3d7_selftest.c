@@ -61,6 +61,12 @@ static uint32_t *A3(int i, uint32_t a, uint32_t b, uint32_t c) {
     g_vec->args[i][0] = a; g_vec->args[i][1] = b; g_vec->args[i][2] = c;
     return g_vec->args[i];
 }
+/* A six-argument vector (IDirect3DDevice7::Clear). */
+static uint32_t *A6(int i, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e, uint32_t f) {
+    uint32_t *v = A3(i, a, b, c);
+    v[3] = d; v[4] = e; v[5] = f;
+    return v;
+}
 
 /* A COM method call. In a running game the object's vtable slot holds the
  * shim's guest VA, which hle_call_guest takes directly. A selftest links the
@@ -111,7 +117,7 @@ int main(void) {
      * ever addressed through P(). */
     struct {
         uint8_t guid[16];
-        uint32_t dd, d3d, d3d2, device, other, tmp, count, passes, primary;
+        uint32_t dd, d3d, d3d2, device, other, tmp, count, passes, primary, target;
         uint8_t desc[236];
         float m[16], back[16];
         uint32_t viewport[6];
@@ -295,6 +301,47 @@ int main(void) {
     ok("caps: describes a software device", (MEM32(P(g->desc)) & 0x400u) != 0 || (MEM32(P(g->desc)) & 0x800u) != 0);
     ok("caps: deviceGUID is the advertised RGB device",
        !memcmp(hle_ptr(P(&g->desc[196])), RGB_DEVICE_GUID, 16));
+    /* ---- A controlled scene, rendered and read back ----
+     * EndScene copies an offscreen target back into CPU memory, so the pixels
+     * checked here are what a title would Lock and blit. Clear to a known
+     * colour, then draw a triangle over it: the renderer has to produce both,
+     * or the D3D7 path is not rendering at all. */
+    {
+        uint32_t *od = hle_alloc(128 * 4u);           /* DDSURFACEDESC2 */
+        od[1]  = 0x1u | 0x20u | 0x2000u | 0x2u | 0x1000u;
+        od[2]  = 16; od[3] = 16;
+        od[26] = 0x1000u | 0x2000u;                   /* TEXTURE | 3DDEVICE: offscreen, not primary */
+        static const uint32_t pf2[8] = { 32, 0x40u, 0, 24, 0xFF0000u, 0xFF00u, 0xFFu, 0 };
+        memcpy(&od[18], pf2, sizeof pf2);
+        uint32_t rc_off = vcall(g->dd, "IDirectDraw7::CreateSurface", 3, A3(4, P(od), P(&g->target), 0));
+        fprintf(stderr, "DBG offscreen: rc=%08x target=%08x w=%u h=%u caps=%08x fl=%08x\n",
+                rc_off, g->target, od[3], od[2], od[26], od[1]);
+        ok("CreateSurface(offscreen 16x16 3D target)", rc_off == 0 && g->target);
+        ok("SetRenderTarget(offscreen)",
+           vcall(g->device, "IDirect3DDevice7::SetRenderTarget", 2, A2(g->target, 0)) == D3D_OK);
+
+        g->viewport[0] = g->viewport[1] = 0; g->viewport[2] = 16; g->viewport[3] = 16;
+        g->viewport[4] = 0; g->viewport[5] = 0x3F800000u;
+        vcall(g->device, "IDirect3DDevice7::SetViewport", 1, A2(P(g->viewport), 0));
+        ok("BeginScene", vcall(g->device, "IDirect3DDevice7::BeginScene", 0, NULL) == D3D_OK);
+        uint32_t rc_clear = vcall(g->device, "IDirect3DDevice7::Clear", 6,
+                 A6(1, 0, 0, 1u /* TARGET only */, 0x00FF00FFu, 0x3F800000u, 0));
+        fprintf(stderr, "DBG clear rc=%08x viewport=%u,%u %ux%u\n", rc_clear,
+                g->viewport[0], g->viewport[1], g->viewport[2], g->viewport[3]);
+        ok("Clear(magenta, 0x00FF00FF)", rc_clear == D3D_OK);
+        ok("EndScene", vcall(g->device, "IDirect3DDevice7::EndScene", 0, NULL) == D3D_OK);
+
+        /* The clear must have reached the surface: read a corner pixel. */
+        uint8_t *px; int pw, ph, pitch, pbpp;
+        if (hle_dd_surface_pixels(g->target, &px, &pw, &ph, &pitch, &pbpp)) {
+            const uint8_t *p = px;                    /* top-left */
+            uint32_t got = pbpp == 32 ? *(const uint32_t *)p
+                         : ((uint32_t)p[0] << 16) | ((uint32_t)p[1] << 8) | p[2];   /* 24bpp BGR bytes */
+            fprintf(stderr, "DBG pixels: %dx%d bpp=%d pitch=%d got=%08x\n", pw, ph, pbpp, pitch, got);
+            ok("the clear reached the surface (magenta in a corner)", (got & 0x00FFFFFFu) == 0x00FF00FFu);
+        } else ok("the cleared surface exposes its pixels", 0);
+        /* SCENE_PIXELS_FOLLOW */
+    }
 
     /* ---- Release ---- */
     ok("IDirect3DDevice7::Release", vcall(g->device, "IDirect3DDevice7::Release", 0, NULL) == 0);

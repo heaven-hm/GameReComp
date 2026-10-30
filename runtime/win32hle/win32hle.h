@@ -344,6 +344,7 @@ void     hle_gdi_release_dc(uint32_t hdc);
 extern const win32hle_shim win32hle_user32[];
 extern const win32hle_shim win32hle_winmm[];
 extern const win32hle_shim win32hle_avifil32[];      /* Video-for-Windows; explicit unsupported-codec errors */
+extern const win32hle_shim win32hle_msvfw32[];       /* ICLocate/ICDecompress, over libavcodec */
 extern const win32hle_shim win32hle_lz32[];          /* LZOpenFileA & co: SZDD expanded in memory (lz32.c) */
 extern const win32hle_shim win32hle_wsock32[];        /* by name and by ordinal */
 void hle_ws_poll(void);                                /* the pump: WSAAsyncSelect notifications */

@@ -23,6 +23,7 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_user32);
     win32hle_register(win32hle_winmm);
     win32hle_register(win32hle_avifil32);
+    win32hle_register(win32hle_msvfw32);                 /* the AVI decompressor API */
     win32hle_register(win32hle_lz32);
     win32hle_register(win32hle_wsock32);
     win32hle_register(win32hle_ole32);
