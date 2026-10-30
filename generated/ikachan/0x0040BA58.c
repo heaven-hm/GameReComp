@@ -14,6 +14,8 @@
  * automatically: it is the other provider's opinion, recorded so
  * the two can be read side by side. */
 uint32_t msvc_rand_step(void) {
-    MEM32(0x00413350u) = MEM32(0x00413350u) * 0x343FDu + 0x269EC3u;
-    return MEM32(0x00413350u) >> 16U & 0x7FFFU;
+    uint32_t state_00413350 = MEM32(0x00413350u);
+    state_00413350 = state_00413350 * 0x343FDu + 0x269EC3u;
+    MEM32(0x00413350u) = state_00413350;
+    return state_00413350 >> 16U & 0x7FFFU;
 }

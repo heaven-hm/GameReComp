@@ -14,6 +14,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.autorecomp import rename as rn
+from tools.autorecomp import rename_gen as rn_gen
 
 
 def fn(records, address="0x00401000"):
@@ -115,3 +116,49 @@ def test_a_global_is_named_from_the_union_of_its_evidence():
     assert ident in named["globals"]
     assert named["globals"][ident]["name"]
     assert len(named["globals"][ident]["evidence"]) == 2
+
+
+# ---- memory fusion: the conditions that make it sound rather than usually-right
+
+def test_repeated_accesses_to_one_address_become_one_local():
+    body = ("uint32_t f(void) {\n"
+            "    MEM32(0x00413350u) = MEM32(0x00413350u) * 0x343FDu + 0x269EC3u;\n"
+            "    return MEM32(0x00413350u) >> 16U & 0x7FFFu;\n"
+            "}")
+    fused, decls, _ = rn_gen.fuse_memory(body, {"global:0x00413350": "state_00413350"})
+    assert decls and "uint32_t state_00413350 = MEM32(0x00413350u);" in fused
+    # the local carries the value, and the store is the only memory write left
+    assert fused.count("MEM32(0x00413350u)") == 2          # the load and the store
+    assert "return state_00413350 >> 16U & 0x7FFFu;" in fused
+
+
+def test_a_call_between_accesses_blocks_the_fusion():
+    # a callee may write any address, so a read across a call must reload
+    body = ("void f(void) {\n"
+            "    MEM32(0x00413350u) = 1;\n"
+            "    helper();\n"
+            "    MEM32(0x00413350u) = MEM32(0x00413350u) + 1;\n"
+            "}")
+    fused, decls, refusals = rn_gen.fuse_memory(body, {})
+    assert refusals, "the call must be reported as blocking fusion"
+
+
+def test_different_widths_to_one_address_are_not_the_same_object():
+    body = ("void f(void) {\n"
+            "    MEM8(0x00413350u) = 1;\n"
+            "    MEM32(0x00413350u) = MEM32(0x00413350u) + 1;\n"
+            "}")
+    fused, decls, _ = rn_gen.fuse_memory(body, {})
+    # two locals are fine, two locals with the SAME NAME are a compile error -
+    # which is what the first version of the fusion produced
+    names = [d.split("=")[0].split()[-1] for d in decls]
+    assert len(names) == len(set(names)), names
+
+
+def test_a_single_access_is_not_fused():
+    body = ("uint32_t f(void) {\n"
+            "    return MEM32(0x00413350u);\n"
+            "}")
+    fused, decls, _ = rn_gen.fuse_memory(body, {})
+    # one load needs no local; fusing it would add a variable for nothing
+    assert decls == [] or fused.count("state_") == 0
