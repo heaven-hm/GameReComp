@@ -134,24 +134,12 @@ def transform(source, fn_name, base, fn_addr=0):
 def ungeneratable_reason(body):
     """Why this provider body is outside what the transform can carry, or None.
 
-    The transform rewrites scalar locals and constant guest-memory accesses. A
-    recovered POINTER (the provider models a guest address as a host pointer) and
-    array indexing through one are a different representation: rewriting
-    `var_1[5]` as C pointer arithmetic would be silently wrong, and a host pointer
-    must never reach guest memory. So those bodies are refused rather than
-    emitted, and the report says which and why."""
-    import re as _re
-    if _re.search(r"\b(struct|union)_\d+", body):
-        return "uses a provider struct/union type (types-and-globals.h was not saved)"
-    # a pointer VARIABLE (`generic32_t *var_1`), not a cast: `*(generic32_t *)`
-    # is how the provider spells a memory access and is exactly what is rewritten
-    if _re.search(r"generic\d+_t\s*\*\s*(var_\d+|argument_\d+)", body) or \
-       _re.search(r"generic\d+_t\s*\*\s*\w+\s*=", body):
-        return "uses a recovered POINTER: a guest address held in a local, which this transform does not rewrite"
-    if _re.search(r"\bvar_\d+\s*\[", body):
-        return "indexes a recovered pointer (array access through a guest address)"
-    if _re.search(r"\b(DWORD|WORD|BYTE|BOOL|LPVOID|HMODULE|HANDLE)\b", body):
-        return "uses a provider-only scalar type from the unsaved headers"
+    This is now a thin pre-check. The AST model is the authority: it synthesizes
+    the provider's opaque types, maps its scalar names, rewrites pointers to guest
+    VAs and refuses what it cannot express, so the checks that used to live here
+    (struct types, pointer variables, provider scalars) would refuse bodies the
+    transform now handles - which is exactly the "accepts less than it can"
+    failure that the three-number count exposes."""
     return None
 
 
@@ -161,8 +149,13 @@ def generate(pe_path, address, revng_dir, names, evidence):
     if not rev.is_file():
         return None, f"the provider has no reading for 0x{address:08X} ({rev} missing)"
     fn = names["functions"].get(f'0x{address:08X}')
-    if not fn or not fn["name"]:
-        return None, f"no name: {fn['kind'] if fn else 'unknown'}"
+    if not fn:
+        return None, "no evidence record for this address"
+    if not fn["name"]:
+        # the namer found nothing to call it by, but the body is still the
+        # deliverable: a mechanical name is honest, and the certification is
+        # what the module's value rests on
+        fn = dict(fn, name=f"function_{address:08X}", mechanical_name=True)
     base = data_base(pe_path)
     if base is None:
         return None, "the PE has no .data section"
@@ -182,6 +175,16 @@ def generate(pe_path, address, revng_dir, names, evidence):
     typed = ast_source
     # the adapter call the AST output leaves under the provider's name
     typed = typed.replace(f"function_0x{address:06x}_Code_x86", fn["name"])
+    # import calls: the provider writes LeaveCriticalSection(), the runtime's
+    # shim is hle_LeaveCriticalSection(). The old text transform did this through
+    # the evidence; the AST path did not, so those modules failed to compile.
+    for rec in evidence["functions"][f'0x{address:08X}']["records"]:
+        if rec["kind"] != "import_call":
+            continue
+        name = rec.get("name") or ""
+        if name and re.match(r"^[A-Za-z_]\w*$", name):
+            typed = re.sub(rf"(?<![A-Za-z_0-9.h>]){re.escape(name)}\s*\(",
+                           f"hle_{name}(", typed)
     local_names = {ident: g["name"] for ident, g in names["globals"].items() if g["name"]}
     typed, decls, refusals = fuse_memory(typed, local_names)
     for note in ast_notes:

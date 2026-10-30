@@ -308,9 +308,28 @@ class Model:
         return body
 
 
-def rewrite(body, segment_base):
+def rewrite(body, segment_base, own_va=None):
     """(C source for the function with guest-VA pointers, notes) or Unsupportable."""
     fn = parse(body)
+    # scope refusals, with reasons
+    import re as _re
+    ret_type = _type_of(fn.decl.type.type) or ""
+    if _re.match(r"(struct|union)_\d+", ret_type):
+        raise Unsupportable("returns a provider struct BY VALUE: the hidden-pointer return "
+                            "convention is not expressible in this module model")
+    # a CALL to another lifted function, not this function's own declaration:
+    # the declaration is the first match and carries the return type before it
+    calls = _re.findall(r"(?<![A-Za-z_0-9])(function_0x([0-9a-f]+)_Code_x86)\s*\(", body)
+    callers = [n for _, n in calls]
+    if own_va is not None:
+        callers = [c for c in callers if int(c, 16) != own_va]
+    elif callers:
+        callers = callers[1:]           # drop the declaration when the VA is unknown
+    if callers:
+        raise Unsupportable(f"calls {len(callers)} other lifted function(s) "
+                            f"(e.g. 0x{int(callers[0],16):08X}): a call into another lifted body "
+                            f"needs that function's guest-ABI entry, which this module model "
+                            f"does not marshal")
     model = Model(segment_base)
     new_body = model.function(fn)
     # the function's own declaration, retyped
@@ -325,16 +344,14 @@ def rewrite(body, segment_base):
         ret_text = c_type(_type_of(ret))
     arg_text = []
     for p in params:
-        ty = _type_of(p.type)
-        pw = None
-        if isinstance(p.type, c_ast.PtrDecl):
-            pw = width_of_type(str(ty).replace("ptr:", ""))
-        if isinstance(p.type, c_ast.PtrDecl) and pw:
-            arg_text.append(f"uint32_t {p.name}")
-        elif p.type is not None and _type_of(p.type) == "void":
+        ty = _type_of(p.type) or ""
+        if ty == "void":
             continue
+        if ty.startswith("ptr:") or isinstance(p.type, c_ast.PtrDecl):
+            # every pointer argument is a GUEST VA, whatever it points at
+            arg_text.append(f"uint32_t {p.name}")
         else:
-            arg_text.append(f"{c_type(_type_of(p.type)) or 'uint32_t'} {p.name}")
+            arg_text.append(f"{c_type(ty) or 'uint32_t'} {p.name}")
     new_body.block_items = [_fold_stmt(i) for i in (new_body.block_items or [])]
     body_text = new_body_to_text(new_body)
     source = f"{ret_text} {name}({', '.join(arg_text) if arg_text else 'void'}) {body_text}\n"

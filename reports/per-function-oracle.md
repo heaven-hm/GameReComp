@@ -175,6 +175,35 @@ capture the real entry state from a live run rather than invent one. Recorded
 beside the register-scope limitation, with the same status: a known limit of the
 method, not a finding about the code.
 
+## The honest chain: 228 accepted, 228 generated, 106 compile, and almost none certifiable
+
+Every stage is a strict subset of the one before it, and collapsing them is how a
+pipeline gets credit it has not earned:
+
+| stage | count | what it means |
+|---|---|---|
+| parser accepts | 228 of 955 | the AST model can read the provider's body |
+| generates C | 228 | the module source is produced |
+| compiles | 106 | the C builds against the runtime headers |
+| certifies | 0 of 3 sampled | the oracle does not relate the body to the original bytes |
+
+Two scope refusals moved the first number down from 524, correctly: a function
+returning a provider struct **by value** (184) uses a hidden-pointer return the
+module model cannot express, and a function **calling another lifted function**
+(56+) needs that function's guest-ABI entry, which is not marshalled. Both are
+honest refusals that would otherwise have become compile errors.
+
+The compile failures that remain are provider helpers (`helper_f*_wrapper`, 101)
+and provider types in local declarations - the unsaved headers again.
+
+**And the fourth number is the important one: of three hot, compiling, called
+functions sampled (0x00480DC1 at 7,180 calls, 0x00483734 at 3,785, 0x00472FF0 at
+372), none certified.** Two returned `original-faulted` because the oracle's
+synthetic entry state cannot drive a function that dereferences its arguments
+(the scope limit recorded above), and one hit a harness gap (an import call not
+resolved to the runtime's shim, now fixed). The effective set is therefore *much
+smaller* than 228, and no plan should be made on the chain's first number.
+
 ## The generator's next gate, measured: pycparser's C coverage
 
 Of Doukutsu's 955 provider functions the AST model accepts **120**. The 835

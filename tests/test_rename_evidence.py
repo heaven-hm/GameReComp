@@ -67,24 +67,35 @@ def test_an_address_that_is_not_code_is_refused():
         re_ev.function_instructions(PE, 0x90000000)
 
 
-def test_an_odd_address_is_refused_as_a_function_start():
-    # x86 has no alignment requirement, but 23.6% of the corpus's table entries
-    # being odd means the discovery is finding mid-instruction addresses; naming
-    # those would generate C for garbage
+def test_parity_is_not_evidence_about_being_a_function():
+    """Odd addresses are NORMAL for this linker, and the claim that they were
+    phantoms was retracted: Doukutsu's own PE entry point (0x00481D27) is odd.
+    What is still refused is an address outside a code section."""
     if not HAVE:
         pytest.skip("the corpus is not present")
-    ok, why = re_ev.plausible_start(PE, 0x0040BA59)      # one byte into a real function
-    assert not ok and "odd address" in why
     ok, why = re_ev.plausible_start(PE, 0x0040BA58)
-    assert ok, why
+    assert ok
+    ok, why = re_ev.plausible_start(PE, 0x0040BA59)
+    # an odd address inside a real function is now ACCEPTED by this check: the
+    # evidence for or against it must come from the bytes, not from parity
+    assert ok or "odd" not in why
 
 
-def test_a_refused_entry_is_not_named():
+def test_a_non_code_address_is_still_refused():
     if not HAVE:
         pytest.skip("the corpus is not present")
-    ev = re_ev.collect(PE, [0x0040BA59])
+    ok, why = re_ev.plausible_start(PE, 0x00000010)
+    assert not ok
+
+
+def test_a_non_code_address_is_still_refused_and_not_named():
+    if not HAVE:
+        pytest.skip("the corpus is not present")
+    ev = re_ev.collect(PE, [0x00000010])
     named = rn.name_all(ev)
-    fn = named["functions"]["0x0040BA59"]
+    fn = named["functions"]["0x00000010"]
     assert fn["kind"] == "not_a_function_start"
     assert fn["name"] is None
     assert named["counts"]["not_a_function_start"] == 1
+
+

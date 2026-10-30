@@ -224,10 +224,11 @@ def plausible_start(pe_path, va):
     it is a discovery pass that also found mid-instruction addresses. Rather than
     name those, the extractor refuses them and says why. This is a data-quality
     check on the function inventory, not a statement about the instruction set."""
-    if va & 1:
-        return False, ("odd address: legal in x86 but not credible as a function entry, and "
-                       "23.6% of the corpus's table entries are odd - the discovery is finding "
-                       "mid-instruction addresses")
+    # Parity is NOT evidence: this linker packs functions with no alignment
+    # padding and Doukutsu's own PE entry point (0x00481D27) is odd. An earlier
+    # version refused odd addresses and was wrong; the retraction is recorded in
+    # reports/per-function-oracle.md. What is still checked is that the address
+    # lands in a code section at all.
     sec = section_of(pe_path, va)
     if not sec:
         return False, f"0x{va:08X} is not in a section"
