@@ -950,8 +950,11 @@ static void dev_set_texture(void) {
         uint8_t *pixels; int w,h,pitch,bpp;
         if (!hle_dd_surface_is_texture(surface) ||
             !hle_dd_surface_pixels(surface,&pixels,&w,&h,&pitch,&bpp)) RET(D3DERR_INVALIDCALL,3);
-        if(w<=0 || h<=0 || (bpp!=16 && bpp!=24 && bpp!=32) || pitch<w*(bpp/8))
+        if(w<=0 || h<=0 || (bpp!=16 && bpp!=24 && bpp!=32))
             RET(D3DERR_NOTAVAILABLE,3);
+        size_t bytes_per_pixel=(size_t)bpp/8u;
+        if(pitch<=0 || (size_t)w>SIZE_MAX/bytes_per_pixel ||
+           (size_t)pitch<(size_t)w*bytes_per_pixel) RET(D3DERR_NOTAVAILABLE,3);
         (void)pixels;
     }
     if (surface==g_texture_surface) RET(D3D_OK,3);
