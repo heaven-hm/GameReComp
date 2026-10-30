@@ -1,0 +1,22 @@
+{
+ "schema": 1,
+ "provider": "tools/autorecomp/rename_gen.py (evidence only)",
+ "note": "Generated BESIDE the project and never dispatched to: it exists so the pipeline can be checked, not so a game can run with it.",
+ "functions": [
+  {
+   "address": "0x00402020",
+   "symbol": "store_block_00499c68",
+   "category": "HIGH_LEVEL_UNVERIFIED",
+   "evidence": [
+    "mov eax, dword ptr [0x499c68]",
+    "mov edx, dword ptr [0x499c68]",
+    "mov eax, dword ptr [0x499c68]",
+    "mov ecx, dword ptr [0x499c68]",
+    "mov eax, dword ptr [0x499c68]",
+    "mov ecx, dword ptr [0x499c68]"
+   ],
+   "file": "0x00402020.c",
+   "not_yet": "the per-function oracle has not been run on this generated function; until it agrees it stays HIGH_LEVEL_UNVERIFIED"
+  }
+ ]
+}

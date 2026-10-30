@@ -1067,7 +1067,8 @@ def parse_output(text):
 def diff(case, lifted, real):
     """Every architectural field the two machines disagree on, by name."""
     out = []
-    for name in REGS:
+    compared = ('eax',) if getattr(case, 'eax_only', False) else REGS
+    for name in compared:
         if lifted['regs'][name] != real['regs'][name]:
             out.append((name, f"{lifted['regs'][name]:08X}", f"{real['regs'][name]:08X}"))
 
@@ -1299,12 +1300,14 @@ def named_addrs(body_text, lo=BASE, hi=BASE + SIZE):
     return sorted(out)
 
 
-def named_addrs_from_code(blob, va, lo=BASE, hi=BASE + SIZE):
+def named_addrs_from_code(blob, va, lo=None, hi=None):
     """The absolute guest addresses the ORIGINAL's own instructions name.
 
     Taken from the bytes rather than from the generated source, so the memory
     compared is the memory the function actually touches, whatever the
     generator emitted and wherever the adapter lives."""
+    lo = BASE if lo is None else lo
+    hi = BASE + SIZE if hi is None else hi
     md = Cs(CS_ARCH_X86, CS_MODE_32)
     md.detail = True
     out = set()
@@ -1373,7 +1376,8 @@ PAGES_
 '''
 
 
-def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, source_file=None):
+def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, source_file=None,
+                        stack_va=None):
     """Compile a harness that drives the project's own body over `cases`."""
     project_dir = Path(project_dir)
     gen = project_dir / "src" / "recomp" / "gen"
@@ -1383,7 +1387,7 @@ def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, sou
     if not cc:
         return None, "no C compiler"
     pages = []
-    for a in named + [ORACLE_STACK]:
+    for a in named + [stack_va]:
         pages.append(f"    hle_vm_reserve(0x{a & ~0xFFF:08X}u, 0x1000u);")
     # The seed must vary WITH the case, so it is emitted as C over the loop
     # counter, not precomputed here: a constant per address made every case the
@@ -1397,7 +1401,7 @@ def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, sou
               .replace("@FOREACH@", seeds)
               .replace("@REPORT@", report)
               .replace("ADDR_", target)
-              .replace("STACK_", f"0x{ORACLE_STACK:08X}u")
+              .replace("STACK_", f"0x{(stack_va or ORACLE_STACK):08X}u")
               .replace("SENTINEL_", f"0x{ORACLE_SENTINEL:08X}u")
               .replace("NCASES_", str(cases))
               .replace("PAGES_", "\n".join(pages))
@@ -1450,28 +1454,53 @@ def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, sou
     return binary, None
 
 
+def _eax_only_case(case):
+    """Mark every register but eax as not compared, for a plain-C body."""
+    class _C(Case):
+        def __init__(self, base):
+            super().__init__(name=base.name, code=base.code, undef=base.undef)
+    c = _C(case)
+    c.eax_only = True
+    return c
+
+
+def oracle_window(pe_path):
+    """The memory window the reference machine needs: the whole image plus a page.
+
+    The fixed 256 KB window was enough for a 200 KB game and not for a 1.4 MB one
+    - Doukutsu's globals are at 0x490000, outside it, and the first certification
+    attempt faulted on the reference machine's own data."""
+    base, secs = pe_sections(pe_path)
+    hi = max((sva + max(vsize, rsize) for _, sva, vsize, roff, rsize in secs), default=base + SIZE)
+    hi = max(hi, base + SIZE)
+    return base, ((hi - base) + 0x1FFF) & ~0xFFF
+
+
 def run_unicorn_function(pe_path, va, named, seed_of, cases):
     """The ORIGINAL's bytes at `va`, driven over the same entry states."""
+    win_lo, win_size = oracle_window(pe_path)
+    stack = win_lo + win_size          # one page beyond the image
+    sentinel = stack
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
-    mu.mem_map(BASE, SIZE)
+    mu.mem_map(win_lo, win_size + 0x1000)
     for addr, blob in pe_image(pe_path).items():
         mu.mem_write(addr, blob)
     results = []
     for c in range(cases):
-        mu.mem_write(ORACLE_STACK, struct.pack('<I', ORACLE_SENTINEL))
+        mu.mem_write(stack, struct.pack('<I', sentinel))
         for a in named:
             mu.mem_write(a, struct.pack('<I', seed_of(c)))
         regs = {'eax': 0x11111111 * (c + 1) & 0xFFFFFFFF, 'ecx': 0x22222222 * (c + 1) & 0xFFFFFFFF,
                 'edx': 0x33333333 * (c + 1) & 0xFFFFFFFF, 'ebx': 0x44444444 * (c + 1) & 0xFFFFFFFF,
                 'esi': 0x55555555 * (c + 1) & 0xFFFFFFFF, 'edi': 0x66666666 * (c + 1) & 0xFFFFFFFF,
-                'ebp': 0, 'esp': ORACLE_STACK}
+                'ebp': 0, 'esp': stack}
         for name, val in regs.items():
             mu.reg_write(UC_REGS[name], val)
         mu.reg_write(X.UC_X86_REG_EFLAGS, EFLAGS_START)
         mu.reg_write(X.UC_X86_REG_FPCW, FPU_CONTROL_WORD)
         mu.reg_write(X.UC_X86_REG_MXCSR, 0x1F80)
         try:
-            mu.emu_start(va, ORACLE_SENTINEL, count=100000)
+            mu.emu_start(va, sentinel, count=100000)
         except Exception as e:                      # unicorn's UcError, name varies by version
             raise OracleFault(f"the ORIGINAL's bytes at 0x{va:08X} faulted on case {c}: {e}")
         mem = {}
@@ -1545,18 +1574,27 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
             out.append({"address": f"0x{address:08X}", "verdict": "no-generated-body",
                         "pe": str(pe_path), "pe_sha256": pe_sha})
             continue
-        named = named_addrs_from_code(blob, address)
+        # the image's own extent: the fixed 256 KB bound silently dropped every
+        # address in a big PE, and a certification with 0 named addresses is
+        # weaker than it looks
+        _lo, _size = oracle_window(pe_path)
+        named = named_addrs_from_code(blob, address, _lo, _lo + _size)
         # One documented seed function, used by both sides: a different value
-        # per case so the arithmetic is exercised, and the same value on each
-        # side so a difference means the function, not the setup.
-        seed_of = lambda c: (0x9E3779B9 * (c + 1)) & 0xFFFFFFFF
+        # per case, and the same value on each side so a difference means the
+        # function, not the setup. The values are SMALL on purpose: a real
+        # function indexes tables off its globals, and a 32-bit pattern as an
+        # index sends the ORIGINAL's own bytes off the mapped window - the first
+        # version used 0x9E3779B9*(case+1) and the reference machine faulted on
+        # its own code, which is the entry state's fault, not the function's.
+        seed_of = lambda c: (c + 1) & 0xFFFFFFFF
 
         if source:
             # certifying a generated module: its symbol is the target, and its
             # file is what gets linked
             target = symbol or target
+        _lo, _size = oracle_window(pe_path)
         binary, err = build_project_cases(project_dir, target, named, seed_of, cases, cc,
-                                          source_file=source)
+                                          source_file=source, stack_va=_lo + _size)
         if binary is None:
             out.append({"address": f"0x{address:08X}", "verdict": "harness-failed",
                         "detail": err, "pe": str(pe_path), "pe_sha256": pe_sha})
@@ -1573,6 +1611,13 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
 
         case = Case(name=f"project 0x{address:08X}", code=blob,
                     undef=ONLY_DF if compare_flags else NO_FLAGS)
+        # A plain-C body models its return value (into eax) and the memory it
+        # writes - not the guest's other general-purpose registers, which are
+        # the compiler's to use. Comparing them is comparing two unrelated
+        # register files; only eax and the named memory are claims the module can
+        # honour.
+        if source:
+            case = _eax_only_case(case)
         rows, diverged = [], 0
         for i, (got, want) in enumerate(zip(lifted, real)):
             fields = diff(case, got, want)
@@ -1596,7 +1641,10 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
                                  "DF only: the body publishes g_flag_k/a/b/cf and recomp_eflags() "
                                  "derives the rest, but the direction flag is not among them"),
             "input_set": {"cases": cases, "named_addresses": [f"0x{a:08X}" for a in named],
-                          "seeded": "each named address holds 0x9E3779B9*(case+1) on both sides; "
+                          "seeded": "each named address holds (case+1) on both sides - small "
+                                    "values so a table index stays inside the mapped window and the "
+                                    "reference machine runs the function rather than faulting on its "
+                                    "own data; "
                                     "registers are per-case constants; esp is a stack page whose "
                                     "top word is the return sentinel",
                           "not_covered": "any entry state other than these, any address the body "

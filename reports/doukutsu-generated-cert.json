@@ -1,0 +1,79 @@
+{
+ "tool": "tools/lift/difftest.py --project",
+ "what_it_proves": "for each address, the body compared (the project's own, or a GENERATED module file when --source is given) and the ORIGINAL's machine code at that VA agree on the registers, the named flags and the named memory, over the entry states driven",
+ "what_it_does_not_prove": "anything about other entry states, other addresses, or the game as a whole; there is no aggregate verdict",
+ "addresses": [
+  {
+   "address": "0x00402020",
+   "verdict": "agree",
+   "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "section": ".text",
+   "bytes_sha256": "41114fd5dccaf1b097d8e2558023cef943ace09716e54f3ad3b304b32e055830",
+   "bytes_read": 4096,
+   "generated_unit": "src/recomp/gen/recomp_0000.c",
+   "symbol_compared": "sub_00402020",
+   "compares": "the eight general-purpose registers and the bytes of every absolute guest address the generated body names",
+   "does_not_compare": "the arithmetic flags: a plain-C body does not model the guest's flag state, which the original leaves as its last arithmetic instruction set it. Only a lifted body publishes one (RECOMP_FLAGS_OUT) and only it can be flag-compared.",
+   "input_set": {
+    "cases": 8,
+    "named_addresses": [
+     "0x00499C68"
+    ],
+    "seeded": "each named address holds (case+1) on both sides - small values so a table index stays inside the mapped window and the reference machine runs the function rather than faulting on its own data; registers are per-case constants; esp is a stack page whose top word is the return sentinel",
+    "not_covered": "any entry state other than these, any address the body does not name, and any input the game would supply"
+   },
+   "diverged_cases": 0,
+   "cases": [
+    {
+     "case": 0,
+     "seed": "0x00000001",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 1,
+     "seed": "0x00000002",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 2,
+     "seed": "0x00000003",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 3,
+     "seed": "0x00000004",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 4,
+     "seed": "0x00000005",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 5,
+     "seed": "0x00000006",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 6,
+     "seed": "0x00000007",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 7,
+     "seed": "0x00000008",
+     "agree": true,
+     "fields": []
+    }
+   ]
+  }
+ ]
+}
