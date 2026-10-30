@@ -132,6 +132,47 @@ only ever passed because the named bits happened to be clear on both sides. With
 the real `EFLAGS` register read, the difference is visible and the honest scope is
 "registers and memory", not "flags included".
 
+## The function inventory is over-approximated by a third, and the odd entries are two different defects
+
+The renaming pass needs to know what a function is before it names one, and the
+first Doukutsu-scale run found that the inventory it was handed contains entries
+that are not function starts. `tools/autorecomp/inventory.py` classifies every
+dispatch-table entry by walking the instruction stream from the entry addresses:
+
+| | entries | even | real start | boundary inside another function | not any boundary |
+|---|---|---|---|---|---|
+| corpus total | 50,942 | 38,997 | 38,997 | 6,484 | 5,461 |
+
+23.4% of table entries are at odd addresses. **Control: every even entry IS an
+instruction boundary (PASS)** — so the disassembly walk is sound and the odd
+entries are genuinely not starts. x86 has no alignment requirement, so an odd
+entry is not illegal; a table where a quarter are odd is not a table of functions.
+
+The two odd classes are not the same defect, and the Lead's measurement on
+Ikachan's lifted project makes the distinction:
+
+- **phantom** (5,461 corpus-wide; 112 of Ikachan's 175 odd): mid-instruction, so
+  it can never be a legitimate call target. Dead weight — build time and a
+  corrupted ranking, nothing worse.
+- **inside another function** (6,484 corpus-wide; the Lead measured 20 of
+  Ikachan's 175 odd by walking from real starts, where this tool's even-address
+  seeds also produce boundaries that are not real starts, so this count is an
+  upper bound): a real instruction boundary, reachable by a `jmp` — a shared block
+  or tail-merge target. Lifting it as an independent function assumes an entry
+  state (esp, live registers, x87 stack) it does not have, so if the guest jumps
+  there the lifted body is wrong in a way no trace localises.
+
+The true function count for Ikachan is about 307, not 482; every count taken from
+a discovery pass is inflated the same way. The corpus numbers in
+`reports/rename-density.json` already exclude entries this tool refuses, and their
+denominator should read "of 12,726 table entries, of which roughly a third are not
+function starts".
+
+This is an upstream defect in the discovery pass (`discover_functions`
+conflates a function start with "some address worth disassembling"), reported
+here rather than fixed here: changing the inventory changes every game's generated
+source, and the regression baseline is recorded against the current one.
+
 ## The ruling: what a plain-C replacement can be verified for
 
 **`HIGH_LEVEL_VERIFIED` means registers and memory for a plain-C replacement.**
