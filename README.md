@@ -1,16 +1,54 @@
-# RevEng-Studio
+# GameReComp
 
 <p align="center">
-  <img src="assets/reveng-studio-logo.svg" alt="RevEng-Studio — legacy game reverse engineering" width="760">
+  <img src="assets/reveng-studio-logo.svg" alt="GameReComp — legacy game reverse engineering" width="760">
 </p>
 
-<p align="center">
-  <strong>Decompile. Recompile. Bring legacy games to modern operating systems.</strong>
-</p>
+**Turn old Windows PC games into playable, moddable, portable games with genuinely human-readable source code — automatically.**
 
-RevEng-Studio is a **game-only reverse-engineering and recompilation toolkit** for understanding, rebuilding, and preserving old games. The goal is to take legacy game executables and their supporting code, analyze how they work, reconstruct or translate their behavior, and produce native builds for modern platforms.
+**GameReComp** is a game-focused preservation, reconstruction, modding,
+and native-porting platform. Its long-term mission is **broad compatibility
+across legacy Windows PC games**, not one hand-reconstructed game at a time.
+Given a game executable and assets you legally own, the intended unattended
+workflow reconstructs understandable, editable C/C++ source, builds a native
+executable **from that exact source**, checks gameplay against the original,
+and packages the result for preservation, modding, and platform ports.
 
-It is designed as a **generic, extensible solution for games**, not a one-game port and not a general-purpose application decompiler. Shared pipelines handle common binary-analysis and recompilation work; game-specific adapters can provide engine, graphics, audio, input, filesystem, and operating-system compatibility where required.
+### What the product is designed to deliver
+
+- **Playable and independently verified:** Rebuilt games should pass
+  reproducible original-vs-rebuilt gameplay scenarios, not merely compile or
+  display a title screen. Verification reports distinguish tested coverage
+  from unverified behaviour.
+- **Actually human-readable C/C++:** Recover meaningful types, identifiers,
+  structs, functions, and natural control flow, not just `eax`/`esp`
+  register-transfer C or prettier pseudocode. Unrecovered functions remain
+  explicitly labelled low-level fallbacks; original developer naming cannot
+  generally be guaranteed from stripped binaries.
+- **Moddable at the source level:** Developers should be able to change game
+  logic, rebuild the native executable, and demonstrate the modification
+  working in-game.
+- **Portable and maintainable:** Reuse a common compatibility runtime and
+  platform backends so recovered game logic can target modern operating
+  systems without a bespoke rewrite for each game.
+- **Broad automated compatibility:** Support many older Windows PC games,
+  engines, executable formats, and middleware through reusable infrastructure
+  and honest compatibility reporting—not a promise that every game works today.
+- **Unattended, non-AI-first processing:** PCRecomp supplies recompilation
+  and Windows-game runtime foundations; rev.ng is the intended primary
+  high-level structural-source provider. Deterministic analysis comes first;
+  AI is **optional** for extra semantic readability. No manual per-function
+  reconstruction should be required by the intended workflow. The desktop
+  GUI is planned over this same backend.
+
+**Differentiator:** Not another decompiler or game-specific recompilation
+script. GameReComp aims to make **verified native game ports with genuinely
+modifiable, human-readable source** reproducible across a large catalogue of
+legacy Windows games.
+
+The current implementation is an early CLI vertical slice; human-readable
+source, verified gameplay, broad native ports, and the GUI described above are
+**product goals, not completed features**.
 
 ## What it aims to do
 
@@ -24,16 +62,16 @@ The long-term goal is to help legacy PC games run on **Windows, Linux, macOS, an
 
 ## Design inspiration
 
-RevEng-Studio combines ideas from existing reverse-engineering and recompilation projects:
+GameReComp combines ideas from existing reverse-engineering and recompilation projects:
 
-| Project | What it contributes to the ecosystem | RevEng-Studio's intended use |
+| Project | What it contributes to the ecosystem | GameReComp's intended use |
 | --- | --- | --- |
 | [PCRecomp](https://github.com/sp00nznet/pcrecomp) | Static recompilation tools and runtime infrastructure for PC software. | Reuse compatible recompilation/runtime techniques as part of a game-focused pipeline. Integration is experimental. |
 | [rev.ng](https://rev.ng/) | Binary analysis and decompilation across architectures. | Use analysis artifacts and provider adapters to inform reconstruction and recompilation. The adapter is experimental. |
 | [Ghidra](https://github.com/NationalSecurityAgency/ghidra) | Disassembly, decompilation, and reverse-engineering framework. | Optional analysis provider for examining game binaries. |
-| [N64Recomp](https://github.com/N64Recomp/N64Recomp) | Static recompilation focused on Nintendo 64 games. | A reference point for game recompilation workflows; RevEng-Studio targets a broader set of legacy game formats and hosts over time. |
+| [N64Recomp](https://github.com/N64Recomp/N64Recomp) | Static recompilation focused on Nintendo 64 games. | A reference point for game recompilation workflows; GameReComp targets a broader set of legacy game formats and hosts over time. |
 
-These projects have different scopes and maturity levels. RevEng-Studio is not a replacement for them; it aims to connect reusable analysis, translation, runtime, and verification components into a more general workflow for legacy games.
+These projects have different scopes and maturity levels. GameReComp is not a replacement for them; it aims to connect reusable analysis, translation, runtime, and verification components into a more general workflow for legacy games.
 
 ## Current status
 
@@ -55,7 +93,7 @@ Game-specific compatibility may still be required. “Generic” means the archi
 
 ## Build and try
 
-The CLI is currently named `recomp-studio`; the repository and product name are **RevEng-Studio**.
+The CLI is currently named `recomp-studio`; the repository and product name are **GameReComp**.
 
 Install a C++20 toolchain, CMake, Ninja, and the dependencies listed in `CMakeLists.txt`, then run:
 
