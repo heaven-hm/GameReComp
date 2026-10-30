@@ -60,6 +60,7 @@ int exit(int);
 import re as _re_field  # noqa: E402  (used by the field-offset rule below)
 
 MEM_OF_WIDTH = {8: "MEM8", 16: "MEM16", 32: "MEM32", 64: "MEM64"}
+_RE_FRAME = __import__("re").compile(r"^stack$")
 SCALAR_OF_WIDTH = {8: "uint8_t", 16: "uint16_t", 32: "uint32_t", 64: "uint64_t"}
 
 # the provider's scalar names -> the C types the generated module may use
@@ -92,6 +93,8 @@ def _type_of(node):
     # THE shape that matters: a cast's to_type is a Typename wrapper round the
     # declarator (Typename -> PtrDecl -> TypeDecl -> IdentifierType), not the
     # PtrDecl directly. That one missing branch made every cast resolve to None.
+    if isinstance(node, (c_ast.Struct, c_ast.Union, c_ast.Enum)):
+        return node.name
     if isinstance(node, c_ast.Typename):
         return _type_of(node.type)
     if isinstance(node, c_ast.ArrayDecl):
@@ -159,7 +162,18 @@ def parse_layouts(header_text):
             off = int(_r.search(r"(\d+)$", fname).group(1))
             fields[fname] = (off, widths.get(ty, 8) if not count else 8)
         layouts[name] = fields
+    # sizes are declared separately: `_SIZE(569344) struct_0 {`
+    for m2 in _r.finditer(r"_SIZE\((\d+)\)\s+(struct_\d+|union_\d+)\s*\{", header_text):
+        _SIZE_CACHE[m2.group(2)] = int(m2.group(1))
     return layouts
+
+
+_SIZE_CACHE = {}
+
+
+def struct_size(name):
+    """The provider struct's extent, as declared by _SIZE(N) in the header."""
+    return _SIZE_CACHE.get(name)
 
 
 class Model:
@@ -167,6 +181,9 @@ class Model:
 
     def __init__(self, segment_base, layouts=None):
         self.layouts = layouts or {}
+        self.frame_name = None
+        self.frame_type = None
+        self.frames_enabled = False
         self.segment_base = segment_base
         self.va_locals = {}        # var name -> width (a pointer that became a VA)
         self.scalar_locals = {}    # var name -> width
@@ -175,7 +192,16 @@ class Model:
     # ---- declaration rewriting
     def decl(self, decl):
         ty = decl.type
-        name = decl.name      # pycparser puts it on the Decl; the nested
+        name = decl.name
+        # `struct_N stack;` is the function's GUEST STACK FRAME, modelled as a
+        # host local by the provider. Its address must become a guest VA (the
+        # frame), never a host pointer.
+        tname = _type_of(ty) or ""
+        if name and tname.startswith(("struct_", "union_")) and _RE_FRAME.search(name or ""):
+            if not getattr(self, "frames_enabled", False):
+                return decl        # frames not modelled here: the host local stays
+            self.frame_name, self.frame_type = name, tname
+            return None        # dropped: its accesses are the `frame` VA now      # pycparser puts it on the Decl; the nested
                               # TypeDecl is where the *type* lives
         # `generic32_t *var_1` (or `generic32_t *var_1 = ...`)
         if isinstance(ty, c_ast.PtrDecl):
@@ -294,6 +320,9 @@ class Model:
                                   args=c_ast.ExprList([addr]))
         if isinstance(node, c_ast.UnaryOp) and node.op == "&":
             inner = node.expr
+            if isinstance(inner, c_ast.ID) and inner.name == self.frame_name:
+                # the guest stack frame: its address IS a guest VA
+                return c_ast.ID("frame")
             if isinstance(inner, c_ast.ID) and inner.name not in self.va_locals \
                     and inner.name != "segment_2":
                 # `&stack`, `&var_7`: the address of a HOST object. Emitting it as
@@ -378,6 +407,8 @@ class Model:
             return c_ast.Compound(block_items=[self.stmt(s) for s in (node.block_items or [])])
         if isinstance(node, c_ast.Decl):
             d = self.decl(node)
+            if d is None:
+                return None
             if d.init is not None:
                 d.init = self.expr(d.init)
             return d
@@ -414,7 +445,7 @@ class Model:
         return body
 
 
-def rewrite(body, segment_base, own_va=None, layouts=None):
+def rewrite(body, segment_base, own_va=None, layouts=None, frames=False):
     """(C source for the function with guest-VA pointers, notes) or Unsupportable."""
     import re as _pre
     # `undef(T)` is the provider's own marker for a value it could not define -
@@ -470,6 +501,7 @@ def rewrite(body, segment_base, own_va=None, layouts=None):
         raise Unsupportable("the provider body is EMPTY: it named an address it could not "
                             "decompile, so there is nothing to generate")
     model = Model(segment_base, layouts)
+    model.frames_enabled = frames
     new_body = model.function(fn)
     # the function's own declaration, retyped
     name = fn.decl.name
@@ -492,9 +524,15 @@ def rewrite(body, segment_base, own_va=None, layouts=None):
         else:
             arg_text.append(f"{c_type(ty) or 'uint32_t'} {p.name}")
     new_body.block_items = [_fold_stmt(i) for i in (new_body.block_items or [])]
+    if model.frame_name:
+        arg_text.append("uint32_t frame")
     body_text = new_body_to_text(new_body)
     source = f"{ret_text} {name}({', '.join(arg_text) if arg_text else 'void'}) {body_text}\n"
-    return source, model.notes + [f"parameters: {len(arg_text)}"]
+    notes = model.notes + [f"parameters: {len(arg_text)}"]
+    if model.frame_name:
+        notes.append(f"frame: {model.frame_type} {struct_size(model.frame_type) or '?'} bytes "
+                     f"({model.frame_name})")
+    return source, notes
 
 
 def _fold_stmt(item):
