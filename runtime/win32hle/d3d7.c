@@ -396,6 +396,8 @@ static void dev_get_caps(void);
 static void dev_enum_textures(void);
 static void d3d_enum_z(void);
 static void d3d_evict(void);
+static void dev_draw_strided(void);
+static void dev_draw_indexed_strided(void);
 static void vb_lock(void);
 static void vb_unlock(void);
 static void vb_get_desc(void);
@@ -404,7 +406,7 @@ static void release_surface_ref(uint32_t surface);
 #define UNIMPL(name, argc) static void name(void) { RET(D3DERR_NOTAVAILABLE, argc); }
 UNIMPL(dev_begin_state,1)
 UNIMPL(dev_end_state,2) UNIMPL(dev_preload,2) UNIMPL(dev_set_clip,2)
-UNIMPL(dev_get_clip,2) UNIMPL(dev_draw_strided,6) UNIMPL(dev_draw_indexed_strided,8)
+UNIMPL(dev_get_clip,2)
 UNIMPL(dev_sphere,6) UNIMPL(dev_validate,2)
 UNIMPL(dev_apply_state,2) UNIMPL(dev_capture_state,2) UNIMPL(dev_delete_state,2)
 UNIMPL(dev_create_state,3) UNIMPL(dev_load,6) UNIMPL(dev_set_clip_plane,3) UNIMPL(dev_get_clip_plane,3)
@@ -535,6 +537,68 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
         if(color_sum_was_enabled) p_enable(GL_COLOR_SUM); else p_disable(GL_COLOR_SUM);
     }
     return 1;
+}
+
+static int strided_field_valid(uint32_t desc,uint32_t offset,uint32_t count,uint32_t bytes) {
+    uint32_t data=MEM32(desc+offset),stride=MEM32(desc+offset+4);
+    if(!data || stride<bytes || !count) return 0;
+    return (uint64_t)data+(uint64_t)(count-1)*stride+bytes<=UINT32_MAX;
+}
+
+static void copy_strided_field(uint8_t *dst,uint32_t dst_stride,uint32_t dst_offset,
+                               uint32_t desc,uint32_t src_offset,uint32_t count,uint32_t bytes) {
+    uint32_t data=MEM32(desc+src_offset),stride=MEM32(desc+src_offset+4);
+    for(uint32_t i=0;i<count;i++)
+        memcpy(dst+(size_t)i*dst_stride+dst_offset,hle_ptr(data+i*stride),bytes);
+}
+
+static uint32_t pack_strided_vertices(uint32_t fvf,uint32_t desc,uint32_t count) {
+    uint32_t packed_stride=vertex_stride(fvf),position=fvf&0x00eu;
+    uint32_t tex_count=(fvf>>8)&15u,off=position==4?16u:12u,tex_bytes=0;
+    if(!desc || desc>UINT32_MAX-40u || !count || count>1000000u || !packed_stride || packed_stride>256u || tex_count>1u) return 0;
+    if(position!=2u && position!=4u) return 0;
+    if(position==4u && (fvf&0x010u)) return 0;
+    if(!strided_field_valid(desc,0,count,off)) return 0;
+    if(fvf&0x010u) { if(!strided_field_valid(desc,8,count,12)) return 0; }
+    if(fvf&0x040u) { if(!strided_field_valid(desc,16,count,4)) return 0; }
+    if(fvf&0x080u) { if(!strided_field_valid(desc,24,count,4)) return 0; }
+    if(tex_count) {
+        uint32_t dimcode=(fvf>>16)&3u;
+        tex_bytes=dimcode==3u?4u:8u;
+        if(!strided_field_valid(desc,32,count,tex_bytes)) return 0;
+    }
+    size_t total=(size_t)packed_stride*count;
+    uint32_t guest=hle_va(hle_alloc(total));
+    if(!guest) return 0;
+    uint8_t *dst=hle_ptr(guest);
+    copy_strided_field(dst,packed_stride,0,desc,0,count,off);
+    off=position==4u?16u:12u;
+    if(fvf&0x010u) { copy_strided_field(dst,packed_stride,off,desc,8,count,12); off+=12; }
+    if(fvf&0x040u) { copy_strided_field(dst,packed_stride,off,desc,16,count,4); off+=4; }
+    if(fvf&0x080u) { copy_strided_field(dst,packed_stride,off,desc,24,count,4); off+=4; }
+    if(tex_count) copy_strided_field(dst,packed_stride,off,desc,32,count,tex_bytes);
+    return guest;
+}
+
+static void dev_draw_strided(void) {
+    uint32_t primitive=A32(1),fvf=A32(2),desc=A32(3),count=A32(4),flags=A32(5);
+    if(flags) RET(D3DERR_NOTAVAILABLE,6);
+    uint32_t vertices=pack_strided_vertices(fvf,desc,count);
+    if(!vertices) RET(D3DERR_INVALIDCALL,6);
+    int ok=draw_vertices(primitive,fvf,vertices,count,0,0);
+    hle_free(hle_ptr(vertices));
+    RET(ok?D3D_OK:D3DERR_INVALIDCALL,6);
+}
+
+static void dev_draw_indexed_strided(void) {
+    uint32_t primitive=A32(1),fvf=A32(2),desc=A32(3),count=A32(4),indices=A32(5),index_count=A32(6),flags=A32(7);
+    if(flags) RET(D3DERR_NOTAVAILABLE,8);
+    if(!indices || !index_count) RET(D3DERR_INVALIDCALL,8);
+    uint32_t vertices=pack_strided_vertices(fvf,desc,count);
+    if(!vertices) RET(D3DERR_INVALIDCALL,8);
+    int ok=draw_vertices(primitive,fvf,vertices,count,indices,index_count);
+    hle_free(hle_ptr(vertices));
+    RET(ok?D3D_OK:D3DERR_INVALIDCALL,8);
 }
 
 static void d3d_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!out) RET(E_POINTER,3);
