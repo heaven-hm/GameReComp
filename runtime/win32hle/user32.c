@@ -2244,6 +2244,27 @@ static void u_TranslateAcceleratorA(void) {              /* (hwnd, haccel, &msg)
     }
     RET(0, 3);
 }
+/* ---- the common dialogs (COMDLG32) ----
+ * There is no native file, colour, font or print dialog here, so these answer
+ * what a real one answers when the user cancels: FALSE from the call and 0 from
+ * CommDlgExtendedError() ("no error" - a cancel is not a failure; the CDERR_*
+ * codes are for real errors, and CDERR_GENERALCODES is 0).  That is a code path
+ * every caller of these already has to handle, and it is the honest answer for
+ * a host with no dialog: a game handed an invented filename would be the lie.
+ * The guest's OPENFILENAMEA/W, CHOOSECOLOR, CHOOSEFONT or PRINTDLG structure is
+ * left exactly as the caller passed it, as a cancel does. */
+static void u_GetOpenFileNameA(void) { RET(0, 1); }
+static void u_GetOpenFileNameW(void) { RET(0, 1); }
+static void u_GetSaveFileNameA(void) { RET(0, 1); }
+static void u_GetSaveFileNameW(void) { RET(0, 1); }
+static void u_ChooseColorA(void)     { RET(0, 1); }
+static void u_ChooseColorW(void)     { RET(0, 1); }
+static void u_ChooseFontA(void)      { RET(0, 1); }
+static void u_ChooseFontW(void)      { RET(0, 1); }
+static void u_PrintDlgA(void)        { RET(0, 1); }
+static void u_PrintDlgW(void)        { RET(0, 1); }
+static void u_CommDlgExtendedError(void) { RET(0, 0); }
+
 /* ---- menus ----
  * A menu is a flat list of items; a popup item carries a submenu handle. Menus
  * are not drawn (no menu bar on the surface yet), but a game queries and edits
@@ -2499,6 +2520,12 @@ const win32hle_shim win32hle_user32[] = {
     { "AdjustWindowRect", u_AdjustWindowRect }, { "AdjustWindowRectEx", u_AdjustWindowRectEx },
     { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "LoadCursorA", u_LoadCursorA },
     { "LoadImageA", u_LoadImageA }, { "LoadBitmapA", u_LoadBitmapA }, { "LoadAcceleratorsA", u_LoadAcceleratorsA },
+    { "GetOpenFileNameA", u_GetOpenFileNameA }, { "GetOpenFileNameW", u_GetOpenFileNameW },
+    { "GetSaveFileNameA", u_GetSaveFileNameA }, { "GetSaveFileNameW", u_GetSaveFileNameW },
+    { "ChooseColorA", u_ChooseColorA }, { "ChooseColorW", u_ChooseColorW },
+    { "ChooseFontA", u_ChooseFontA }, { "ChooseFontW", u_ChooseFontW },
+    { "PrintDlgA", u_PrintDlgA }, { "PrintDlgW", u_PrintDlgW },
+    { "CommDlgExtendedError", u_CommDlgExtendedError },
     { "LoadMenuA", u_LoadMenuA }, { "TranslateAcceleratorA", u_TranslateAcceleratorA },
     { "CreateMenu", u_CreateMenu }, { "CreatePopupMenu", u_CreatePopupMenu }, { "DestroyMenu", u_DestroyMenu },
     { "AppendMenuA", u_AppendMenuA }, { "InsertMenuA", u_InsertMenuA }, { "ModifyMenuA", u_ModifyMenuA },
