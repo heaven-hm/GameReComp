@@ -110,7 +110,7 @@ static void k_GetCommandLineW(void) {
 static void k_GetCurrentProcess(void)   { RET(0xFFFFFFFFu, 0); }        /* pseudo-handle */
 static void k_GetCurrentProcessId(void) { RET((uint32_t)getpid(), 0); }
 static void k_ExitProcess(void)         {
-    fprintf(stderr, "[win32hle] ExitProcess(%u)\n", A32(0));
+    fprintf(stderr, "[win32hle] ExitProcess(%u) from guest 0x%08X\n", A32(0), g_cur_func);
     hle_fls_thread_exit();                           /* the exiting thread's FLS destructors */
     hle_exit((int)A32(0));
 }
