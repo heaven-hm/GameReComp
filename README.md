@@ -206,14 +206,27 @@ strict subset of the one before it:
 
 | Stage | Doukutsu's 955 provider functions |
 | --- | --- |
-| provider bodies that parse and satisfy the module model | 50 |
+| provider bodies that parse and satisfy the module model | 157 at the sweep's rule set |
 | **certify against the original bytes** | **17** |
 
-Seventeen, not seven, and the reason is a rule rather than a fix. The seven
-certified on **registers and named memory**; ten more certify on the **return
-value alone** because the original's bytes prove they write no guest memory and
-call nothing, so `eax` is their whole contract. Those are different claims and the
-table keeps them apart.
+Seventeen, and the reason is a rule rather than a fix. Seven certified on **`eax`
+and the named guest memory**; ten more certify on the **return value alone**
+because the original's bytes show they write no guest memory and call nothing, so
+`eax` is their whole contract.
+
+**The seven do not compare registers, and an earlier version of this README said
+they did.** A generated module is a plain C function: it models its return value
+and the memory it writes, not the guest's other general-purpose registers. The
+`--source` harness compares `eax` alone (`diff()` takes `compared = ('eax',)` for
+these cases), so "registers and named memory" was an overclaim carried over from
+the lifted-body path, where all eight registers genuinely are compared. Corrected
+here rather than buried: the seven's verdicts are correct and their *scope* was
+described too broadly.
+
+The 157 is the sweep's acceptance count at that commit's rule set; at current HEAD
+the default rule set accepts 47 and 173 with the frame model behind its flag. The
+staged number is a property of a rule set, not a constant, and a table that mixes
+them is two measurements wearing one row.
 
 **The count was 19 for one commit, and it went down because a rule got stricter.**
 A scan for host addresses found one bad module; the invariant — *no `MEMn` may be
@@ -228,18 +241,39 @@ a count that went up because the pattern got looser.**
 
 The honest summary: **the pipeline can prove that a generated function equals the
 original's code, on the inputs it drove, for 17 of 955 functions** — seven of them
-on the strong claim and ten on the weaker one. Naming is the bottleneck, not
-certification, and the read-this-instead-of-the-assembly goal is still ahead of it.
+on `eax` and named memory, ten on the return value alone. Naming is the bottleneck,
+not certification, and the read-this-instead-of-the-assembly goal is still ahead of
+it.
+
+An independent audit of every number above was run against the tools rather than
+read for plausibility, and is in
+[`reports/number-audit.md`](reports/number-audit.md). It disagreed with seven of
+them; four were errors in this file and have been corrected here rather than
+argued with. It also found that the ten `agree-return` certifications hold **by
+luck rather than by rule**: the purity check behind them cannot see a write through
+`[index*scale+disp]`, and two functions in the same population have exactly that
+shape. They fell outside the compiled set, so no verdict was wrong — but the rule
+needs fixing before another ten rest on it.
 
 Three provider defects were found and named on the way, all one class: rev.ng
 recovered a body that returns a constant where the original computes from its
-inputs, with a `void f(void)` signature that could not have used them. And the
-frame loop's core — `0x00481BB0`, 6.6 million dispatched calls in a 12-second run —
-is **refused**, with 180 `undef()` values in its 8,541-byte provider body, which is
-the decompiler saying 180 times that it could not determine a value. The low-level
-fallback carries it and the game still runs: **the provider failed on the function
-that matters most, and a pipeline that could only report the provider's successes
-would have called that progress.**
+inputs, with **no parameters** — the provider's prototype is `generic32_t f(void)`,
+so the parameter list is empty while the return type is not, which is what let the
+body return a constant. And the frame loop's core — `0x00481BB0` — is **refused**,
+with **180 `undef()` values** in its provider body, which is the decompiler saying
+180 times that it could not determine a value. (That body is 8,541 bytes as
+`tools/autorecomp/revng.py`'s `function_source()` extracts it, which is what the
+tool count uses; the function *definition* alone is 8,467. The number is only
+meaningful with its measurement stated, so it is stated.) The low-level fallback
+carries it and the game still runs: **the provider failed on the function that
+matters most, and a pipeline that could only report the provider's successes would
+have called that progress.**
+
+`0x00481BB0` is also the frame loop's core: **6,600,457 dispatched calls** in a
+`RECOMP_CALL_CAP=300000` census run, which is what that artifact records. It is not
+a 12-second measurement and an earlier version of this README implied it was — the
+census ended by the cap so its table could be dumped, and a capped run and a timed
+run are not interchangeable numbers.
 
 ### Other measured outcomes, kept distinct
 
