@@ -1572,7 +1572,21 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
     One entry per address, each carrying the input set it was driven over, the
     binary and VA the bytes came from (hashed), and the fields that differed.
     There is deliberately no aggregate verdict: agreement on eight entry states
-    is not a statement about the game."""
+    is not a statement about the game.
+
+    THIS IS A SEQUENTIAL INSTRUMENT. Each address builds and links its own harness
+    in a fresh temp directory, and five concurrent runs were observed to fail
+    silently - rc=1, no report - while the identical command run alone returned
+    `agree`. If a sweep reports a pile of failures, run one module by hand before
+    believing any of them: a resource-starved or colliding harness failure looks
+    exactly like a bad module in a table. The machine is sequential too.
+
+    The two reference machines are seeded from ONE value per case (registers and
+    named memory alike). A fix applied to only one side is not a fix: the first
+    version gave Unicorn coherent seeds and left the lifted side on per-register
+    patterns, so every register comparison in --project mode was between
+    unrelated states and the resulting single-register "divergences" read as lift
+    bugs."""
     import hashlib
     pe_path = Path(pe_path)
     pe_sha = hashlib.sha256(pe_path.read_bytes()).hexdigest()
