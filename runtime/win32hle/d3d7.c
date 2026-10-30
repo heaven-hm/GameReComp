@@ -175,6 +175,7 @@ static uint32_t g_dev_vt;
 static uint32_t g_vb_vt;
 static uint32_t g_device;
 static uint32_t g_render_target;
+static int g_scene_active;
 static float g_world[16], g_view[16], g_projection[16];
 static uint32_t g_render[256];
 static uint32_t g_viewport[6];
@@ -306,7 +307,7 @@ static void emit_vertex(const uint8_t *v, uint32_t fvf, int screen_xy) {
 static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
                          uint32_t vertex_count, uint32_t indices, uint32_t index_count) {
     unsigned mode=gl_primitive(primitive); uint32_t stride=vertex_stride(fvf);
-    if(!load_gl() || mode==0xffffffffu || !stride || !vertices) return 0;
+    if(!g_scene_active || !load_gl() || mode==0xffffffffu || !stride || !vertices) return 0;
     if(vertex_count>1000000u || index_count>3000000u) return 0;
     if(g_texture_surface && g_stage_state[1]!=1 && ((fvf >> 8) & 15)) {
         uint8_t *pixels; int w,h,pitch,bpp;
@@ -342,7 +343,7 @@ static void d3d_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void d3d_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){hle_com_free(s);if(g_d3d==s)g_d3d=0;} RET(r,1); }
 static void dev_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!out) RET(E_POINTER,3); if(memcmp(hle_ptr(iid),IID_IUNKNOWN,16)&&memcmp(hle_ptr(iid),IID_IDIRECT3DDEVICE7,16)){MEM32(out)=0;RET(E_NOINTERFACE,3);} MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
 static void dev_addref(void) { RET(++MEM32(A32(0)+4),1); }
-static void dev_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);if(g_device==s){g_device=0;hle_screen_d3d7_active(0);release_surface_ref(g_texture_surface);g_texture_surface=0;release_surface_ref(g_render_target);g_render_target=0;if(g_gl_texture&&load_gl())p_delete_textures(1,&g_gl_texture);g_gl_texture=0;}} RET(r,1); }
+static void dev_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);if(g_device==s){g_device=0;g_scene_active=0;hle_screen_d3d7_active(0);release_surface_ref(g_texture_surface);g_texture_surface=0;release_surface_ref(g_render_target);g_render_target=0;if(g_gl_texture&&load_gl())p_delete_textures(1,&g_gl_texture);g_gl_texture=0;}} RET(r,1); }
 static void vb_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!out) RET(E_POINTER,3); if(memcmp(hle_ptr(iid),IID_IUNKNOWN,16)&&memcmp(hle_ptr(iid),IID_IDIRECT3DVERTEXBUFFER7,16)){MEM32(out)=0;RET(E_NOINTERFACE,3);} MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
 static void vb_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void vb_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);} RET(r,1); }
@@ -609,8 +610,18 @@ static void dev_set_tss(void) {
     RET(D3D_OK,4);
 }
 static void dev_get_direct3d(void) { uint32_t out=A32(1);if(!out)RET(E_POINTER,2);MEM32(out)=g_d3d;MEM32(g_d3d+4)++;RET(D3D_OK,2); }
-static void dev_begin_scene(void) { RET(load_gl()?D3D_OK:D3DERR_NOTAVAILABLE,1); }
-static void dev_end_scene(void) { hle_screen_gl_swap(); RET(D3D_OK,1); }
+static void dev_begin_scene(void) {
+    if(g_scene_active) RET(D3DERR_INVALIDCALL,1);
+    if(!load_gl()) RET(D3DERR_NOTAVAILABLE,1);
+    g_scene_active=1;
+    RET(D3D_OK,1);
+}
+static void dev_end_scene(void) {
+    if(!g_scene_active) RET(D3DERR_INVALIDCALL,1);
+    g_scene_active=0;
+    hle_screen_gl_swap();
+    RET(D3D_OK,1);
+}
 static void dev_clear(void) {
     uint32_t count=A32(1),rects=A32(2),flags=A32(3),c=A32(4),zb=A32(5),stencil=A32(6);
     float z,old_clear_color[4],old_clear_depth; int depth_bits=0,stencil_bits=0,glvp[4],old_scissor[4];
