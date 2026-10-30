@@ -639,3 +639,31 @@ result. `tests/test_rename_ast.py` keeps both halves asserted -- the definition 
 for a body that calls one, **and** `generate()` references it -- because a helper that
 is correct and unreachable is the failure mode, not a helper that is wrong.
 
+## The certifiable pool after the intrinsics: what certified, and what is a to-do
+
+The eight intrinsics moved the population (357 → 371 bodies generating, 126 → 132
+generating callers, 28 → 39 multi-function closures). Certifying the new subjects:
+
+**CERTIFIED — 0x004618B0**, closure `{0x004618B0, 0x0040F310}`:
+`agree` on 8 entry states, `closure: {functions: 2, named_words: 1, frames_summed: 0}`.
+Committed under `reports/certified/0x004618B0/` with the module, the callee and the
+verdict. **The certified count moves 1 → 2.**
+
+**HARNESS-FAILED — 0x004812DE and 0x0048136B, and the reason is a real defect, not a
+blocked module.** Both closures contain `0x00483734`, whose generated body calls
+`hle_LeaveCriticalSection` — **a function that does not exist.** The runtime's shim is
+`static void k_LeaveCriticalSection(void)` in `kernel32.c`, dispatched through the shim
+table; there is no `hle_` entry point for it. So the import mapping in the generator
+**invents a name** for a shim it cannot call, and the module cannot link. That is the
+same class as the eighteen implicit-int declarations found last round, one level up:
+a call to a name that is not there. It needs either a shim-table dispatch in the
+generated module or a refusal for import calls — not a rename.
+
+**REFUSED (not harness-failed) — 0x0040EDE0 and 0x00480E64**, both by the signature
+cross-check ("the provider's prototype takes N argument(s) but the original reads M
+registers before writing them"): the callee lost inputs, which is the class 4 rule
+doing its job.
+
+**Not yet measured:** the remaining new entries. My census run and the Lead's differ
+(346 vs 371 bodies) because my closure walk requires evidence for every callee, so the
+nine-odd remaining subjects are a to-do rather than a count.
