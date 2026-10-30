@@ -274,9 +274,16 @@ Three provider defects were found and named on the way, all one class: rev.ng
 recovered a body that returns a constant where the original computes from its
 inputs, with **no parameters** — the provider's prototype is `generic32_t f(void)`,
 so the parameter list is empty while the return type is not, which is what let the
-body return a constant. And the frame loop's core — `0x00481BB0` — is **refused**,
-with **180 `undef()` values** in its provider body, which is the decompiler saying
-180 times that it could not determine a value. (That body is 8,541 bytes as
+body return a constant.
+
+**And the decompiler's own failure rate, which belongs beside the certified count
+rather than in a footnote: 24 of the 955 provider bodies are refused for containing
+`undef()`, carrying 2,331 undefined values between them.** Every one of those is
+rev.ng saying it could not determine a value. The frame loop's core — `0x00481BB0` —
+is the most concentrated case, with **180 of them** in a single body, which is the
+decompiler saying it does not know 180 times about the one function that runs 6.6
+million times in a twelve-second session. The low-level fallback carries it and the
+game still runs. (That body is 8,541 bytes as
 `tools/autorecomp/revng.py`'s `function_source()` extracts it, which is what the
 tool count uses; the function *definition* alone is 8,467. The number is only
 meaningful with its measurement stated, so it is stated.) The low-level fallback
