@@ -109,6 +109,37 @@ the claim can be re-run rather than believed:
 bodies -> 28 multi-function closures generating -> **1 certified**. One, not 28. The
 number that moved is the one the closure work existed to move, and it moved once.
 
+### What the committed certification does and does not establish
+
+The certified source is **committed** and the verdict certifies **that source** against
+the original's bytes. It does not follow that re-running the generator reproduces the
+same bytes, and it does not: regenerating `0x0041F9E0` from a fresh evidence collection
+produces a module with a different symbol name in its header
+(`typed_access_0041f9e0 [named_structured]` rather than `function_0041F9E0
+[no_evidence]`), because the name comes from the evidence records the collection
+happened to produce.
+
+So the two claims must be kept apart:
+
+| claim | established | by what |
+| --- | --- | --- |
+| the committed C, compiled, matches the original across 8 entry states | **yes** | the verdict, reproducible from the committed sources |
+| the generator reproduces that exact C from the same binary | **no** | the symbol differs when the evidence set differs |
+
+That is not a defect in the certification -- it certifies what it names. It is a limit
+on what the certification can be used to argue: **it says the source is right, not that
+the pipeline is deterministic in its naming.** A deterministic generator (fixed evidence
+collection, sorted names, no run-order dependence) is a separate piece of work and is not
+claimed here.
+
+**And a change to the generator can invalidate committed evidence without any test
+failing**, because the verdict names source files that a later transform could have
+emitted differently. The check that matters before shipping a transform change is: does
+any committed certified module depend on the feature that changed? `0x0041F9E0`'s
+closure uses **no intrinsic**, so the intrinsic work in `96ae5e6` cannot have altered it.
+That check -- "which committed evidence depends on this change" -- is cheap and should be
+part of the habit, not discovered afterwards.
+
 ## A pass at the oracle is evidence, not proof — with a measured example
 
 The per-function oracle compares **values**: the registers a body leaves and the
