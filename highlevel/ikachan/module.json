@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "name": "ikachan",
+  "game": "ikachan",
+  "provider": "hand-written from the mechanical body",
+  "note": "Each entry names the original address it replaces, and the evidence for the reading. The mechanical body of a replaced address is still compiled as sub_XXXXXXXX__lowlevel, so the claim can be re-checked against it at any time.",
+  "functions": [
+    {
+      "address": "0x0040BA58",
+      "symbol": "msvc_rand_next",
+      "category": "HIGH_LEVEL_VERIFIED",
+      "convention": "cdecl",
+      "args": [],
+      "returns": "uint32_t",
+      "provenance": {
+        "evidence": "The mechanical body is seed = seed * 0x343FD + 0x269EC3; return (seed >> 16) & 0x7FFF, with the state in the global at 0x413350. 0x343FD and 0x269EC3 are the multiplier and increment of the Microsoft C runtime's linear congruential generator, and (state >> 16) & 0x7FFF is its documented output. No name or constant is inferred: both constants are in the instruction stream and the shift/mask are the two following instructions.",
+        "verified_by": "tools/autorecomp/hlverify.py: 8 cases (seeds 0x00000000, 0x00000001, 0x7FFFFFFF, 0xFFFFFFFF, 0x000343FD, 0x00269EC3, 0x12345678, 0xDEADBEEF), 0 mismatches in eax and in the 4096-byte guest comparison window. Both entry points linked from the project's own generated unit, so the shipped object code of each was compared.",
+        "not_claimed": "That this is the game's only source of randomness, or that the game calls it with the C library's rand() semantics. The generator is identified; its callers are not.",
+        "not_proven": "inputs other than the listed seeds, and behaviour that only appears in a full game run. Equivalence is scoped to the differential harness, not proved for all inputs."
+      }
+    },
+    {
+      "address": "0x00401000",
+      "symbol": "reset_global_configuration",
+      "category": "HIGH_LEVEL_VERIFIED",
+      "convention": "cdecl",
+      "args": [],
+      "returns": "void",
+      "provenance": {
+        "evidence": "The mechanical body writes 22 constants into one contiguous block at 0x413BE0..0x413C1F and returns; there is no input, no branch and no read. Two callers (0x404D9C, 0x4053A2) call it as a setup step before using the block. Field widths and offsets are taken from the store instructions themselves.",
+        "verified_by": "tools/autorecomp/hlverify.py: 8 cases, 0 mismatches in eax and in the 4096-byte guest comparison window. The function takes no input, so the cases differ only in the pre-existing guest state; the check that matters here is that both write the same 22 constants.",
+        "not_claimed": "What the fields mean. The names below describe the shape the stores prove (a pair of 16.16 fixed-point points at +0x18 and +0x28, four fractions at +0x30); they are not the original developer's names and no evidence establishes them.",
+        "not_proven": "inputs other than the listed seeds, and behaviour that only appears in a full game run. Equivalence is scoped to the differential harness, not proved for all inputs."
+      }
+    }
+  ]
+}

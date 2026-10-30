@@ -100,7 +100,17 @@ target_include_directories(@NAME@ PRIVATE
   src/recomp/gen
   src/runtime/recomp32
   src/runtime/win32hle
+  src/highlevel
 )
+
+# High-level source units: typed functions plus the generated adapters that
+# expose them through the guest ABI. Compiled into this executable alongside
+# the mechanical bodies, which stay under their sub_XXXXXXXX__lowlevel names.
+file(GLOB HIGHLEVEL_SOURCES CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/highlevel/*.c")
+if(HIGHLEVEL_SOURCES)
+  target_sources(@NAME@ PRIVATE ${HIGHLEVEL_SOURCES})
+endif()
 
 # Generated code is machine-shaped register C; the warnings it would raise are
 # not actionable and would bury the runtime's.
@@ -125,6 +135,9 @@ Rebuilt from `@EXE@` by RevEng-Studio autorecomp.
 
 - Source: `src/recomp/gen/recomp_*.c` (one function per original address,
   `sub_XXXXXXXX`; register-transfer C, provenance `LOW_LEVEL_FALLBACK`)
+- High-level source: `src/highlevel/` (typed C plus the generated ABI adapters;
+  present only when a module replaced a function, and the mechanical body of a
+  replaced function stays compiled as `sub_XXXXXXXX__lowlevel`)
 - Runtime: `src/runtime/win32hle/` (pinned copy), `src/runtime/recomp32/recomp_types.h`
 - Build: `cmake -S . -B build && cmake --build build -j`
 - Run: `./build/@NAME@ /path/to/@EXE@` (the original executable supplies the
@@ -203,10 +216,15 @@ def _copy_runtime(project_dir: Path) -> dict:
     return {"files": runtime_files}
 
 
-def write_project(project_dir, name, exe_name, pe_info, extra=None) -> dict:
+def write_project(project_dir, name, exe_name, pe_info, extra=None,
+                  highlevel_modules=None) -> dict:
     """Write main.c, CMakeLists.txt, README and project.json.
 
     pe_info: dict of inspect-stage metadata for project.json provenance.
+    highlevel_modules: modules from tools/autorecomp/highlevel.py. Their typed
+        sources are copied in, the adapters are generated beside them, and the
+        dispatch table (written by the translator) points at the adapters. The
+        mechanical bodies stay compiled under their __lowlevel names.
     Returns a small summary dict.
     """
     project_dir = Path(project_dir)
@@ -214,6 +232,23 @@ def write_project(project_dir, name, exe_name, pe_info, extra=None) -> dict:
     (project_dir / "src").mkdir(exist_ok=True)
 
     runtime = _copy_runtime(project_dir)
+
+    highlevel_files = []
+    if highlevel_modules:
+        from . import highlevel as _highlevel
+        hl_src = project_dir / "src" / "highlevel"
+        hl_src.mkdir(parents=True, exist_ok=True)
+        for module in highlevel_modules:
+            for source in module["sources"]:
+                shutil.copy2(source, hl_src / source.name)
+                highlevel_files.append(f"src/highlevel/{source.name}")
+        # The adapters and the declarations are generated, never authored: the
+        # guest ABI marshalling lives in exactly one place.
+        for written in _highlevel.emit_unit(highlevel_modules, hl_src):
+            highlevel_files.append(f"src/highlevel/{written.name}")
+        (hl_src / "highlevel_impl.h").write_text(
+            _highlevel.header_source(highlevel_modules))
+        highlevel_files.append("src/highlevel/highlevel_impl.h")
 
     (project_dir / "src" / "main.c").write_text(MAIN_C)
     (project_dir / "CMakeLists.txt").write_text(CMAKE.replace("@NAME@", name))
@@ -234,6 +269,7 @@ def write_project(project_dir, name, exe_name, pe_info, extra=None) -> dict:
         },
         "pe": pe_info,
         "runtime_files": runtime["files"],
+        "highlevel_files": highlevel_files,
     }
     if extra:
         record.update(extra)

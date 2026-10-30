@@ -79,6 +79,13 @@ def build_parser():
                              "recorded source digest matches the freshly "
                              "generated source, skipping recompilation; "
                              "refuses (fail-closed) on any mismatch")
+    parser.add_argument("--highlevel", metavar="DIR",
+                        help="directory of typed replacement modules "
+                             "(default: highlevel/ in this repository). A "
+                             "module names original addresses and provides real "
+                             "C; the pipeline generates the guest-ABI adapters, "
+                             "compiles them into the same executable and keeps "
+                             "the mechanical body as sub_XXXXXXXX__lowlevel")
     parser.add_argument("--import-trace", action="store_true",
                         help="record every import the rebuilt process dispatches "
                              "(RECOMP_TRACE) and put the call profile in the "
@@ -121,7 +128,7 @@ def main(argv=None):
         split_bytes=args.split_bytes, build_timeout=args.build_timeout,
         build=not args.no_build, run_binary=not args.no_run,
         reuse_build=args.reuse_build, fresh_build=args.fresh_build,
-        import_trace=args.import_trace,
+        import_trace=args.import_trace, highlevel_dir=args.highlevel,
         on_event=_progress)
     try:
         run_pipeline(pipeline)

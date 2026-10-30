@@ -96,7 +96,8 @@ def _write_unit(filepath, chunk, first_index, last_index):
 
 def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
                           split_size: int = 1000, func_names: dict = None,
-                          max_unit_bytes: int = MAX_UNIT_BYTES):
+                          max_unit_bytes: int = MAX_UNIT_BYTES,
+                          highlevel: dict = None):
     """
     Generate recompiled C source files from discovered functions.
 
@@ -109,6 +110,10 @@ def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
         count alone is not a size bound: GeneRally's first 1,000 functions
         produced a 273 MB unit because individual bodies reach 2.25 MB. A
         single function larger than the cap still gets a unit of its own.
+    highlevel: address -> replacement entry from tools/autorecomp/highlevel.py.
+        A replaced function's mechanical body is emitted under
+        `sub_XXXXXXXX__lowlevel` and the dispatch table points at the
+        high-level entry point instead, so the fallback stays in the build.
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -152,19 +157,38 @@ def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
         chunk_first = last_index + 1
 
     for func_idx, func in enumerate(sorted_funcs):
+        # A function with a high-level replacement still gets its mechanical
+        # body emitted, under a distinct name: it stays compiled, stays
+        # countable and stays available as the comparison baseline, but the
+        # dispatch table points at the high-level entry point instead. Dropping
+        # it would make the fallback invisible, which is the one thing the
+        # source-quality contract does not allow.
+        high = highlevel.get(func.address) if highlevel else None
+        # The lifter writes the body under func.name, so a replaced function's
+        # mechanical body is emitted under its __lowlevel name by renaming the
+        # function for the duration of the lift and putting it back after.
+        original_name = func.name
+        if high:
+            func.name = high["low_level_symbol"]
         try:
             code = lifter.lift_function(func)
             name = func.name
         except Exception as e:
             # An empty stub would let the rebuilt game run with a
             # function silently doing nothing; fail loudly instead.
+            symbol = high["low_level_symbol"] if high else f"sub_{func.address:08X}"
             code = (f"/* ERROR lifting sub_{func.address:08X}: {e} */\n"
-                    f"void sub_{func.address:08X}(void) {{\n"
+                    f"void {symbol}(void) {{\n"
                     f'    fprintf(stderr, "[recomp] unresolved function 0x{func.address:08X} called\\n");\n'
                     f"    abort();\n"
                     f"}}\n")
-            name = f"sub_{func.address:08X}"
-        all_func_names.append((func.address, name))
+            name = symbol
+        finally:
+            func.name = original_name
+        # What the dispatch table calls: the high-level entry point when one
+        # exists, the mechanical body otherwise.
+        all_func_names.append((func.address,
+                               high["entry_symbol"] if high else name))
         chunk.append((func, code))
         chunk_bytes += len(code)
         if len(chunk) >= split_size or chunk_bytes >= max_unit_bytes:
@@ -186,6 +210,12 @@ def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
         f.write(f"/* {len(all_func_names)} recompiled functions */\n\n")
         for addr, name in all_func_names:
             f.write(f"void {name}(void);  /* 0x{addr:08X} */\n")
+        if highlevel:
+            # The mechanical bodies of replaced functions are still compiled
+            # and still need declaring.
+            for addr, high in sorted(highlevel.items()):
+                f.write(f"void {high['low_level_symbol']}(void);"
+                        f"  /* 0x{addr:08X} mechanical fallback */\n")
 
     # Generate dispatch table
     dispatch_path = os.path.join(output_dir, "recomp_dispatch.c")
