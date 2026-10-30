@@ -69,9 +69,24 @@ them. Three artifacts plus three support headers produce a compiling pair:
 
 then `ptml_to_c` each `.ptml`. `types-and-globals.h` includes the three support
 headers and `helpers.h` needs `types-and-globals.h` first; included in that order
-the pair compiles. Project mode matters: `quick artifact` re-runs the whole
-analysis for each artifact, which on a 1.4 MB game through an emulated container
-is hours apiece, while the cached model makes each extra artifact cheap.
+the pair compiles.
+
+THE `.c` MUST COME FROM THE SAME PROJECT AS THE HEADERS, and this is the trap that
+cost an afternoon. `quick artifact emit-c-as-single-file` runs its own analysis, so
+its recovered type IDs are numbered independently of `project init`'s: the C used
+`union_3778` 1,329 times while the project-mode header contained `struct_0` ...
+`struct_1876` and not one of the names the C actually referenced. A struct field
+offset looked up across those two would be a number from a different numbering --
+a plausible wrong address that compiles and reads the wrong dword.
+
+Emit the C from the cached model too, and it is the same model by construction:
+
+    docker run --platform linux/amd64 --rm -v "$PWD:/work" revng/revng \
+      sh -c "cd /work/$PROJ && revng project artifact emit-c-as-single-file"
+
+That took 5m40s against 5 hours for a fresh analysis, and the check that it worked
+is cheap: count the `struct_N`/`union_N` names the C uses and how many appear in
+the header. Measured after regenerating Doukutsu's: 1,617 of 1,617 present.
 """
 
 import html
