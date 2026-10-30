@@ -24,6 +24,27 @@
 #include <sys/wait.h>
 #include "win32hle.h"
 
+/* per-process temp paths: a fixed /tmp file lets two concurrent runs corrupt each
+ * other - the same defect the other selftests had. */
+#include <unistd.h>
+#include <sys/stat.h>
+static char g_tmpdir[128];
+static const char *selftest_tmpdir(void) {
+    if (!g_tmpdir[0]) {
+        snprintf(g_tmpdir, sizeof g_tmpdir, "/tmp/win32hle_selftest_%ld", (long)getpid());
+        mkdir(g_tmpdir, 0700);
+    }
+    return g_tmpdir;
+}
+static const char *selftest_tmpfile(const char *name) {
+    static char buf[2][256];
+    static int next;
+    char *out = buf[next++ & 1];
+    snprintf(out, 256, "%s/%s", selftest_tmpdir(), name);
+    return out;
+}
+
+
 #define ENTRY_VA  0x00401000u
 #define ATEXIT_VA 0x00402000u
 #define INITFN_VA 0x00403000u
@@ -257,13 +278,13 @@ static void guest(void) {
     /* ---- _findfirst over the file the test just made ---- */
     a[0] = g_findspec, a[1] = g_findbuf;
     uint32_t fh = call("_findfirst", 2, a);
-    g_find_ok = fh != 0xFFFFFFFFu && strstr((char *)hle_ptr(g_findbuf + 20), "win32hle_msvcrt") != NULL;
+    g_find_ok = fh != 0xFFFFFFFFu && strstr((char *)hle_ptr(g_findbuf + 20), "msvcrt.dat") != NULL;
     if (fh != 0xFFFFFFFFu) { a[0] = fh; call("_findclose", 1, a); }
 
     /* ---- _fullpath(NULL, rel, 0) allocates the absolute guest path ---- */
     a[0] = 0, a[1] = g_path, a[2] = 0;
     uint32_t full = call("_fullpath", 3, a);
-    g_fullpath_ok = full != 0 && strstr((char *)hle_ptr(full), "win32hle_msvcrt.dat") != NULL;
+    g_fullpath_ok = full != 0 && strstr((char *)hle_ptr(full), "msvcrt.dat") != NULL;
 
     /* ---- time, setlocale ---- */
     a[0] = g_timebuf;
@@ -276,7 +297,7 @@ static void guest(void) {
     /* ---- remove, and the file is gone ---- */
     a[0] = g_path;
     g_remove_ok = call("remove", 1, a) == 0;
-    g_open_ok = g_open_ok && access("/tmp/win32hle_msvcrt.dat", F_OK) != 0;
+    g_open_ok = g_open_ok && access(selftest_tmpfile("msvcrt.dat"), F_OK) != 0;
 
     eax = 0;
 }
@@ -299,8 +320,8 @@ const recomp_dispatch_entry_t recomp_dispatch_table[] = {
 const uint32_t recomp_dispatch_count = 3;
 
 int main(void) {
-    remove("/tmp/win32hle_msvcrt.dat");                  /* a stale file would hide a failed remove */
-    g_path = hle_guest_strdup("/tmp/win32hle_msvcrt.dat");
+    remove(selftest_tmpfile("msvcrt.dat"));                  /* a stale file would hide a failed remove */
+    g_path = hle_guest_strdup(selftest_tmpfile("msvcrt.dat"));
     g_nopath = hle_guest_strdup("/tmp/win32hle_no_such_file.dat");
     g_mode_wb = hle_guest_strdup("wb");
     g_mode_rb = hle_guest_strdup("rb");
@@ -311,7 +332,8 @@ int main(void) {
     g_atexit_msg = hle_guest_strdup("atexit-ran\n");
     g_fmt = hle_guest_strdup("%d %s %u");
     g_scanfmt = hle_guest_strdup("%d %s");
-    g_findspec = hle_guest_strdup("/tmp/win32hle_msvcrt*");
+    { char spec[300]; snprintf(spec, sizeof spec, "%s/msvcrt*", selftest_tmpdir());
+      g_findspec = hle_guest_strdup(spec); }
     g_wbuf = hle_va(hle_alloc(64));
     g_rbuf = hle_va(hle_alloc(64));
     g_out = hle_va(hle_alloc(64));

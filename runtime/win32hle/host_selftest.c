@@ -19,6 +19,31 @@
 #include "win32hle.h"
 #include "host.h"
 
+/* THROWAWAY-PROOF PATHS: this selftest used a FIXED /tmp path, so two concurrent
+ * runs corrupted each other - and `rm -rf /tmp/hleov` in one process while another
+ * reads /tmp/hleov/game/rules.ini is destructive, not merely racy. That is why the
+ * suite failed ~13% of the time, only on the first invocation after a code change:
+ * that is when `regress --tier fast` overlaps with whatever else is in flight. A
+ * per-process directory makes the collision impossible rather than rarer. */
+#include <unistd.h>
+#include <sys/stat.h>
+static char g_tmpdir[128];
+static const char *selftest_tmpdir(void) {
+    if (!g_tmpdir[0]) {
+        snprintf(g_tmpdir, sizeof g_tmpdir, "/tmp/win32hle_selftest_%ld", (long)getpid());
+        mkdir(g_tmpdir, 0700);
+    }
+    return g_tmpdir;
+}
+static const char *selftest_tmpfile(const char *name) {
+    static char buf[4][256];
+    static int next;
+    char *out = buf[next++ & 3];
+    snprintf(out, 256, "%s/%s", selftest_tmpdir(), name);
+    return out;
+}
+
+
 void hle_gdi_set_target(uint32_t *pixels, int w, int h);
 
 #define IMAGE_BASE 0x00400000u
@@ -181,7 +206,7 @@ int main(void) {
     VA_StretchDIBits    = hle_resolve("StretchDIBits");
     ok("user32/gdi32 shims resolve", VA_CreateWindowExA && VA_GetMessageA && VA_DispatchMessageA && VA_StretchDIBits);
 
-    const char *path = "/tmp/win32hle_host_pe.bin";
+    const char *path = selftest_tmpfile("host_pe.bin");
     build_pe(path);
     ok("host boot (map + bind) ok", recomp_host_boot(path) == 0);
     ok("entry VA is the image's",   recomp_host_entry() == ENTRY_VA);

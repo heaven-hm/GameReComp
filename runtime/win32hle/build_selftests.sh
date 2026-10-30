@@ -15,7 +15,9 @@ if [ "$(uname -s)" = Darwin ] || [ "${HLE_BASED:-0}" = 1 ]; then
   CC=${CC:-cc}
   ARCH=${HLE_MEM_BASE:+-DRECOMP_MEM_BASE=$HLE_MEM_BASE}
   LIBS=$(pkg-config --cflags --libs sdl2 SDL2_ttf)
-  TMP=$TMP/hle-based
+  # per-process: two concurrent runs wrote the same binaries into one fixed
+  # directory, which is a build collision on top of the test fixtures' collision
+  TMP=$TMP/hle-based-$$
   mkdir -p "$TMP"
 else
   CC=${CC:-gcc}

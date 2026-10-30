@@ -12,6 +12,27 @@
 #include <unistd.h>
 #include "win32hle.h"
 
+/* per-process temp paths: fixed /tmp paths let two concurrent runs corrupt each
+ * other, and `rm -rf /tmp/hleov` in one process is destructive, not racy. */
+#include <unistd.h>
+#include <sys/stat.h>
+static char g_tmpdir[128];
+static const char *selftest_tmpdir(void) {
+    if (!g_tmpdir[0]) {
+        snprintf(g_tmpdir, sizeof g_tmpdir, "/tmp/win32hle_selftest_%ld", (long)getpid());
+        mkdir(g_tmpdir, 0700);
+    }
+    return g_tmpdir;
+}
+static const char *selftest_tmpfile(const char *name) {
+    static char buf[4][256];
+    static int next;
+    char *out = buf[next++ & 3];
+    snprintf(out, 256, "%s/%s", selftest_tmpdir(), name);
+    return out;
+}
+
+
 #define ENTRY_VA 0x00401000u
 #define GENERIC_WRITE 0x40000000u
 #define GENERIC_READ  0x80000000u
@@ -27,7 +48,7 @@ static uint32_t V_Create, V_Read, V_Write, V_Close, V_GAlloc, V_GLock, V_GFree,
                 V_WriteIni, V_GetIni;
 
 /* scratch guest memory (VAs, made in main) */
-static const char g_ini_host[] = "/tmp/win32hle_k32ext.ini";
+static const char *g_ini_host;   /* per-process, set at init */
 static uint32_t g_path, g_ini, g_sec, g_key, g_val, g_payload, g_readbuf, g_inibuf;
 static uint32_t g_io;     /* bytes read/written out-param */
 
@@ -88,7 +109,8 @@ const uint32_t recomp_dispatch_count = 1;
 int main(void) {
     remove(g_ini_host);   /* the append-writer starts clean */
     static const uint8_t payload[16] = { 1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16 };
-    g_path = hle_guest_strdup("/tmp/win32hle_k32ext.dat"), g_ini = hle_guest_strdup(g_ini_host);
+    g_ini_host = selftest_tmpfile("k32ext.ini");
+    g_path = hle_guest_strdup(selftest_tmpfile("k32ext.dat")), g_ini = hle_guest_strdup(g_ini_host);
     g_sec = hle_guest_strdup("video"), g_key = hle_guest_strdup("width"), g_val = hle_guest_strdup("1024");
     g_payload = hle_va(hle_alloc(16)), memcpy(hle_ptr(g_payload), payload, 16);
     g_readbuf = hle_va(hle_alloc(16)), g_inibuf = hle_va(hle_alloc(64)), g_io = hle_va(hle_alloc(4));
@@ -118,33 +140,41 @@ int main(void) {
      * it has none, writes into the overlay (the game's file copied first when
      * kept), and the game's files untouched. */
     {
-        char p[1024], q[1024];
+        char p[1024], q[1024], ovroot[512], game[600], mod[600];
         FILE *f;
-        system("rm -rf /tmp/hleov && mkdir -p /tmp/hleov/game/maps /tmp/hleov/mod");
-        /* Paths come back resolved (macOS's /tmp is /private/tmp), and a
-         * case-insensitive disk (APFS) finds a file by the spelling asked. */
-        char root[4096], want[4200];                      /* realpath's buffer is PATH_MAX (fortified glibc checks) */
-        if (!realpath("/tmp/hleov", root)) snprintf(root, sizeof root, "/tmp/hleov");
-        f = fopen("/tmp/hleov/game/rules.ini", "w"); fputs("base", f); fclose(f);
-        f = fopen("/tmp/hleov/game/maps/a.map", "w"); fputs("map", f); fclose(f);
-        f = fopen("/tmp/hleov/mod/RULES.INI", "w"); fputs("mod", f); fclose(f);
-        hle_set_drive('C', "/tmp/hleov/game");
-        hle_set_overlay("/tmp/hleov/game", "/tmp/hleov/mod");
+        snprintf(ovroot, sizeof ovroot, "%s/hleov", selftest_tmpdir());
+        { char cmd[1800];
+          snprintf(cmd, sizeof cmd, "rm -rf %s && mkdir -p %s/game/maps %s/mod", ovroot, ovroot, ovroot);
+          system(cmd); }
+        snprintf(game, sizeof game, "%s/game", ovroot);
+        snprintf(mod, sizeof mod, "%s/mod", ovroot);
+        char root[4096], want[4200];
+        if (!realpath(ovroot, root)) snprintf(root, sizeof root, "%s", ovroot);
+        { char path[700];
+          snprintf(path, sizeof path, "%s/rules.ini", game);
+          f = fopen(path, "w"); fputs("base", f); fclose(f);
+          snprintf(path, sizeof path, "%s/maps/a.map", game);
+          f = fopen(path, "w"); fputs("map", f); fclose(f);
+          snprintf(path, sizeof path, "%s/RULES.INI", mod);
+          f = fopen(path, "w"); fputs("mod", f); fclose(f); }
+        hle_set_drive('C', game);
+        hle_set_overlay(game, mod);
         ok("overlay: the mod's file is read", hle_host_path("C:\\rules.ini", p, sizeof p) && strcasestr(p, "/mod/RULES.INI"));
         ok("overlay: the game's where the mod has none", hle_host_path("C:\\maps\\a.map", p, sizeof p) && strstr(p, "/game/maps/a.map"));
         hle_host_path_for_write("C:\\saves\\one.sav", p, sizeof p, 0);
         snprintf(want, sizeof want, "%s/mod/saves/one.sav", root);
-        ok("overlay: a new file goes to the mod, its directory made", !strcmp(p, want) &&
-           access("/tmp/hleov/mod/saves", F_OK) == 0);
+        { char saves[700]; snprintf(saves, sizeof saves, "%s/saves", mod);
+          ok("overlay: a new file goes to the mod, its directory made", !strcmp(p, want) && access(saves, F_OK) == 0); }
         hle_host_path_for_write("C:\\maps\\a.map", p, sizeof p, 1);
         f = fopen(p, "r");
         ok("overlay: a kept file is copied into the mod first", f && fgets(q, sizeof q, f) && !strcmp(q, "map") &&
            strstr(p, "/mod/maps/a.map"));
         if (f) fclose(f);
-        ok("overlay: the game's files untouched", access("/tmp/hleov/game/saves", F_OK) != 0);
+        { char saves[700]; snprintf(saves, sizeof saves, "%s/saves", game);
+          ok("overlay: the game's files untouched", access(saves, F_OK) != 0); }
         snprintf(want, sizeof want, "%s/game", root);
         ok("overlay: a directory stays the game's (the cwd)", hle_host_path("C:\\", p, sizeof p) && !strcmp(p, want));
-        chdir("/tmp/hleov/game");
+        chdir(game);
         ok("overlay: a name relative to the game's folder", hle_host_path("rules.ini", p, sizeof p) && strcasestr(p, "/mod/RULES.INI"));
         hle_set_overlay(NULL, NULL);
         ok("overlay off: the game's file again", hle_host_path("C:\\rules.ini", p, sizeof p) && strstr(p, "/game/rules.ini"));

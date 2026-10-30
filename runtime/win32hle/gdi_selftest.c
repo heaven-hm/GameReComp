@@ -13,6 +13,31 @@
 #include "win32hle.h"
 #include "host.h"
 
+/* THROWAWAY-PROOF PATHS: this selftest used a FIXED /tmp path, so two concurrent
+ * runs corrupted each other - and `rm -rf /tmp/hleov` in one process while another
+ * reads /tmp/hleov/game/rules.ini is destructive, not merely racy. That is why the
+ * suite failed ~13% of the time, only on the first invocation after a code change:
+ * that is when `regress --tier fast` overlaps with whatever else is in flight. A
+ * per-process directory makes the collision impossible rather than rarer. */
+#include <unistd.h>
+#include <sys/stat.h>
+static char g_tmpdir[128];
+static const char *selftest_tmpdir(void) {
+    if (!g_tmpdir[0]) {
+        snprintf(g_tmpdir, sizeof g_tmpdir, "/tmp/win32hle_selftest_%ld", (long)getpid());
+        mkdir(g_tmpdir, 0700);
+    }
+    return g_tmpdir;
+}
+static const char *selftest_tmpfile(const char *name) {
+    static char buf[4][256];
+    static int next;
+    char *out = buf[next++ & 3];
+    snprintf(out, 256, "%s/%s", selftest_tmpdir(), name);
+    return out;
+}
+
+
 static int fails;
 static void ok(const char *what, int cond) { if (!cond) { printf("FAIL %s\n", what); fails++; } }
 static uint32_t call(const char *name, int n, const uint32_t *a) { return hle_call_guest(hle_resolve(name), n, a); }
@@ -65,7 +90,8 @@ int main(void) {
     /* RIFF: "RIFF" n "WAVE" "fmt " 4 [1 2 3 4] "data" 2 [9 9] */
     static const uint8_t riff[] = { 'R','I','F','F', 26,0,0,0, 'W','A','V','E', 'f','m','t',' ', 4,0,0,0, 1,2,3,4,
                                     'd','a','t','a', 2,0,0,0, 9,9 };
-    FILE *f = fopen("/tmp/hle_selftest.wav", "wb");
+    const char *wav_path = selftest_tmpfile("selftest.wav");
+    FILE *f = fopen(wav_path, "wb");
     fwrite(riff, 1, sizeof riff, f);
     fclose(f);
     hle_set_drive('Z', "/");
