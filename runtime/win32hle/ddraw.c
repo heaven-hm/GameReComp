@@ -48,6 +48,7 @@
 #define DDSCAPS_OFFSCREENPLAIN 0x00000040u
 #define DDSCAPS_PRIMARYSURFACE 0x00000200u
 #define DDSCAPS_SYSTEMMEMORY   0x00000800u
+#define DDSCAPS_TEXTURE        0x00001000u
 #define DDSCAPS_3DDEVICE       0x00002000u
 #define DDSCAPS_VIDEOMEMORY    0x00004000u
 #define DDSCAPS_VISIBLE        0x00008000u
@@ -116,6 +117,10 @@ int hle_dd_surface_is_3d_target(uint32_t obj) {
     if (!obj || !g_vt_surf || MEM32(obj) != g_vt_surf) return 0;
     surf_t *s = S(obj);
     return (s->caps & DDSCAPS_3DDEVICE) != 0;
+}
+int hle_dd_surface_is_texture(uint32_t obj) {
+    if (!obj || !g_vt_surf || MEM32(obj) != g_vt_surf) return 0;
+    return (S(obj)->caps & DDSCAPS_TEXTURE) != 0;
 }
 int hle_dd_surface_is_primary_3d_target(uint32_t obj) {
     return hle_dd_surface_is_primary(obj) && hle_dd_surface_is_3d_target(obj);
