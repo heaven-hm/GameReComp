@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated_at": "2026-10-30T04:38:51Z",
+  "generated_at": "2026-10-30T04:39:57Z",
   "command": "python3 tools/autorecomp/diagnose.py --timeout 15",
   "timeout_seconds": 15.0,
   "method": "each rebuilt binary is launched as `<binary> <absolute PE path>` from the game's own directory, with RECOMP_PERMISSIVE=1 and the dummy SDL video/audio drivers (the pipeline's run-stage settings); the runtime binds unresolved imports to a self-naming stub that aborts on first call, so first_import is what the running guest actually reached. The permissive loader line always reads 0 unresolved because a stub counts as resolved, so each binary is launched a second time without RECOMP_PERMISSIVE and that strict run's unresolved count is recorded under `strict`",
@@ -23,12 +23,12 @@
       ]
     },
     {
-      "project": "cavestory-doukutsu",
+      "project": "Doukutsu",
       "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
-      "chosen": "cavestory-doukutsu",
+      "chosen": "Doukutsu",
       "chosen_because": "corpus-record",
       "also_present": [
-        "Doukutsu"
+        "cavestory-doukutsu"
       ]
     },
     {
@@ -121,7 +121,7 @@
       "import": "PathRemoveFileSpecA",
       "games_blocked": 1,
       "games": [
-        "cavestory-doukutsu"
+        "Doukutsu"
       ]
     },
     {
@@ -133,6 +133,56 @@
     }
   ],
   "runs": [
+    {
+      "project": "Doukutsu",
+      "name": "Doukutsu",
+      "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
+      "binary": "/Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/Doukutsu/build/Doukutsu",
+      "binary_exists": true,
+      "outcome": "reached-unimplemented-import",
+      "first_import": "PathRemoveFileSpecA",
+      "stub_va": "0x7F003EC0",
+      "caller": "0x00412420",
+      "exit_code": -6,
+      "signal": "SIGABRT",
+      "timed_out": false,
+      "duration_seconds": 0.04,
+      "boot_line": {
+        "entry": "0x00481D27",
+        "unresolved_iat_imports": 0
+      },
+      "iat_bind": {
+        "iat_bound": 143,
+        "iat_unresolved": 0
+      },
+      "strict": {
+        "exit_code": 2,
+        "timed_out": false,
+        "launch_error": null,
+        "unresolved_iat_imports": 4,
+        "iat_bound": 139,
+        "iat_unresolved": 4,
+        "unresolved_names": [
+          "DINPUT.dll!DirectInputCreateA",
+          "SHELL32.dll!DragFinish",
+          "SHELL32.dll!DragQueryFileA",
+          "SHLWAPI.dll!PathRemoveFileSpecA"
+        ],
+        "unresolved_name_count": 4,
+        "duration_seconds": 0.09
+      },
+      "runtime": {
+        "files": 33,
+        "host_c_sha256": "1c6475f8e4f3244825ad3eecd1724a39dd9973d5e0a7374ac643cfcd9279c8dc",
+        "has_msvcrt": true,
+        "has_gl32": true,
+        "has_sdlmix": true,
+        "has_sdl12": true
+      },
+      "crash_trace": null,
+      "raw_error": null,
+      "stderr_tail": "[pe] /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe mapped at 0x00400000, span 0x18E000\n[pe] bound 143 imports, 0 unresolved\n[host] /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe booted: entry 0x00481D27, 0 unresolved imports\n[module] GetProcAddress(kernel32.dll, InitializeCriticalSectionAndSpinCount): not answered\n[module] GetProcAddress(kernel32.dll, FlsAlloc): not answered\n[module] GetProcAddress(kernel32.dll, FlsGetValue): not answered\n[module] GetProcAddress(kernel32.dll, FlsSetValue): not answered\n[module] GetProcAddress(kernel32.dll, FlsFree): not answered\n[win32hle] FATAL: unimplemented import PathRemoveFileSpecA (0x7F003EC0) called from guest 0x00412420\n"
+    },
     {
       "project": "cavestory-doconfig",
       "name": "DoConfig",
@@ -146,7 +196,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.19,
+      "duration_seconds": 0.04,
       "boot_line": {
         "entry": "0x004032C1",
         "unresolved_iat_imports": 0
@@ -167,7 +217,7 @@
           "USER32.dll!CheckRadioButton"
         ],
         "unresolved_name_count": 2,
-        "duration_seconds": 0.27
+        "duration_seconds": 0.03
       },
       "runtime": {
         "files": 28,
@@ -182,58 +232,6 @@
       "stderr_tail": "[pe] /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe mapped at 0x00400000, span 0x1A000\n[pe] bound 90 imports, 0 unresolved\n[host] /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe booted: entry 0x004032C1, 0 unresolved imports\n[module] GetProcAddress(kernel32.dll, InitializeCriticalSectionAndSpinCount): not answered\n[module] GetProcAddress(kernel32.dll, FlsAlloc): not answered\n[module] GetProcAddress(kernel32.dll, FlsGetValue): not answered\n[module] GetProcAddress(kernel32.dll, FlsSetValue): not answered\n[module] GetProcAddress(kernel32.dll, FlsFree): not answered\n[win32hle] FATAL: unimplemented import EnumFontFamiliesA (0x7F002BD0) called from guest 0x00402220\n"
     },
     {
-      "project": "cavestory-doukutsu",
-      "name": "Doukutsu",
-      "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
-      "binary": "/Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/cavestory-doukutsu/build/Doukutsu",
-      "binary_exists": true,
-      "outcome": "reached-unimplemented-import",
-      "first_import": "PathRemoveFileSpecA",
-      "stub_va": "0x7F002C10",
-      "caller": "0x00412420",
-      "exit_code": -6,
-      "signal": "SIGABRT",
-      "timed_out": false,
-      "duration_seconds": 0.17,
-      "boot_line": {
-        "entry": "0x00481D27",
-        "unresolved_iat_imports": 0
-      },
-      "iat_bind": {
-        "iat_bound": 143,
-        "iat_unresolved": 0
-      },
-      "strict": {
-        "exit_code": 2,
-        "timed_out": false,
-        "launch_error": null,
-        "unresolved_iat_imports": 6,
-        "iat_bound": 137,
-        "iat_unresolved": 6,
-        "unresolved_names": [
-          "DINPUT.dll!DirectInputCreateA",
-          "SHELL32.dll!DragFinish",
-          "SHELL32.dll!DragQueryFileA",
-          "SHLWAPI.dll!PathRemoveFileSpecA",
-          "USER32.dll!GetWindowPlacement",
-          "USER32.dll!SystemParametersInfoA"
-        ],
-        "unresolved_name_count": 6,
-        "duration_seconds": 0.19
-      },
-      "runtime": {
-        "files": 28,
-        "host_c_sha256": "997abf22639d8780160321b3676e457cd0a04c797530b408fb18bde0473080ff",
-        "has_msvcrt": false,
-        "has_gl32": false,
-        "has_sdlmix": false,
-        "has_sdl12": false
-      },
-      "crash_trace": null,
-      "raw_error": null,
-      "stderr_tail": "[pe] /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe mapped at 0x00400000, span 0x18E000\n[pe] bound 143 imports, 0 unresolved\n[host] /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe booted: entry 0x00481D27, 0 unresolved imports\n[module] GetProcAddress(kernel32.dll, InitializeCriticalSectionAndSpinCount): not answered\n[module] GetProcAddress(kernel32.dll, FlsAlloc): not answered\n[module] GetProcAddress(kernel32.dll, FlsGetValue): not answered\n[module] GetProcAddress(kernel32.dll, FlsSetValue): not answered\n[module] GetProcAddress(kernel32.dll, FlsFree): not answered\n[win32hle] FATAL: unimplemented import PathRemoveFileSpecA (0x7F002C10) called from guest 0x00412420\n"
-    },
-    {
       "project": "cavestory-orgview",
       "name": "OrgView",
       "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/OrgView.exe",
@@ -246,7 +244,7 @@
       "exit_code": 0,
       "signal": null,
       "timed_out": false,
-      "duration_seconds": 0.32,
+      "duration_seconds": 0.06,
       "boot_line": {
         "entry": "0x00406241",
         "unresolved_iat_imports": 0
@@ -267,7 +265,7 @@
           "USER32.dll!SetMenuDefaultItem"
         ],
         "unresolved_name_count": 2,
-        "duration_seconds": 0.19
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 28,
@@ -294,7 +292,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.8,
+      "duration_seconds": 0.03,
       "boot_line": {
         "entry": "0x0049767D",
         "unresolved_iat_imports": 0
@@ -393,7 +391,7 @@
           "SDL.dll!SDL_RWFromFile"
         ],
         "unresolved_name_count": 162,
-        "duration_seconds": 0.15
+        "duration_seconds": 0.03
       },
       "runtime": {
         "files": 29,
@@ -420,7 +418,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.18,
+      "duration_seconds": 0.03,
       "boot_line": {
         "entry": "0x004109DC",
         "unresolved_iat_imports": 0
@@ -498,7 +496,7 @@
           "api-ms-win-crt-utility-l1-1-0.dll!srand"
         ],
         "unresolved_name_count": 59,
-        "duration_seconds": 0.45
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 28,
@@ -525,7 +523,7 @@
       "exit_code": -10,
       "signal": "SIGBUS",
       "timed_out": false,
-      "duration_seconds": 0.21,
+      "duration_seconds": 0.04,
       "boot_line": {
         "entry": "0x0042D49C",
         "unresolved_iat_imports": 0
@@ -549,7 +547,7 @@
           "KERNEL32.DLL!SuspendThread"
         ],
         "unresolved_name_count": 5,
-        "duration_seconds": 0.15
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 33,
@@ -594,7 +592,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.15,
+      "duration_seconds": 0.04,
       "boot_line": {
         "entry": "0x00518F68",
         "unresolved_iat_imports": 0
@@ -693,7 +691,7 @@
           "oleaut32.dll!SafeArrayGetLBound"
         ],
         "unresolved_name_count": 159,
-        "duration_seconds": 0.1
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 28,
@@ -720,7 +718,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.11,
+      "duration_seconds": 0.04,
       "boot_line": {
         "entry": "0x005841A4",
         "unresolved_iat_imports": 0
@@ -819,7 +817,7 @@
           "ole32.dll!CoTaskMemAlloc"
         ],
         "unresolved_name_count": 175,
-        "duration_seconds": 0.08
+        "duration_seconds": 0.05
       },
       "runtime": {
         "files": 28,
@@ -846,7 +844,7 @@
       "exit_code": 1,
       "signal": null,
       "timed_out": false,
-      "duration_seconds": 0.14,
+      "duration_seconds": 0.04,
       "boot_line": {
         "entry": "0x0040BA76",
         "unresolved_iat_imports": 0
@@ -864,7 +862,7 @@
         "iat_unresolved": 0,
         "unresolved_names": [],
         "unresolved_name_count": 0,
-        "duration_seconds": 0.1
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 28,
@@ -891,7 +889,7 @@
       "exit_code": 1,
       "signal": null,
       "timed_out": false,
-      "duration_seconds": 0.39,
+      "duration_seconds": 0.11,
       "boot_line": {
         "entry": "0x00401000",
         "unresolved_iat_imports": 0
@@ -918,7 +916,7 @@
           "bulletml.dll!_ZNK14BulletMLRunner5isEndEv"
         ],
         "unresolved_name_count": 8,
-        "duration_seconds": 0.15
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 33,
@@ -945,7 +943,7 @@
       "exit_code": -10,
       "signal": "SIGBUS",
       "timed_out": false,
-      "duration_seconds": 0.08,
+      "duration_seconds": 0.05,
       "boot_line": {
         "entry": "0x00420E2C",
         "unresolved_iat_imports": 0
@@ -1044,7 +1042,7 @@
           "bulletml.dll!_BulletMLRunner_set_doChangeSpeed"
         ],
         "unresolved_name_count": 90,
-        "duration_seconds": 0.08
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 28,
@@ -1089,7 +1087,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.12,
+      "duration_seconds": 0.03,
       "boot_line": {
         "entry": "0x00401000",
         "unresolved_iat_imports": 0
@@ -1188,7 +1186,7 @@
           "msvcrt.dll!_findclose"
         ],
         "unresolved_name_count": 145,
-        "duration_seconds": 0.07
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 28,
@@ -1215,7 +1213,7 @@
       "exit_code": -10,
       "signal": "SIGBUS",
       "timed_out": false,
-      "duration_seconds": 0.16,
+      "duration_seconds": 0.05,
       "boot_line": {
         "entry": "0x004254EC",
         "unresolved_iat_imports": 0
@@ -1314,7 +1312,7 @@
           "bulletml.dll!_BulletMLRunner_set_createSimpleBullet"
         ],
         "unresolved_name_count": 94,
-        "duration_seconds": 0.15
+        "duration_seconds": 0.04
       },
       "runtime": {
         "files": 28,
@@ -1359,7 +1357,7 @@
       "exit_code": -10,
       "signal": "SIGBUS",
       "timed_out": false,
-      "duration_seconds": 0.2,
+      "duration_seconds": 0.08,
       "boot_line": {
         "entry": "0x004187D0",
         "unresolved_iat_imports": 0
@@ -1458,7 +1456,7 @@
           "bulletml.dll!_BulletMLRunner_set_getBulletSpeed"
         ],
         "unresolved_name_count": 86,
-        "duration_seconds": 0.16
+        "duration_seconds": 0.06
       },
       "runtime": {
         "files": 28,
@@ -1503,7 +1501,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.23,
+      "duration_seconds": 0.08,
       "boot_line": {
         "entry": "0x00433569",
         "unresolved_iat_imports": 0
@@ -1528,7 +1526,7 @@
           "USER32.dll!CheckRadioButton"
         ],
         "unresolved_name_count": 6,
-        "duration_seconds": 0.18
+        "duration_seconds": 0.12
       },
       "runtime": {
         "files": 28,

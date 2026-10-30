@@ -1,6 +1,6 @@
 # Permissive-boot diagnostic sweep
 
-Generated 2026-10-30T04:38:51Z by `python3 tools/autorecomp/diagnose.py --timeout 15` (timeout 15s per game).
+Generated 2026-10-30T04:39:57Z by `python3 tools/autorecomp/diagnose.py --timeout 15` (timeout 15s per game).
 
 Each rebuilt binary is started with `RECOMP_PERMISSIVE=1`, which binds unresolved imports to the runtime's self-naming stub. The guest runs until it calls an unimplemented import; the runtime then prints and aborts:
 
@@ -20,7 +20,7 @@ Measured: 15 projects, 8 reached an unimplemented import. Outcomes: crashed 4, e
 | 2 | `_initterm_e` | 2 | generally, generally-trackeditor |
 | 3 | `DirectDrawEnumerateExA` | 1 | warning-forever |
 | 4 | `EnumFontFamiliesA` | 1 | cavestory-doconfig |
-| 5 | `PathRemoveFileSpecA` | 1 | cavestory-doukutsu |
+| 5 | `PathRemoveFileSpecA` | 1 | Doukutsu |
 | 6 | `__set_app_type` | 1 | rrootage |
 
 ## Per-game rows
@@ -29,8 +29,8 @@ Measured: 15 projects, 8 reached an unimplemented import. Outcomes: crashed 4, e
 
 | project | outcome | exit | first import | stub VA | caller | strict exit | strict unresolved | pinned runtime |
 |---------|---------|------|--------------|---------|--------|-------------|-------------------|----------------|
+| Doukutsu | reached-unimplemented-import | -6 | `PathRemoveFileSpecA` | 0x7F003EC0 | 0x00412420 | 2 | 4 | 1c6475f8 |
 | cavestory-doconfig | reached-unimplemented-import | -6 | `EnumFontFamiliesA` | 0x7F002BD0 | 0x00402220 | 2 | 2 | 997abf22 |
-| cavestory-doukutsu | reached-unimplemented-import | -6 | `PathRemoveFileSpecA` | 0x7F002C10 | 0x00412420 | 2 | 6 | 997abf22 |
 | cavestory-orgview | exited-clean | 0 | - | - | - | 2 | 2 | 997abf22 |
 | generally | reached-unimplemented-import | -6 | `_initterm_e` | 0x7F003430 | 0x00497D76 | 2 | 162 | 6ecb197e |
 | generally-trackeditor | reached-unimplemented-import | -6 | `_initterm_e` | 0x7F002E70 | 0x004113CA | 2 | 59 | 997abf22 |
@@ -68,13 +68,13 @@ Raw stderr for every row is in `reports/games/diagnostic-sweep.json` (`stderr_ta
 
 ## Duplicate project directories collapsed
 
-Several project directories exist for one executable (the generator's default names a project after the executable stem). One row per game is reported, from the directory the committed corpus record names:
+Several project directories exist for one executable (the generator's default names a project after the executable stem). One row per game is reported; which directory was measured, and why, is recorded per game:
 
-- measured `cavestory-doconfig`; also present: `DoConfig`
-- measured `cavestory-doukutsu`; also present: `Doukutsu`
-- measured `ikachan`; also present: `dxIka`
-- measured `herocore-gm7`; also present: `herocore_gm7`
-- measured `parsec47`; also present: `p47`
-- measured `rrootage`; also present: `rr`
-- measured `tumiki-fighters`; also present: `tf`
-- measured `torus-trooper`; also present: `tt`
+- measured `cavestory-doconfig` (corpus-record tree has no binary; used the built sibling); also present: `DoConfig`
+- measured `Doukutsu` (corpus-record); also present: `cavestory-doukutsu`
+- measured `ikachan` (corpus-record); also present: `dxIka`
+- measured `herocore-gm7` (corpus-record); also present: `herocore_gm7`
+- measured `parsec47` (corpus-record); also present: `p47`
+- measured `rrootage` (corpus-record); also present: `rr`
+- measured `tumiki-fighters` (corpus-record); also present: `tf`
+- measured `torus-trooper` (corpus-record); also present: `tt`

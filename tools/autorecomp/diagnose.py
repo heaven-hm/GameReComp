@@ -736,11 +736,13 @@ def render_markdown(report):
         out.append("")
         out.append("Several project directories exist for one executable "
                    "(the generator's default names a project after the "
-                   "executable stem). One row per game is reported, from the "
-                   "directory the committed corpus record names:")
+                   "executable stem). One row per game is reported; which "
+                   "directory was measured, and why, is recorded per game:")
         out.append("")
         for dup in duplicates:
-            out.append(f"- measured `{dup['chosen']}`; also present: "
+            out.append(f"- measured `{dup['chosen']}` "
+                       f"({dup.get('chosen_because', 'unspecified')}); "
+                       f"also present: "
                        f"{', '.join('`' + d + '`' for d in dup['also_present'])}")
         out.append("")
     return "\n".join(out)
