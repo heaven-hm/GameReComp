@@ -422,6 +422,7 @@ projects/<name>/
 | --- | --- |
 | [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) | Install, first run, reading the report, troubleshooting |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Component map and data flow |
+| [`docs/TARGETS.md`](docs/TARGETS.md) | What is built (PE32 x86 to macOS ARM64, 32-bit guest state) and what is not, with the reason for every row |
 | [`docs/PIPELINE.md`](docs/PIPELINE.md) | Stages, weights, timeouts, recovery loop |
 | [`docs/BACKENDS.md`](docs/BACKENDS.md) | Translation backends and their status |
 | [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | Verification statuses, oracle gaps, fail-closed rules |
