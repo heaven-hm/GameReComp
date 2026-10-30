@@ -327,7 +327,6 @@ static void s_GL_GetSwapInterval(void) {
     RETC(g_glctx ? SDL_GL_GetSwapInterval() : (g_gl_swap_interval < 0 ? 0 : g_gl_swap_interval));
 }
 static void s_GetVideoSurface(void) { RETC(g_video); }
-static void s_WM_SetCaption(void) { if (g_window && ASTR(0)) SDL_SetWindowTitle(g_window, ASTR(0)); RETCV(); }
 static void s_UpdateRect(void) { if (A32(0) == g_video) present(); RETCV(); }
 static void s_UpdateRects(void) { if (A32(0) == g_video) present(); RETCV(); }
 static void s_CreateRGBSurface(void) { RETC(new_surface((int)A32(1), (int)A32(2), (int)A32(3), A32(4), A32(5), A32(6), A32(7), 0, 1)); }
@@ -608,63 +607,63 @@ static int rw_close(uint32_t rw) {
 }
 /* Translate one SDL2 event into the guest's SDL 1.2 SDL_Event (20 bytes). The
  * guest reads this with SDL 1.2's offsets, which is why they are spelled out. */
-static void put_event(uint32_t out, const SDL_Event *e) {
-    if (!out) return;
-    for (int i = 0; i < S12_EVENT_SIZE; i++) MEM8(out + (uint32_t)i) = 0;
+static void put16h(uint8_t *o, uint16_t v) { o[0] = (uint8_t)v; o[1] = (uint8_t)(v >> 8); }
+static void event_from_sdl2(uint8_t *out, const SDL_Event *e) {
+    memset(out, 0, S12_EVENT_SIZE);
     switch (e->type) {
     case SDL_QUIT:
-        MEM8(out) = S12_QUIT;
+        out[0] = S12_QUIT;
         break;
     case SDL_KEYDOWN:
     case SDL_KEYUP: {
         SDL_Keymod mod = SDL_GetModState();
         int sym = s12_key(e->key.keysym.sym);
         keystate_note(sym, e->type == SDL_KEYDOWN);
-        MEM8(out) = (uint8_t)(e->type == SDL_KEYDOWN ? S12_KEYDOWN : S12_KEYUP);
-        MEM8(out + 1) = 0;                       /* which: the keyboard device */
-        MEM8(out + 2) = e->key.state;            /* SDL_PRESSED / SDL_RELEASED */
-        MEM8(out + 4) = (uint8_t)e->key.keysym.scancode;   /* SDL2's scancode: USB usage, not SDL 1.2's set 1 */
-        put16(out + 8, (uint16_t)sym);
-        put16(out + 12, (uint16_t)mod);
-        put16(out + 16, g_unicode ? unicode_of(e->key.keysym.sym, mod) : 0);
+        out[0] = (uint8_t)(e->type == SDL_KEYDOWN ? S12_KEYDOWN : S12_KEYUP);
+        out[1] = 0;                       /* which: the keyboard device */
+        out[2] = e->key.state;            /* SDL_PRESSED / SDL_RELEASED */
+        out[4] = (uint8_t)e->key.keysym.scancode;   /* SDL2's scancode: USB usage, not SDL 1.2's set 1 */
+        put16h(out + 8, (uint16_t)sym);
+        put16h(out + 12, (uint16_t)mod);
+        put16h(out + 16, g_unicode ? unicode_of(e->key.keysym.sym, mod) : 0);
         break;
     }
     case SDL_MOUSEMOTION:
-        MEM8(out) = S12_MOUSEMOTION;
-        MEM8(out + 1) = 0;
-        MEM8(out + 2) = e->motion.state;
-        put16(out + 4, (uint16_t)e->motion.x); put16(out + 6, (uint16_t)e->motion.y);
-        put16(out + 8, (uint16_t)e->motion.xrel); put16(out + 10, (uint16_t)e->motion.yrel);
+        out[0] = S12_MOUSEMOTION;
+        out[1] = 0;
+        out[2] = e->motion.state;
+        put16h(out + 4, (uint16_t)e->motion.x); put16h(out + 6, (uint16_t)e->motion.y);
+        put16h(out + 8, (uint16_t)e->motion.xrel); put16h(out + 10, (uint16_t)e->motion.yrel);
         break;
     case SDL_MOUSEBUTTONDOWN:
     case SDL_MOUSEBUTTONUP:
-        MEM8(out) = (uint8_t)(e->type == SDL_MOUSEBUTTONDOWN ? S12_MOUSEBUTTONDOWN : S12_MOUSEBUTTONUP);
-        MEM8(out + 1) = 0;
-        MEM8(out + 2) = e->button.button;
-        MEM8(out + 3) = e->button.state;
-        put16(out + 4, (uint16_t)e->button.x); put16(out + 6, (uint16_t)e->button.y);
+        out[0] = (uint8_t)(e->type == SDL_MOUSEBUTTONDOWN ? S12_MOUSEBUTTONDOWN : S12_MOUSEBUTTONUP);
+        out[1] = 0;
+        out[2] = e->button.button;
+        out[3] = e->button.state;
+        put16h(out + 4, (uint16_t)e->button.x); put16h(out + 6, (uint16_t)e->button.y);
         break;
     case SDL_JOYAXISMOTION:
-        MEM8(out) = S12_JOYAXISMOTION;
-        MEM8(out + 1) = e->jaxis.which; MEM8(out + 2) = e->jaxis.axis;
-        put16(out + 4, (uint16_t)e->jaxis.value);
+        out[0] = S12_JOYAXISMOTION;
+        out[1] = e->jaxis.which; out[2] = e->jaxis.axis;
+        put16h(out + 4, (uint16_t)e->jaxis.value);
         break;
     case SDL_JOYBALLMOTION:
-        MEM8(out) = S12_JOYBALLMOTION;
-        MEM8(out + 1) = e->jball.which; MEM8(out + 2) = e->jball.ball;
-        put16(out + 4, (uint16_t)e->jball.xrel); put16(out + 6, (uint16_t)e->jball.yrel);
+        out[0] = S12_JOYBALLMOTION;
+        out[1] = e->jball.which; out[2] = e->jball.ball;
+        put16h(out + 4, (uint16_t)e->jball.xrel); put16h(out + 6, (uint16_t)e->jball.yrel);
         break;
     case SDL_JOYHATMOTION:
-        MEM8(out) = S12_JOYHATMOTION;
-        MEM8(out + 1) = e->jhat.which; MEM8(out + 2) = e->jhat.hat; MEM8(out + 3) = e->jhat.value;
+        out[0] = S12_JOYHATMOTION;
+        out[1] = e->jhat.which; out[2] = e->jhat.hat; out[3] = e->jhat.value;
         break;
     case SDL_JOYBUTTONDOWN:
     case SDL_JOYBUTTONUP:
-        MEM8(out) = (uint8_t)(e->type == SDL_JOYBUTTONDOWN ? S12_JOYBUTTONDOWN : S12_JOYBUTTONUP);
-        MEM8(out + 1) = e->jbutton.which; MEM8(out + 2) = e->jbutton.button; MEM8(out + 3) = e->jbutton.state;
+        out[0] = (uint8_t)(e->type == SDL_JOYBUTTONDOWN ? S12_JOYBUTTONDOWN : S12_JOYBUTTONUP);
+        out[1] = e->jbutton.which; out[2] = e->jbutton.button; out[3] = e->jbutton.state;
         break;
     default:
-        MEM8(out) = S12_NOEVENT;
+        out[0] = S12_NOEVENT;
         break;
     }
 }
@@ -972,13 +971,248 @@ static void s_SetPalette(void) { RETC(set_palette_range(A32(0), A32(2), (int)A32
 static void s_SetColors(void) { RETC(set_palette_range(A32(0), A32(1), (int)A32(2), (int)A32(3))); }
 
 /* ---- guest RWops: the shim table entries below ---- */
-static void s_PollEvent(void) {
+/* ---- the event queue ----
+ * SDL 1.2's SDL_PushEvent and SDL_PeepEvents work on SDL's own queue, and
+ * SDL_EventState(SDL_IGNORE) drops a type on the way out.  SDL2's event types
+ * are numbered differently from SDL 1.2's, so the queue is ours: events the
+ * guest pushes land in it, SDL2's are translated into it, and everything is
+ * filtered by the per-type enable table on the way to the guest. */
+enum { S12_QUEUE_MAX = 64 };
+static uint8_t g_queue[S12_QUEUE_MAX][S12_EVENT_SIZE];
+static int g_qhead, g_qcount;
+static uint8_t g_event_enabled[S12_NUMEVENTS];
+static int g_events_ready;
+/* SDL 1.2 starts with every event type enabled (SDL_EventState's default). */
+static void events_init(void) {
+    if (g_events_ready) return;
+    g_events_ready = 1;
+    memset(g_event_enabled, 1, sizeof g_event_enabled);
+}
+
+static int queue_push(const uint8_t *ev) {
+    if (g_qcount >= S12_QUEUE_MAX) return -1;
+    memcpy(g_queue[(g_qhead + g_qcount) % S12_QUEUE_MAX], ev, S12_EVENT_SIZE);
+    g_qcount++;
+    return 0;
+}
+static int queue_pop(uint8_t *ev) {
+    if (g_qcount <= 0) return 0;
+    memcpy(ev, g_queue[g_qhead], S12_EVENT_SIZE);
+    g_qhead = (g_qhead + 1) % S12_QUEUE_MAX;
+    g_qcount--;
+    return 1;
+}
+static int enabled(const uint8_t *ev) {
+    int t = ev[0];
+    return t > 0 && t < S12_NUMEVENTS ? g_event_enabled[t] != 0 : 1;
+}
+/* SDL 1.2 drops a disabled type where it would be delivered
+ * (SDL_ProcessEvents[type] == SDL_IGNORE), so it is discarded, not held. */
+static int queue_pop_enabled(uint8_t *ev) {
+    while (queue_pop(ev)) if (enabled(ev)) return 1;
+    return 0;
+}
+/* Pull one SDL2 event into the queue (translated), skipping disabled types. */
+static int pump_one(int block_ms) {
     SDL_Event e;
-    if (!SDL_PollEvent(&e)) RETC(0);
-    put_event(A32(0), &e);
+    for (int i = 0; i < 64; i++) {
+        int got = block_ms < 0 ? SDL_WaitEventTimeout(&e, 1000) : block_ms ? SDL_WaitEventTimeout(&e, block_ms) : SDL_PollEvent(&e);
+        if (!got) return 0;
+        uint8_t ev[S12_EVENT_SIZE];
+        event_from_sdl2(ev, &e);
+        if (ev[0] == S12_NOEVENT) continue;              /* not one SDL 1.2 has */
+        if (!enabled(ev)) continue;
+        return queue_push(ev) == 0;
+    }
+    return 0;
+}
+static void s_PollEvent(void) {
+    events_init();
+    uint8_t ev[S12_EVENT_SIZE];
+    /* pump_one leaves what it translated in the queue, so it is popped here. */
+    if (!queue_pop_enabled(ev) && !(pump_one(0) && queue_pop_enabled(ev))) RETC(0);
+    if (A32(0)) memcpy(hle_ptr(A32(0)), ev, S12_EVENT_SIZE);
     RETC(1);
 }
 static void s_PumpEvents(void) { SDL_PumpEvents(); RETCV(); }
+static void s_WaitEvent(void) {                          /* (SDL_Event *event) */
+    events_init();
+    uint8_t ev[S12_EVENT_SIZE];
+    if (!queue_pop_enabled(ev) && !(pump_one(-1) && queue_pop_enabled(ev))) RETC(0);
+    if (A32(0)) memcpy(hle_ptr(A32(0)), ev, S12_EVENT_SIZE);
+    RETC(1);
+}
+static void s_PushEvent(void) {
+    events_init();                          /* (SDL_Event *event) */
+    uint8_t ev[S12_EVENT_SIZE];
+    uint32_t p = A32(0);
+    if (!p) RETC(-1);
+    memcpy(ev, hle_ptr(p), S12_EVENT_SIZE);
+    if (!ev[0]) RETC(-1);
+    RETC(queue_push(ev) == 0 ? 0 : -1);                  /* SDL 1.2: 0 on success, -1 when the queue is full */
+}
+static void s_PeepEvents(void) {
+    events_init();                         /* (events, numevents, action, mask) */
+    uint32_t events = A32(0), mask = A32(3);
+    int n = (int)A32(1), action = (int)A32(2), got = 0;
+    if (n < 0 || !events) RETC(0);
+    if (action == S12_ADDEVENT) {                        /* push the guest's events into the queue */
+        for (int i = 0; i < n; i++)
+            if (queue_push((const uint8_t *)hle_ptr(events + (uint32_t)i * S12_EVENT_SIZE)) != 0) break;
+            else got++;
+        RETC(got);
+    }
+    for (int i = 0; i < g_qcount && got < n; i++) {
+        uint8_t *ev = g_queue[(g_qhead + i) % S12_QUEUE_MAX];
+        if (!enabled(ev)) continue;
+        if (mask != 0xFFFFFFFFu && ev[0] < 32 && !(mask & (1u << ev[0]))) continue;
+        memcpy(hle_ptr(events + (uint32_t)got * S12_EVENT_SIZE), ev, S12_EVENT_SIZE);
+        got++;
+    }
+    if (action == S12_GETEVENT) {                        /* ... and remove them */
+        for (int i = 0; i < got; i++) { uint8_t drop[S12_EVENT_SIZE]; queue_pop(drop); }
+    }
+    RETC(got);
+}
+static void s_NumEvents(void) { RETC((uint32_t)g_qcount); }
+static void s_EventState(void) {
+    events_init();                         /* (type, state) */
+    int type = (int)A32(0), state = (int)A32(1);
+    if (type <= 0 || type >= S12_NUMEVENTS) RETC(S12_ENABLE);
+    int was = g_event_enabled[type] ? S12_ENABLE : S12_IGNORE;
+    if (state != S12_QUERY) g_event_enabled[type] = (uint8_t)(state != S12_IGNORE);
+    RETC(was);
+}
+/* ---- video information and modes ----
+ * SDL_GetVideoInfo's SDL_VideoInfo is a guest structure (SDL_video.h): a word
+ * of capability bits, video_mem, the SDL_PixelFormat *, and the current mode.
+ * The bits say what this layer really offers - software surfaces with colour
+ * key, alpha and fill blits, in a window - so a game that checks them gets an
+ * answer that matches what its blits will do. */
+enum { S12_VIDEOINFO = 20 };
+static uint32_t g_videoinfo;
+static uint32_t video_format(void) {
+    if (g_video) return sf_format(g_video);
+    uint32_t f = hle_va(hle_alloc(S12_FORMAT));
+    if (!f) return 0;
+    MEM8(f + S12_FMT_BPP) = 32; MEM8(f + S12_FMT_BYTESPP) = 4;
+    MEM8(f + S12_FMT_ALPHA) = 255;
+    set_mask_fields(f, 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0xFF000000u);
+    return f;
+}
+static void s_GetVideoInfo(void) {
+    if (!g_videoinfo) {
+        g_videoinfo = hle_va(hle_alloc(S12_VIDEOINFO));
+        if (!g_videoinfo) RETC(0);
+    }
+    uint32_t vf = video_format();
+    MEM32(g_videoinfo) = (1u << 1) | (1u << 12) | (1u << 13) | (1u << 14) | (1u << 15);   /* wm_available, blit_sw[_CC|_A], blit_fill */
+    MEM32(g_videoinfo + 4) = 0;                          /* video_mem: none of it is video memory */
+    MEM32(g_videoinfo + 8) = vf;
+    MEM32(g_videoinfo + 12) = g_video ? (uint32_t)sf_w(g_video) : 640;
+    MEM32(g_videoinfo + 16) = g_video ? (uint32_t)sf_h(g_video) : 480;
+    RETC(g_videoinfo);
+}
+/* SDL_ListModes: the display's modes as SDL_Rects, largest first, NULL-ended;
+ * (SDL_Rect **)-1 means "any size is fine".  SDL2's mode list is the display's,
+ * which is what a window would be created in. */
+#define S12_MAX_MODES 32
+static uint32_t g_modelist;
+static void s_ListModes(void) {
+    /* "Returns (SDL_Rect **)-1 if any dimension is okay for the given format"
+     * (SDL_video.h): in a window that is exactly the case. */
+    if (!(A32(1) & S12_FULLSCREEN)) RETC(0xFFFFFFFFu);
+    if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) { error(SDL_GetError()); RETC(0); }
+    int display = 0, n = SDL_GetNumDisplayModes(display);
+    if (n <= 0) RETC(0);
+    if (!g_modelist) {
+        g_modelist = hle_va(hle_alloc((S12_MAX_MODES + 1) * 8));
+        if (!g_modelist) RETC(0);
+    }
+    int used = 0;
+    for (int i = 0; i < n && used < S12_MAX_MODES; i++) {
+        SDL_DisplayMode m;
+        if (SDL_GetDisplayMode(display, i, &m) != 0) continue;
+        uint32_t r = g_modelist + (uint32_t)used * 8;
+        put16(r, 0); put16(r + 2, 0); put16(r + 4, (uint16_t)m.w); put16(r + 6, (uint16_t)m.h);
+        used++;
+    }
+    MEM32(g_modelist + (uint32_t)used * 8) = 0;          /* the NULL terminator */
+    RETC(used ? g_modelist : 0);
+}
+static void s_VideoModeOK(void) {                        /* (w, h, bpp, flags) */
+    int bpp = (int)A32(2);
+    if (!(A32(3) & S12_FULLSCREEN)) {
+        /* In a window any size works and the surface really is the depth asked
+         * for (SDL 1.2 answers the bpp it would give); 0 for a depth we cannot
+         * make a surface in. */
+        RETC(bpp == 0 ? 32u : (bpp == 8 || bpp == 16 || bpp == 24 || bpp == 32) ? (uint32_t)bpp : 0u);
+    }
+    if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) { error(SDL_GetError()); RETC(0); }
+    SDL_DisplayMode want, got;
+    SDL_zero(want);
+    want.w = (int)A32(0); want.h = (int)A32(1);
+    want.format = (bpp == 16) ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_ARGB8888;
+    if (SDL_GetClosestDisplayMode(0, &want, &got)) RETC((uint32_t)SDL_BITSPERPIXEL(got.format));
+    RETC(0);                                             /* no mode at that size: SDL answers 0 too */
+}
+
+/* ---- the window manager ---- */
+static uint32_t g_caption, g_icon_caption;
+static void s_WM_SetCaption(void) {                      /* (title, icon) */
+    if (A32(0)) g_caption = hle_guest_strdup(ASTR(0));
+    if (A32(1)) g_icon_caption = hle_guest_strdup(ASTR(1));
+    if (g_window) SDL_SetWindowTitle(g_window, A32(0) ? ASTR(0) : "");
+    RETCV();
+}
+static void s_WM_GetCaption(void) {                      /* (char **title, char **icon) */
+    if (A32(0)) MEM32(A32(0)) = g_caption;
+    if (A32(1)) MEM32(A32(1)) = g_icon_caption;
+    RETCV();
+}
+/* SDL_WM_SetIcon: the guest's surface becomes an SDL2 surface over the same
+ * guest pixels and SDL_SetWindowIcon copies what it needs. */
+static void s_WM_SetIcon(void) {                         /* (SDL_Surface *icon, Uint8 *mask) */
+    uint32_t s = A32(0);
+    if (!s || !g_window) RETCV();
+    uint32_t f = sf_format(s);
+    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(hle_ptr(sf_pixels(s)), sf_w(s), sf_h(s),
+                                                 sf_bpp(s), sf_pitch(s),
+                                                 MEM32(f + S12_FMT_RMASK), MEM32(f + S12_FMT_GMASK),
+                                                 MEM32(f + S12_FMT_BMASK), MEM32(f + S12_FMT_AMASK));
+    if (!icon) { error(SDL_GetError()); RETCV(); }
+    SDL_SetWindowIcon(g_window, icon);
+    SDL_FreeSurface(icon);
+    RETCV();
+}
+static void s_WM_IconifyWindow(void) {
+    if (!g_window) RETC(0);                              /* nothing to iconify */
+    SDL_MinimizeWindow(g_window);
+    RETC(1);
+}
+static void s_WM_ToggleFullScreen(void) {
+    if (!g_window) RETC(0);
+    uint32_t full = (SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN_DESKTOP) ? 1u : 0u;
+    if (SDL_SetWindowFullscreen(g_window, full ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) { error(SDL_GetError()); RETC(0); }
+    RETC(1);
+}
+static void s_WM_GrabInput(void) {                       /* (SDL_GrabMode mode) */
+    int mode = (int)A32(0);
+    if (mode != -1 && g_window) {                        /* SDL_GRAB_QUERY leaves it alone */
+        SDL_SetWindowGrab(g_window, mode == 1 ? SDL_TRUE : SDL_FALSE);
+        SDL_SetRelativeMouseMode(mode == 1 ? SDL_TRUE : SDL_FALSE);
+    }
+    if (mode == -1 && g_window) RETC((SDL_GetWindowGrab(g_window) == SDL_TRUE) ? 1u : 0u);
+    RETC((uint32_t)(mode == -1 ? 0 : mode));
+}
+static void s_GetAppState(void) {
+    if (!g_window) RETC(0);                              /* no window, no focus to report */
+    uint32_t f = SDL_GetWindowFlags(g_window), st = 0;
+    if (f & SDL_WINDOW_MOUSE_FOCUS) st |= 0x01u;         /* SDL_APPMOUSEFOCUS */
+    if (f & SDL_WINDOW_INPUT_FOCUS) st |= 0x02u;         /* SDL_APPINPUTFOCUS */
+    if (!(f & SDL_WINDOW_MINIMIZED)) st |= 0x04u;        /* SDL_APPACTIVE */
+    RETC(st);
+}
 static void s_ShowCursor(void) { RETC(SDL_ShowCursor((int)A32(0))); }
 /* ---- keyboard, mouse and joystick ----
  * SDL 1.2's Windows driver builds keysym.sym from the virtual key through
@@ -1224,7 +1458,7 @@ static void s_WarpMouse(void) { SDL_WarpMouseInWindow(g_window,(int)A32(0),(int)
 const win32hle_shim win32hle_sdl12[] = {
     { "SDL_Init", s_Init }, { "SDL_InitSubSystem", s_InitSubSystem }, { "SDL_Quit", s_Quit }, { "SDL_QuitSubSystem", s_QuitSubSystem }, { "SDL_WasInit", s_WasInit },
     { "SDL_GetError", s_GetError }, { "SDL_ClearError", s_ClearError }, { "SDL_GetTicks", s_GetTicks }, { "SDL_Delay", s_Delay },
-    { "SDL_SetVideoMode", s_SetVideoMode }, { "SDL_GetVideoSurface", s_GetVideoSurface }, { "SDL_WM_SetCaption", s_WM_SetCaption }, { "SDL_Flip", s_Flip }, { "SDL_UpdateRect", s_UpdateRect }, { "SDL_UpdateRects", s_UpdateRects },
+    { "SDL_SetVideoMode", s_SetVideoMode }, { "SDL_GetVideoSurface", s_GetVideoSurface }, { "SDL_Flip", s_Flip }, { "SDL_UpdateRect", s_UpdateRect }, { "SDL_UpdateRects", s_UpdateRects },
     { "SDL_CreateRGBSurface", s_CreateRGBSurface }, { "SDL_CreateRGBSurfaceFrom", s_CreateRGBSurfaceFrom }, { "SDL_FreeSurface", s_FreeSurface }, { "SDL_LockSurface", s_LockSurface }, { "SDL_UnlockSurface", s_UnlockSurface }, { "SDL_FillRect", s_FillRect }, { "SDL_BlitSurface", s_BlitSurface }, { "SDL_UpperBlit", s_UpperBlit },
     { "SDL_PollEvent", s_PollEvent }, { "SDL_PumpEvents", s_PumpEvents }, { "SDL_ShowCursor", s_ShowCursor }, { "SDL_WarpMouse", s_WarpMouse },
     { "SDL_RWFromFile", s_RWFromFile }, { "SDL_RWFromMem", s_RWFromMem }, { "SDL_RWseek", s_RWseek }, { "SDL_RWread", s_RWread },
@@ -1248,5 +1482,11 @@ const win32hle_shim win32hle_sdl12[] = {
     { "SDL_JoystickGetAxis", s_JoystickGetAxis }, { "SDL_JoystickGetHat", s_JoystickGetHat },
     { "SDL_JoystickGetButton", s_JoystickGetButton }, { "SDL_JoystickGetBall", s_JoystickGetBall },
     { "SDL_JoystickClose", s_JoystickClose }, { "SDL_SetModuleHandle", s_SetModuleHandle },
+    { "SDL_PushEvent", s_PushEvent }, { "SDL_WaitEvent", s_WaitEvent }, { "SDL_PeepEvents", s_PeepEvents },
+    { "SDL_EventState", s_EventState }, { "SDL_NumEvents", s_NumEvents }, { "SDL_GetAppState", s_GetAppState },
+    { "SDL_GetVideoInfo", s_GetVideoInfo }, { "SDL_ListModes", s_ListModes }, { "SDL_VideoModeOK", s_VideoModeOK },
+    { "SDL_WM_SetCaption", s_WM_SetCaption }, { "SDL_WM_GetCaption", s_WM_GetCaption }, { "SDL_WM_SetIcon", s_WM_SetIcon },
+    { "SDL_WM_IconifyWindow", s_WM_IconifyWindow }, { "SDL_WM_ToggleFullScreen", s_WM_ToggleFullScreen },
+    { "SDL_WM_GrabInput", s_WM_GrabInput },
     { 0, 0 }
 };
