@@ -67,6 +67,18 @@ static uint32_t *A3(int i, uint32_t a, uint32_t b, uint32_t c) {
  * shim table with C functions instead, so resolve the name and drive the
  * shim through the guest entry the same way, rather than a host pointer. */
 static uint32_t vcall(uint32_t obj, const char *method, int n, const uint32_t *args) {
+    /* The caller's argument vector must be guest memory: hle_call_guest pushes
+     * it into the guest, and a host stack array is a fatal error deep inside
+     * the runtime. Catch it here, where the method name is known. */
+#ifdef HLE_FLAT
+    (void)0;                                     /* flat: every pointer is a VA */
+#else
+    if (args && ((uintptr_t)args - (uintptr_t)g_mem_base) >> 32) {   /* NULL = no arguments */
+        fprintf(stderr, "d3d7_selftest: %s was handed a host-stack argument vector\n", method);
+        fails++;
+        return 0xFFFFFFFFu;
+    }
+#endif
     uint32_t a[8] = { obj };
     for (int i = 0; i < n; i++) a[1 + i] = args[i];
     uint32_t va = hle_resolve(method);
@@ -115,10 +127,11 @@ int main(void) {
     mach_enter();
     g_vec = hle_alloc(sizeof *g_vec);                /* argument vectors (needs the machine) */
 
-    /* The device half needs the window's GL context, as a title's would, so it
-     * is opt-in (D3D7_SELFTEST_DEVICE=1) and skipped where SDL cannot give
-     * one. By default only the facade contract - which needs no GL - runs. */
-    int device_half = getenv("D3D7_SELFTEST_DEVICE") != NULL;
+    /* The device half needs the window's GL context, as a title's would. It
+     * runs by default; D3D7_SELFTEST_FACADE_ONLY=1 stops after the facade
+     * contract, and where SDL cannot give a GL context the run is skipped
+     * (exit 77) rather than failed. */
+    int device_half = getenv("D3D7_SELFTEST_FACADE_ONLY") == NULL;
     if (device_half && (!hle_screen_request_opengl() || hle_screen_open("d3d7 selftest", 0, 0) != 0)) {
         fprintf(stderr, "d3d7_selftest: no OpenGL context; the device half needs one\n");
         mach_leave();
@@ -159,10 +172,10 @@ int main(void) {
        vcall(g->d3d, "IDirect3D7::CreateDevice", 3, A3(7, P(g->guid), 0, P(&g->device))) == D3DERR_NOTAVAILABLE &&
        g->device == 0);
 
-    /* ---- A real device over the window's GL context (opt-in) ---- */
+    /* ---- A real device over the window's GL context ---- */
     if (!device_half) {
         mach_leave();
-        if (fails == 0) printf("d3d7_selftest: facade checks passed (set D3D7_SELFTEST_DEVICE=1 for the device half)\n");
+        if (fails == 0) printf("d3d7_selftest: facade checks passed (D3D7_SELFTEST_FACADE_ONLY)\n");
         return fails != 0;
     }
 
@@ -219,14 +232,15 @@ int main(void) {
 
     /* A material source the fixed-function GL path cannot represent is
      * refused, and the state it would have changed is untouched. */
-    uint32_t spec_before = 0xFFFFFFFFu;
-    vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, P(&spec_before)));
+    g->tmp = 0xFFFFFFFFu;
+    vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, P(&g->tmp)));
+    uint32_t before_spec = g->tmp;
     uint32_t x = vcall(g->device, "IDirect3DDevice7::SetRenderState", 2,
                        A2(RS_SPECULARMATERIALSOURCE, 0u /* D3DMCS_MATERIAL */));
-    uint32_t spec_after = 0xFFFFFFFFu;
-    vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, P(&spec_after)));
+    g->tmp = 0xFFFFFFFEu;
+    vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, P(&g->tmp)));
     ok("SetRenderState(SPECULARMATERIALSOURCE, material) is refused, not faked",
-       x == D3DERR_NOTAVAILABLE && spec_after == spec_before);
+       x == D3DERR_NOTAVAILABLE && g->tmp == before_spec);
     /* Diffuse from the material is the same task as from colour 1 here. */
     ok("SetRenderState(DIFFUSEMATERIALSOURCE, material)",
        vcall(g->device, "IDirect3DDevice7::SetRenderState", 2, A2(RS_DIFFUSEMATERIALSOURCE, 0u)) == D3D_OK);

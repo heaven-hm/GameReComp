@@ -1313,7 +1313,9 @@ static int render_state_supported(uint32_t state) {
 static int render_state_value_valid(uint32_t state,uint32_t value) {
     switch(state) {
     case 146: case 148:
-        return value==0;
+        /* Specular/emissive from a vertex colour: GL_COLOR_MATERIAL fixes only
+         * ambient and diffuse, so no value can be honoured here. */
+        return 0;
     case 145: case 147:
         /* Diffuse/ambient: MATERIAL and COLOR1 are the same tracked material. */
         return value==D3DMCS_MATERIAL || value==D3DMCS_COLOR1;
@@ -1347,7 +1349,11 @@ static void dev_set_render_state(void) {
     uint32_t s=A32(1),v=A32(2);
     if(!s || s>=256) RET(D3DERR_INVALIDCALL,3);
     if(!render_state_supported(s)) RET(D3DERR_NOTAVAILABLE,3);
-    if(!render_state_value_valid(s,v)) RET(D3DERR_INVALIDCALL,3);
+    /* A value outside the state's domain is an invalid call; a state this
+     * backend cannot honour at all (the material sources above) is simply not
+     * available. Reporting both as INVALIDCALL would tell a title its argument
+     * was wrong when the capability is missing. */
+    if(!render_state_value_valid(s,v)) RET(s==146 || s==148 ? D3DERR_NOTAVAILABLE : D3DERR_INVALIDCALL,3);
     if(s==9 && v==3) RET(D3DERR_NOTAVAILABLE,3);
     if(!load_gl()) RET(D3DERR_NOTAVAILABLE,3);
     if(s==7 && v) { int depth_bits=0; p_getint(GL_DEPTH_BITS,&depth_bits); if(depth_bits<=0) RET(D3DERR_NOTAVAILABLE,3); }

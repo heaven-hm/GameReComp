@@ -183,9 +183,10 @@ libsdl2-ttf-dev` for `HLE_BASED=1`); on a Mac, `brew install sdl2 sdl2_ttf`.
 `d3d7_selftest.c` is the one exception to "headless": the dummy driver has no
 OpenGL, so the script runs it on a GL-capable driver (the caller's
 `SDL_VIDEODRIVER`, else `cocoa`/`x11`) and reports `skip` when none is
-available. It checks the Direct3D 7 facade by default; the device half needs a
-real context and is opt-in:
+available. It drives the Direct3D 7 facade and, over that context, a real
+device: render states, texture stage state, transforms, scene pairing and the
+caps it reports. To check only the part that needs no GL:
 
 ```
-D3D7_SELFTEST_DEVICE=1 runtime/win32hle/build_selftests.sh
+D3D7_SELFTEST_FACADE_ONLY=1 runtime/win32hle/build_selftests.sh
 ```
