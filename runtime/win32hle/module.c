@@ -19,6 +19,9 @@
 #include <strings.h>
 #include <unistd.h>
 #include "win32hle.h"
+
+/* kernel32_crt.c's codepage-1252 conversion (it owns the mapping). */
+int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
 #include "pe_loader.h"
 
 #define ERROR_MOD_NOT_FOUND       126u
@@ -103,6 +106,19 @@ static uint32_t system_module(const char *name) {
 static void k_GetModuleHandleA(void) {
     const char *name = ASTR(0);
     if (!name) RET(g_main >= 0 ? g_mod[g_main].base : 0x00400000u, 1);
+    int i = find_by_name(name);
+    if (i >= 0) RET(g_mod[i].base, 1);
+    uint32_t s = system_module(name);
+    if (!s) hle_set_last_error(ERROR_MOD_NOT_FOUND);
+    RET(s, 1);
+}
+
+/* GetModuleHandleW: the same lookup with a UTF-16 module name. */
+static void k_GetModuleHandleW(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    if (!w) RET(g_main >= 0 ? g_mod[g_main].base : 0x00400000u, 1);
+    char name[512];
+    if (!hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_MOD_NOT_FOUND); RET(0, 1); }
     int i = find_by_name(name);
     if (i >= 0) RET(g_mod[i].base, 1);
     uint32_t s = system_module(name);
@@ -325,7 +341,7 @@ static void k_SetCurrentDirectoryA(void) {
 }
 
 const win32hle_shim win32hle_module[] = {
-    { "GetModuleHandleA",     k_GetModuleHandleA },
+    { "GetModuleHandleA",     k_GetModuleHandleA }, { "GetModuleHandleW", k_GetModuleHandleW },
     { "GetModuleFileNameA",   k_GetModuleFileNameA },
     { "LoadLibraryA",         k_LoadLibraryA },
     { "LoadLibraryExA",       k_LoadLibraryExA },

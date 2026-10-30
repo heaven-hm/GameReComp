@@ -19,6 +19,11 @@
 #include <pthread.h>
 #include <sched.h>
 #include "win32hle.h"
+
+/* kernel32_crt.c's codepage-1252 conversions (it owns the mapping); the W
+ * calls here share them rather than carrying a second copy. */
+int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
+int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
 #ifdef __APPLE__
 #include <mach-o/dyld.h>   /* _NSGetExecutablePath */
 #endif
@@ -26,6 +31,8 @@
 #define HEAP_ZERO_MEMORY            0x00000008u
 #define HEAP_REALLOC_IN_PLACE_ONLY  0x00000010u
 #define ERROR_INVALID_HANDLE        6u
+#define ERROR_FILE_NOT_FOUND 2u
+#define ERROR_INVALID_NAME 123u
 #define ERROR_NOT_ENOUGH_MEMORY     8u
 #define ERROR_INVALID_PARAMETER    87u
 #define ERROR_CALL_NOT_IMPLEMENTED 120u
@@ -81,6 +88,19 @@ static void k_GetCommandLineA(void) {
     static const char *copied_from;
     static uint32_t va;
     if (copied_from != g_cmdline) va = hle_guest_strdup(g_cmdline), copied_from = g_cmdline;
+    RET(va, 0);
+}
+/* The same command line in UTF-16: converted once per change, in guest memory. */
+static void k_GetCommandLineW(void) {
+    static const char *copied_from;
+    static uint32_t va;
+    if (copied_from != g_cmdline) {
+        size_t n = strlen(g_cmdline);
+        uint16_t *w = (uint16_t *)hle_alloc((uint32_t)(n + 1) * 2);
+        if (w && hle_ansi_to_wide(g_cmdline, w, n + 1)) va = hle_va(w);
+        else va = 0;
+        copied_from = g_cmdline;
+    }
     RET(va, 0);
 }
 static void k_GetCurrentProcess(void)   { RET(0xFFFFFFFFu, 0); }        /* pseudo-handle */
@@ -287,6 +307,52 @@ static void k_lstrcmpiA(void) { RET((uint32_t)strcasecmp(ASTR(0) ? ASTR(0) : "",
 
 /* STARTUPINFOA is 68 bytes; the CRT reads it early. */
 static void k_GetStartupInfoA(void) { uint32_t si = A32(0); if (si) { memset(hle_ptr(si), 0, 68); MEM32(si) = 68; } RETV(1); }
+/* STARTUPINFOW is the same 68 bytes with WCHAR* string fields, and like the A
+ * call this reports none of them (no lpDesktop, no lpTitle). */
+static void k_GetStartupInfoW(void) { uint32_t si = A32(0); if (si) { memset(hle_ptr(si), 0, 68); MEM32(si) = 68; } RETV(1); }
+/* InitializeSListHead(&list): an empty SLIST_HEADER, which is zero. */
+static void k_InitializeSListHead(void) { if (A32(0)) memset(hle_ptr(A32(0)), 0, 16); RETV(1); }
+/* IsDebuggerPresent(): no debugger is attached to a lifted process here. */
+static void k_IsDebuggerPresent(void) { RET(0, 0); }
+/* WinExec(cmd, show): run a program, as Windows does.  The executable at the
+ * front of the command line is translated through hle_host_path (so a guest
+ * C:\... path finds the host file) and started with the rest of the line as
+ * its arguments; the answer is 33 (>31 = started) or the Win32 error that
+ * stopped it.  Windows-style paths inside the ARGUMENTS are not translated -
+ * that is the shell's business, and the limitation is stated rather than
+ * papered over. */
+static void k_WinExec(void) {
+    const char *cmd = ASTR(0);
+    if (!cmd || !*cmd) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0, 2); }
+    while (*cmd == ' ') cmd++;
+    char exe[1024];
+    const char *rest = cmd;
+    size_t n = 0;
+    if (*cmd == '"') {
+        rest = cmd + 1;
+        while (*rest && *rest != '"' && n < sizeof exe - 1) exe[n++] = *rest++;
+        if (*rest == '"') rest++;
+    } else {
+        while (*rest && *rest != ' ' && n < sizeof exe - 1) exe[n++] = *rest++;
+    }
+    exe[n] = 0;
+    char host[1200];
+    if (!exe[0] || !hle_host_path(exe, host, sizeof host)) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(2, 2); }
+    /* The shell executes a path with a slash directly and searches PATH for a
+     * bare name, so a relative program gets "./" - and quoting is only needed
+     * when the path has a space, which would otherwise split it. */
+    char exe_host[1200];
+    if (strchr(host, '/')) snprintf(exe_host, sizeof exe_host, "%s", host);
+    else snprintf(exe_host, sizeof exe_host, "./%s", host);
+    char line[2048];
+    if (strchr(exe_host, ' ')) snprintf(line, sizeof line, "\"%s\"%s", exe_host, rest);
+    else snprintf(line, sizeof line, "%s%s", exe_host, rest);
+    pid_t pid = fork();
+    if (pid < 0) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+    if (pid == 0) { execl("/bin/sh", "sh", "-c", line, (char *)NULL); _exit(127); }
+    hle_set_last_error(0);
+    RET(33, 2);                                          /* >31: the program was started */
+}
 
 /* --- critical sections ---
  * CRITICAL_SECTION: DebugInfo, LockCount, RecursionCount, OwningThread,
@@ -344,17 +410,27 @@ static void named_add(const char *name, uint32_t h) {
 }
 static void free_obj(void *o) { free(o); }
 
-static void k_CreateEventA(void) {                       /* (sa, manual, initial, name) */
+/* The body of CreateEventA/W: the name only identifies a named object, so the
+ * W call converts it and shares this. */
+static uint32_t create_event(const char *name) {
     static int closer;
     if (!closer) hle_handle_set_closer(HLE_H_EVENT, free_obj), closer = 1;
-    uint32_t h = named_find(ASTR(3));
-    if (h) { g_last_error = ERROR_ALREADY_EXISTS; RET(h, 4); }
+    uint32_t h = named_find(name);
+    if (h) { g_last_error = ERROR_ALREADY_EXISTS; return h; }
     hevent *e = (hevent *)calloc(1, sizeof *e);
     e->manual = A32(1) != 0, e->signaled = A32(2) != 0;
     h = hle_handle_alloc(HLE_H_EVENT, e);
-    named_add(ASTR(3), h);
+    named_add(name, h);
     g_last_error = 0;
-    RET(h, 4);
+    return h;
+}
+static void k_CreateEventA(void) { RET(create_event(ASTR(3)), 4); }
+static void k_CreateEventW(void) {                       /* (sa, manual, initial, name) */
+    const uint16_t *w = (const uint16_t *)APTR(3);
+    char name[512];
+    if (!w || !*w) RET(create_event(NULL), 4);           /* an unnamed event */
+    if (!hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_INVALID_NAME); RET(0, 4); }
+    RET(create_event(name), 4);
 }
 void hle_set_event(uint32_t h) { hevent *e = (hevent *)hle_handle_obj(h, HLE_H_EVENT); if (e) e->signaled = 1; }
 static void k_OpenEventA(void) { uint32_t h = named_find(ASTR(2)); if (!h) g_last_error = 2; RET(h, 3); }
@@ -583,7 +659,7 @@ const win32hle_shim win32hle_kernel32[] = {
     { "GlobalDeleteAtom",   k_GlobalDeleteAtom },
     { "GlobalGetAtomNameA", k_GlobalGetAtomNameA },
     { "GetProcessHeap",     k_GetProcessHeap },
-    { "GetCommandLineA",    k_GetCommandLineA },
+    { "GetCommandLineA",    k_GetCommandLineA }, { "GetCommandLineW", k_GetCommandLineW },
     { "GetCurrentProcess",  k_GetCurrentProcess },
     { "GetCurrentProcessId",k_GetCurrentProcessId },
     { "GetCurrentThreadId", k_GetCurrentThreadId },
@@ -641,7 +717,9 @@ const win32hle_shim win32hle_kernel32[] = {
     { "lstrcatA",           k_lstrcatA },
     { "lstrcmpA",           k_lstrcmpA },
     { "lstrcmpiA",          k_lstrcmpiA },
-    { "GetStartupInfoA",    k_GetStartupInfoA },
+    { "GetStartupInfoA",    k_GetStartupInfoA }, { "GetStartupInfoW", k_GetStartupInfoW },
+    { "InitializeSListHead", k_InitializeSListHead }, { "IsDebuggerPresent", k_IsDebuggerPresent },
+    { "WinExec",            k_WinExec },
     { "InitializeCriticalSection", k_InitializeCriticalSection },
     { "DeleteCriticalSection",     k_DeleteCriticalSection },
     { "EnterCriticalSection",      k_EnterCriticalSection },
@@ -652,7 +730,7 @@ const win32hle_shim win32hle_kernel32[] = {
     { "InterlockedExchange",       k_InterlockedExchange },
     { "InterlockedExchangeAdd",    k_InterlockedExchangeAdd },
     { "InterlockedCompareExchange",k_InterlockedCompareExchange },
-    { "CreateEventA",       k_CreateEventA },
+    { "CreateEventA",       k_CreateEventA }, { "CreateEventW", k_CreateEventW },
     { "SetEvent",           k_SetEvent },
     { "ResetEvent",         k_ResetEvent },
     { "PulseEvent",         k_PulseEvent },
