@@ -45,20 +45,22 @@ Windows PE32 game + user-supplied assets
 
 ## Measured so far
 
-17 executable rows in [`table.md`](table.md), each tied to the input's SHA-256:
+19 measured executable rows, each tied to the input's SHA-256. The full
+per-game table — name, OS, architecture, what the port produced and its working
+status — is [`docs/GAME_MATRIX.md`](docs/GAME_MATRIX.md); the database with the
+upstream PCRecomp claims beside it is [`table.md`](table.md).
 
 | Result | Games |
 | --- | --- |
-| 75/100 — compiled, launched, `launch-failed` (host blocker, see below) | 14 PE32 games: Cave Story (Doukutsu, OrgView, DoConfig), GeneRally TrackEditor, Gunroar, Hero Core (gm5, gm7), Ikachan, Noiz2sa, Parsec47, rRootage, Torus Trooper, Tumiki Fighters, Warning Forever |
-| 40/100 — inspect+recover+translate+project, compile timed out before the deadline fix | GeneRally.exe (rerun in progress) |
-| 0/100 — fail-closed PE32+ rejection, recorded honestly | OpenTyrian, Pixeltetris |
+| 93/100 — boots, binds every import, launches and exits on its own; no oracle, so `partial` | Ikachan (dxIka.exe) |
+| 85/100 — compiled to a native binary, then stopped in the PE loader on unresolved imports (`launch-failed`) | 14 PE32 games: Cave Story (Doukutsu, OrgView, DoConfig), GeneRally (GeneRally.exe, TrackEditor.exe), Gunroar, Hero Core (gm5, gm7), Noiz2sa, Parsec47, rRootage, Torus Trooper, Tumiki Fighters, Warning Forever |
+| 0/100 — PE32+ refused at inspect, recorded honestly as a measured row | Cannonball, OpenTyrian, Pixeltetris, Snake |
 
-The rebuilt binaries reach dynamic linking and then abort inside Homebrew freetype
-2.15.0 (`Symbol not found: _HVF_clear_part_cache` in
-`/System/Library/PrivateFrameworks/FontServices.framework/libhvf.dylib`). That is a
-host toolchain fault, not game code; until the host library is fixed the honest
-verification status is `launch-failed`. The pipeline never promotes it to anything
-stronger.
+**No game has passed a gameplay scenario.** The `launch-failed` rows are not a
+host-toolchain fault: each one records exit 2 and the exact import names its
+runtime could not bind (2-179 names: SDL 1.2 and SDL_mixer 1.2 for the ABA
+games, DirectDraw/DirectInput, OpenGL, and the MSVC CRT). Runtime coverage is
+the measured ceiling today, and closing those gaps is the work in progress.
 
 ## Honest limits
 
@@ -70,12 +72,23 @@ stronger.
 - **No gameplay verification yet.** Oracle checks are process-level
   (exit code, stdout/stderr, launch); frame/input/audio comparison is a recorded
   oracle gap in every report.
+- **No independent original-game oracle process yet.** The `--oracle` flag
+  compares the rebuilt process against a user-supplied JSON of expected exit
+  code/stdout/stderr; it does not run the original Windows binary.
 - **The three extra corpus titles** (`igi.exe`, `ac.exe`, `halo.exe`) are not
   present locally and are reported as `MISSING_INPUT`, never invented.
 - **GUI deferred.** No Qt application ships in v0.1; the design lives in
   [`docs/GUI.md`](docs/GUI.md).
 - **No hidden delegation.** The rebuilt executable is built from the generated
   project's source and nothing else; no emulator or Wine path is used to run it.
+  The original PE is mapped read-only as the guest's data image; every guest
+  instruction executed is generated C, dispatched through `recomp_lookup`.
+  [Audited](reports/audit-2026-10-30.md): `otool`/`nm`/`strings` clean, no
+  `PROT_EXEC` on the image anywhere in the delivered runtime.
+- **Generated projects are build output and are not committed.** `projects/` is
+  gitignored; the tracked artifacts are the pipeline that produces them plus
+  [`docs/GAME_MATRIX.md`](docs/GAME_MATRIX.md) and [`table.md`](table.md), which
+  record the input hash each row was measured against.
 
 ## Quick start (CLI)
 

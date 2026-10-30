@@ -19,12 +19,15 @@ Last measurement: 2026-10-29T22:53:56Z
 
 ## How to read the score
 
-`PASS /100` is weighted stage completion: inspect 10, recover 10, translate 10,
-project 10, compile 20, run 15, verify 15, report 10. A stage counts only when it
-succeeded for the recorded input hash. The verification status is the honest
-outcome and can be lower than the score suggests: a rebuilt binary that compiles
-but fails to boot or crashes scores 85 and reports `launch-failed`, while one that
-launches and exits with no independent oracle scores 93 and reports `partial`.
+`PASS /100` is weighted work, not a verdict: inspect 10, recover 10, translate
+10, project 10, compile 20, report 10, run 15 (full when the rebuilt process
+launched on its own, half when it launched then faulted, none when it never
+reached its entry point) and verify 15 (full for a verified scenario, 8 for a
+launch without an oracle). A stage counts only when it succeeded for the recorded
+input hash. The verification status is the honest outcome and can be lower than
+the score: a rebuilt binary that compiles but never boots scores 70 and reports
+`launch-failed`; one that launches and exits with no independent oracle scores 93
+and reports `partial`; only a verified scenario reaches 100.
 
 ## Measured inputs
 
