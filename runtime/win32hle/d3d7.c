@@ -30,6 +30,14 @@ enum { GL_POINTS=0x0000, GL_LINES=0x0001, GL_LINE_STRIP=0x0003,
        GL_ONE_MINUS_SRC_COLOR=0x0301, GL_FRONT_AND_BACK=0x0408,
        GL_POINT=0x1B00, GL_LINE=0x1B01, GL_FILL=0x1B02,
        GL_FLAT=0x1D00, GL_SMOOTH=0x1D01 };
+enum { GL_LIGHTING=0x0B50, GL_COLOR_MATERIAL=0x0B57, GL_LIGHT0=0x4000,
+       GL_MAX_LIGHTS=0x0D31, GL_AMBIENT=0x1200, GL_DIFFUSE=0x1201,
+       GL_SPECULAR=0x1202, GL_POSITION=0x1203, GL_SPOT_DIRECTION=0x1204,
+       GL_SPOT_EXPONENT=0x1205, GL_SPOT_CUTOFF=0x1206,
+       GL_CONSTANT_ATTENUATION=0x1207, GL_LINEAR_ATTENUATION=0x1208,
+       GL_QUADRATIC_ATTENUATION=0x1209, GL_EMISSION=0x1600,
+       GL_SHININESS=0x1601, GL_FRONT=0x0404, GL_LIGHT_MODEL_AMBIENT=0x0B53,
+       GL_LIGHT_MODEL_LOCAL_VIEWER=0x0B51, GL_NORMALIZE=0x0BA1 };
 enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_MODULATE=0x2100, GL_REPLACE=0x1E01, GL_RGB=0x1907, GL_RGBA=0x1908,
        GL_BGR=0x80E0, GL_BGRA=0x80E1, GL_UNSIGNED_BYTE=0x1401,
@@ -61,6 +69,13 @@ typedef void (*gl_tex_parameter_i_fn)(unsigned,unsigned,int);
 typedef void (*gl_pixel_store_i_fn)(unsigned,int);
 typedef void (*gl_tex_envi_fn)(unsigned,unsigned,int);
 typedef void (*gl_delete_textures_fn)(int,const unsigned *);
+typedef void (*gl_materialfv_fn)(unsigned,unsigned,const float *);
+typedef void (*gl_materialf_fn)(unsigned,unsigned,float);
+typedef void (*gl_lightfv_fn)(unsigned,unsigned,const float *);
+typedef void (*gl_lightf_fn)(unsigned,unsigned,float);
+typedef void (*gl_color_material_fn)(unsigned,unsigned);
+typedef void (*gl_light_modelfv_fn)(unsigned,const float *);
+typedef void (*gl_light_modeli_fn)(unsigned,int);
 
 static gl_begin_fn p_begin; static gl_end_fn p_end;
 static gl_vertex3_fn p_vertex3; static gl_vertex4_fn p_vertex4;
@@ -82,6 +97,11 @@ static gl_tex_parameter_i_fn p_tex_parameter_i;
 static gl_pixel_store_i_fn p_pixel_store_i;
 static gl_tex_envi_fn p_tex_envi;
 static gl_delete_textures_fn p_delete_textures;
+static gl_materialfv_fn p_materialfv; static gl_materialf_fn p_materialf;
+static gl_lightfv_fn p_lightfv; static gl_lightf_fn p_lightf;
+static gl_color_material_fn p_color_material;
+static gl_light_modelfv_fn p_light_modelfv;
+static gl_light_modeli_fn p_light_modeli;
 static int g_gl_loaded;
 
 #define LOAD_GL(field, type, symbol) do { *(void **)(&(field)) = SDL_GL_GetProcAddress(symbol); if (!(field)) return 0; } while (0)
@@ -109,6 +129,13 @@ static int load_gl(void) {
     LOAD_GL(p_pixel_store_i, gl_pixel_store_i_fn, "glPixelStorei");
     LOAD_GL(p_tex_envi, gl_tex_envi_fn, "glTexEnvi");
     LOAD_GL(p_delete_textures, gl_delete_textures_fn, "glDeleteTextures");
+    LOAD_GL(p_materialfv, gl_materialfv_fn, "glMaterialfv");
+    LOAD_GL(p_materialf, gl_materialf_fn, "glMaterialf");
+    LOAD_GL(p_lightfv, gl_lightfv_fn, "glLightfv");
+    LOAD_GL(p_lightf, gl_lightf_fn, "glLightf");
+    LOAD_GL(p_color_material, gl_color_material_fn, "glColorMaterial");
+    LOAD_GL(p_light_modelfv, gl_light_modelfv_fn, "glLightModelfv");
+    LOAD_GL(p_light_modeli, gl_light_modeli_fn, "glLightModeli");
     g_gl_loaded = 1;
     return 1;
 }
@@ -126,6 +153,10 @@ static uint32_t g_viewport[6];
 static uint32_t g_texture_surface;
 static unsigned g_gl_texture;
 static uint32_t g_stage_state[32];
+static uint8_t g_material[68];
+static uint8_t g_lights[8][104];
+static uint8_t g_light_valid[8], g_light_enabled[8];
+static unsigned g_max_lights;
 
 static void dev_get_direct3d(void);
 static void dev_begin_scene(void);
@@ -147,6 +178,14 @@ static void dev_get_texture(void);
 static void dev_set_texture(void);
 static void dev_get_tss(void);
 static void dev_set_tss(void);
+static void refresh_lights(void);
+static void apply_material(void);
+static void dev_set_material(void);
+static void dev_get_material(void);
+static void dev_set_light(void);
+static void dev_get_light(void);
+static void dev_light_enable(void);
+static void dev_get_light_enable(void);
 static void d3d_enum_z(void);
 static void d3d_evict(void);
 static void vb_lock(void);
@@ -155,16 +194,14 @@ static void vb_get_desc(void);
 static void release_surface_ref(uint32_t surface);
 
 #define UNIMPL(name, argc) static void name(void) { RET(D3DERR_NOTAVAILABLE, argc); }
-UNIMPL(dev_get_caps,1) UNIMPL(dev_enum_textures,2) UNIMPL(dev_set_target,2)
-UNIMPL(dev_get_target,1) UNIMPL(dev_set_material,1) UNIMPL(dev_get_material,1)
-UNIMPL(dev_set_light,2) UNIMPL(dev_get_light,2) UNIMPL(dev_begin_state,0)
-UNIMPL(dev_end_state,1) UNIMPL(dev_preload,1) UNIMPL(dev_set_clip,1)
-UNIMPL(dev_get_clip,1) UNIMPL(dev_draw_strided,4) UNIMPL(dev_draw_indexed_strided,6)
-UNIMPL(dev_sphere,5) UNIMPL(dev_validate,1)
-UNIMPL(dev_apply_state,1) UNIMPL(dev_capture_state,1) UNIMPL(dev_delete_state,1)
-UNIMPL(dev_create_state,2) UNIMPL(dev_load,4) UNIMPL(dev_light_enable,2)
-UNIMPL(dev_get_light_enable,2) UNIMPL(dev_set_clip_plane,2) UNIMPL(dev_get_clip_plane,2)
-UNIMPL(dev_get_info,3) UNIMPL(vb_process_vertices,8) UNIMPL(vb_optimize,2)
+UNIMPL(dev_get_caps,2) UNIMPL(dev_enum_textures,3) UNIMPL(dev_set_target,3)
+UNIMPL(dev_get_target,2) UNIMPL(dev_begin_state,1)
+UNIMPL(dev_end_state,2) UNIMPL(dev_preload,2) UNIMPL(dev_set_clip,2)
+UNIMPL(dev_get_clip,2) UNIMPL(dev_draw_strided,6) UNIMPL(dev_draw_indexed_strided,8)
+UNIMPL(dev_sphere,6) UNIMPL(dev_validate,2)
+UNIMPL(dev_apply_state,2) UNIMPL(dev_capture_state,2) UNIMPL(dev_delete_state,2)
+UNIMPL(dev_create_state,3) UNIMPL(dev_load,6) UNIMPL(dev_set_clip_plane,3) UNIMPL(dev_get_clip_plane,3)
+UNIMPL(dev_get_info,4) UNIMPL(vb_process_vertices,8) UNIMPL(vb_optimize,3)
 UNIMPL(vb_process_strided,8)
 #undef UNIMPL
 
@@ -296,9 +333,18 @@ static void d3d_create_device(void) {
         uint32_t state=hle_va(hle_alloc(4)); MEM32(g_device+8)=state;
         identity(g_world); identity(g_view); identity(g_projection);
         memset(g_render,0,sizeof g_render); g_render[7]=1; g_render[8]=3; g_render[9]=2;
+        g_render[137]=1; g_render[141]=1; g_render[145]=1; g_render[147]=0; g_render[148]=0;
+        memset(g_material,0,sizeof g_material); memset(g_lights,0,sizeof g_lights);
+        memset(g_light_valid,0,sizeof g_light_valid); memset(g_light_enabled,0,sizeof g_light_enabled);
+        int max_lights=0; p_getint(GL_MAX_LIGHTS,&max_lights);
+        g_max_lights=max_lights<0?0u:max_lights>8?8u:(unsigned)max_lights;
         memset(g_stage_state,0,sizeof g_stage_state); g_stage_state[1]=4; g_stage_state[2]=2; g_stage_state[3]=1;
         g_stage_state[5]=2; g_stage_state[6]=2; g_stage_state[13]=1; g_stage_state[14]=1;
         g_viewport[2]=640;g_viewport[3]=480;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
+        float ambient[4]={0,0,0,1}; p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,ambient);
+        p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,0); p_enable(GL_LIGHTING);
+        p_enable(GL_COLOR_MATERIAL); p_color_material(GL_FRONT_AND_BACK,GL_DIFFUSE);
+        apply_material();
     } else MEM32(g_device+4)++;
     MEM32(out)=g_device; RET(D3D_OK,4);
 }
@@ -386,11 +432,92 @@ static void dev_clear(void) { uint32_t flags=A32(3),c=A32(4),zb=A32(5); float z;
     if(flags&2)p_clear_depth((double)z); unsigned m=0;if(flags&1)m|=0x4000;if(flags&2)m|=0x0100;if(flags&4)m|=0x0400;p_clear(m);RET(D3D_OK,7); }
 
 static float *transform_for(uint32_t state) { if(state==1)return g_world;if(state==2)return g_view;if(state==3)return g_projection;return NULL; }
-static void dev_set_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);memcpy(to,hle_ptr(m),64);if(st==1||st==2)refresh_modelview();if(st==3)load_projection();RET(D3D_OK,3); }
+static void dev_set_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);memcpy(to,hle_ptr(m),64);if(st==1||st==2){refresh_modelview();if(st==2)refresh_lights();}if(st==3)load_projection();RET(D3D_OK,3); }
 static void dev_get_transform(void) { uint32_t st=A32(1),m=A32(2);float *from=transform_for(st);if(!from||!m)RET(D3DERR_INVALIDCALL,3);memcpy(hle_ptr(m),from,64);RET(D3D_OK,3); }
-static void dev_multiply_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);float a[16],b[16],r[16];memcpy(a,to,64);memcpy(b,hle_ptr(m),64);for(int i=0;i<4;i++)for(int j=0;j<4;j++){r[i*4+j]=0;for(int k=0;k<4;k++)r[i*4+j]+=a[i*4+k]*b[k*4+j];}memcpy(to,r,64);if(st==1||st==2)refresh_modelview();if(st==3)load_projection();RET(D3D_OK,3); }
+static void dev_multiply_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);float a[16],b[16],r[16];memcpy(a,to,64);memcpy(b,hle_ptr(m),64);for(int i=0;i<4;i++)for(int j=0;j<4;j++){r[i*4+j]=0;for(int k=0;k<4;k++)r[i*4+j]+=a[i*4+k]*b[k*4+j];}memcpy(to,r,64);if(st==1||st==2){refresh_modelview();if(st==2)refresh_lights();}if(st==3)load_projection();RET(D3D_OK,3); }
 static void dev_set_viewport(void) { uint32_t p=A32(1);if(!p)RET(E_POINTER,2);for(int i=0;i<6;i++)g_viewport[i]=MEM32(p+i*4);if(load_gl())hle_screen_gl_viewport((int)g_viewport[0],(int)g_viewport[1],(int)g_viewport[2],(int)g_viewport[3]);RET(D3D_OK,2); }
 static void dev_get_viewport(void) { uint32_t p=A32(1);if(!p)RET(E_POINTER,2);for(int i=0;i<6;i++)MEM32(p+i*4)=g_viewport[i];RET(D3D_OK,2); }
+
+/* D3DMATERIAL7 is four RGBA float vectors followed by power (68 bytes).
+ * D3DLIGHT7 is type, three RGBA vectors, two xyz vectors and seven floats
+ * (104 bytes). Keep the exact guest layouts for Get* and only copy from guest
+ * memory after validating their pointers. */
+static void apply_material(void) {
+    if (!load_gl()) return;
+    float m[17],no_specular[4]={0,0,0,0}; memcpy(m,g_material,sizeof m);
+    p_materialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,m);
+    p_materialfv(GL_FRONT_AND_BACK,GL_AMBIENT,m+4);
+    p_materialfv(GL_FRONT_AND_BACK,GL_SPECULAR,g_render[29]?m+8:no_specular);
+    p_materialfv(GL_FRONT_AND_BACK,GL_EMISSION,m+12);
+    p_materialf(GL_FRONT_AND_BACK,GL_SHININESS,m[16]);
+}
+static void apply_light(unsigned index) {
+    const uint8_t *l=g_lights[index];
+    unsigned gl=GL_LIGHT0+index;
+    uint32_t type; memcpy(&type,l,4);
+    float diff[4],spec[4],amb[4],pos[4],dir[3],range,falloff,a0,a1,a2,theta,phi;
+    memcpy(diff,l+4,16);memcpy(spec,l+20,16);memcpy(amb,l+36,16);
+    memcpy(pos,l+52,12); pos[3]=(type==3)?0.f:1.f;
+    memcpy(dir,l+64,12);
+    if(type==3) for(int i=0;i<3;i++)pos[i]=-dir[i];
+    memcpy(&range,l+76,4); memcpy(&falloff,l+80,4);
+    memcpy(&a0,l+84,4); memcpy(&a1,l+88,4); memcpy(&a2,l+92,4);
+    memcpy(&theta,l+96,4); memcpy(&phi,l+100,4);
+    p_lightfv(gl,GL_DIFFUSE,diff); p_lightfv(gl,GL_SPECULAR,spec); p_lightfv(gl,GL_AMBIENT,amb);
+    p_lightfv(gl,GL_POSITION,pos);
+    if(type==2) {
+        p_lightfv(gl,GL_SPOT_DIRECTION,dir);
+        p_lightf(gl,GL_SPOT_CUTOFF,phi>=3.14159265f?180.f:phi*(90.f/3.14159265f));
+        p_lightf(gl,GL_SPOT_EXPONENT,falloff<0.f?0.f:falloff>128.f?128.f:falloff);
+    } else { p_lightf(gl,GL_SPOT_CUTOFF,180.f); }
+    p_lightf(gl,GL_CONSTANT_ATTENUATION,a0);
+    p_lightf(gl,GL_LINEAR_ATTENUATION,a1);
+    p_lightf(gl,GL_QUADRATIC_ATTENUATION,a2);
+    (void)range; (void)theta; /* GL's fixed pipeline has no D3D range/inner-cone equivalent. */
+    if(g_light_enabled[index])p_enable(gl);else p_disable(gl);
+}
+static void refresh_lights(void) {
+    for(unsigned i=0;i<g_max_lights&&i<8;i++)if(g_light_valid[i])apply_light(i);
+}
+static void dev_set_material(void) {
+    uint32_t p=A32(1); if(!p)RET(E_POINTER,2);
+    if(!load_gl())RET(D3DERR_NOTAVAILABLE,2);
+    memcpy(g_material,hle_ptr(p),sizeof g_material); apply_material(); RET(D3D_OK,2);
+}
+static void dev_get_material(void) {
+    uint32_t p=A32(1); if(!p)RET(E_POINTER,2);
+    memcpy(hle_ptr(p),g_material,sizeof g_material); RET(D3D_OK,2);
+}
+static void dev_set_light(void) {
+    uint32_t index=A32(1),p=A32(2),type;
+    if(!p)RET(E_POINTER,3);
+    if(index>=g_max_lights||index>=8)RET(D3DERR_INVALIDCALL,3);
+    memcpy(&type,hle_ptr(p),4);
+    if(type<1||type>3)RET(D3DERR_NOTAVAILABLE,3);
+    if(!load_gl())RET(D3DERR_NOTAVAILABLE,3);
+    memcpy(g_lights[index],hle_ptr(p),sizeof g_lights[index]);
+    g_light_valid[index]=1; apply_light(index); RET(D3D_OK,3);
+}
+static void dev_get_light(void) {
+    uint32_t index=A32(1),p=A32(2);
+    if(!p)RET(E_POINTER,3);
+    if(index>=g_max_lights||index>=8||!g_light_valid[index])RET(D3DERR_INVALIDCALL,3);
+    memcpy(hle_ptr(p),g_lights[index],sizeof g_lights[index]); RET(D3D_OK,3);
+}
+static void dev_light_enable(void) {
+    uint32_t index=A32(1),enabled=A32(2);
+    if(index>=g_max_lights||index>=8||!g_light_valid[index])RET(D3DERR_INVALIDCALL,3);
+    g_light_enabled[index]=enabled!=0;
+    if(!load_gl())RET(D3DERR_NOTAVAILABLE,3);
+    if(g_light_enabled[index])p_enable(GL_LIGHT0+index);else p_disable(GL_LIGHT0+index);
+    RET(D3D_OK,3);
+}
+static void dev_get_light_enable(void) {
+    uint32_t index=A32(1),p=A32(2);
+    if(!p)RET(E_POINTER,3);
+    if(index>=g_max_lights||index>=8)RET(D3DERR_INVALIDCALL,3);
+    MEM32(p)=g_light_enabled[index]?1u:0u; RET(D3D_OK,3);
+}
 
 static void dev_set_render_state(void) { uint32_t s=A32(1),v=A32(2);if(s<256)g_render[s]=v;if(!load_gl())RET(D3DERR_NOTAVAILABLE,3);
     switch(s){case 7:if(v)p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);break;
@@ -404,6 +531,13 @@ static void dev_set_render_state(void) { uint32_t s=A32(1),v=A32(2);if(s<256)g_r
     case 28:if(v)p_enable(GL_FOG);else p_disable(GL_FOG);break;
     case 34:{float f[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_fogfv(0x0B66,f);break;}
     case 36:case 37:case 38:{float f;memcpy(&f,&v,4);p_fogf(s==36?0x0B63:s==37?0x0B64:0x0B62,f);break;}
+    case 137:if(v)p_enable(GL_LIGHTING);else p_disable(GL_LIGHTING);break;
+    case 139:{float a[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,a);break;}
+    case 141:if(v){p_enable(GL_COLOR_MATERIAL);p_color_material(GL_FRONT_AND_BACK,GL_DIFFUSE);}else p_disable(GL_COLOR_MATERIAL);break;
+    case 143:if(v)p_enable(GL_NORMALIZE);else p_disable(GL_NORMALIZE);break;
+    case 29:apply_material();break;
+    case 142:p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,v?1:0);break;
+    case 145:case 146:case 147:case 148:break; /* Material-source modes are not implemented yet. */
     default:break;} RET(D3D_OK,3); }
 static void dev_get_render_state(void) { uint32_t s=A32(1),p=A32(2);if(!p)RET(E_POINTER,3);MEM32(p)=s<256?g_render[s]:0;RET(D3D_OK,3); }
 static void dev_draw_primitive(void) { uint32_t n=A32(4);RET(draw_vertices(A32(1),A32(2),A32(3),n,0,0)?D3D_OK:D3DERR_INVALIDCALL,6); }
