@@ -57,3 +57,7 @@ projects/
 # IDA-derived Win16 ordinal map. Built locally by tools/ne/idt_to_json.py from
 # an IDA install; it is IDA's data, not ours to redistribute.
 tools/ne/win16_imports.json
+
+# rev.ng container staging (a binary from outside the repo, for the
+# duration of one decompilation; never committed)
+.revng-in/
