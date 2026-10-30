@@ -355,16 +355,106 @@ def generate(pe_path, address, revng_dir, names, evidence, frames=False, extra=N
     return "\n".join(header) + "\n\n" + typed + adapter, None
 
 
+def closure_blockers(pe_path, revng_c, header, signatures, layouts, cap=256):
+    """Which refusal class blocks multi-function closures, weighted by caller.
+
+    A closure is only as usable as its WORST member, so the ordering metric is
+    closures-unblocked-per-fix, not class size. This is the measurement that decides
+    the next piece; it found that fixing the largest class (124 struct returns) moved
+    multi-function closures from zero to zero.
+    """
+    import re as _r
+    from collections import Counter, defaultdict
+    lines = Path(revng_c).read_text(errors="replace").splitlines()
+    bodies = {}
+    for i, l in enumerate(lines):
+        m = _r.match(r"^[A-Za-z_]\w*[ \t]+function_0x([0-9a-f]+)_Code_x86\s*\(", l)
+        if not m or not l.rstrip().endswith("{"):
+            continue
+        va = int(m.group(1), 16)
+        depth, out, opened = 0, [], False
+        for l2 in lines[i:]:
+            out.append(l2)
+            depth += l2.count("{") - l2.count("}")
+            if "{" in l2:
+                opened = True
+            if opened and depth <= 0:
+                break
+        bodies[va] = "\n".join(out)
+    callee_names = {va: f"function_{va:08X}" for va in bodies}
+
+    def generates(va):
+        try:
+            rename_ast.rewrite(bodies[va], 0x0049B000, own_va=va, layouts=layouts,
+                               frames=True, signatures=signatures,
+                               callee_names=callee_names)
+            return True, None
+        except rename_ast.Unsupportable as e:
+            return False, str(e)
+        except Exception as e:                       # noqa: BLE001 - an instrument bug, reported
+            return False, f"instrument bug: {type(e).__name__}"
+
+    callers = [va for va in bodies if signatures.get(va, {}).get("calls") and generates(va)[0]]
+    blocked_by, sole = defaultdict(set), Counter()
+    for va in callers:
+        order, _ = closure_of(va, signatures, cap)
+        bad = []
+        for m in order:
+            if m == va:
+                continue
+            ok, why = generates(m)
+            if not ok:
+                bad.append((m, (why or "").split(":")[-1].strip()[:64]))
+        for m, why in bad:
+            blocked_by[why].add(va)
+        if len(bad) == 1:
+            sole[bad[0][0]] += 1
+    return {
+        "generating_callers": len(callers),
+        "by_reason": [{"reason": why, "closures_blocked": len(cs)}
+                      for why, cs in sorted(blocked_by.items(), key=lambda kv: -len(kv[1]))],
+        "sole_blockers": [{"address": f"0x{m:08X}", "closures": n}
+                          for m, n in sole.most_common() if n],
+    }
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description='generate typed C from evidence, beside the project')
     ap.add_argument('--pe', required=True)
     ap.add_argument('--address', action='append', default=[])
     ap.add_argument('--revng', required=True)
-    ap.add_argument('--out', required=True,
+    ap.add_argument('--closure-blockers', action='store_true',
+                    help='print and write the min-over-closure blocker table instead of '
+                         'generating: which refusal class blocks the most otherwise-'
+                         'generating callers, weighted by closure')
+    ap.add_argument('--header', help='types-and-globals.h (for --closure-blockers)')
+    ap.add_argument('--revng-c', help='the provider .c (for --closure-blockers)')
+    ap.add_argument('--json', help='write the blocker table here (for --closure-blockers)')
+    ap.add_argument('--out', required=False,
                     help="output directory. It must be OUTSIDE the repository's highlevel/ tree: "
                          "the pipeline scans that tree for modules to dispatch and a generated "
                          "module there would be applied to the game")
     args = ap.parse_args(argv)
+    if args.closure_blockers:
+        if not (args.revng_c and args.header):
+            ap.error('--closure-blockers needs --revng-c and --header')
+        layouts = rename_ast.parse_layouts(Path(args.header).read_text(errors="replace"))
+        sigs = rename_ast.parse_signatures(Path(args.revng_c).read_text(errors="replace"),
+                                           layouts)
+        table = closure_blockers(args.pe, args.revng_c, args.header, sigs, layouts)
+        print(f"generating call-bearing callers: {table['generating_callers']}")
+        print("\nBY CLOSURES BLOCKED (weighted by caller):")
+        for r in table["by_reason"]:
+            print(f"  {r['closures_blocked']:4d}  {r['reason']}")
+        print("\nSOLE BLOCKERS (fix one function, N closures become multi-function):")
+        for b in table["sole_blockers"]:
+            print(f"  {b['address']}  {b['closures']} caller(s)")
+        if args.json:
+            Path(args.json).write_text(json.dumps(table, indent=1))
+            print(f"\nwritten: {args.json}")
+        return 0
+    if not args.out:
+        ap.error('--out is required unless --closure-blockers is given')
     addresses = [int(a, 0) for a in args.address]
     if not addresses:
         ap.error('at least one --address is needed')
