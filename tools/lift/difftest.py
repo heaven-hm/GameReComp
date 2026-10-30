@@ -26,9 +26,12 @@ Needs: unicorn, capstone (pip), and a C compiler (gcc/clang/cc, or $RECOMP_CC).
 """
 
 import argparse
+import json
 import os
+import re
 import shutil
 import struct
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
@@ -37,6 +40,7 @@ from dataclasses import dataclass, field
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+from capstone.x86 import X86_OP_MEM
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_32
 from unicorn import x86_const as X
 
@@ -1093,7 +1097,48 @@ def main():
     ap.add_argument('-k', '--filter', help='only cases whose name contains this')
     ap.add_argument('--keep', action='store_true', help='keep the generated C')
     ap.add_argument('-v', '--verbose', action='store_true', help='show passing cases')
+    ap.add_argument('--project', help='a generated project dir: compare its C against the ORIGINAL bytes')
+    ap.add_argument('--pe', help='the original PE those bytes come from')
+    ap.add_argument('--address', action='append', default=[],
+                    help='a VA to compare (repeatable); default is the project\'s replaced functions')
+    ap.add_argument('--cases', type=int, default=8, help='entry states to drive (default 8)')
+    ap.add_argument('--json', help='write the per-address report here')
     args = ap.parse_args()
+
+    if args.project:
+        if not args.pe:
+            raise SystemExit('--project needs --pe: the bytes must come from the original')
+        addrs = [int(a, 0) for a in args.address]
+        if not addrs:
+            # the project's replaced functions, from its high-level module
+            addrs = []
+            for mod in sorted((Path(args.project) / 'src' / 'highlevel').glob('*.json')):
+                import json as _json
+                try:
+                    data = _json.loads(mod.read_text())
+                except Exception:
+                    continue
+                for fn in data.get('functions', []) if isinstance(data, dict) else []:
+                    va = fn.get('address') or fn.get('va')
+                    if va:
+                        addrs.append(int(va, 0) if isinstance(va, str) else int(va))
+        if not addrs:
+            raise SystemExit('no addresses: pass --address 0x... (no high-level module to read them from)')
+        print(f'per-function oracle: {args.project} against {args.pe}')
+        rows = oracle(args.project, args.pe, addrs, args.cases)
+        if args.json:
+            Path(args.json).write_text(json.dumps(
+                {"tool": "tools/lift/difftest.py --project",
+                 "what_it_proves": "for each address, the project's generated body and the "
+                                   "ORIGINAL's machine code at that VA agree on the registers and "
+                                   "the named memory, over the entry states driven",
+                 "what_it_does_not_prove": "anything about other entry states, other addresses, or "
+                                           "the game as a whole; there is no aggregate verdict",
+                 "addresses": rows}, indent=1))
+            print(f'  report: {args.json}')
+        bad = [r for r in rows if r['verdict'] != 'agree']
+        print(f'{len(rows)} address(es): {len(rows) - len(bad)} agree, {len(bad)} not')
+        return 1 if bad else 0
 
     cases = [c for c in CASES if not args.filter or args.filter in c.name]
     if not cases:
@@ -1138,6 +1183,373 @@ def main():
     print(f'\n{matched}/{len(cases)} match hardware, '
           f'{ceilings} known divergences, {failed} failures')
     return 1 if failed else 0
+
+
+
+
+# =====================================================================
+# Project-driven cases: the ORIGINAL bytes against the project's own C.
+#
+# A hand-written case is a few instructions. A project case is a whole function:
+# its bytes come from the original PE at the address the project was generated
+# from, and the thing it is compared against is the project's `sub_XXXXXXXX` -
+# the body the shipped dispatch table calls - not a second lifting pass.
+#
+# What is compared: the eight general-purpose registers and every byte of the
+# guest memory the generated body names (the absolute addresses it reads or
+# writes). What is NOT compared: the arithmetic flags. The generated body keeps
+# its lazy flag state in locals that nothing exposes after the call, so the
+# flags are not observable from outside it; a flag bug that alters control flow
+# still shows up, because the branch taken changes the result or the memory.
+# That is a real limit and the report says so.
+#
+# The entry state is one defined state, driven across cases: the image is
+# mapped as the PE lays it out, the registers are set from a per-case seed, esp
+# points at a stack page holding the return sentinel, and every absolute guest
+# address the body names is seeded with the same per-case pattern on both sides.
+# =====================================================================
+
+ORACLE_SENTINEL = 0x00430000      # an address inside the mapped window: the ret lands here
+ORACLE_STACK    = 0x00420000      # the stack page for the driven entry state
+
+def pe_sections(pe_path):
+    """(image_base, [(name, va, vsize, raw_off, raw_size)]) from a PE32 file."""
+    data = Path(pe_path).read_bytes()
+    if data[:2] != b'MZ':
+        raise SystemExit(f'{pe_path}: not a PE file')
+    e_lfanew = int.from_bytes(data[0x3C:0x40], 'little')
+    if data[e_lfanew:e_lfanew + 4] != b'PE\0\0':
+        raise SystemExit(f'{pe_path}: no PE signature')
+    coff = e_lfanew + 4
+    nsec = int.from_bytes(data[coff + 2:coff + 4], 'little')
+    optsz = int.from_bytes(data[coff + 16:coff + 18], 'little')
+    opt = coff + 20
+    magic = int.from_bytes(data[opt:opt + 2], 'little')
+    if magic != 0x10b:
+        raise SystemExit(f'{pe_path}: not PE32 (magic 0x{magic:X})')
+    image_base = int.from_bytes(data[opt + 28:opt + 32], 'little')
+    sec = opt + optsz
+    out = []
+    for i in range(nsec):
+        s = sec + 40 * i
+        name = data[s:s + 8].rstrip(b'\0').decode('latin1')
+        vsize, va, raw_size, raw_off = struct.unpack_from('<IIII', data, s + 8)
+        out.append((name, image_base + va, vsize, raw_off, raw_size))
+    return image_base, out
+
+
+def pe_image(pe_path):
+    """{va: bytes} for every section, clipped to the comparison window."""
+    data = Path(pe_path).read_bytes()
+    _, secs = pe_sections(pe_path)
+    img = {}
+    for name, va, vsize, raw_off, raw_size in secs:
+        n = min(raw_size, vsize if vsize else raw_size)
+        lo = max(va, BASE)
+        hi = min(va + n, BASE + SIZE)
+        if hi <= lo:
+            continue
+        img[lo] = data[raw_off + (lo - va): raw_off + (hi - va)]
+    return img
+
+
+def pe_bytes_at(pe_path, va, max_len=1024):
+    """The original bytes at a VA, or a refusal.
+
+    Fail closed: a VA that is not inside an executable section of this PE is
+    not something to guess about - comparing a function against the wrong bytes
+    is worse than not comparing it."""
+    data = Path(pe_path).read_bytes()
+    _, secs = pe_sections(pe_path)
+    for name, sva, vsize, raw_off, raw_size in secs:
+        if not (sva <= va < sva + max(vsize, raw_size)):
+            continue
+        if 'text' not in name.lower() and not name.startswith('.text'):
+            raise SystemExit(f'0x{va:08X} is in section {name!r}, which is not code')
+        n = min(max_len, sva + raw_size - va, sva + vsize - va)
+        if n <= 0:
+            raise SystemExit(f'0x{va:08X} is past the file')
+        blob = data[raw_off + (va - sva): raw_off + (va - sva) + n]
+        return blob, name
+    raise SystemExit(f'0x{va:08X} is not in any section of {pe_path}')
+
+
+def named_addrs(body_text, lo=BASE, hi=BASE + SIZE):
+    """The absolute guest addresses a generated body names, 4-byte aligned.
+
+    The generator does not write them at a fixed width: `MEM32(0x413350)` is six
+    hex digits and `sub_0040BA58` is eight. A pattern that required eight found
+    neither, so this accepts 4 to 8 digits and keeps only addresses inside the
+    mapped window."""
+    out = set()
+    for m in re.finditer(r'0x([0-9A-Fa-f]{4,8})u?\b', body_text):
+        v = int(m.group(1), 16)
+        if lo <= v < hi:
+            out.add(v & ~3)
+    return sorted(out)
+
+
+def named_addrs_from_code(blob, va, lo=BASE, hi=BASE + SIZE):
+    """The absolute guest addresses the ORIGINAL's own instructions name.
+
+    Taken from the bytes rather than from the generated source, so the memory
+    compared is the memory the function actually touches, whatever the
+    generator emitted and wherever the adapter lives."""
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+    md.detail = True
+    out = set()
+    for insn in md.disasm(bytes(blob), va):
+        for op in insn.operands:
+            if op.type == X86_OP_MEM and op.mem.base == 0 and op.mem.index == 0:
+                v = op.mem.disp & 0xFFFFFFFF
+                if lo <= v < hi:
+                    out.add(v & ~3)
+        # A function ends at its return; disassembling past it would collect the
+        # next function's globals and compare memory this one never touches.
+        if insn.mnemonic in ('ret', 'retf', 'retn'):
+            break
+    return sorted(out)
+
+
+ORACLE_HARNESS = r'''/* generated by tools/lift/difftest.py --project: do not edit */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "win32hle.h"
+#include "host.h"
+#include "recomp_funcs.h"
+
+/* The project's own body: the shipped dispatch entry point, which is the typed
+ * function where one exists and the mechanical body everywhere else. */
+void ADDR_(void);
+
+int main(void) {
+    recomp_host_init();
+    hle_vm_reserve(STACK_, 0x1000u);
+PAGES_
+    int have = 0, cases = 0;
+    long off = 0;
+    for (cases = 0; cases < NCASES_ && cases < 64; cases++) {
+        MEM32(STACK_) = SENTINEL_;                  /* the ret lands here and is not taken */
+        @FOREACH@
+        g_eax = (uint32_t)(0x11111111u * (uint32_t)(cases + 1));
+        g_ecx = (uint32_t)(0x22222222u * (uint32_t)(cases + 1));
+        g_edx = (uint32_t)(0x33333333u * (uint32_t)(cases + 1));
+        g_ebx = (uint32_t)(0x44444444u * (uint32_t)(cases + 1));
+        g_esi = (uint32_t)(0x55555555u * (uint32_t)(cases + 1));
+        g_edi = (uint32_t)(0x66666666u * (uint32_t)(cases + 1));
+        g_ebp = 0u;
+        g_esp = STACK_;
+        ADDR_();
+        printf("CASE %d\n", cases);
+        printf("R %08X %08X %08X %08X %08X %08X %08X %08X\n",
+               g_eax, g_ecx, g_edx, g_ebx, g_esp, g_ebp, g_esi, g_edi);
+        printf("F %08X\n", 0u);
+        printf("T 0\n");
+        @REPORT@
+        printf("ENDCASE\n");
+    }
+    (void)have; (void)off;
+    return 0;
+}
+'''
+
+
+def build_project_cases(project_dir, target, named, seed_of, cases, cc=None):
+    """Compile a harness that drives the project's own body over `cases`."""
+    project_dir = Path(project_dir)
+    gen = project_dir / "src" / "recomp" / "gen"
+    if not gen.is_dir():
+        return None, f"{project_dir}: no generated sources"
+    cc = cc or shutil.which("cc") or shutil.which("gcc")
+    if not cc:
+        return None, "no C compiler"
+    pages = []
+    for a in named + [ORACLE_STACK]:
+        pages.append(f"    hle_vm_reserve(0x{a & ~0xFFF:08X}u, 0x1000u);")
+    # The seed must vary WITH the case, so it is emitted as C over the loop
+    # counter, not precomputed here: a constant per address made every case the
+    # same case and every comparison a divergence.
+    seeds = "\n".join(f"        MEM32(0x{a:08X}u) = (uint32_t)(SEED_MUL_ * (uint32_t)(cases + 1));"
+                       for a in named)
+    seeds = seeds.replace("SEED_MUL_", f"0x{seed_of(0) | 1:08X}u")
+    report = "\n".join(f'        printf("M %08X %02X\\n", 0x{a + k:08X}u, MEM8(0x{a + k:08X}u));'
+                       for a in named for k in range(4))
+    source = (ORACLE_HARNESS
+              .replace("@FOREACH@", seeds)
+              .replace("@REPORT@", report)
+              .replace("ADDR_", target)
+              .replace("STACK_", f"0x{ORACLE_STACK:08X}u")
+              .replace("SENTINEL_", f"0x{ORACLE_SENTINEL:08X}u")
+              .replace("NCASES_", str(cases))
+              .replace("PAGES_", "\n".join(pages)))
+    tmp = Path(tempfile.mkdtemp(prefix="poracle-"))
+    harness = tmp / "poracle.c"
+    harness.write_text(source)
+    includes = [f"-I{gen}", f"-I{project_dir / 'src' / 'runtime' / 'recomp32'}",
+                f"-I{project_dir / 'src' / 'runtime' / 'win32hle'}"]
+    try:
+        pkg = subprocess.run(["pkg-config", "--cflags", "sdl2", "SDL2_ttf"],
+                             capture_output=True, text=True, timeout=30)
+        if pkg.returncode == 0:
+            includes += pkg.stdout.split()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    sources = [str(harness)] + [str(p) for p in sorted(gen.glob("recomp_*.c"))]
+    hl = project_dir / "src" / "highlevel"
+    if hl.is_dir():
+        includes.append(f"-I{hl}")
+        sources += [str(p) for p in sorted(hl.glob("*.c"))]
+    sources += [str(p) for p in sorted((project_dir / "src" / "runtime" / "win32hle").glob("*.c"))]
+    binary = tmp / "poracle"
+    # The shipped runtime draws through SDL2 and SDL2_ttf, so the harness needs
+    # the same libraries the project's own CMake gets from pkg-config.
+    libs = ["-lm", "-lpthread"]
+    try:
+        pkg = subprocess.run(["pkg-config", "--libs", "sdl2", "SDL2_ttf"],
+                             capture_output=True, text=True, timeout=30)
+        if pkg.returncode == 0:
+            libs += pkg.stdout.split()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    cmd = [cc, "-O1", "-w", "-o", str(binary)] + includes + sources + libs
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    if r.returncode != 0:
+        return None, f"harness build failed:\n{r.stderr[-2000:]}"
+    return binary, None
+
+
+def run_unicorn_function(pe_path, va, named, seed_of, cases):
+    """The ORIGINAL's bytes at `va`, driven over the same entry states."""
+    mu = Uc(UC_ARCH_X86, UC_MODE_32)
+    mu.mem_map(BASE, SIZE)
+    for addr, blob in pe_image(pe_path).items():
+        mu.mem_write(addr, blob)
+    results = []
+    for c in range(cases):
+        mu.mem_write(ORACLE_STACK, struct.pack('<I', ORACLE_SENTINEL))
+        for a in named:
+            mu.mem_write(a, struct.pack('<I', seed_of(c)))
+        regs = {'eax': 0x11111111 * (c + 1) & 0xFFFFFFFF, 'ecx': 0x22222222 * (c + 1) & 0xFFFFFFFF,
+                'edx': 0x33333333 * (c + 1) & 0xFFFFFFFF, 'ebx': 0x44444444 * (c + 1) & 0xFFFFFFFF,
+                'esi': 0x55555555 * (c + 1) & 0xFFFFFFFF, 'edi': 0x66666666 * (c + 1) & 0xFFFFFFFF,
+                'ebp': 0, 'esp': ORACLE_STACK}
+        for name, val in regs.items():
+            mu.reg_write(UC_REGS[name], val)
+        mu.reg_write(X.UC_X86_REG_EFLAGS, EFLAGS_START)
+        mu.reg_write(X.UC_X86_REG_FPCW, FPU_CONTROL_WORD)
+        mu.reg_write(X.UC_X86_REG_MXCSR, 0x1F80)
+        try:
+            mu.emu_start(va, ORACLE_SENTINEL, count=100000)
+        except Exception as e:                      # unicorn's UcError, name varies by version
+            raise OracleFault(f"the ORIGINAL's bytes at 0x{va:08X} faulted on case {c}: {e}")
+        mem = {}
+        for a in named:
+            for k in range(4):
+                mem[a + k] = mu.mem_read(a + k, 1)[0]
+        results.append({'regs': {n: mu.reg_read(UC_REGS[n]) for n in REGS},
+                        'eflags': 0, 'mem': mem, 'fp_depth': 0, 'st': []})
+    return results
+
+
+# ------------------------------------------------------------------ the oracle
+
+ALL_FLAGS = ('CF', 'PF', 'AF', 'ZF', 'SF', 'DF', 'OF')
+
+
+class OracleFault(Exception):
+    """The original's bytes could not be run: report it, do not guess."""
+
+
+def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print):
+    """Per address: the ORIGINAL's bytes against the project's own body.
+
+    One entry per address, each carrying the input set it was driven over, the
+    binary and VA the bytes came from (hashed), and the fields that differed.
+    There is deliberately no aggregate verdict: agreement on eight entry states
+    is not a statement about the game."""
+    import hashlib
+    pe_path = Path(pe_path)
+    pe_sha = hashlib.sha256(pe_path.read_bytes()).hexdigest()
+    out = []
+    for address in addresses:
+        blob, section = pe_bytes_at(pe_path, address, 4096)
+        # The generated body: its text gives the absolute addresses the function
+        # names, which are the memory both sides must agree on.
+        # The shipped entry point is `sub_XXXXXXXX`: the dispatch table calls it,
+        # and where a high-level replacement exists it is the adapter into the
+        # typed function. The mechanical body `sub_XXXXXXXX__lowlevel` is the
+        # fallback and is compared only when there is no adapter, which the
+        # report states per address.
+        target, unit = None, None
+        for base in (Path(project_dir) / "src" / "highlevel",
+                     Path(project_dir) / "src" / "recomp" / "gen"):
+            for u in sorted(base.glob("*.c")):
+                if re.search(rf"void sub_{address:08X}\(void\) \{{", u.read_text(errors="replace")):
+                    target, unit = f"sub_{address:08X}", str(u.relative_to(project_dir))
+                    break
+            if target:
+                break
+        if target is None:
+            for u in sorted((Path(project_dir) / "src" / "recomp" / "gen").glob("recomp_[0-9]*.c")):
+                if re.search(rf"void sub_{address:08X}__lowlevel\(void\) \{{", u.read_text(errors="replace")):
+                    target, unit = f"sub_{address:08X}__lowlevel", str(u.relative_to(project_dir))
+                    break
+        if target is None:
+            out.append({"address": f"0x{address:08X}", "verdict": "no-generated-body",
+                        "pe": str(pe_path), "pe_sha256": pe_sha})
+            continue
+        named = named_addrs_from_code(blob, address)
+        # One documented seed function, used by both sides: a different value
+        # per case so the arithmetic is exercised, and the same value on each
+        # side so a difference means the function, not the setup.
+        seed_of = lambda c: (0x9E3779B9 * (c + 1)) & 0xFFFFFFFF
+
+        binary, err = build_project_cases(project_dir, target, named, seed_of, cases, cc)
+        if binary is None:
+            out.append({"address": f"0x{address:08X}", "verdict": "harness-failed",
+                        "detail": err, "pe": str(pe_path), "pe_sha256": pe_sha})
+            continue
+        r = subprocess.run([str(binary)], capture_output=True, text=True, timeout=600)
+        lifted = parse_output(r.stdout)
+        try:
+            real = run_unicorn_function(pe_path, address, named, seed_of, cases)
+        except OracleFault as e:
+            out.append({"address": f"0x{address:08X}", "verdict": "original-faulted",
+                        "detail": str(e), "pe": str(pe_path), "pe_sha256": pe_sha,
+                        "symbol_compared": target})
+            continue
+
+        case = Case(name=f"project 0x{address:08X}", code=blob, undef=ALL_FLAGS)
+        rows, diverged = [], 0
+        for i, (got, want) in enumerate(zip(lifted, real)):
+            fields = diff(case, got, want)
+            if fields:
+                diverged += 1
+            rows.append({"case": i, "seed": f"0x{seed_of(i):08X}", "agree": not fields,
+                         "fields": [{"field": n, "project": a, "original": b} for n, a, b in fields]})
+        out.append({
+            "address": f"0x{address:08X}",
+            "verdict": "agree" if diverged == 0 else "diverge",
+            "pe": str(pe_path), "pe_sha256": pe_sha, "section": section,
+            "bytes_sha256": hashlib.sha256(blob).hexdigest(), "bytes_read": len(blob),
+            "generated_unit": unit, "symbol_compared": target,
+            "compares": "the eight general-purpose registers and the bytes of every absolute "
+                        "guest address the generated body names",
+            "does_not_compare": "the arithmetic flags: the generated body keeps its lazy flag "
+                                "state in locals that nothing exposes after the call",
+            "input_set": {"cases": cases, "named_addresses": [f"0x{a:08X}" for a in named],
+                          "seeded": "each named address holds 0x9E3779B9*(case+1) on both sides; "
+                                    "registers are per-case constants; esp is a stack page whose "
+                                    "top word is the return sentinel",
+                          "not_covered": "any entry state other than these, any address the body "
+                                         "does not name, and any input the game would supply"},
+            "diverged_cases": diverged, "cases": rows,
+        })
+        progress(f"  {out[-1]['address']}: {out[-1]['verdict']} "
+                 f"({diverged}/{cases} cases differ, {len(named)} named address(es))")
+    return out
 
 
 if __name__ == '__main__':

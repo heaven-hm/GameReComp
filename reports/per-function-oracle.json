@@ -1,0 +1,165 @@
+{
+ "tool": "tools/lift/difftest.py --project",
+ "what_it_proves": "for each address, the project's generated body and the ORIGINAL's machine code at that VA agree on the registers and the named memory, over the entry states driven",
+ "what_it_does_not_prove": "anything about other entry states, other addresses, or the game as a whole; there is no aggregate verdict",
+ "addresses": [
+  {
+   "address": "0x0040BA58",
+   "verdict": "agree",
+   "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/ikachan/dxIka.exe",
+   "pe_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+   "section": ".text",
+   "bytes_sha256": "9c2797f0f3372f8e1850e02cf018bc5d39b69c877f98feef4446ababde0e3b24",
+   "bytes_read": 4096,
+   "generated_unit": "src/highlevel/recomp_highlevel_ikachan.c",
+   "symbol_compared": "sub_0040BA58",
+   "compares": "the eight general-purpose registers and the bytes of every absolute guest address the generated body names",
+   "does_not_compare": "the arithmetic flags: the generated body keeps its lazy flag state in locals that nothing exposes after the call",
+   "input_set": {
+    "cases": 8,
+    "named_addresses": [
+     "0x00413350"
+    ],
+    "seeded": "each named address holds 0x9E3779B9*(case+1) on both sides; registers are per-case constants; esp is a stack page whose top word is the return sentinel",
+    "not_covered": "any entry state other than these, any address the body does not name, and any input the game would supply"
+   },
+   "diverged_cases": 0,
+   "cases": [
+    {
+     "case": 0,
+     "seed": "0x9E3779B9",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 1,
+     "seed": "0x3C6EF372",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 2,
+     "seed": "0xDAA66D2B",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 3,
+     "seed": "0x78DDE6E4",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 4,
+     "seed": "0x1715609D",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 5,
+     "seed": "0xB54CDA56",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 6,
+     "seed": "0x5384540F",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 7,
+     "seed": "0xF1BBCDC8",
+     "agree": true,
+     "fields": []
+    }
+   ]
+  },
+  {
+   "address": "0x00401000",
+   "verdict": "agree",
+   "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/ikachan/dxIka.exe",
+   "pe_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+   "section": ".text",
+   "bytes_sha256": "5e4e155d51fb968d48e42888692cca603ea748ad0b3ac2c54a9cc3ce92dba6b2",
+   "bytes_read": 4096,
+   "generated_unit": "src/highlevel/recomp_highlevel_ikachan.c",
+   "symbol_compared": "sub_00401000",
+   "compares": "the eight general-purpose registers and the bytes of every absolute guest address the generated body names",
+   "does_not_compare": "the arithmetic flags: the generated body keeps its lazy flag state in locals that nothing exposes after the call",
+   "input_set": {
+    "cases": 8,
+    "named_addresses": [
+     "0x00413BE0",
+     "0x00413BE4",
+     "0x00413BE8",
+     "0x00413BEC",
+     "0x00413BF0",
+     "0x00413BF8",
+     "0x00413BFC",
+     "0x00413C00",
+     "0x00413C04",
+     "0x00413C08",
+     "0x00413C0C",
+     "0x00413C10",
+     "0x00413C14",
+     "0x00413C18",
+     "0x00413C1C"
+    ],
+    "seeded": "each named address holds 0x9E3779B9*(case+1) on both sides; registers are per-case constants; esp is a stack page whose top word is the return sentinel",
+    "not_covered": "any entry state other than these, any address the body does not name, and any input the game would supply"
+   },
+   "diverged_cases": 0,
+   "cases": [
+    {
+     "case": 0,
+     "seed": "0x9E3779B9",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 1,
+     "seed": "0x3C6EF372",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 2,
+     "seed": "0xDAA66D2B",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 3,
+     "seed": "0x78DDE6E4",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 4,
+     "seed": "0x1715609D",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 5,
+     "seed": "0xB54CDA56",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 6,
+     "seed": "0x5384540F",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 7,
+     "seed": "0xF1BBCDC8",
+     "agree": true,
+     "fields": []
+    }
+   ]
+  }
+ ]
+}
