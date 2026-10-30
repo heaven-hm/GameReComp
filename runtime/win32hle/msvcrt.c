@@ -46,6 +46,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <locale.h>
+#include <fenv.h>
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
@@ -145,6 +146,18 @@ static uint32_t g_envp_va;
 static uint32_t g_argc_va;        /* the int cell __p___argc hands out */
 static uint32_t g_argv_cell_va;   /* the char** cell __p___argv hands out */
 static uint32_t g_usermatherr;    /* the __setusermatherr callback, recorded */
+/* the UCRT (api-ms-win-crt-*): the CRT's own onexit table, the argv mode the
+ * startup asked for, and the FP control word _controlfp_s reports */
+static uint32_t g_onexit_table, g_onexit_first, g_onexit_last, g_onexit_end;
+static uint32_t g_argv_mode;
+static uint32_t g_fp_control = 0x0009001Fu;   /* _PC_53 | _RC_NEAR | _MCW_EM, the MSVC default */
+#define UCRT_MAX_TLS_CB 16
+static uint32_t g_tls_cb[UCRT_MAX_TLS_CB];    /* _register_thread_local_exe_atexit_callback */
+static int g_tls_cb_n;
+static uint32_t g_cmdline_va;                 /* _get_narrow_winmain_command_line */
+static char **g_host_argv;                    /* this process's own arguments */
+static int g_host_argc;
+static int  ms_atexit_add(uint32_t fn);       /* defined with the exit path below */
 static int      g_app_type;       /* __set_app_type */
 
 /* The environment __getmainargs reports, matching what kernel32_crt.c's
@@ -251,6 +264,8 @@ static void ms_init_once(void) {
     int argc = 0;
     char **argv = ms_host_argv(&argc);
     g_argc = (uint32_t)argc;
+    g_host_argv = argv;
+    g_host_argc = argc;
     g_argv_va = ms_guest_vec(argv, argc);
     g_envp_va = ms_guest_vec(g_env_words, (int)(sizeof g_env_words / sizeof g_env_words[0]));
     MEM32(g_environ_va) = g_envp_va;
@@ -1183,11 +1198,154 @@ static void c_initterm_e(void) {                     /* (begin, end) -> nonzero 
     RETC(0);
 }
 
+/* ============================================ the UCRT (api-ms-win-crt-*)
+ * A game built against the Windows 10 SDK imports the same C runtime through
+ * the API sets (api-ms-win-crt-runtime-l1-1-0.dll and friends) instead of
+ * msvcrt.dll.  The functions behind those names ARE the UCRT, which is the
+ * same CRT this file already implements, so the ones that exist above are the
+ * same shims - the loader resolves by name, so _initterm, _errno, exit, _cexit
+ * and friends already answer an api-ms-win import.  Only the startup calls the
+ * UCRT added (the onexit tables, the argv/environment setup, the invalid
+ * parameter handlers) are new, and they are here rather than in a second file
+ * because they run against the same atexit chain and the same process state. */
+
+/* The UCRT's onexit table: _first, _last, _end, three guest pointers. */
+enum { UCRT_ONEXIT_MAX = 256 };
+static uint32_t g_onexit_first, g_onexit_last, g_onexit_end;   /* the CRT's own table */
+
+static void u_initialize_onexit_table(void) {        /* (_onexit_table_t *table) -> 0 */
+    ms_init();
+    uint32_t t = A32(0);
+    if (!t) RETC(-1);
+    uint32_t first = hle_va(hle_alloc(UCRT_ONEXIT_MAX * 4));
+    if (!first) RETC(-1);
+    MEM32(t) = first;                                /* _first */
+    MEM32(t + 4) = first;                            /* _last  */
+    MEM32(t + 8) = first + UCRT_ONEXIT_MAX * 4;      /* _end   */
+    g_onexit_table = t;                              /* the CRT's own table, run at exit */
+    g_onexit_first = first;
+    g_onexit_last = first;
+    g_onexit_end = first + UCRT_ONEXIT_MAX * 4;
+    RETC(0);
+}
+static void u_register_onexit_function(void) {       /* (table, fn) -> 0, or -1 when full */
+    ms_init();
+    uint32_t t = A32(0), fn = A32(1);
+    if (!t || !fn) RETC(-1);
+    uint32_t last = MEM32(t + 4), end = MEM32(t + 8);
+    if (!last || last + 4 > end) RETC(-1);           /* a table that was never initialised, or full */
+    MEM32(last) = fn;
+    MEM32(t + 4) = last + 4;
+    RETC(0);
+}
+/* The table's callbacks, last registered first, and the thread-local callbacks
+ * (which Windows would run at thread exit - see the note on them below). */
+static void ms_run_onexit_table(void) {
+    if (g_onexit_table) {
+        uint32_t last = MEM32(g_onexit_table + 4);
+        while (last > g_onexit_first) {
+            last -= 4;
+            uint32_t fn = MEM32(last);
+            if (fn) { uint32_t a[1] = { 0 }; hle_call_guest(fn, 0, a); }
+        }
+        MEM32(g_onexit_table + 4) = g_onexit_first;
+    }
+    while (g_tls_cb_n > 0) {
+        uint32_t fn = g_tls_cb[--g_tls_cb_n];
+        if (fn) { uint32_t a[1] = { 0 }; hle_call_guest(fn, 0, a); }
+    }
+}
+
+/* _crt_atexit: the CRT's own atexit, the same chain msvcrt's atexit uses. */
+static void u_crt_atexit(void) {
+    ms_init();
+    RETC(ms_atexit_add(A32(0)) ? 0u : 1u);
+}
+/* _configure_narrow_argv(mode): the CRT records whether to parse the command
+ * line itself.  This layer always has the arguments (ms_init builds argc/argv
+ * from the host's), so the mode is recorded and the answer is success. */
+static void u_configure_narrow_argv(void) { ms_init(); g_argv_mode = (int)A32(0); RETC(0); }
+/* _initialize_narrow_environment(): the UCRT sets up `environ`.  msvcrt.c keeps
+ * the environment block the same way __getmainargs does, so this is a no-op
+ * that answers 0 - the environment really is initialised by then. */
+static void u_initialize_narrow_environment(void) { ms_init(); RETC(0); }
+/* _get_narrow_winmain_command_line(): the command line WinMain is given. */
+static void u_get_narrow_winmain_command_line(void) {
+    ms_init();
+    /* The command line WinMain would be given: this process's own, as a guest
+     * string (the same source GetCommandLineA answers from). */
+    if (!g_cmdline_va) {
+        char line[1024];
+        int n = 0;
+        for (int i = 1; i < g_host_argc && n < (int)sizeof line - 2; i++) {
+            if (i > 1) line[n++] = ' ';
+            line[n++] = '"';
+            for (const char *p = g_host_argv[i]; *p && n < (int)sizeof line - 3; p++) line[n++] = *p;
+            line[n++] = '"';
+        }
+        line[n] = 0;
+        g_cmdline_va = hle_guest_strdup(line);
+    }
+    RETC(g_cmdline_va);
+}
+/* _controlfp_s(&current, new, mask): the FP control word.  The rounding bits
+ * are applied to the host (fesetround), because that is the FP the lifted code
+ * actually executes on; the x87 precision-control bits have no host equivalent
+ * on SSE/ARM and are recorded in the returned word rather than applied - a
+ * documented difference, not a claim that they took effect. */
+static void u_controlfp_s(void) {
+    ms_init();
+    uint32_t cur = A32(0), newv = A32(1), mask = A32(2);
+    if (cur) MEM32(cur) = g_fp_control;
+    if (mask) {
+        uint32_t v = (g_fp_control & ~mask) | (newv & mask);
+        g_fp_control = v;
+        int r = FE_TONEAREST;
+        if ((v & 0x300u) == 0x000u) r = FE_TONEAREST;        /* _RC_NEAR */
+        else if ((v & 0x300u) == 0x100u) r = FE_DOWNWARD;    /* _RC_DOWN */
+        else if ((v & 0x300u) == 0x200u) r = FE_UPWARD;      /* _RC_UP   */
+        else r = FE_TOWARDZERO;                              /* _RC_CHOP */
+        fesetround(r);
+    }
+    RETC(0);
+}
+/* _seh_filter_exe: what the CRT's exception filter decides for an exception the
+ * guest did not handle.  This layer has no guest SEH (RaiseException ends the
+ * run), so nothing routes an exception here; answering EXCEPTION_CONTINUE_SEARCH
+ * (0) is what the UCRT does for a code it has no special case for. */
+static void u_seh_filter_exe(void) { RETC(0); }
+/* The UCRT's invalid-parameter handlers: with no handler installed (this layer
+ * has no _set_invalid_parameter_handler) the default one reports and terminates
+ * the process, so these do exactly that rather than returning as if the
+ * parameter had been acceptable. */
+static void u_invalid_parameter_noinfo(void) {
+    fprintf(stderr, "[msvcrt] invalid parameter passed to a CRT function\n");
+    hle_exit(3);
+}
+static void u_invalid_parameter_noinfo_noreturn(void) { u_invalid_parameter_noinfo(); }
+/* terminate(): C++ std::terminate with no handler ends the process. */
+static void u_terminate(void) {
+    fprintf(stderr, "[msvcrt] std::terminate called\n");
+    hle_exit(3);
+}
+/* _register_thread_local_exe_atexit_callback(cb): the UCRT runs these when the
+ * thread exits.  This layer's guest threads end inside hle_call_guest, so the
+ * callbacks are run at process exit instead - the callback really runs, at a
+ * later point than Windows would, and the difference is stated here rather than
+ * hidden. */
+static void u_register_thread_local_exe_atexit_callback(void) {
+    ms_init();
+    uint32_t cb = A32(0);
+    if (cb && g_tls_cb_n < UCRT_MAX_TLS_CB) g_tls_cb[g_tls_cb_n++] = cb;
+    RETCV();
+}
+
 /* ======================================================= exit and atexit */
 static uint32_t g_atexit[MS_MAXATEXIT];
 static int g_atexit_n;
 static int g_exit_ran;
 
+static void ms_run_onexit_table(void);
 static void ms_run_atexit(void) {
     if (g_exit_ran) return;
     g_exit_ran = 1;
@@ -1198,6 +1356,11 @@ static void ms_run_atexit(void) {
             hle_call_guest(fn, 0, a);
         }
     }
+    /* The UCRT's onexit table (see the api-ms-win-crt section below): its
+     * entries are the C++ static destructors a UCRT startup registered, and
+     * they run the same way round as atexit's.  Declared here because this is
+     * the exit path; defined with the rest of the UCRT state. */
+    ms_run_onexit_table();
 }
 static int ms_atexit_add(uint32_t fn) {
     if (!fn || g_atexit_n >= MS_MAXATEXIT) return 0;
@@ -1281,6 +1444,25 @@ uint32_t hle_msvcrt_data(const char *name) {
 /* ============================================================ the shims */
 const win32hle_shim win32hle_msvcrt[] = {
     /* startup */
+    /* The api-ms-win-crt-runtime-l1-1-0 names that are the same functions the
+     * msvcrt names above already answer (_initterm, _initterm_e, _errno, _cexit,
+     * _exit, exit, __set_app_type/_set_app_type) resolve to those shims: the
+     * loader looks a name up across the whole registry, so one implementation
+     * serves both import spellings.  The rest are the UCRT's startup calls. */
+    { "_initialize_onexit_table",     u_initialize_onexit_table },
+    { "_register_onexit_function",    u_register_onexit_function },
+    { "_crt_atexit",                  u_crt_atexit },
+    { "_configure_narrow_argv",       u_configure_narrow_argv },
+    { "_initialize_narrow_environment", u_initialize_narrow_environment },
+    { "_get_narrow_winmain_command_line", u_get_narrow_winmain_command_line },
+    { "_controlfp_s",                 u_controlfp_s },
+    { "_seh_filter_exe",              u_seh_filter_exe },
+    { "_invalid_parameter_noinfo",    u_invalid_parameter_noinfo },
+    { "_invalid_parameter_noinfo_noreturn", u_invalid_parameter_noinfo_noreturn },
+    { "_register_thread_local_exe_atexit_callback", u_register_thread_local_exe_atexit_callback },
+    { "_set_app_type",                c_set_app_type },
+    { "_c_exit",                      c_cexit },
+    { "terminate",                    u_terminate },
     { "__getmainargs",                c_getmainargs },
     { "__set_app_type",               c_set_app_type },
     { "__setusermatherr",             c_setusermatherr },
