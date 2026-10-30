@@ -224,7 +224,33 @@ static void shim_entry(void) {
     if (g_waiters) hle_yield();
     g_last_import_va = g_shim[i].va;                     /* again: the thread that ran meanwhile set its own */
     g_cur_import = g_shim[i].name;
+    /* A shim must return with esp ABOVE where it entered and on a word
+     * boundary: it always pops at least the synthetic return address, plus its
+     * own arguments for stdcall. esp must never come back below the entry
+     * value (a shim that pushed without popping has corrupted the guest
+     * stack), and a delta that is not a multiple of 4 means the stack pointer
+     * itself is wrong.
+     *
+     * What this cannot check is whether the argc was RIGHT: the shim table is
+     * { name, fn } with no declared arity, so the expected delta is unknown
+     * here. A first version of this check compared against entry+4 (correct
+     * only for a cdecl shim) and therefore reported every stdcall shim as
+     * drifting by exactly its argument count -- GetModuleHandleA by 4 and
+     * VirtualAlloc by 16, both of which are correct. Do not "fix" a report
+     * from this check by changing the shim: add the arity to the table first,
+     * then this can be exact. */
+    uint32_t esp_in = win32hle_trace ? g_esp : 0;
     g_shim[i].fn();
+    if (win32hle_trace) {
+        if (g_esp <= esp_in || ((g_esp - esp_in) & 3u)) {
+            fprintf(stderr, "[hle] BAD STACK after %s: esp 0x%08X -> 0x%08X "
+                            "(a shim must pop its return address and stay on a "
+                            "word boundary)\n", g_shim[i].name, esp_in, g_esp);
+        } else if (win32hle_trace > 1) {
+            fprintf(stderr, "[hle] %s popped %u word(s) (ret + argc)\n",
+                    g_shim[i].name, (g_esp - esp_in) / 4u);
+        }
+    }
 }
 recomp_func_t recomp_lookup_import(uint32_t va) {
     if (va < SHIM_BASE || va >= SHIM_BASE + SHIM_STEP * (uint32_t)g_shim_n) return NULL;
