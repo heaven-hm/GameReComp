@@ -122,7 +122,10 @@ def main(argv=None):
     ap.add_argument('--pe', required=True)
     ap.add_argument('--address', action='append', default=[])
     ap.add_argument('--revng', required=True)
-    ap.add_argument('--out', required=True, help='output directory (never the project)')
+    ap.add_argument('--out', required=True,
+                    help="output directory. It must be OUTSIDE the repository's highlevel/ tree: "
+                         "the pipeline scans that tree for modules to dispatch and a generated "
+                         "module there would be applied to the game")
     args = ap.parse_args(argv)
     addresses = [int(a, 0) for a in args.address]
     if not addresses:
@@ -130,6 +133,14 @@ def main(argv=None):
     evidence = collect(args.pe, addresses, args.revng)
     names = name_all(evidence)
     outdir = Path(args.out)
+    # The pipeline scans the repository's highlevel/ tree for modules to dispatch.
+    # A generated module there would be APPLIED to the game, which is the one
+    # thing a beside-the-project artifact must never do.
+    repo_highlevel = (Path(__file__).resolve().parents[2] / "highlevel").resolve()
+    if repo_highlevel in outdir.resolve().parents or outdir.resolve() == repo_highlevel:
+        sys.exit(f'{outdir}: refusing to write inside {repo_highlevel} -- the pipeline scans it '
+                 f'for modules to dispatch, and a generated module there would be applied to a '
+                 f'game instead of sitting beside it')
     outdir.mkdir(parents=True, exist_ok=True)
     module = {"schema": 1, "provider": "tools/autorecomp/rename_gen.py (evidence only)",
               "note": "Generated BESIDE the project and never dispatched to: it exists so the "
