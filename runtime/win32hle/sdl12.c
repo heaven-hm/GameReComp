@@ -1083,6 +1083,211 @@ static void s_EventState(void) {
     if (state != S12_QUERY) g_event_enabled[type] = (uint8_t)(state != S12_IGNORE);
     RETC(was);
 }
+/* ---- the audio device (SDL_audio.h) ----
+ * SDL_OpenAudio's callback is guest code, so the SDL2 device's callback runs it
+ * through hle_call_guest with a guest buffer of its own; SDL2 silences the
+ * stream before each callback, as SDL 1.2 does.  The format is opened exactly
+ * as asked (no allowed changes), so the guest's callback always sees the format
+ * it negotiated, and a device that cannot do it fails the open instead of
+ * silently converting. */
+static SDL_AudioDeviceID g_adev;
+static uint32_t g_audio_cb, g_audio_userdata, g_audio_stream, g_audio_stream_len;
+static uint16_t g_audio_format;
+static uint8_t g_audio_channels, g_audio_silence;
+
+static void audio_cb(void *userdata, Uint8 *stream, int len) {
+    (void)userdata;
+    if (!g_audio_cb) return;                             /* SDL2 already silenced it */
+    if ((int)g_audio_stream_len < len) {
+        if (g_audio_stream) hle_free(hle_ptr(g_audio_stream));
+        g_audio_stream = hle_va(hle_alloc((uint32_t)len));
+        g_audio_stream_len = g_audio_stream ? (uint32_t)len : 0;
+        if (!g_audio_stream) return;
+    }
+    uint32_t args[3] = { g_audio_userdata, g_audio_stream, (uint32_t)len };
+    hle_call_guest(g_audio_cb, 3, args);
+    memcpy(stream, hle_ptr(g_audio_stream), (size_t)len);
+}
+static void s_OpenAudio(void) {                          /* (desired, obtained) */
+    uint32_t want = A32(0), got = A32(1);
+    if (!want) { error("SDL_OpenAudio: NULL spec"); RETC(-1); }
+    SDL_AudioSpec desired;
+    SDL_zero(desired);
+    desired.freq = (int)MEM32(want);
+    desired.format = (SDL_AudioFormat)MEM16(want + 4);
+    desired.channels = MEM8(want + 6);
+    desired.samples = MEM16(want + 8);
+    desired.callback = audio_cb;
+    desired.userdata = NULL;
+    if (!desired.freq || !desired.channels || !desired.samples) { error("SDL_OpenAudio: bad spec"); RETC(-1); }
+    if (g_adev) SDL_CloseAudioDevice(g_adev), g_adev = 0;
+    SDL_AudioSpec have;
+    SDL_zero(have);
+    SDL_AudioDeviceID dev = SDL_OpenAudioDevice(NULL, 0, &desired, &have, 0);
+    if (!dev) { error(SDL_GetError()); RETC(-1); }
+    g_adev = dev;
+    g_audio_cb = MEM32(want + 16);
+    g_audio_userdata = MEM32(want + 20);
+    g_audio_format = have.format;
+    g_audio_channels = have.channels;
+    g_audio_silence = have.silence;
+    if (got) {                                           /* what the device really gave */
+        MEM32(got) = (uint32_t)have.freq;
+        MEM16(got + 4) = have.format;
+        MEM8(got + 6) = have.channels;
+        MEM8(got + 7) = have.silence;
+        MEM16(got + 8) = have.samples;
+        MEM16(got + 10) = 0;
+        MEM32(got + 12) = (uint32_t)have.size;
+        MEM32(got + 16) = MEM32(want + 16);
+        MEM32(got + 20) = MEM32(want + 20);
+    }
+    RETC(0);
+}
+static void s_CloseAudio(void) {
+    if (g_adev) SDL_CloseAudioDevice(g_adev), g_adev = 0;
+    g_audio_cb = 0;
+    RETCV();
+}
+static void s_PauseAudio(void) { if (g_adev) SDL_PauseAudioDevice(g_adev, (int)A32(0)); RETCV(); }
+static void s_LockAudio(void) { if (g_adev) SDL_LockAudioDevice(g_adev); RETCV(); }
+static void s_UnlockAudio(void) { if (g_adev) SDL_UnlockAudioDevice(g_adev); RETCV(); }
+static void s_GetAudioStatus(void) {                     /* SDL_AUDIO_STOPPED/PLAYING/PAUSED */
+    RETC(g_adev ? (uint32_t)SDL_GetAudioDeviceStatus(g_adev) : 0u);
+}
+
+/* SDL_BuildAudioCVT/SDL_ConvertAudio.  SDL 1.2 fills an SDL_AudioCVT with a
+ * filter chain; this shim records the conversion the guest asked for (SDL
+ * 1.2's return contract: 0 = nothing to do, 1 = convert, -1 = error) and
+ * SDL_ConvertAudio does it in place in cvt->buf: any of U8/S8/U16/S16, mono or
+ * stereo, and a linear resample.  SDL_AudioCVT's 32-bit layout is
+ * needed 0, src_format 4, dst_format 6, rate_incr 8 (double), buf 16, len 20,
+ * len_cvt 24, len_mult 28, len_ratio 32 (double), filters 40..79,
+ * filter_index 80. */
+enum { S12_CVT_NEEDED = 0, S12_CVT_SRCFMT = 4, S12_CVT_DSTFMT = 6, S12_CVT_RATEINCR = 8,
+       S12_CVT_BUF = 16, S12_CVT_LEN = 20, S12_CVT_LENCVT = 24, S12_CVT_LENMULT = 28,
+       S12_CVT_LENRATIO = 32, S12_CVT_FILTERS = 40, S12_CVT_FILTERINDEX = 80, S12_CVT_SIZE = 84 };
+static int audio_bits(uint16_t fmt) { return (fmt & 0xFF) == 8 ? 8 : 16; }
+static int audio_signed(uint16_t fmt) { return (fmt & 0x8000) != 0; }
+/* The conversion's channel counts and rates are not fields of SDL_AudioCVT (SDL
+ * 1.2 keeps them inside the filter chain SDL_BuildAudioCVT installed), so this
+ * shim remembers what each guest SDL_AudioCVT was built for.  SDL_ConvertAudio
+ * refuses a CVT it never built rather than guessing at one. */
+typedef struct { uint32_t cvt; uint16_t sf, df; int sc, dc, sr, dr; } cvt_slot;
+static cvt_slot g_cvt[8];
+static cvt_slot *cvt_of(uint32_t va) {
+    if (!va) return NULL;
+    for (int i = 0; i < (int)(sizeof g_cvt / sizeof g_cvt[0]); i++) if (g_cvt[i].cvt == va) return &g_cvt[i];
+    return NULL;
+}
+static void s_BuildAudioCVT(void) {                      /* (cvt, src_fmt, src_ch, src_rate, dst_fmt, dst_ch, dst_rate) */
+    uint32_t cvt = A32(0);
+    if (!cvt) RETC(-1);
+    uint16_t sf = (uint16_t)A32(1), df = (uint16_t)A32(4);
+    int sc = (int)A32(2), dc = (int)A32(5), sr = (int)A32(3), dr = (int)A32(6);
+    if (sc <= 0 || dc <= 0 || sr <= 0 || dr <= 0 || audio_bits(sf) == 16 + 1 || audio_bits(df) == 16 + 1) { error("SDL_BuildAudioCVT: bad format"); RETC(-1); }
+    int needed = (sf != df) || (sc != dc) || (sr != dr);
+    int src_frame = (audio_bits(sf) / 8) * sc, dst_frame = (audio_bits(df) / 8) * dc;
+    /* "buffer must be len*len_mult big" (SDL_audio.h): the rate change and the
+     * frame-size change both count, e.g. mono u8 22050 -> stereo s16 44100 is
+     * 8x. */
+    double len_ratio = ((double)dst_frame * dr) / ((double)src_frame * sr);
+    int len_mult = (int)(len_ratio + 0.999999);
+    if (len_mult < 1) len_mult = 1;
+    MEM32(cvt + S12_CVT_NEEDED) = (uint32_t)needed;
+    MEM16(cvt + S12_CVT_SRCFMT) = sf;
+    MEM16(cvt + S12_CVT_DSTFMT) = df;
+    double incr = (double)dr / (double)sr, ratio = len_ratio;
+    memcpy(hle_ptr(cvt + S12_CVT_RATEINCR), &incr, 8);
+    memcpy(hle_ptr(cvt + S12_CVT_LENRATIO), &ratio, 8);
+    MEM32(cvt + S12_CVT_BUF) = 0;
+    MEM32(cvt + S12_CVT_LEN) = 0;
+    MEM32(cvt + S12_CVT_LENCVT) = 0;
+    MEM32(cvt + S12_CVT_LENMULT) = (uint32_t)len_mult;
+    for (int i = 0; i < 10; i++) MEM32(cvt + S12_CVT_FILTERS + (uint32_t)i * 4) = 0;
+    MEM32(cvt + S12_CVT_FILTERINDEX) = 0;
+    cvt_slot *slot = cvt_of(cvt);                        /* remember what to convert from and to */
+    if (!slot) for (int i = 0; i < (int)(sizeof g_cvt / sizeof g_cvt[0]); i++) if (!g_cvt[i].cvt) { slot = &g_cvt[i]; break; }
+    if (!slot) { error("SDL_BuildAudioCVT: too many converter tables"); RETC(-1); }
+    slot->cvt = cvt; slot->sf = sf; slot->df = df;
+    slot->sc = sc; slot->dc = dc; slot->sr = sr; slot->dr = dr;
+    RETC(needed ? 1 : 0);
+}
+/* One sample as a 32-bit value in the 16-bit range, so 8- and 16-bit sources
+ * mix and convert without losing anything. */
+static int audio_sample(uint16_t fmt, const uint8_t *p, int i) {
+    if (audio_bits(fmt) == 8) return audio_signed(fmt) ? (int)(int8_t)p[i] * 256 : ((int)p[i] - 128) * 256;
+    uint16_t raw = (uint16_t)(p[i * 2] | (p[i * 2 + 1] << 8));
+    if (fmt & 0x1000) raw = (uint16_t)((raw >> 8) | (raw << 8));   /* MSB format */
+    return (int)(int16_t)raw;
+}
+static void audio_put(uint16_t fmt, uint8_t *out, int i, int v) {
+    if (v > 32767) v = 32767;
+    if (v < -32768) v = -32768;
+    if (audio_bits(fmt) == 8) {
+        int b = v / 256;
+        if (b > 127) b = 127;
+        if (b < -128) b = -128;
+        out[i] = (uint8_t)(audio_signed(fmt) ? (int8_t)b : b + 128);
+    } else {
+        uint16_t raw = (uint16_t)(int16_t)v;
+        if (fmt & 0x1000) raw = (uint16_t)((raw >> 8) | (raw << 8));
+        out[i * 2] = (uint8_t)raw;
+        out[i * 2 + 1] = (uint8_t)(raw >> 8);
+    }
+}
+static void s_ConvertAudio(void) {                       /* (SDL_AudioCVT *cvt) */
+    uint32_t cvt = A32(0);
+    cvt_slot *c = cvt_of(cvt);
+    if (!cvt || !c) { error("SDL_ConvertAudio: this SDL_AudioCVT was not built by SDL_BuildAudioCVT"); RETC(-1); }
+    uint32_t buf = MEM32(cvt + S12_CVT_BUF);
+    int len = (int)MEM32(cvt + S12_CVT_LEN);
+    if (!buf || len <= 0) { error("SDL_ConvertAudio: no buffer"); RETC(-1); }
+    if (!MEM32(cvt + S12_CVT_NEEDED)) { MEM32(cvt + S12_CVT_LENCVT) = (uint32_t)len; RETC(0); }
+    int sframe = (audio_bits(c->sf) / 8) * c->sc;
+    if (len % sframe) len -= len % sframe;               /* whole source frames only */
+    int frames = len / sframe;
+    if (frames <= 0) { error("SDL_ConvertAudio: nothing to convert"); RETC(-1); }
+    int out_frames = c->sr == c->dr ? frames : (int)((long)frames * c->dr / c->sr);
+    if (out_frames <= 0) { error("SDL_ConvertAudio: conversion yields no frames"); RETC(-1); }
+    int dframe = (audio_bits(c->df) / 8) * c->dc;
+    uint32_t need = (uint32_t)(out_frames * dframe);
+    if (need > MEM32(cvt + S12_CVT_LENMULT) * (uint32_t)len) { error("SDL_ConvertAudio: buffer too small"); RETC(-1); }
+    int *tmp = (int *)malloc(sizeof(int) * (size_t)out_frames * (size_t)c->dc);
+    if (!tmp) { error("out of memory"); RETC(-1); }
+    const uint8_t *in = (const uint8_t *)hle_ptr(buf);
+    /* channel conversion, then a linear resample */
+    for (int f = 0; f < out_frames; f++) {
+        double pos = c->sr == c->dr ? (double)f : (double)f * c->sr / c->dr;
+        int i0 = (int)pos;
+        if (i0 > frames - 1) i0 = frames - 1;
+        int i1 = i0 + 1 < frames ? i0 + 1 : i0;
+        double t = pos - i0;
+        for (int ch = 0; ch < c->dc; ch++) {
+            int src_ch = ch < c->sc ? ch : (c->sc == 1 ? 0 : c->sc - 1);
+            int a = audio_sample(c->sf, in, i0 * c->sc + src_ch);
+            int b = audio_sample(c->sf, in, i1 * c->sc + src_ch);
+            int v = (int)(a + (b - a) * t);
+            if (c->sc == 2 && c->dc == 1) {              /* stereo to mono: average both */
+                int l = audio_sample(c->sf, in, i0 * 2), r = audio_sample(c->sf, in, i0 * 2 + 1);
+                int l2 = audio_sample(c->sf, in, i1 * 2), r2 = audio_sample(c->sf, in, i1 * 2 + 1);
+                v = (int)(((l + r) / 2) + (((l2 + r2) / 2) - ((l + r) / 2)) * t);
+            }
+            tmp[f * c->dc + ch] = v;
+        }
+    }
+    for (int i = 0; i < out_frames * c->dc; i++) audio_put(c->df, (uint8_t *)hle_ptr(buf), i, tmp[i]);
+    free(tmp);
+    MEM32(cvt + S12_CVT_LENCVT) = need;
+    RETC(0);
+}
+static void s_MixAudio(void) {                           /* (dst, src, len, volume) */
+    uint32_t dst = A32(0), src = A32(1), len = A32(2);
+    if (!g_adev || !dst || !src || !len) RETCV();         /* nothing open: SDL 1.2 mixes nothing either */
+    SDL_MixAudioFormat(hle_ptr(dst), hle_ptr(src), g_audio_format, len, (int)A32(3));
+    RETCV();
+}
+
 /* ---- video information and modes ----
  * SDL_GetVideoInfo's SDL_VideoInfo is a guest structure (SDL_video.h): a word
  * of capability bits, video_mem, the SDL_PixelFormat *, and the current mode.
@@ -1488,5 +1693,8 @@ const win32hle_shim win32hle_sdl12[] = {
     { "SDL_WM_SetCaption", s_WM_SetCaption }, { "SDL_WM_GetCaption", s_WM_GetCaption }, { "SDL_WM_SetIcon", s_WM_SetIcon },
     { "SDL_WM_IconifyWindow", s_WM_IconifyWindow }, { "SDL_WM_ToggleFullScreen", s_WM_ToggleFullScreen },
     { "SDL_WM_GrabInput", s_WM_GrabInput },
+    { "SDL_OpenAudio", s_OpenAudio }, { "SDL_CloseAudio", s_CloseAudio }, { "SDL_PauseAudio", s_PauseAudio },
+    { "SDL_LockAudio", s_LockAudio }, { "SDL_UnlockAudio", s_UnlockAudio }, { "SDL_GetAudioStatus", s_GetAudioStatus },
+    { "SDL_BuildAudioCVT", s_BuildAudioCVT }, { "SDL_ConvertAudio", s_ConvertAudio }, { "SDL_MixAudio", s_MixAudio },
     { 0, 0 }
 };
