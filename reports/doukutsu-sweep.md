@@ -402,3 +402,31 @@ as facts that stop the next person repeating the work.
   word copy is sound — and a hypothetical 6-byte struct would now be **refused**
   rather than copied past its end. The alignment precondition is a check in the code
   rather than an assumption inherited from the data.
+
+## The `StructRef` class is blocked by the provider, not by us
+
+After the offset fix, the top refusal class is "a `StructRef` is neither a VA nor a
+scalar" (16 closures). It looks like the next rule to refine. It is not.
+
+**The provider did not recover field layouts.** Measured on
+`highlevel/doukutsu/types-and-globals.h`:
+
+    structs with a declared _SIZE            2,081
+    field declarations that are padding      3,117
+    field declarations with a real type          0
+    `pointer_or_number32_t` occurrences          1
+
+So every recovered struct is an **opaque blob of known size with padding where the
+fields are**. A `->field` access therefore cannot be classified as a VA or a scalar,
+because nothing in the provider's output says what is at that offset. `classify()`
+has no `StructRef` branch and refuses; **that is correct given what it knows**, and
+adding a branch would mean guessing whether an offset holds a pointer.
+
+This is the same shape as `0x00480DC1`'s empty body: a refusal that looks like our
+gap and is the provider's. It should be marked *do not chase* in the same way, so the
+next person does not spend a day refining a rule that has no information to refine.
+
+What would change it: a provider pass that records field types, or a Ghidra-supplied
+structure database. Neither is our transform, and both are larger than anything left
+in the current queue.
+
