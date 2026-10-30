@@ -143,7 +143,7 @@ def ungeneratable_reason(body):
     return None
 
 
-def generate(pe_path, address, revng_dir, names, evidence):
+def generate(pe_path, address, revng_dir, names, evidence, frames=False):
     """(file text, name) for one function, or (None, reason)."""
     rev = Path(revng_dir) / f'0x{address:08X}.c'
     if not rev.is_file():
@@ -195,7 +195,7 @@ def generate(pe_path, address, revng_dir, names, evidence):
     # text transform below is only a fallback for bodies without pointers.
     ast_source, ast_notes = None, []
     try:
-        ast_source, ast_notes = rename_ast.rewrite(body, base)
+        ast_source, ast_notes = rename_ast.rewrite(body, base, frames=frames)
     except rename_ast.Unsupportable as e:
         return None, f"the AST model refuses this body: {e}"
     # the provider's comment block stays as provenance, then our header
@@ -242,19 +242,34 @@ def generate(pe_path, address, revng_dir, names, evidence):
     # `ret` is cdecl, so the caller pops), and a cdecl frame's arguments are on
     # the guest stack at esp+4, esp+8, ...
     argc = 0
+    frame_note = None
     for note in ast_notes:
         if note.startswith("parameters: "):
             argc = int(note.split(": ")[1])
+        if note.startswith("frame: "):
+            frame_note = note
     conv_record = next((r for r in evidence["functions"][f'0x{address:08X}']["records"]
                         if r["kind"] == "signature"), {})
     convention = conv_record.get("convention") or "cdecl"
     returns = "uint32_t" if "return" in typed.split("{", 1)[-1] else "void"
+    # the GUEST FRAME is not a guest-ABI argument: the adapter derives it from
+    # the guest stack pointer. `frame: <type> <size> bytes` carries the extent.
+    frame_size = None
+    if frame_note:
+        import re as _r
+        m = _r.search(r"frame: \S+ (\d+) bytes", frame_note)
+        frame_size = int(m.group(1)) if m else None
+        argc -= 1
     if argc:
         decls = "\n".join(f"    uint32_t argument_{i} = MEM32(g_esp + {4 + 4 * i}u);"
                           for i in range(argc))
-        call = f"{fn['name']}({', '.join(f'argument_{i}' for i in range(argc))})"
+        args = ", ".join(f"argument_{i}" for i in range(argc))
     else:
-        decls, call = "", f"{fn['name']}()"
+        decls, args = "", ""
+    if frame_size:
+        decls = (decls + "\n" if decls else "") + f"    uint32_t frame = g_esp - {frame_size}u;"
+        args = (args + ", " if args else "") + "frame"
+    call = f"{fn['name']}({args})"
     body = (f"{decls}\n    uint32_t result = {call};\n    RETC(result);" if convention == "cdecl"
             else f"{decls}\n    uint32_t result = {call};\n    RET(result, {argc});")
     if returns == "void":
