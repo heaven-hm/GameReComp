@@ -303,6 +303,7 @@ extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 a
 extern const win32hle_shim win32hle_gl32[];           /* OPENGL32/GLU32 on the host's GL (gl32.c) */
 extern const win32hle_shim win32hle_msvcrt[];         /* the MSVC CRT on the host libc (msvcrt.c) */
 extern const win32hle_shim win32hle_kernel32_atom[];  /* the local atom table (kernel32_atom.c) */
+extern const win32hle_shim win32hle_dinput[];         /* DirectInput 3/5/7 keyboard+mouse (dinput.c) */
 
 /* The SDL 1.2 window and GL context, for gl32.c. They are sdl12.c's: a GL
  * context exists only after SDL_SetVideoMode with SDL_OPENGL. */
