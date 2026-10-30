@@ -37,7 +37,8 @@ enum { GL_LIGHTING=0x0B50, GL_COLOR_MATERIAL=0x0B57, GL_LIGHT0=0x4000,
        GL_CONSTANT_ATTENUATION=0x1207, GL_LINEAR_ATTENUATION=0x1208,
        GL_QUADRATIC_ATTENUATION=0x1209, GL_EMISSION=0x1600,
        GL_SHININESS=0x1601, GL_FRONT=0x0404, GL_LIGHT_MODEL_AMBIENT=0x0B53,
-       GL_LIGHT_MODEL_LOCAL_VIEWER=0x0B51, GL_NORMALIZE=0x0BA1 };
+       GL_LIGHT_MODEL_LOCAL_VIEWER=0x0B51, GL_NORMALIZE=0x0BA1,
+       GL_AMBIENT_AND_DIFFUSE=0x1602 };
 enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_MODULATE=0x2100, GL_REPLACE=0x1E01, GL_RGB=0x1907, GL_RGBA=0x1908,
        GL_BGR=0x80E0, GL_BGRA=0x80E1, GL_UNSIGNED_BYTE=0x1401,
@@ -180,6 +181,7 @@ static void dev_get_tss(void);
 static void dev_set_tss(void);
 static void refresh_lights(void);
 static void apply_material(void);
+static void apply_color_material_state(void);
 static void dev_set_material(void);
 static void dev_get_material(void);
 static void dev_set_light(void);
@@ -249,16 +251,16 @@ static void emit_vertex(const uint8_t *v, uint32_t fvf, int screen_xy) {
     uint32_t pos=fvf&0x00e, off=(pos==4?16:12);
     float x,y,z;
     memcpy(&x,v,4); memcpy(&y,v+4,4); memcpy(&z,v+8,4);
+    if(fvf&0x010) { float n[3]; memcpy(n,v+off,12); p_normal3(n[0],n[1],n[2]); off+=12; }
+    if(fvf&0x040) { uint32_t c; memcpy(&c,v+off,4); p_color4ub((uint8_t)(c>>16),(uint8_t)(c>>8),(uint8_t)c,(uint8_t)(c>>24)); off+=4; }
+    if(fvf&0x080) off+=4;
+    if(((fvf>>8)&15)>0) { float uv[2]={0,0}; memcpy(uv,v+off,8); p_tex2(uv[0],uv[1]); }
     if(screen_xy) {
         int vp[4]={0,0,640,480};
         p_getint(0x0BA2,(int *)vp);
         float w=(float)(vp[2]>0?vp[2]:640), h=(float)(vp[3]>0?vp[3]:480);
         p_vertex4(2.f*x/w-1.f, 1.f-2.f*y/h, z, 1.f);
     } else p_vertex3(x,y,z);
-    if(fvf&0x010) { float n[3]; memcpy(n,v+off,12); p_normal3(n[0],n[1],n[2]); off+=12; }
-    if(fvf&0x040) { uint32_t c; memcpy(&c,v+off,4); p_color4ub((uint8_t)(c>>16),(uint8_t)(c>>8),(uint8_t)c,(uint8_t)(c>>24)); off+=4; }
-    if(fvf&0x080) off+=4;
-    if(((fvf>>8)&15)>0) { float uv[2]={0,0}; memcpy(uv,v+off,8); p_tex2(uv[0],uv[1]); }
 }
 static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
                          uint32_t vertex_count, uint32_t indices, uint32_t index_count) {
@@ -343,7 +345,7 @@ static void d3d_create_device(void) {
         g_viewport[2]=640;g_viewport[3]=480;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
         float ambient[4]={0,0,0,1}; p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,ambient);
         p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,0); p_enable(GL_LIGHTING);
-        p_enable(GL_COLOR_MATERIAL); p_color_material(GL_FRONT_AND_BACK,GL_DIFFUSE);
+        apply_color_material_state();
         apply_material();
     } else MEM32(g_device+4)++;
     MEM32(out)=g_device; RET(D3D_OK,4);
@@ -463,6 +465,10 @@ static void apply_light(unsigned index) {
     memcpy(&range,l+76,4); memcpy(&falloff,l+80,4);
     memcpy(&a0,l+84,4); memcpy(&a1,l+88,4); memcpy(&a2,l+92,4);
     memcpy(&theta,l+96,4); memcpy(&phi,l+100,4);
+    /* D3D7 stores lights in world space. OpenGL captures light positions in
+     * eye space when submitted, so use the view matrix without the world
+     * transform, then restore the vertex modelview matrix. */
+    p_matrix_mode(GL_MODELVIEW); p_load_matrix(g_view);
     p_lightfv(gl,GL_DIFFUSE,diff); p_lightfv(gl,GL_SPECULAR,spec); p_lightfv(gl,GL_AMBIENT,amb);
     p_lightfv(gl,GL_POSITION,pos);
     if(type==2) {
@@ -475,6 +481,7 @@ static void apply_light(unsigned index) {
     p_lightf(gl,GL_QUADRATIC_ATTENUATION,a2);
     (void)range; (void)theta; /* GL's fixed pipeline has no D3D range/inner-cone equivalent. */
     if(g_light_enabled[index])p_enable(gl);else p_disable(gl);
+    refresh_modelview();
 }
 static void refresh_lights(void) {
     for(unsigned i=0;i<g_max_lights&&i<8;i++)if(g_light_valid[i])apply_light(i);
@@ -519,7 +526,23 @@ static void dev_get_light_enable(void) {
     MEM32(p)=g_light_enabled[index]?1u:0u; RET(D3D_OK,3);
 }
 
-static void dev_set_render_state(void) { uint32_t s=A32(1),v=A32(2);if(s<256)g_render[s]=v;if(!load_gl())RET(D3DERR_NOTAVAILABLE,3);
+/* The fixed-function GL color-material path can represent D3DMCS_COLOR1 for
+ * diffuse and ambient, including their combined case. Other D3D material
+ * sources have no equivalent in this immediate-mode bridge; reject them
+ * instead of silently claiming to apply a state that has no effect. */
+static void apply_color_material_state(void) {
+    if (!load_gl()) return;
+    unsigned mode=0;
+    if (g_render[145]==1 && g_render[147]==1) mode=GL_AMBIENT_AND_DIFFUSE;
+    else if (g_render[145]==1) mode=GL_DIFFUSE;
+    else if (g_render[147]==1) mode=GL_AMBIENT;
+    if (g_render[141] && mode) {
+        p_enable(GL_COLOR_MATERIAL);
+        p_color_material(GL_FRONT_AND_BACK,mode);
+    } else p_disable(GL_COLOR_MATERIAL);
+}
+
+static void dev_set_render_state(void) { uint32_t s=A32(1),v=A32(2);if((s==145||s==147)&&v>1)RET(D3DERR_NOTAVAILABLE,3);if((s==146||s==148)&&v!=0)RET(D3DERR_NOTAVAILABLE,3);if(!load_gl())RET(D3DERR_NOTAVAILABLE,3);if(s<256)g_render[s]=v;
     switch(s){case 7:if(v)p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);break;
     case 8:p_polygon(GL_FRONT_AND_BACK,v==1?GL_POINT:v==2?GL_LINE:GL_FILL);break;
     case 9:p_shade(v==1?GL_FLAT:GL_SMOOTH);break;
@@ -533,11 +556,14 @@ static void dev_set_render_state(void) { uint32_t s=A32(1),v=A32(2);if(s<256)g_r
     case 36:case 37:case 38:{float f;memcpy(&f,&v,4);p_fogf(s==36?0x0B63:s==37?0x0B64:0x0B62,f);break;}
     case 137:if(v)p_enable(GL_LIGHTING);else p_disable(GL_LIGHTING);break;
     case 139:{float a[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,a);break;}
-    case 141:if(v){p_enable(GL_COLOR_MATERIAL);p_color_material(GL_FRONT_AND_BACK,GL_DIFFUSE);}else p_disable(GL_COLOR_MATERIAL);break;
+    case 141:apply_color_material_state();break;
     case 143:if(v)p_enable(GL_NORMALIZE);else p_disable(GL_NORMALIZE);break;
     case 29:apply_material();break;
     case 142:p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,v?1:0);break;
-    case 145:case 146:case 147:case 148:break; /* Material-source modes are not implemented yet. */
+    case 145:case 147:
+        apply_color_material_state();break;
+    case 146:case 148:
+        break;
     default:break;} RET(D3D_OK,3); }
 static void dev_get_render_state(void) { uint32_t s=A32(1),p=A32(2);if(!p)RET(E_POINTER,3);MEM32(p)=s<256?g_render[s]:0;RET(D3D_OK,3); }
 static void dev_draw_primitive(void) { uint32_t n=A32(4);RET(draw_vertices(A32(1),A32(2),A32(3),n,0,0)?D3D_OK:D3DERR_INVALIDCALL,6); }
