@@ -46,6 +46,13 @@ uint32_t hle_vm_reserve(uint32_t va, uint32_t size) {
     if (va && (uint32_t)(uintptr_t)p != (va & ~0xFFFFu)) { munmap(p, size); return 0; }
     return (uint32_t)(uintptr_t)p;
 }
+/* Flat mode has no range table -- a guest address is a host address, and the
+ * only tracked region is the heap -- so this reports none rather than guessing
+ * which pages are real. A caller that needs ranges calls it with a range. */
+int hle_region_list(uint32_t *base, uint32_t *len, int max) {
+    (void)base; (void)len; (void)max;
+    return 0;
+}
 void hle_vm_release(uint32_t va, uint32_t size) { munmap((void *)(uintptr_t)va, size); }
 void hle_vm_zero(uint32_t va, uint32_t size)    { madvise((void *)(uintptr_t)va, size, MADV_DONTNEED); }
 
@@ -136,6 +143,28 @@ static void add_range(uint64_t lo, uint64_t hi) {
     while (i > 0 && g_rng[i - 1].lo > lo) { g_rng[i] = g_rng[i - 1]; i--; }
     g_rng[i].lo = lo, g_rng[i].hi = hi;
     g_nrng++;
+}
+
+/* The committed spans, for anything that needs to know what the guest can
+ * actually read: the state fingerprint is the first caller, and it must not be
+ * handed an uncommitted range or it would hash unmapped memory.
+ *
+ * Returns the count, and fills up to `max` (base,length) pairs sorted by base.
+ * Only ranges this table committed are listed -- page zero stays unmapped and
+ * is deliberately absent, because a guest reading it faults on Windows too.
+ * The image is not here: the PE loader maps it through this same function on a
+ * real run, so it appears as a range like any other once it is mapped. */
+int hle_region_list(uint32_t *base, uint32_t *len, int max) {
+    hle_mem_init();
+    pthread_mutex_lock(&g_mem_lock);
+    int n = g_nrng < max ? g_nrng : max;
+    for (int i = 0; i < n; i++) {
+        if (base) base[i] = (uint32_t)g_rng[i].lo;
+        if (len) len[i] = (uint32_t)(g_rng[i].hi - g_rng[i].lo);
+    }
+    int total = g_nrng;
+    pthread_mutex_unlock(&g_mem_lock);
+    return total > max ? max : total;
 }
 
 /* First fit above ANY_LO, past the shim range. */

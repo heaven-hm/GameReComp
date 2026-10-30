@@ -81,6 +81,10 @@ static inline uint32_t hle_a32(int i) {
  * Pages: a reservation at va (0: anywhere), zero-filled, 0 on failure. */
 void     hle_mem_init(void);                            /* map the guest block; idempotent */
 uint32_t hle_vm_reserve(uint32_t va, uint32_t size);
+/* The committed guest spans, sorted by base: what a fingerprint may hash.
+ * Returns the count (capped at max) and fills the arrays. Page zero is absent
+ * on purpose. Flat-mode builds report none. */
+int      hle_region_list(uint32_t *base, uint32_t *len, int max);
 void     hle_vm_release(uint32_t va, uint32_t size);
 void     hle_vm_zero(uint32_t va, uint32_t size);       /* decommit: reads as zero again */
 /* The heap every Heap/Local/Global block comes from: a 16-byte header before

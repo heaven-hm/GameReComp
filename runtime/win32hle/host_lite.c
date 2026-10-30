@@ -70,14 +70,15 @@ static int g_cap_read;
  *
  *   RECOMP_STATE_RANGE=0x00400000:0x40000,0x10500000:0x100000
  *
- * With no range named it hashes the registers and flags only, and says so in
- * the cap line's `ranges 0`. A registers-only fingerprint that looked like a
- * state comparison and was not one would be worse than no fingerprint.
+ * With no range named it covers every committed guest span, discovered through
+ * hle_region_list(), so the image and the heap are included without the caller
+ * having to know either extent. Naming RECOMP_STATE_RANGE overrides that, which
+ * is what a caller wants when only one structure matters and hashing four
+ * megabytes per checkpoint costs more than the comparison is worth.
  *
- * This cannot enumerate committed memory -- the runtime has no region
- * accessor -- so a range has to be named. What to name is the caller's
- * knowledge, and naming it explicitly is honest about the fact that the
- * fingerprint covers what it was told to cover and nothing else.
+ * The count is printed either way: two fingerprints are only comparable if they
+ * covered the same number of ranges, and a report that does not say how much it
+ * covered invites a false match.
  */
 enum { HLE_STATE_REGS = 13 };          /* 8 general purpose + 4 flag words + eip */
 static struct { uint32_t base, len; } g_state_range[16];
@@ -86,7 +87,19 @@ static int g_n_state_range = -1;
 static void state_ranges_init(void) {
     const char *spec = getenv("RECOMP_STATE_RANGE");
     g_n_state_range = 0;
-    if (!spec || !*spec) return;
+    /* No range named: cover what is actually committed. That is what every
+     * caller would otherwise have to know by hand -- the image span, the heap
+     * extent -- and get subtly wrong in a different way each time. */
+    if (!spec || !*spec) {
+        static uint32_t base[16], len[16];
+        int n = hle_region_list(base, len, (int)(sizeof g_state_range / sizeof *g_state_range));
+        for (int i = 0; i < n; i++) {
+            g_state_range[i].base = base[i];
+            g_state_range[i].len = len[i];
+            g_n_state_range++;
+        }
+        return;
+    }
     const char *p = spec;
     while (*p && g_n_state_range < (int)(sizeof g_state_range / sizeof *g_state_range)) {
         char *end;
