@@ -192,6 +192,68 @@ class RuntimeSyncTest(unittest.TestCase):
                 diagnose.sync_runtime(project, root / "does-not-exist"))
 
 
+class RunStatusTest(unittest.TestCase):
+    """run_status is the pipeline-comparable classification of a row."""
+
+    def test_timeout_means_it_looped(self):
+        self.assertEqual(diagnose.run_status_of("timeout"), "timeout")
+
+    def test_returning_on_its_own_is_exited_whatever_the_code(self):
+        self.assertEqual(diagnose.run_status_of("exited-clean"), "exited")
+        self.assertEqual(diagnose.run_status_of("exited-error"), "exited")
+
+    def test_signal_is_a_crash(self):
+        self.assertEqual(diagnose.run_status_of("crashed"), "crashed")
+
+    def test_aborting_at_an_unimplemented_import_is_boot_failed(self):
+        # Under strict binding the same binary fails the boot, so this is the
+        # comparable status; permissive_outcome keeps the precise value.
+        self.assertEqual(
+            diagnose.run_status_of("reached-unimplemented-import"),
+            "boot-failed")
+
+    def test_unmeasured_rows_are_not_run(self):
+        for outcome in ("no-binary", "launch-failed", "build-failed"):
+            self.assertEqual(diagnose.run_status_of(outcome), "not-run")
+
+    def test_an_unknown_outcome_is_not_silently_mapped(self):
+        self.assertEqual(diagnose.run_status_of("something-new"), "unknown")
+
+
+class TraceProfileTest(unittest.TestCase):
+    """A dispatch profile is what separates a game loop from a spin."""
+
+    TRACE = """\
+[pe] mapped
+[host] booted
+[hle] GetTickCount
+[hle] PeekMessageA
+[hle] IDirectInputDevice::GetDeviceState
+[hle] GetTickCount
+[hle] PeekMessageA
+[hle] Sleep
+[hle] PeekMessageA
+[hle] GetTickCount
+"""
+
+    def test_counts_each_import_in_order_of_calls(self):
+        from collections import Counter
+        counts = Counter(diagnose.TRACE_RE.findall(self.TRACE))
+        self.assertEqual(dict(counts.most_common(2)),
+                         {"PeekMessageA": 3, "GetTickCount": 3})
+        self.assertEqual(counts["Sleep"], 1)
+        self.assertEqual(sum(counts.values()), 8)
+
+    def test_a_loop_profile_is_not_one_call_repeating(self):
+        # The distinction the column exists for: a spin has one distinct
+        # import, a frame loop has several.
+        from collections import Counter
+        counts = Counter(diagnose.TRACE_RE.findall(self.TRACE))
+        self.assertGreater(len(counts), 3)
+        spin = Counter(["Sleep"] * 50)
+        self.assertEqual(len(spin), 1)
+
+
 class BaselineCompareTest(unittest.TestCase):
     """Before/after is keyed by PE hash, not by project directory name."""
 

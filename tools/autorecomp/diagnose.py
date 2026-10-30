@@ -168,24 +168,51 @@ def pinned_runtime(project_dir):
     }
 
 
-def trace_crash(binary, pe_path, timeout=10.0, tail=12):
-    """Re-run a crashed game with RECOMP_TRACE=1 and list the last dispatches.
+def trace_run(binary, pe_path, timeout=10.0, tail=12, top=12):
+    """Relaunch with RECOMP_TRACE=1 and profile the imports the guest called.
 
     A crash inside lifted code leaves no clue in the normal log: no stub was
-    called, so nothing names itself. The trace shows which shims the guest did
-    reach before it died, which is the difference between "a shim returned
-    NULL" and "the guest jumped somewhere it should not have".
+    called, so nothing names itself. A run that reaches the deadline looks the
+    same whether it is a game loop or a spin. The dispatch profile is what
+    separates those cases - a frame loop shows a message pump, a timer and a
+    present, a spin shows one call repeating.
     """
+    from collections import Counter
     run = run_permissive(binary, pe_path, timeout=timeout,
                          env_extra={"RECOMP_TRACE": "1"})
     text = run["stdout"] + "\n" + run["stderr"]
     names = TRACE_RE.findall(text)
+    counts = Counter(names)
     return {
         "exit_code": run["exit_code"],
+        "timed_out": run["timed_out"],
         "dispatched_import_count": len(names),
+        "distinct_imports": len(counts),
+        "top_imports": [{"import": name, "calls": calls}
+                        for name, calls in counts.most_common(top)],
         "last_dispatched": names[-tail:],
         "stderr_tail": run["stderr"][-TAIL_CHARS:],
     }
+
+
+# The pipeline's own vocabulary, so a row here can be compared with a row in
+# reports/games/results.json. `permissive_outcome` keeps this tool's precise
+# value; run_status is the comparable classification.
+RUN_STATUS = {
+    "timeout": "timeout",           # still running at the deadline: it looped
+    "exited-clean": "exited",
+    "exited-error": "exited",       # returned on its own, with a nonzero code
+    "crashed": "crashed",
+    "reached-unimplemented-import": "boot-failed",
+    "no-binary": "not-run",
+    "launch-failed": "not-run",
+    "build-failed": "not-run",
+}
+
+
+def run_status_of(outcome):
+    """The pipeline-comparable status for one measured outcome."""
+    return RUN_STATUS.get(outcome, "unknown")
 
 
 def load_baseline(path):
@@ -472,7 +499,9 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
         "duration_seconds": None,
         "boot_line": None,
         "iat_bind": None,
+        "run_status": None,
         "strict": None,
+        "import_profile": None,
         "runtime": pinned_runtime(project_dir),
         "crash_trace": None,
         "raw_error": None,
@@ -513,6 +542,7 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
     row["boot_line"] = parse_boot_line(combined)
     row["iat_bind"] = parse_bound_line(combined)
     row["outcome"] = classify(run["exit_code"], run["timed_out"], hit)
+    row["run_status"] = run_status_of(row["outcome"])
     row["signal"] = signal_name(run["exit_code"])
     if row["outcome"] == "timeout":
         row["raw_error"] = (f"no unimplemented import within {timeout:g}s; "
@@ -526,8 +556,12 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
     if strict is not None:
         row["strict"] = strict
     if row["outcome"] == "crashed" and trace_crashes:
-        row["crash_trace"] = trace_crash(binary, pe_path,
-                                         timeout=min(timeout, 10.0))
+        row["crash_trace"] = trace_run(binary, pe_path,
+                                       timeout=min(timeout, 10.0))
+    if row["outcome"] == "timeout" and trace_crashes:
+        # A run that reaches the deadline entered something; the dispatch
+        # profile says whether that something is a game loop.
+        row["import_profile"] = trace_run(binary, pe_path, timeout=timeout)
     return row
 
 
@@ -685,11 +719,19 @@ def build_report(rows, generated_at, command, timeout, duplicates=None,
                    "loader line always reads 0 unresolved because a stub "
                    "counts as resolved, so each binary is launched a second "
                    "time without RECOMP_PERMISSIVE and that strict run's "
-                   "unresolved count is recorded under `strict`"),
+                   "unresolved count is recorded under `strict`. run_status "
+                   "is the pipeline-comparable classification of the "
+                   "permissive run (timeout = still running at the deadline, "
+                   "exited = returned on its own, crashed = killed by a "
+                   "signal, boot-failed = aborted at an unimplemented "
+                   "import); permissive_outcome keeps this tool's precise "
+                   "value"),
         "projects_measured": len(rows),
         "projects_reaching_import": sum(1 for r in rows if r.get("first_import")),
         "outcomes": {o: sum(1 for r in rows if r["outcome"] == o)
                      for o in sorted({r["outcome"] for r in rows})},
+        "run_statuses": {st: sum(1 for r in rows if r.get("run_status") == st)
+                         for st in sorted({r.get("run_status") for r in rows})},
         "runtime_source": runtime_source,
         "baseline": baseline,
         "before_after": compare_baseline(rows, baseline),
@@ -749,10 +791,10 @@ def render_markdown(report):
                "`RECOMP_PERMISSIVE`; it is the only launch that reports a "
                "meaningful unresolved-import count.")
     out.append("")
-    out.append("| project | outcome | exit | first import | stub VA | caller "
-               "| strict exit | strict unresolved | pinned runtime |")
-    out.append("|---------|---------|------|--------------|---------|--------"
-               "|-------------|-------------------|----------------|")
+    out.append("| project | run status | outcome | exit | first import | stub VA "
+               "| caller | strict exit | strict unresolved | pinned runtime |")
+    out.append("|---------|------------|---------|------|--------------|--------"
+               "|--------|-------------|-------------------|----------------|")
     for row in rows:
         exit_code = row["exit_code"]
         if row["timed_out"]:
@@ -762,7 +804,8 @@ def render_markdown(report):
         if strict.get("timed_out"):
             strict_exit = f"{strict_exit} (timeout)"
         strict_unresolved = strict.get("unresolved_iat_imports")
-        out.append(f"| {row['project']} | {row['outcome']} | "
+        out.append(f"| {row['project']} | {row.get('run_status') or '-'} | "
+                   f"{row['outcome']} | "
                    f"{exit_code} | "
                    f"{('`' + row['first_import'] + '`') if row['first_import'] else '-'} | "
                    f"{row['stub_va'] or '-'} | {row['caller'] or '-'} | "
@@ -833,6 +876,25 @@ def render_markdown(report):
             for entry in noted:
                 out.append(f"- **{entry['project']}**: {entry['baseline_provenance']}")
             out.append("")
+
+    looping = [r for r in rows if r.get("import_profile")]
+    if looping:
+        out.append("## Games that reached the deadline (entered something)")
+        out.append("")
+        out.append("`timeout` means the process was still running at the "
+                   "deadline. The dispatch profile from a `RECOMP_TRACE=1` "
+                   "relaunch is what separates a game loop from a spin: a loop "
+                   "shows a message pump, a timer and a present, a spin shows "
+                   "one call repeating.")
+        out.append("")
+        for row in looping:
+            profile = row["import_profile"]
+            top = ", ".join(f"`{e['import']}` x{e['calls']}"
+                            for e in profile["top_imports"][:8])
+            out.append(f"- **{row['project']}**: "
+                       f"{profile['dispatched_import_count']} dispatches, "
+                       f"{profile['distinct_imports']} distinct - {top}")
+        out.append("")
 
     traced = [r for r in rows if r.get("crash_trace")]
     if traced:
