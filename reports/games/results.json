@@ -2,6 +2,23 @@
   "schema": 1,
   "runs": [
     {
+      "relative_path": "igi.exe",
+      "game": "IGI",
+      "filename": "igi.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 70,
+      "verification": "launch-failed",
+      "status": "rebuilt process boot-failed (exit 2)",
+      "run_status": "boot-failed",
+      "exit_code": 2,
+      "host": "Darwin arm64 (host build)",
+      "input_sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01",
+      "evidence": "/private/tmp/igi-port/reports/report.html",
+      "project_dir": "/private/tmp/igi-port",
+      "generated_at": "2026-10-30T16:55:35Z"
+    },
+    {
       "relative_path": "snake/snake-windows-x86_64.exe",
       "game": "Snake",
       "filename": "snake-windows-x86_64.exe",

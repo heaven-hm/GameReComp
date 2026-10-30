@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-10-30T06:57:44Z by `python -m tools.gamesdb`. Measured 23; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-10-30T16:55:35Z by `python -m tools.gamesdb`. Measured 24; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **Cave Story** (DoConfig.exe) at 85/100, launch-failed: rebuilt process boot-failed (exit 2).
 
@@ -21,6 +21,7 @@ Best measured result: **Cave Story** (DoConfig.exe) at 85/100, launch-failed: re
 | Gunroar | gr.exe | i386 (PE32) | Windows | 77 | launch-failed: rebuilt process crashed (exit -10) | projects/gr/reports/report.html (host: Darwin arm64 (host build)) |
 | GeneRally | TrackEditor.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/TrackEditor/reports/report.html (host: Darwin arm64 (host build)) |
 | Hero Core | herocore gm5.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore_gm5/reports/report.html (host: Darwin arm64 (host build)) |
+| IGI | igi.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | /private/tmp/igi-port/reports/report.html (host: Darwin arm64 (host build)) |
 | OpenTyrian | opentyrian.exe | x86-64 (PE32+) | Windows | 10 | not-run: verification did not run | projects/opentyrian/reports/report.html |
 | Pixeltetris | Pixeltetris.exe | x86-64 (PE32+) | Windows | 10 | not-run: verification did not run | projects/Pixeltetris/reports/report.html |
 | Snake | snake-windows-x86_64.exe | x86-64 (PE32+) | Windows | 10 | not-run: verification did not run | projects/snake_windows_x86_64/reports/report.html |
