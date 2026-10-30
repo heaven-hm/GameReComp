@@ -227,9 +227,9 @@ static void s_GetTicks(void) { RETC(hle_clock_ms()); }
 /* SDL_Delay must let other guest threads run: the machine is given up around
  * the sleep (hle_block_begin/end), as kernel32's Sleep does. */
 static void s_Delay(void) {
-    uint32_t ms = A32(0);
+    uint32_t ms = A32(0), real = hle_clock_sleep(ms);   /* virtual time moves; 0 to sleep for real */
     hle_block_begin();
-    SDL_Delay(hle_clock_virtual() ? 0u : ms);   /* virtual time passes by itself */
+    SDL_Delay(real);
     hle_block_end();
     RETCV();
 }

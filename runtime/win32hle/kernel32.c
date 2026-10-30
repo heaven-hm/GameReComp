@@ -300,14 +300,13 @@ static void k_QueryPerformanceCounter(void) {
 /* Sleep gives the machine up for the wait, so another guest thread (a mixer,
  * a timer callback) runs meanwhile. Sleep(0) is a yield. */
 static void k_Sleep(void) {
-    uint32_t ms = A32(0);
+    uint32_t ms = A32(0), real = hle_clock_sleep(ms);
+    /* hle_clock_sleep moves virtual time by at least ms and answers 0 for how
+     * long to really sleep; with the clock off it answers ms unchanged. A sleep
+     * that did NOT move virtual time would leave a guest waiting for time to
+     * pass spinning forever. */
     hle_block_begin();
-    /* With the virtual clock the time passes by itself (it is a function of the
-     * shim call count), so sleeping for real would only make the run slower
-     * without changing what the guest sees. */
-    if (hle_clock_virtual()) sched_yield();
-    else if (ms) usleep(ms * 1000u);
-    else sched_yield();
+    if (real) usleep(real * 1000u); else sched_yield();
     hle_block_end();
     RETV(1);
 }
