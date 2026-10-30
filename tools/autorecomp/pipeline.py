@@ -513,6 +513,12 @@ class Pipeline:
         stdout = _tail(stdout_path, 200)
         stderr = _tail(stderr_path, 200)
         output = "\n".join(part for part in (stdout, stderr) if part)
+        # The loader's own lines are at the TOP of the log, and a process that
+        # runs until the deadline writes far more than 200 lines after them --
+        # so reading only the tail reported a running game's import counts as
+        # unknown. Scan the whole stderr for them; keep the tail for the
+        # human-facing output_tail.
+        boot_output = _tail(stderr_path, 10 ** 9)
         if not timed_out:
             if rc is not None and rc < 0:
                 status = "crashed"
@@ -521,14 +527,14 @@ class Pipeline:
             else:
                 status = "exited"
 
-        unresolved = sorted(set(re.findall(r"\[pe\] unresolved import (\S+)", output)))
+        unresolved = sorted(set(re.findall(r"\[pe\] unresolved import (\S+)", boot_output)))
         # The import-call profile of the run, most-called first: the artifact a
         # verification report can carry to show what the process actually did.
-        calls = Counter(re.findall(r"^\[hle\] ([A-Za-z_][\w:]*)$", output, re.M))
+        calls = Counter(re.findall(r"^\[hle\] ([A-Za-z_][\w:]*)$", boot_output, re.M))
         import_profile = [{"import": name, "calls": n}
                           for name, n in calls.most_common(40)]
-        boot_m = re.search(r"\[host\] .* booted: entry 0x([0-9A-Fa-f]+), (\d+) unresolved imports", output)
-        bound_m = re.search(r"\[pe\] bound (\d+) imports, (\d+) unresolved", output)
+        boot_m = re.search(r"\[host\] .* booted: entry 0x([0-9A-Fa-f]+), (\d+) unresolved imports", boot_output)
+        bound_m = re.search(r"\[pe\] bound (\d+) imports, (\d+) unresolved", boot_output)
         result = {
             "command": cmd,
             "cwd": str(self.assets_dir),
