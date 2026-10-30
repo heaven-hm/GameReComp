@@ -15,6 +15,13 @@
 #include <SDL2/SDL.h>
 #include "win32hle.h"
 
+/* input_rec.c: record what the input shims return, replay it into another run. */
+int  hle_input_recording(void);
+int  hle_input_replaying(void);
+void hle_input_record(const char *what, const void *data, size_t n);
+int  hle_input_replay(const char *what, void *data, size_t n);
+void hle_input_reset(void);
+
 /* Guest-visible SDL 1.2 structures, as SDL-1.2.15's headers lay them out on a
  * 32-bit Windows build (the ABI the games were compiled against).  A lifted
  * game reads these fields itself, so the offsets are the ABI, not a private
@@ -1252,6 +1259,10 @@ static int queue_pop_enabled(uint8_t *ev) {
 /* Pull one SDL2 event into the queue (translated), skipping disabled types. */
 static int pump_one(int block_ms) {
     SDL_Event e;
+    {   /* replay: the next recorded event, if the transcript has one */
+        uint8_t rec[S12_EVENT_SIZE];
+        if (hle_input_replaying() && hle_input_replay("event", rec, sizeof rec)) return queue_push(rec) == 0;
+    }
     for (int i = 0; i < 64; i++) {
         int got = block_ms < 0 ? SDL_WaitEventTimeout(&e, 1000) : block_ms ? SDL_WaitEventTimeout(&e, block_ms) : SDL_PollEvent(&e);
         if (!got) return 0;
@@ -1259,6 +1270,7 @@ static int pump_one(int block_ms) {
         event_from_sdl2(ev, &e);
         if (ev[0] == S12_NOEVENT) continue;              /* not one SDL 1.2 has */
         if (!enabled(ev)) continue;
+        if (hle_input_recording()) hle_input_record("event", ev, S12_EVENT_SIZE);
         return queue_push(ev) == 0;
     }
     return 0;
@@ -1739,6 +1751,13 @@ static uint8_t g_evt_down[S12_SDLK_LAST];
 static void keystate_note(int sym, int down) { if (sym > 0 && sym < S12_SDLK_LAST) g_evt_down[sym] = down ? 1 : 0; }
 static void refresh_keystate(void) {
     if (!g_keystate) return;
+    /* A recording of the key state replaces the host's: the guest must see the
+     * input the recorded run saw, not what is on this keyboard now. */
+    if (hle_input_replaying() &&
+        hle_input_replay("keys", hle_ptr(g_keystate), S12_SDLK_LAST)) {
+        for (int i = 0; i < S12_SDLK_LAST; i++) g_evt_down[i] = MEM8(g_keystate + (uint32_t)i) ? 1 : 0;
+        return;
+    }
     memset(hle_ptr(g_keystate), 0, S12_SDLK_LAST);
     int n = 0;
     const Uint8 *ks = SDL_GetKeyboardState(&n);
@@ -1748,6 +1767,7 @@ static void refresh_keystate(void) {
         if (sym > 0 && sym < S12_SDLK_LAST) MEM8(g_keystate + (uint32_t)sym) = 1;
     }
     for (int i = 0; i < S12_SDLK_LAST; i++) if (g_evt_down[i]) MEM8(g_keystate + (uint32_t)i) = 1;
+    if (hle_input_recording()) hle_input_record("keys", hle_ptr(g_keystate), S12_SDLK_LAST);
 }
 static void s_GetKeyState(void) {
     if (!g_keystate) g_keystate = hle_va(hle_alloc(S12_SDLK_LAST));
@@ -1760,6 +1780,14 @@ static void s_GetModState(void) { RETC((uint32_t)SDL_GetModState()); }
 static void s_GetMouseState(void) {
     int x = 0, y = 0;
     uint32_t b = SDL_GetMouseState(&x, &y);
+    {   /* the mouse the recorded run saw, when replaying */
+        uint32_t m[3] = { (uint32_t)x, (uint32_t)y, b };
+        if (hle_input_replaying() && hle_input_replay("mouse", m, sizeof m)) {
+            x = (int)m[0]; y = (int)m[1]; b = m[2];
+        } else if (hle_input_recording()) {
+            hle_input_record("mouse", m, sizeof m);
+        }
+    }
     if (A32(0)) MEM32(A32(0)) = (uint32_t)x;
     if (A32(1)) MEM32(A32(1)) = (uint32_t)y;
     RETC(b);

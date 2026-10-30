@@ -42,6 +42,7 @@
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
+#include <stdio.h>
 #include "win32hle.h"
 
 #define CLOCK_THREADS 64
@@ -86,6 +87,16 @@ static void clock_init(void) {
 }
 
 int hle_clock_virtual(void) { clock_init(); return g_virtual; }
+
+/* The clock's configuration as text ("host", "virtual:1", "virtual:16"), so a
+ * recording can say which clock it was made with and a replay can check that it
+ * is running with the same one. A replay that is reproducible only because the
+ * machine was idle is not reproducible. */
+void hle_clock_config(char *buf, size_t n) {
+    clock_init();
+    if (!g_virtual) snprintf(buf, n, "host");
+    else snprintf(buf, n, "virtual:%u", (unsigned)g_step);
+}
 
 /* The time the shims report, in milliseconds. In virtual mode a read advances
  * the calling thread's clock, so a poll loop makes progress deterministically. */
