@@ -54,37 +54,147 @@ TIMING_CALLS = {
     "SDL_GetTicks", "SDL_Delay", "SDL_WaitEvent", "WaitMessage", "MsgWaitForMultipleObjects",
 }
 
-LINE = re.compile(r"^\[hle\]\s+(\S+)\s*$")
+# "[hle] Name" (the default) or "[hle] <guest tid> Name" (RECOMP_TRACE_TID=1).
+LINE = re.compile(r"^\[hle\]\s+(?:(\d+)\s+)?(\S+)\s*$")
 
 
 def parse(path):
-    """The call names in a trace, in order.
+    """The (guest thread id, call name) pairs in a trace, in order.
 
-    Accepts a RECOMP_TRACE capture (`[hle] Name`) and any line whose last field
-    looks like a call name, so a checkpoint file with extra columns
-    (a sequence number, registers) can be compared as well. Lines that are not
-    call records are ignored, so stderr can be piped in whole."""
-    names = []
+    The thread id is None for the default untagged format, and kept when the
+    trace was recorded with RECOMP_TRACE_TID=1. Accepts a RECOMP_TRACE capture
+    (`[hle] Name` or `[hle] 260 Name`) and any line whose last field looks like a
+    call name, so a checkpoint file with extra columns can be compared as well.
+    Lines that are not call records are ignored, so stderr can be piped in."""
+    calls = []
     with open(path, "r", errors="replace") as fh:
         for line in fh:
             m = LINE.match(line.rstrip("\n"))
             if m:
-                names.append(m.group(1))
+                calls.append((int(m.group(1)) if m.group(1) else None, m.group(2)))
                 continue
             parts = line.split()
             if len(parts) >= 2 and not line.startswith("["):
                 # a checkpoint line: "seq Name eip esp ..." -- take the name
-                names.append(parts[1])
-    return names
+                calls.append((None, parts[1]))
+    return calls
+
+
+def by_thread(calls):
+    """{thread id: [call names]}, in the order each thread made them. An
+    untagged trace is one thread."""
+    out = {}
+    for tid, name in calls:
+        out.setdefault(tid, []).append(name)
+    return out
 
 
 def first_divergence(a, b):
-    """(index, call_a, call_b) of the first difference, or None if one trace is
-    a prefix of the other (which the caller reports as an early end)."""
+    """(index, value_a, value_b) of the first difference, or None if one trace
+    is a prefix of the other."""
     for i in range(min(len(a), len(b))):
         if a[i] != b[i]:
             return i, a[i], b[i]
     return None
+
+
+def as_calls(trace):
+    """A trace as (thread id, name) pairs: bare names are accepted too, so a
+    caller (and the selftest) can compare plain sequences."""
+    return [item if isinstance(item, tuple) else (None, item) for item in trace]
+
+
+def is_tagged(calls):
+    calls = as_calls(calls)
+    return any(tid is not None for tid, _ in calls)
+
+
+def locate(a, b):
+    """Where two traces first part, per thread when they are thread-tagged.
+
+    Returns (kind, payload). `kind` is "same" when the traces match, "early"
+    when one is a prefix of the other, and "diverge" with payload
+    (thread, index, call_a, call_b) otherwise. Comparison is per thread when
+    both traces carry thread ids: two concurrent threads interleave differently
+    on every run, so a single global sequence cannot be stable even when each
+    thread's own behaviour is, and comparing thread by thread is the only
+    comparison that means anything."""
+    a, b = as_calls(a), as_calls(b)
+    if is_tagged(a) or is_tagged(b):
+        ta, tb = by_thread(a), by_thread(b)
+        problems = []
+        for tid in sorted(set(ta) | set(tb), key=lambda t: (t is None, t)):
+            if tid not in tb:
+                problems.append((tid, "only in the first trace"))
+                continue
+            if tid not in ta:
+                problems.append((tid, "only in the second trace"))
+                continue
+            d = first_divergence(ta[tid], tb[tid])
+            if d is not None:
+                problems.append((tid, d))
+        if not problems:
+            if len(a) == len(b):
+                return "same", (sum(len(v) for v in ta.values()), len(ta))
+            short, long_ = (a, b) if len(a) < len(b) else (b, a)
+            return "early", (len(short), long_[len(short)][1])
+        first = problems[0]
+        if isinstance(first[1], str):          # a thread present in only one trace
+            return "diverge", (first[0], None, first[1], None)
+        tid, (i, ca, cb) = first
+        return "diverge", (tid, i, ca, cb)
+    d = first_divergence([n for _, n in a], [n for _, n in b])
+    if d is not None:
+        return "diverge", (None, d[0], d[1], d[2])
+    if len(a) == len(b):
+        return "same", (len(a), 1)
+    short, long_ = (a, b) if len(a) < len(b) else (b, a)
+    return "early", (len(short), long_[len(short)][1])
+
+
+def thread_sequences(calls):
+    """The per-thread name sequences, or the single sequence when untagged."""
+    if is_tagged(calls):
+        return by_thread(calls)
+    return {None: [n for _, n in calls]}
+
+
+def report(a, b, label_a="baseline", label_b="candidate", context=5):
+    """The divergence report, as text."""
+    out = []
+    a, b = as_calls(a), as_calls(b)
+    kind, payload = locate(a, b)
+    if is_tagged(a) or is_tagged(b):
+        ta, tb = by_thread(a), by_thread(b)
+        out.append(f"{label_a}: {len(a)} calls on {len(ta)} thread(s) | "
+                   f"{label_b}: {len(b)} calls on {len(tb)} thread(s)")
+    else:
+        out.append(f"{label_a}: {len(a)} calls | {label_b}: {len(b)} calls")
+    if kind == "same":
+        out.append("the two traces are identical: no divergence")
+        return 0, out
+    if kind == "early":
+        n, nxt = payload
+        out.append(f"no divergence in the common prefix of {n} calls; one trace ended "
+                   f"there and the other continued with {nxt!r}")
+        return 1, out
+    tid, index, ca, cb = payload
+    where = f"thread {tid}, call {index}" if tid is not None else f"call {index}"
+    if index is None:
+        out.append(f"divergence at {where}: {ca} / {cb}")
+        return 2, out
+    # classify on the sequences that actually differ
+    sa, sb = thread_sequences(a), thread_sequences(b)
+    seq_a, seq_b = sa.get(tid, []), sb.get(tid, [])
+    ckind, why = classify(seq_a, seq_b, index)
+    out.append(f"first divergence at {where}: {label_a} has {ca!r}, {label_b} has {cb!r}")
+    out.append(f"  classified: {ckind.upper()} -- {why}")
+    lo = max(0, index - context)
+    out.append(f"  context ({lo}..{index + context}):")
+    for i in range(lo, min(max(len(seq_a), len(seq_b)), index + context)):
+        out.append(f"    {i:8d}  {seq_a[i] if i < len(seq_a) else '--':34s} | "
+                   f"{seq_b[i] if i < len(seq_b) else '--'}")
+    return (1 if ckind == "timing" else 2), out
 
 
 def classify(a, b, index, lookahead=64):
@@ -128,31 +238,6 @@ def classify(a, b, index, lookahead=64):
         f"clock difference changed a branch and never came back")
 
 
-def report(a, b, label_a="baseline", label_b="candidate", context=5):
-    """The divergence report, as text."""
-    out = []
-    d = first_divergence(a, b)
-    out.append(f"{label_a}: {len(a)} calls | {label_b}: {len(b)} calls")
-    if d is None:
-        if len(a) == len(b):
-            out.append("the two traces are identical: no divergence")
-            return 0, out
-        short, long_, which = (a, b, label_b) if len(a) < len(b) else (b, a, label_a)
-        out.append(f"no divergence in the common prefix of {len(short)} calls; "
-                   f"{which} ended there and the other continued with {long_[len(short)]!r}")
-        out.append(f"  last calls of the shorter trace: {', '.join(short[-context:])}")
-        return 1, out
-    index, ca, cb = d
-    kind, why = classify(a, b, index)
-    out.append(f"first divergence at call {index}: {label_a} has {ca!r}, {label_b} has {cb!r}")
-    out.append(f"  classified: {kind.upper()} -- {why}")
-    lo = max(0, index - context)
-    out.append(f"  context ({lo}..{index + context}):")
-    for i in range(lo, min(max(len(a), len(b)), index + context)):
-        out.append(f"    {i:8d}  {a[i] if i < len(a) else '--':34s} | {b[i] if i < len(b) else '--'}")
-    return (1 if kind == "timing" else 2), out
-
-
 def run_capped(binary, exe, cwd, cap, env_extra, timeout):
     """Run a binary with the call cap set, and return its call trace.
 
@@ -174,8 +259,9 @@ def run_capped(binary, exe, cwd, cap, env_extra, timeout):
     except subprocess.TimeoutExpired as e:
         err = (e.stderr or b"").decode("utf-8", "replace") if isinstance(e.stderr, bytes) else (e.stderr or "")
         rc = None
-    names = [m.group(1) for line in err.splitlines() if (m := LINE.match(line.rstrip("\n")))]
-    return names, rc
+    calls = [(int(m.group(1)) if m.group(1) else None, m.group(2))
+             for line in err.splitlines() if (m := LINE.match(line.rstrip("\n")))]
+    return calls, rc
 
 
 def bisect_run(baseline_binary, candidate_binary, exe, cwd, lo, hi, env_extra=None,
@@ -197,8 +283,13 @@ def bisect_run(baseline_binary, candidate_binary, exe, cwd, lo, hi, env_extra=No
     def pair(cap):
         a, _ = run_capped(baseline_binary, exe, cwd, cap, env_extra, timeout)
         b, _ = run_capped(candidate_binary, exe, cwd, cap, env_extra, timeout)
-        d = first_divergence(a, b)
-        return (d[0] if d is not None else (None if len(a) == len(b) else min(len(a), len(b)))), a, b
+        kind, payload = locate(a, b)
+        if kind == "same":
+            return None, a, b            # None means "they match at this cap"
+        if kind == "early":
+            return ("early", payload[0]), a, b
+        tid, idx, _, _ = payload
+        return (tid, idx), a, b
 
     trace(f"bisecting between cap {lo} and {hi}, {repeat} pair(s) per cap")
     idx, a, b = pair(hi)
