@@ -275,3 +275,71 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+def function_source(c_text, address):
+    """rev.ng's C for one function, by its original address.
+
+    rev.ng names a function `function_0xADDRESS_Code_ARCH`, so its output is
+    address-keyed and can be matched against the recompiler's inventory and
+    against a hand-written module. That match is what makes it evidence rather
+    than a second opinion nobody can line up.
+    """
+    # rev.ng does not zero-pad the address: 0x40BA58 is
+    # `function_0x40ba58_Code_x86`, not `function_0x0040ba58_...`. Matching a
+    # fixed width found nothing, which is exactly the mistake the harness in
+    # hlverify made with the generator's own addresses.
+    name = rf"function_0x0*{address:x}_Code_"
+    start = None
+    for m in re.finditer(rf"^\s*([A-Za-z_][\w \*]*?)\s+({name}\w+)\s*\(",
+                         c_text, re.M | re.I):
+        start = m.start()
+        break
+    if start is None:
+        return None
+    # The ABI macro sits on the line above the signature.
+    before = c_text.rfind("_ABI(", 0, start)
+    if before != -1 and c_text.count("\n", before, start) <= 1:
+        start = before
+    depth, i = 0, c_text.index("{", start)
+    for j in range(i, len(c_text)):
+        if c_text[j] == "{":
+            depth += 1
+        elif c_text[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return c_text[start:j + 1].strip() + "\n"
+    return None
+
+
+def corroborate(module, c_text, out_dir):
+    """Write rev.ng's reading of each replaced function beside the module.
+
+    This is a provider's independent opinion, recorded. It is not a proof and it
+    is not compared automatically: whether two decompilations agree is a
+    judgement, and pretending a string comparison could make it is how a
+    verification report starts lying. What it does is make the comparison
+    possible without re-running rev.ng, and put the provider's output under
+    version control next to the claim it bears on.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written = []
+    for fn in module["functions"]:
+        source = function_source(c_text, fn["address"])
+        if source is None:
+            written.append({"address": f"0x{fn['address']:08X}",
+                            "symbol": fn["symbol"], "revng": None,
+                            "note": "rev.ng recovered no function at this address"})
+            continue
+        path = out_dir / f"0x{fn['address']:08X}.c"
+        path.write_text(
+            f"/* rev.ng's independent reading of 0x{fn['address']:08X}, the\n"
+            f" * address {fn['symbol']} replaces. Not a proof and not compared\n"
+            f" * automatically: it is the other provider's opinion, recorded so\n"
+            f" * the two can be read side by side. */\n{source}")
+        written.append({"address": f"0x{fn['address']:08X}",
+                        "symbol": fn["symbol"],
+                        "revng": f"revng/{path.name}",
+                        "bytes": len(source)})
+    return written

@@ -16,7 +16,12 @@
         "evidence": "The mechanical body is seed = seed * 0x343FD + 0x269EC3; return (seed >> 16) & 0x7FFF, with the state in the global at 0x413350. 0x343FD and 0x269EC3 are the multiplier and increment of the Microsoft C runtime's linear congruential generator, and (state >> 16) & 0x7FFF is its documented output. No name or constant is inferred: both constants are in the instruction stream and the shift/mask are the two following instructions.",
         "verified_by": "tools/autorecomp/hlverify.py: 8 cases (seeds 0x00000000, 0x00000001, 0x7FFFFFFF, 0xFFFFFFFF, 0x000343FD, 0x00269EC3, 0x12345678, 0xDEADBEEF), 0 mismatches in eax and in the 4096-byte guest comparison window. Both entry points linked from the project's own generated unit, so the shipped object code of each was compared.",
         "not_claimed": "That this is the game's only source of randomness, or that the game calls it with the C library's rand() semantics. The generator is identified; its callers are not.",
-        "not_proven": "inputs other than the listed seeds, and behaviour that only appears in a full game run. Equivalence is scoped to the differential harness, not proved for all inputs."
+        "not_proven": "inputs other than the listed seeds, and behaviour that only appears in a full game run. Equivalence is scoped to the differential harness, not proved for all inputs.",
+        "corroborating_provider": {
+          "provider": "rev.ng (container revng/revng, --platform linux/amd64)",
+          "artifact": "revng/0x0040BA58.c",
+          "what_it_is": "rev.ng's independent decompilation of the same address, recorded beside this file. It is a second reading, not a stronger proof: the two are not compared automatically, because whether two decompilations agree is a judgement."
+        }
       }
     },
     {
@@ -30,12 +35,23 @@
         "evidence": "The mechanical body writes 22 constants into one contiguous block at 0x413BE0..0x413C1F and returns; there is no input, no branch and no read. Two callers (0x404D9C, 0x4053A2) call it as a setup step before using the block. Field widths and offsets are taken from the store instructions themselves.",
         "verified_by": "tools/autorecomp/hlverify.py: 8 cases, 0 mismatches in eax and in the 4096-byte guest comparison window. The function takes no input, so the cases differ only in the pre-existing guest state; the check that matters here is that both write the same 22 constants.",
         "not_claimed": "What the fields mean. The names below describe the shape the stores prove (a pair of 16.16 fixed-point points at +0x18 and +0x28, four fractions at +0x30); they are not the original developer's names and no evidence establishes them.",
-        "not_proven": "inputs other than the listed seeds, and behaviour that only appears in a full game run. Equivalence is scoped to the differential harness, not proved for all inputs."
+        "not_proven": "inputs other than the listed seeds, and behaviour that only appears in a full game run. Equivalence is scoped to the differential harness, not proved for all inputs.",
+        "corroborating_provider": {
+          "provider": "rev.ng (container revng/revng, --platform linux/amd64)",
+          "artifact": "revng/0x00401000.c",
+          "what_it_is": "rev.ng's independent decompilation of the same address, recorded beside this file. It is a second reading, not a stronger proof: the two are not compared automatically, because whether two decompilations agree is a judgement."
+        }
       }
     }
   ],
   "target": {
     "sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
     "entry_point": "0x0040BA76"
+  },
+  "revng": {
+    "run": "python3 -m tools.autorecomp.revng <dxIka.exe> --out ikachan-revng.c",
+    "output_bytes": 841653,
+    "functions_recovered": 183,
+    "note": "rev.ng reached the same two readings this module was written from: 0x40BA58 multiplies the word at segment_2+4944 by 214013 (0x343FD) and adds 2531011 (0x269EC3), and 0x401000 writes the same 22 constants into the same block."
   }
 }
