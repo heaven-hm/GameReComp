@@ -808,7 +808,7 @@ static void d3d_create_device(void) {
         uint32_t state=hle_va(hle_alloc(4)); MEM32(g_device+8)=state;
         identity(g_world); identity(g_view); identity(g_projection); identity(g_texture_transform);
         memset(g_render,0,sizeof g_render); g_render[7]=1; g_render[8]=3; g_render[9]=2; g_render[14]=1;
-        p_depth_mask(1);
+        p_enable(GL_DEPTH_TEST); p_depth_mask(1); p_disable(GL_ALPHA_TEST);
         g_render[137]=1; g_render[141]=1; g_render[145]=1; g_render[147]=0; g_render[148]=0;
         memset(g_material,0,sizeof g_material); memset(g_lights,0,sizeof g_lights);
         memset(g_light_valid,0,sizeof g_light_valid); memset(g_light_enabled,0,sizeof g_light_enabled);
@@ -1215,7 +1215,7 @@ static void apply_color_material_state(void) {
 
 static int render_state_supported(uint32_t state) {
     switch(state) {
-    case 7: case 8: case 9: case 14: case 19: case 20: case 22: case 23: case 24: case 25:
+    case 7: case 8: case 9: case 14: case 15: case 19: case 20: case 22: case 23: case 24: case 25:
     case 27: case 28: case 29: case 34: case 35: case 36: case 37: case 38:
     case 137: case 139: case 141: case 142: case 143: case 145: case 146: case 147: case 148: case 152:
         return 1;
@@ -1225,7 +1225,7 @@ static int render_state_supported(uint32_t state) {
 }
 static int render_state_value_valid(uint32_t state,uint32_t value) {
     switch(state) {
-    case 7: case 14: case 27: case 28: case 29: case 137: case 141: case 142: case 143: case 145: case 147:
+    case 7: case 14: case 15: case 27: case 28: case 29: case 137: case 141: case 142: case 143: case 145: case 147:
         return value<=1;
     case 8: case 22:
         return value>=1 && value<=3;
@@ -1262,6 +1262,7 @@ static void dev_set_render_state(void) {
     switch(s) {
     case 7: if(v)p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);break;
     case 14: p_depth_mask(v?1:0);break;
+    case 15: if(v)p_enable(GL_ALPHA_TEST);else p_disable(GL_ALPHA_TEST);break;
     case 8: p_polygon(GL_FRONT_AND_BACK,v==1?GL_POINT:v==2?GL_LINE:GL_FILL);break;
     case 9: p_shade(v==1?GL_FLAT:GL_SMOOTH);break;
     case 19: case 20: p_blend(gl_blend(g_render[19]?g_render[19]:2),gl_blend(g_render[20]?g_render[20]:1));break;
