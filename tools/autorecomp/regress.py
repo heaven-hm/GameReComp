@@ -228,6 +228,30 @@ def tier_fast(record=False, baseline=None):
         "observed": observed,
     })
 
+    # The GUI's data path, exercised headlessly: if it cannot read a real project
+    # it will show an empty dashboard, and an empty dashboard is indistinguishable
+    # from a project that produced nothing. Skipped when Qt has not been built,
+    # with the reason, rather than passing silently.
+    gui = ROOT / "gui" / "build" / "reveng-studio"
+    if gui.is_file():
+        import os
+        env = dict(os.environ, QT_QPA_PLATFORM="offscreen")
+        g = _run([str(gui), "--selftest", "projects/cavestory-doukutsu",
+                  "--repo", str(ROOT)], timeout=120, env=env)
+        ok_gui = g.returncode == 0 and "functions:" in g.stdout
+        results.append({
+            "check": "gui reads a real project headlessly",
+            "ok": ok_gui,
+            "detail": next((ln.strip() for ln in g.stdout.splitlines()
+                            if ln.startswith(("functions:", "certified:", "SELFTEST"))),
+                           (g.stdout or g.stderr).strip()[:200]),
+        })
+    else:
+        results.append({
+            "check": "gui reads a real project headlessly", "ok": None,
+            "detail": "gui/build/reveng-studio not built (cmake -S gui -B gui/build)",
+        })
+
     # The high-level bridge: a module for another binary must be refused, not
     # applied. This is the bug that replaced the fixture's entry point.
     applied = _run(["./RevEng", "tests/fixtures/pe32-minimal.exe",
