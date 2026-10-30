@@ -260,6 +260,7 @@ class Model:
         self.address = 0
         self.pointer_types = {}     # pointer local -> provider struct it points at
         self.signatures = {}        # callee VA -> declared contract
+        self.image_lo, self.image_hi = 0x00400000, 0x80000000
         self.callee_names = {}      # callee VA -> generated function name
         self.segment_base = segment_base
         self.va_locals = {}        # var name -> width (a pointer that became a VA)
@@ -319,7 +320,15 @@ class Model:
         if node is None:
             raise Boundary(f"{where}: nothing to classify")
         if isinstance(node, c_ast.Constant):
-            return VA if node.value.upper().startswith("0X") else SCALAR
+            v = node.value
+            if v.upper().startswith("0X"):
+                try:
+                    n = int(v.rstrip("UuLl"), 16)
+                except ValueError:
+                    return SCALAR
+                # the guest image: a hex constant in that range is an address
+                return VA if self.image_lo <= n < self.image_hi else SCALAR
+            return SCALAR
         if isinstance(node, c_ast.ID):
             if node.name == "segment_2":
                 return VA
@@ -352,11 +361,37 @@ class Model:
             left = self.classify(node.left, where)
             right = self.classify(node.right, where)
             if node.op in ("+", "-") and VA in (left, right):
+                # adding a KNOWN SMALL offset to a VA yields a VA - that is what a
+                # field or frame offset is. An unbounded addend does not: `va +
+                # arbitrary_int` is how the host pointer confusion started, so
+                # anything larger than a frame/field offset is refused.
+                other_node = node.right if left == VA else node.left
+                if isinstance(other_node, c_ast.Constant):
+                    try:
+                        off = int(other_node.value.rstrip("UuLl"), 0)
+                    except ValueError:
+                        off = None
+                    if off is not None and 0 <= off <= 0x10000:
+                        return VA
+                    raise Boundary(f"{where}: an unbounded offset on a VA does not preserve "
+                                   f"VA-ness - refusing rather than guessing")
                 return VA
-            # a bit-mask on an address is still an address: `x & 0xFFFFFFFF` is the
-            # provider's most common idiom (180 bodies were refused by treating it
-            # as a mixed-kind expression)
-            if node.op in ("&", "|", "^") and VA in (left, right):
+            # A BIT-MASK on an address is still an address, but ONLY a mask: on a
+            # 32-bit guest `x & 0xFFFFFFFF` is identity, so it preserves VA-ness.
+            # `x | const` or `x ^ const` does not preserve it - an arbitrary OR can
+            # move the address anywhere - and `va + arbitrary_int` is how the host
+            # pointer confusion started. So masks are accepted and everything else
+            # is refused: the rule stays a rule rather than becoming a heuristic
+            # that accepts "any arithmetic on a VA".
+            if node.op == "&" and VA in (left, right):
+                other = right if left == VA else left
+                if other == SCALAR:
+                    const = node.right if left == VA else node.left
+                    if isinstance(const, c_ast.Constant) and const.value.upper().startswith("0X") \
+                            and int(const.value.rstrip("UuLl"), 16) >= 0xFFFFFFFF:
+                        return VA          # identity mask on a 32-bit guest
+                    raise Boundary(f"{where}: a partial bit-mask on a VA does not preserve "
+                                   f"VA-ness - refusing rather than guessing")
                 return VA
             if left == SCALAR and right == SCALAR:
                 return SCALAR

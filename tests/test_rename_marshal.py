@@ -103,3 +103,22 @@ def test_a_call_bearing_body_can_only_claim_high_level_unverified():
     # oracle cannot see, so it cannot claim the verified category
     assert category_for(0x1001, sigs) == "HIGH_LEVEL_UNVERIFIED"
     assert category_for(0x1002, sigs) == "HIGH_LEVEL_VERIFIED"
+
+
+# ---- the closure: what a certification of a calling function must cover
+def test_the_closure_contains_the_transitive_callees():
+    from tools.autorecomp.rename_gen import closure_of
+    sigs = {1: {"calls": [2]}, 2: {"calls": [3]}, 3: {"calls": []}, 9: {"calls": []}}
+    order, capped = closure_of(1, sigs)
+    assert order == [1, 2, 3]
+    assert capped is False
+
+
+def test_the_closure_is_capped_and_says_so():
+    from tools.autorecomp.rename_gen import closure_of
+    # a chain longer than the cap must be refused rather than partially linked
+    sigs = {i: {"calls": [i + 1]} for i in range(1, 20)}
+    sigs[20] = {"calls": []}
+    order, capped = closure_of(1, sigs, cap=5)
+    assert len(order) == 5
+    assert capped is True

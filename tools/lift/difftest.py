@@ -1103,12 +1103,17 @@ def main():
     ap.add_argument('--address', action='append', default=[],
                     help='a VA to compare (repeatable); default is the project\'s replaced functions')
     ap.add_argument('--cases', type=int, default=8, help='entry states to drive (default 8)')
+    ap.add_argument('--closure', default='',
+                    help='comma-separated VAs of the call closure (the entry plus every '
+                         'callee, recursively): their named memory is unioned into the '
+                         'comparison and their frames summed, because a call-bearing '
+                         'module is otherwise certified over a state it cannot see')
     ap.add_argument('--frame-size', type=int, default=0,
                     help='bytes of guest stack frame below the entry esp to compare; '
                          'without it a frame function would certify on eax alone')
     ap.add_argument('--json', help='write the per-address report here')
-    ap.add_argument('--source', help='certify a GENERATED module file instead of the project\'s '
-                                     'own body (used with --project for the runtime headers)')
+    ap.add_argument('--source', help='certify GENERATED module file(s) instead of the project\'s '
+                                     'own body (comma-separated for a call closure)')
     ap.add_argument('--symbol', help='the function symbol in --source (default: sub_XXXXXXXX)')
     ap.add_argument('--flags', action='store_true',
                     help='also compare the arithmetic flags. Only meaningful for a LIFTED body: '
@@ -1135,9 +1140,13 @@ def main():
         if not addrs:
             raise SystemExit('no addresses: pass --address 0x... (no high-level module to read them from)')
         print(f'per-function oracle: {args.project} against {args.pe}')
+        closure = [int(x, 16) for x in args.closure.split(',') if x.strip()] if args.closure else None
+        if args.source:
+            args.source = [p.strip() for p in args.source.split(',') if p.strip()]
         rows = oracle(args.project, args.pe, addrs, args.cases,
                       source=args.source, symbol=args.symbol,
-                      compare_flags=args.flags, frame_size=args.frame_size)
+                      compare_flags=args.flags, frame_size=args.frame_size,
+                      closure=closure)
         if args.json:
             Path(args.json).write_text(json.dumps(
                 {"tool": "tools/lift/difftest.py --project",
@@ -1475,9 +1484,11 @@ def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, sou
         pass
     sources = [str(harness)]
     if source_file:
-        # A generated module is self-contained C: link it and the runtime, not
-        # the project's own units, so what is certified is the generated file.
-        sources.append(str(Path(source_file)))
+        # A generated module is self-contained C (or several files, for a call
+        # closure): link them and the runtime, not the project's own units, so what
+        # is certified is exactly the generated code.
+        for f in (source_file if isinstance(source_file, (list, tuple)) else [source_file]):
+            sources.append(str(Path(f)))
     else:
         sources += [str(p) for p in sorted(gen.glob("recomp_*.c"))]
     hl = project_dir / "src" / "highlevel"
@@ -1673,8 +1684,35 @@ class OracleFault(Exception):
     """The original's bytes could not be run: report it, do not guess."""
 
 
+def closure_named_and_frames(pe_path, entry, closure, signatures=None):
+    """The named-memory union and the frame total over a call closure.
+
+    A certification of a CALLING function is only honest if the calls are inside the
+    compared state: the callee's named addresses have to be in the memory set, and
+    each callee's guest frame has to be inside the compared frame region. Linking the
+    closure without unioning would let the verdict claim coverage it does not have,
+    which is the defect this project has retracted five times.
+    """
+    _lo, _size = oracle_window(pe_path)
+    named = set()
+    frame_total = 0
+    for va in closure:
+        try:
+            blob, _ = pe_bytes_at(pe_path, va, 4096)
+        except Exception:
+            continue
+        named |= set(named_addrs_from_code(blob, va, _lo, _lo + _size))
+        if signatures and va in signatures:
+            frame_total += signatures[va].get("frame_size") or 0
+    if not signatures:
+        # without the provider's contracts, the entry's own frame is all we know
+        frame_total = 0
+    return sorted(named), frame_total
+
+
 def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
-           source=None, symbol=None, compare_flags=False, frame_size=0):
+           source=None, symbol=None, compare_flags=False, frame_size=0,
+           closure=None, signatures=None):
     """Per address: the ORIGINAL's bytes against the project's own body.
 
     One entry per address, each carrying the input set it was driven over, the
@@ -1730,7 +1768,13 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
         # address in a big PE, and a certification with 0 named addresses is
         # weaker than it looks
         _lo, _size = oracle_window(pe_path)
-        named = named_addrs_from_code(blob, address, _lo, _lo + _size)
+        if closure and len(closure) > 1:
+            # the call closure: union the named memory and sum the frames
+            named, closure_frame = closure_named_and_frames(pe_path, address, closure,
+                                                            signatures)
+            frame_size = frame_size or closure_frame
+        else:
+            named = named_addrs_from_code(blob, address, _lo, _lo + _size)
         # One documented seed function, used by both sides: a different value
         # per case, and the same value on each side so a difference means the
         # function, not the setup. The values are SMALL on purpose: a real
@@ -1876,6 +1920,11 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
                 "original-faulted": "the reference machine could not drive the function from "
                                     "the seeded entry state",
             }.get(verdict, verdict),
+            "closure": ({"functions": len(closure), "addresses": [f"0x{v:08X}" for v in closure],
+                         "named_words": len(named),
+                         "frames_summed": frame_size}
+                        if closure and len(closure) > 1 else
+                        {"functions": 1, "named_words": len(named), "frames_summed": 0}),
             "frame": ({"extent": frame_size,
                        "base": f"0x{(_lo + _size) - frame_size:08X}",
                        "compared": True,
