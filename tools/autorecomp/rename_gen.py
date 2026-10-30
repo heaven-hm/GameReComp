@@ -39,33 +39,77 @@ def data_base(pe_path):
     return None
 
 
+def _balanced(text, start):
+    """The balanced parenthesised expression beginning at `start` (which must be
+    '('), and the index just past its ')'. Returns (expr, end)."""
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == '(':
+            depth += 1
+        elif text[i] == ')':
+            depth -= 1
+            if depth == 0:
+                return text[start + 1:i], i + 1
+    return None, start
+
+
 def typed_expr(expr, base, width_map):
-    """Turn a rev.ng memory expression into a guest accessor call.
+    """Turn EVERY recovered memory access into a guest accessor call.
 
-    `*(generic16_t *)(generic32_t)((generic32_t)&segment_2 + 7158ULL)` becomes
-    `MEM16(0x00413BF6u)`, and the same for each width. Anything not matching this
-    exact shape is left alone and reported, rather than guessed at."""
-    def repl(m):
-        width = int(m.group(1))
-        off = int(m.group(2), 0)
-        va = base + off
-        fn = {8: "MEM8", 16: "MEM16", 32: "MEM32", 64: "MEM64"}.get(width)
-        if fn is None:
-            return m.group(0)
-        return f"{fn}(0x{va:08X}u)"
-    # the provider writes this several ways - with and without a space after the
-    # cast, with the segment add wrapped in more casts - so the pattern is loose
-    # about everything except the width and the offset
-    out = re.sub(r"\*\(generic(\d+)_t \*\)[^;]*?&segment_\d+\s*\+\s*(\d+|0x[0-9A-Fa-f]+)ULL?\s*\)",
-                 repl, expr)
-    return out
+    The provider's model is that a pointer is a guest address, so
+    `*(generic32_t *)(EXPR)` means "the dword at guest address EXPR" whatever
+    EXPR is - a constant, a segment offset, or an address computed from another
+    load. `&segment_2 + off` is a constant address and becomes the VA; everything
+    else is passed through unchanged, so `MEM32(MEM32(0x49CDA8u) * 20u + 0x49CDB8u)`
+    comes out of a doubly-indirect access.
+
+    This replaces the first version, which only handled the constant form and so
+    silently left pointer arithmetic as host pointer dereferences - correct for
+    the two Ikachan functions and wrong for almost every real one."""
+    # 1. the segment-relative constants: they are the base of everything else,
+    # and an access rewritten in step 2 can expose another one, so alternate
+    seg = re.compile(r"\(\s*generic32_t\s*\)\s*&segment_\d+\s*\+\s*(\d+|0x[0-9A-Fa-f]+)U?LL?")
+    for _ in range(4):
+        expr = seg.sub(lambda m: f"0x{base + int(m.group(1), 0):08X}u", expr)
+    # 2. every `*(genericW_t *)(EXPR)` -> MEMw(EXPR), innermost first
+    pat = re.compile(r"\*\(generic(\d+)_t \*\)")
+    for _ in range(8):                      # nested accesses need several passes
+        changed = False
+        for m in list(pat.finditer(expr))[::-1]:
+            i = m.end()
+            # skip the provider's cast decorations before the expression
+            while True:
+                j = i
+                while j < len(expr) and expr[j] in " \t":
+                    j += 1
+                cm = re.match(r"\(\s*(?:generic\d+_t|uint\d+_t|int\d+_t)\s*\)", expr[j:])
+                if cm:
+                    i = j + cm.end()
+                elif j < len(expr) and expr[j] == '(':
+                    inner, end = _balanced(expr, j)
+                    if inner is None:
+                        break
+                    fn = {8: "MEM8", 16: "MEM16", 32: "MEM32", 64: "MEM64"}.get(int(m.group(1)))
+                    if fn is None:
+                        break
+                    expr = expr[:m.start()] + f"{fn}({inner})" + expr[end:]
+                    changed = True
+                    break
+                else:
+                    break
+        expr = seg.sub(lambda m: f"0x{base + int(m.group(1), 0):08X}u", expr)
+        if not changed:
+            break
+    return expr
 
 
-def transform(source, fn_name, base):
+def transform(source, fn_name, base, fn_addr=0):
     """The provider's C for one function, typed and named."""
     text = source
-    # the function's symbol
-    text = re.sub(r'\b(function_0x[0-9A-Fa-f]+_Code_x86|function_[0-9A-Fa-f]+)\b', fn_name, text)
+    # ONLY this function's symbol. The first version renamed every
+    # function_0x... occurrence, so calls to other lifted functions became calls
+    # to the function itself.
+    text = re.sub(rf"\bfunction_0x{fn_addr:06x}_Code_x86\b", fn_name, text)
     # memory accesses FIRST: the accessor pattern is written in terms of the
     # provider's genericN_t casts, so replacing the types before it destroys the
     # pattern and leaves bare pointer arithmetic behind
@@ -73,8 +117,9 @@ def transform(source, fn_name, base):
     # the types, after the accesses are gone
     for g, c in GENERIC.items():
         text = re.sub(r'\b' + g + r'\b', c, text)
-    # rev.ng's ABI annotation is not C
+    # rev.ng's declaration macros are not C
     text = re.sub(r'^_ABI\([^)]*\)\s*\n', '', text, flags=re.M)
+    text = re.sub(r"\b_NORETURN\b", "", text)
     # remaining cast noise the accessor call no longer needs
     text = re.sub(r"\(uint32_t\)\s*\(\(uint32_t\)", "(", text)
     # decimal constants the provider printed as ULL become the hex the bytes show
@@ -83,6 +128,30 @@ def transform(source, fn_name, base):
         return f"0x{v:X}u"
     text = re.sub(r"\b(\d{4,})U\b", hexify, text)
     return text
+
+
+def ungeneratable_reason(body):
+    """Why this provider body is outside what the transform can carry, or None.
+
+    The transform rewrites scalar locals and constant guest-memory accesses. A
+    recovered POINTER (the provider models a guest address as a host pointer) and
+    array indexing through one are a different representation: rewriting
+    `var_1[5]` as C pointer arithmetic would be silently wrong, and a host pointer
+    must never reach guest memory. So those bodies are refused rather than
+    emitted, and the report says which and why."""
+    import re as _re
+    if _re.search(r"\b(struct|union)_\d+", body):
+        return "uses a provider struct/union type (types-and-globals.h was not saved)"
+    # a pointer VARIABLE (`generic32_t *var_1`), not a cast: `*(generic32_t *)`
+    # is how the provider spells a memory access and is exactly what is rewritten
+    if _re.search(r"generic\d+_t\s*\*\s*(var_\d+|argument_\d+)", body) or \
+       _re.search(r"generic\d+_t\s*\*\s*\w+\s*=", body):
+        return "uses a recovered POINTER: a guest address held in a local, which this transform does not rewrite"
+    if _re.search(r"\bvar_\d+\s*\[", body):
+        return "indexes a recovered pointer (array access through a guest address)"
+    if _re.search(r"\b(DWORD|WORD|BYTE|BOOL|LPVOID|HMODULE|HANDLE)\b", body):
+        return "uses a provider-only scalar type from the unsaved headers"
+    return None
 
 
 def generate(pe_path, address, revng_dir, names, evidence):
@@ -97,8 +166,11 @@ def generate(pe_path, address, revng_dir, names, evidence):
     if base is None:
         return None, "the PE has no .data section"
     body = rev.read_text(errors="replace")
+    why = ungeneratable_reason(body)
+    if why:
+        return None, why
     # the provider's comment block stays as provenance, then our header
-    typed = transform(body, fn["name"], base)
+    typed = transform(body, fn["name"], base, address)
     local_names = {ident: g["name"] for ident, g in names["globals"].items() if g["name"]}
     typed, decls, refusals = fuse_memory(typed, local_names)
     header = [
@@ -118,7 +190,24 @@ def generate(pe_path, address, revng_dir, names, evidence):
     if refusals:
         header.insert(-1, f" * fusion: {len(refusals)} access(es) left fused-out: " + refusals[0])
     header.append(" */")
-    return "\n".join(header) + "\n\n" + typed, None
+    # The guest ABI entry point. The typed function is plain C: its result is a
+    # host value, and the guest reads eax. The adapter is what marshals one into
+    # the other, and it is the symbol the dispatch table calls - which is why it
+    # is what the oracle certifies, exactly as it does for the shipped module.
+    sig = next((r for r in evidence["functions"][f'0x{address:08X}']["records"]
+                if r["kind"] == "signature"), {})
+    argc = sig.get("argc") or 0
+    convention = sig.get("convention") or "cdecl"
+    returns = "uint32_t" if "return" in typed.split("{", 1)[-1] else "void"
+    call = f"{fn['name']}()"
+    body = (f"    uint32_t result = {call};\n    RETC(result);" if convention == "cdecl"
+            else f"    uint32_t result = {call};\n    RET(result, {argc});")
+    if returns == "void":
+        body = (f"    {call};\n    RETC(0);" if convention == "cdecl"
+                else f"    {call};\n    RET(0, {argc});")
+    adapter = (f"\n/* the guest ABI entry point the dispatch table calls (convention: {convention}, "
+               f"{argc} argument(s)) */\nvoid sub_{address:08X}(void) {{\n{body}\n}}\n")
+    return "\n".join(header) + "\n\n" + typed + adapter, None
 
 
 def main(argv=None):
