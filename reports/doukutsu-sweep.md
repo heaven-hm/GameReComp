@@ -432,37 +432,49 @@ in the current queue.
 
 ## A census of all 955 provider bodies, by production refusal
 
-Every earlier number in this report measured a *class* — how many closures a reason
-blocks, how many bodies contain an intrinsic. None of them said where the 955 bodies
-actually go. This does, using the production path (`rename_ast.rewrite`, which is what
-the generator calls) rather than `parse()` alone. Written to
+**Correction first, because the first two versions of this table were wrong.**
+
+The first census called `rename_ast.rewrite()` WITHOUT the signatures the generator
+always supplies, so 410 bodies were reported as "no declared callee contract" -- an
+artefact of the measurement, not a property of the provider. The second measured
+`parse()` alone, which production never reaches for most bodies because the intrinsic
+and `undef` refusals come first.
+
+This version passes exactly what the generator passes: layouts, parsed signatures,
+callee names, frames, and the PE's own data span. Written to
 `reports/body-census.json`.
 
-    410  transform: no declared callee contract was supplied, so the call cannot cross
-    233  transform: not a guest VA, so it cannot be a memory operand
-     78  transform: the provider named an address it could not decompile
+    413  other transform refusals   (broken down below)
+    269  GENERATES
+     78  provider:  named an address it could not decompile
      77  provider:  unimplemented intrinsic
-     35  GENERATES
+     49  transform: not a guest VA
      31  parse:     other
      22  provider:  undef()
      16  parse:     Invalid expression
 
-**The largest single reason is the call contract, not a parse problem** — 410 bodies
-are refused because the caller's callee has no contract. That is the closure work's
-input, and it is the thing to fix before any further parse refinement.
+**269 of 955 bodies generate**, not 35. The earlier figure understated the pipeline
+by eight times, and the error was the measurement's, not the code's.
 
-### A correction to the commit that preceded this
+### The shape of what remains
 
-`bit_cast` was rewritten to a cast so bodies containing it would parse, and the
-`parse()`-level count fell 72 -> 39. The commit presented that as the effect. It was
-not the production effect: **`bit_cast` is in the intrinsic refusal list and is
-checked BEFORE the parse**, so those bodies were already being refused correctly as
-"unimplemented intrinsic" and never reached the parser. The 72 -> 39 figure measured a
-path production does not take for them, and the closure-blocker table duly did not
-move.
+    174  a dereference with no recoverable width
+     75  a StructRef is neither a VA nor a scalar      (provider - do not chase)
+     33  the C and the header disagree
+     22  union_NNNN has no declared size
+     22  a ArrayRef is neither a VA nor a scalar
+     17  calls 0x0040F350, whose contract is not in the provider's declarations
+     25  calls that return a struct BY VALUE (the hidden-pointer return)
 
-The rewrite is harmless and still helps `parse_signatures`, which parses donated
-bodies to read their frames. But the number reported should have been this census's,
-and the lesson is the one this project keeps re-learning: **measure the path the
-product takes, not the function under the test.**
+The largest addressable class is the unrecoverable dereference width at **174 bodies**
+-- far larger than the closure-weighted table suggested, because most of those bodies
+are leaves whose closures never generate for other reasons.
 
+### Why 269 bodies generate but only 24 closures do
+
+**501 of the 955 bodies carry calls. Of those, 98 generate individually.** The closure
+count is 24. The gap -- 98 callers, 24 usable closures -- is the min-over-closure
+effect stated as a number: **74 call-bearing bodies generate cleanly and are blocked
+only by a member of their closure.** Each refusal class that sits on a *callee* is
+worth far more than its raw count, which is what the closure-weighted ordering
+measures and a flat body census cannot.
