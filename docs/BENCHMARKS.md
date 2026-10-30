@@ -81,6 +81,37 @@ with no independent original-Windows oracle supplied it is reported as `partial`
 verified. The remaining gap is runtime coverage (the libraries the loader names), not
 translation: every input here already reaches a built binary.
 
+## The corpus database is stale, and this is the evidence
+
+`reports/games/results.json` and the aggregate above were recorded at
+**2026-10-30T06:14**, before the day's runtime work. Three rows re-measured since
+disagree with it:
+
+| game | in results.json | re-measured |
+| --- | --- | --- |
+| Cave Story (`Doukutsu.exe`) | 85, `launch-failed`, boot-failed (exit 2) | **93, `partial`** — runs a frame loop |
+| Ikachan (`dxIka.exe`) | — | **93, `partial`** |
+| Cave Story (`OrgView.exe`) | — | **93, `partial`** |
+
+So the database understates the pipeline, while the README describes the current
+state correctly. **An understated number is still a wrong number**, and the two
+disagreeing is worse than either alone: a reader who checks the database
+concludes nothing runs; the README says several do.
+
+The rows are not being edited by hand. `generated_at` on each row is what proves
+the staleness, and the honest repair is a re-sweep that rewrites every row from its
+own project's `reports/report.json`, which is what
+[`reports/run-sweep.sh`](../reports/run-sweep.sh) does:
+
+```sh
+SMALL_GAMES_PATH=/path/to/games sh reports/run-sweep.sh 20
+python3 -m tools.gamesdb --table table.md --matrix --no-readme
+```
+
+Until that runs, treat every number in the aggregate above as a **floor from an
+earlier build**, not as the current outcome, and prefer the README's measured
+sections, which were re-run today and carry their own commands.
+
 ## Method
 
 - Command: `./RevEng <binary> --project-dir projects/<game> --timeout 20`
