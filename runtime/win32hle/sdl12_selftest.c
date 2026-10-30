@@ -1,5 +1,9 @@
 /* SDL 1.2-on-SDL2 regression: guest surfaces/events work headless and SDL's
- * cdecl imports leave their arguments for the lifted caller to discard. */
+ * cdecl imports leave their arguments for the lifted caller to discard.
+ *
+ * The offsets asserted here are SDL 1.2's own (SDL-1.2.15 headers): a lifted
+ * game reads the surface and event fields itself, so a shim that wrote them
+ * anywhere else would hand the game garbage. */
 #define RECOMP_GENERATED_CODE
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -9,6 +13,11 @@
 #include "win32hle.h"
 
 #define ENTRY_VA 0x00401000u
+/* SDL_Surface (SDL-1.2.15): flags 0, format 4, w 8, h 12, pitch 16, pixels 20,
+ * clip_rect 32, unused1 48, refcount 64.  SDL_KeyboardEvent: type 0, which 1,
+ * state 2, keysym.scancode 4, keysym.sym 8, keysym.mod 12, unicode 16. */
+enum { SF_FORMAT = 4, SF_W = 8, SF_H = 12, SF_PITCH = 16, SF_PIXELS = 20, SF_CLIP = 32, SF_REFCOUNT = 64 };
+enum { EV_TYPE = 0, EV_KEY_STATE = 2, EV_KEY_SCANCODE = 4, EV_KEY_SYM = 8, EV_KEY_MOD = 12, EV_KEY_UNICODE = 16 };
 static int fails;
 static uint32_t va_delay, cdecl_ok;
 static void ok(const char *w, int c) { if (!c) { printf("FAIL %s\n", w); fails++; } }
@@ -36,22 +45,26 @@ int main(void) {
     ok("SDL cdecl leaves caller argument", cdecl_ok);
     ok("SDL_Init", call("SDL_Init", 1, (uint32_t[]){ SDL_INIT_VIDEO }) == 0);
     uint32_t video = call("SDL_SetVideoMode", 4, (uint32_t[]){ 8, 8, 32, 0 });
-    ok("SDL_SetVideoMode", video != 0 && MEM32(video + 16) != 0);
+    ok("SDL_SetVideoMode", video != 0 && MEM32(video + SF_PIXELS) != 0);
     ok("SDL_GetVideoSurface", call("SDL_GetVideoSurface", 0, NULL) == video);
-    ok("SDL pixel format masks", MEM32(MEM32(video + 4) + 16) == 0x00FF0000u && MEM32(MEM32(video + 4) + 28) == 0xFF000000u);
+    ok("SDL surface w/h/pitch", MEM32(video + SF_W) == 8 && MEM32(video + SF_H) == 8 && u16(video + SF_PITCH) == 32);
+    ok("SDL surface clip_rect is the whole surface", u16(video + SF_CLIP) == 0 && u16(video + SF_CLIP + 4) == 8);
+    ok("SDL surface refcount", MEM32(video + SF_REFCOUNT) == 1);
+    ok("SDL pixel format masks", MEM32(MEM32(video + SF_FORMAT) + 16) == 0x00FF0000u && MEM32(MEM32(video + SF_FORMAT) + 28) == 0xFF000000u);
     ok("SDL_FillRect", call("SDL_FillRect", 3, (uint32_t[]){ video, 0, 0xFF102030u }) == 0);
-    ok("SDL_FillRect wrote pixels", MEM32(MEM32(video + 16)) == 0xFF102030u);
+    ok("SDL_FillRect wrote pixels", MEM32(MEM32(video + SF_PIXELS)) == 0xFF102030u);
     uint32_t src = call("SDL_CreateRGBSurface", 8, (uint32_t[]){ 0, 2, 2, 32, 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0xFF000000u });
     ok("SDL_CreateRGBSurface", src != 0);
     call("SDL_FillRect", 3, (uint32_t[]){ src, 0, 0xFFA0B0C0u });
     uint32_t *dstrect = hle_alloc(8); dstrect[0] = (2u << 16) | 3u; dstrect[1] = (2u << 16) | 2u;
     ok("SDL_BlitSurface", call("SDL_BlitSurface", 4, (uint32_t[]){ src, 0, video, hle_va(dstrect) }) == 0);
-    ok("SDL_BlitSurface copied", MEM32(MEM32(video + 16) + 3 * 4 + 2 * 32) == 0xFFA0B0C0u);
+    ok("SDL_BlitSurface copied", MEM32(MEM32(video + SF_PIXELS) + 3 * 4 + 2 * 32) == 0xFFA0B0C0u);
     SDL_Event e; SDL_zero(e); e.type = SDL_KEYDOWN; e.key.state = SDL_PRESSED; e.key.keysym.sym = SDLK_a; SDL_PushEvent(&e);
     uint8_t *event = hle_alloc(32);
     int saw_key = 0;
     for (int i = 0; i < 16 && call("SDL_PollEvent", 1, (uint32_t[]){ hle_va(event) }); i++)
-        if (MEM32(hle_va(event)) == 2 && u16(hle_va(event) + 12) == SDLK_a) saw_key = 1;
+        if (MEM8(hle_va(event) + EV_TYPE) == 2 && u16(hle_va(event) + EV_KEY_SYM) == SDLK_a)
+            saw_key = 1;
     ok("SDL_PollEvent", saw_key);
     call("SDL_FreeSurface", 1, &src);
     call("SDL_Quit", 0, NULL);
