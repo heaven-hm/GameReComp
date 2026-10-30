@@ -276,7 +276,10 @@ def evidence_for_function(pe_path, va, imports, revng_dir=None, end=None):
                                      "evidence": f"{mnem} {insn.op_str}"})
             elif op.type == X86_OP_IMM:
                 v = op.imm & 0xFFFFFFFF
-                if v > 0xFFFF and not (IMAGE_LO <= v < IMAGE_HI):
+                # every immediate is evidence, small ones included: the LCG's
+                # shift of 16 and mask of 0x7FFF were invisible while the rule
+                # kept only values above 0xFFFF, and they are half the function
+                if not (IMAGE_LO <= v < IMAGE_HI):
                     recs.append({"kind": "constant", "identity": f"constant:0x{v:08X}",
                                  "at": f"0x{at:08X}", "value": f"0x{v:08X}",
                                  "evidence": f"{mnem} {insn.op_str}"})

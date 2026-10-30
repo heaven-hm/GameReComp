@@ -5,6 +5,8 @@
 /* evidence for every identifier:
  *   imul eax, eax, 0x343fd
  *   add eax, 0x269ec3
+ *   sar eax, 0x10
+ *   and eax, 0x7fff
  * names:
  *   state_00413350: global:0x00413350
  */
