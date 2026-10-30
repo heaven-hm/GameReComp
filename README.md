@@ -96,8 +96,8 @@ git clone https://github.com/heaven-hm/GameReComp.git
 cd GameReComp
 python3 -m pip install capstone
 
-./RevEng /path/to/game.exe
-./RevEng /path/to/game.exe --interactive
+python3 -m tools.autorecomp.cli /path/to/game.exe
+python3 -m tools.autorecomp.cli /path/to/game.exe --interactive
 ```
 
 Generated files: `projects/<game>/src/` (C), `build/` (binary), `reports/` (evidence). Supply your own legally obtained game executable and assets. [Installation & troubleshooting →](docs/GETTING_STARTED.md)
@@ -106,9 +106,9 @@ Generated files: `projects/<game>/src/` (C), `build/` (binary), `reports/` (evid
 <summary><b>More commands</b></summary>
 
 ```bash
-./RevEng /path/to/game.exe --assets-dir /path/to/game/assets
-./RevEng /path/to/game.exe --no-build --no-run
-./RevEng /path/to/game.exe --timeout 60 --json
+python3 -m tools.autorecomp.cli /path/to/game.exe --assets-dir /path/to/game/assets
+python3 -m tools.autorecomp.cli /path/to/game.exe --no-build --no-run
+python3 -m tools.autorecomp.cli /path/to/game.exe --timeout 60 --json
 sh verify.sh --fast
 ```
 
