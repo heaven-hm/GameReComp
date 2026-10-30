@@ -141,16 +141,23 @@ def _decode(raw):
     return raw.decode("utf-8", "replace") if isinstance(raw, bytes) else (raw or "")
 
 
-def run_permissive(binary, pe_path, cwd=None, timeout=15.0, env_extra=None):
+def run_permissive(binary, pe_path, cwd=None, timeout=15.0, env_extra=None,
+                   headless=True):
     """Launch one rebuilt binary permissively; capture its real output.
+
+    The launch mirrors the pipeline's own run stage: the original PE is passed
+    as an absolute path, the working directory is the game's asset directory,
+    and the SDL drivers are the dummy ones so a diagnostic sweep cannot open a
+    window on the user's desktop.
 
     Returns a dict of measured facts. Never raises for a bad launch: a failure
     to start is itself the result and is recorded verbatim.
     """
+    pe_abs = str(Path(pe_path).resolve())
     result = {
         "binary": str(binary),
-        "pe": str(pe_path),
-        "argv": [str(binary), str(Path(pe_path).name)],
+        "pe": pe_abs,
+        "argv": [str(binary), pe_abs],
         "cwd": str(cwd) if cwd else None,
         "timeout_seconds": timeout,
         "exit_code": None,
@@ -162,19 +169,23 @@ def run_permissive(binary, pe_path, cwd=None, timeout=15.0, env_extra=None):
     }
     env = dict(os.environ)
     env["RECOMP_PERMISSIVE"] = "1"
+    if headless:
+        env["SDL_VIDEODRIVER"] = "dummy"
+        env["SDL_AUDIODRIVER"] = "dummy"
     if env_extra:
         env.update(env_extra)
 
     # The game's own directory is the working directory: it opens its data
     # files by relative path, exactly as the pipeline's run stage does.
-    run_cwd = str(cwd or Path(pe_path).parent)
+    run_cwd = str(cwd or Path(pe_abs).parent)
     result["cwd"] = run_cwd
     started = time.time()
     try:
         proc = subprocess.Popen(
-            [str(binary), Path(pe_path).name],
+            [str(binary), pe_abs],
             cwd=run_cwd, env=env, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, start_new_session=True)
+            stderr=subprocess.PIPE, stdin=subprocess.DEVNULL,
+            start_new_session=True)
     except OSError as exc:
         result["launch_error"] = f"{type(exc).__name__}: {exc}"
         result["duration_seconds"] = round(time.time() - started, 2)
@@ -372,11 +383,13 @@ def build_report(rows, generated_at, command, timeout):
         "generated_at": generated_at,
         "command": command,
         "timeout_seconds": timeout,
-        "method": ("each rebuilt binary is launched with RECOMP_PERMISSIVE=1 "
-                   "from the game's own directory; the runtime binds "
-                   "unresolved imports to a self-naming stub that aborts on "
-                   "first call, so first_import is what the running guest "
-                   "actually reached"),
+        "method": ("each rebuilt binary is launched as "
+                   "`<binary> <absolute PE path>` from the game's own "
+                   "directory, with RECOMP_PERMISSIVE=1 and the dummy SDL "
+                   "video/audio drivers (the pipeline's run-stage settings); "
+                   "the runtime binds unresolved imports to a self-naming "
+                   "stub that aborts on first call, so first_import is what "
+                   "the running guest actually reached"),
         "projects_measured": len(rows),
         "projects_reaching_import": sum(1 for r in rows if r.get("first_import")),
         "outcomes": {o: sum(1 for r in rows if r["outcome"] == o)
