@@ -1,0 +1,49 @@
+{
+ "schema": 1,
+ "provider": "tools/autorecomp/rename_gen.py (evidence only)",
+ "note": "Generated BESIDE the project and never dispatched to: it exists so the pipeline can be checked, not so a game can run with it.",
+ "functions": [
+  {
+   "address": "0x0040BA58",
+   "symbol": "msvc_rand_step",
+   "category": "HIGH_LEVEL_UNVERIFIED",
+   "evidence": [
+    "imul eax, eax, 0x343fd",
+    "add eax, 0x269ec3"
+   ],
+   "file": "0x0040BA58.c",
+   "not_yet": "the per-function oracle has not been run on this generated function; until it agrees it stays HIGH_LEVEL_UNVERIFIED"
+  },
+  {
+   "address": "0x00401000",
+   "symbol": "store_block_00413be0",
+   "category": "HIGH_LEVEL_UNVERIFIED",
+   "evidence": [
+    "mov byte ptr [0x413be0], 1",
+    "mov word ptr [0x413be2], 0xf",
+    "mov word ptr [0x413be4], ax",
+    "mov byte ptr [0x413be6], al",
+    "mov byte ptr [0x413be7], al",
+    "mov word ptr [0x413be8], 0x3e8",
+    "mov word ptr [0x413bea], 0x3e9",
+    "mov word ptr [0x413bec], ax",
+    "mov byte ptr [0x413bee], al",
+    "mov byte ptr [0x413bef], al",
+    "mov word ptr [0x413bf0], ax",
+    "mov byte ptr [0x413bf2], al",
+    "mov dword ptr [0x413bf8], 0x20c000",
+    "mov dword ptr [0x413bfc], 0x168000",
+    "mov dword ptr [0x413c00], eax",
+    "mov dword ptr [0x413c04], eax",
+    "mov dword ptr [0x413c08], 0x218000",
+    "mov dword ptr [0x413c0c], 0x16c000",
+    "mov dword ptr [0x413c10], 0x4000",
+    "mov dword ptr [0x413c14], 0x800",
+    "mov dword ptr [0x413c18], 0xc000",
+    "mov dword ptr [0x413c1c], 0x5800"
+   ],
+   "file": "0x00401000.c",
+   "not_yet": "the per-function oracle has not been run on this generated function; until it agrees it stays HIGH_LEVEL_UNVERIFIED"
+  }
+ ]
+}
