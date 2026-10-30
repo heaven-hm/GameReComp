@@ -1669,6 +1669,47 @@ static void u_GetWindowRect(void) {
     put_rect(A32(1), ox, oy, ox + x->w, oy + x->h);
     RET(1, 2);
 }
+/* GetWindowPlacement(hwnd, &WINDOWPLACEMENT): length +0, flags +4, showCmd +8,
+ * ptMinPosition +12..20, ptMaxPosition +20..28, rcNormalPosition +28..44. */
+static void u_GetWindowPlacement(void) {
+    win_t *x = W(A32(0));
+    uint32_t wp = A32(1);
+    if (!x || !wp) RET(0, 2);
+    int ox, oy;
+    origin(x, &ox, &oy);
+    MEM32(wp) = 44;                                      /* length, as CALLER-provided or ours */
+    MEM32(wp + 4) = 0;                                   /* flags: neither minimized nor maximized */
+    MEM32(wp + 8) = 1;                                   /* SW_SHOWNORMAL */
+    MEM32(wp + 12) = (uint32_t)ox, MEM32(wp + 16) = (uint32_t)oy;
+    MEM32(wp + 20) = (uint32_t)ox, MEM32(wp + 24) = (uint32_t)oy;
+    put_rect(wp + 28, ox, oy, ox + x->w, oy + x->h);
+    RET(1, 2);
+}
+/* SystemParametersInfoA(action, param, data, winini): the host's answers for
+ * the queries a game asks; every SPI_SET_* is accepted (the host owns these
+ * settings), and an unknown query fails as Windows fails it. */
+static void u_SystemParametersInfoA(void) {
+    uint32_t act = A32(0), data = A32(2);
+    switch (act) {
+    case 0x0030:                                         /* SPI_GETWORKAREA */
+        if (data) put_rect(data, 0, 0, g_screen_w, g_screen_h);
+        RET(1, 4);
+    case 0x0003:                                         /* SPI_GETMOUSE: threshold1, threshold2, acceleration */
+        if (data) MEM32(data) = 6, MEM32(data + 4) = 10, MEM32(data + 8) = 1;
+        RET(1, 4);
+    case 0x0010: case 0x000E: case 0x0072:               /* SPI_GETSCREENSAVEACTIVE/TIMEOUT, RUNNING */
+        if (data) MEM32(data) = 0;
+        RET(1, 4);
+    case 0x0073:                                         /* SPI_GETDESKWALLPAPER: none */
+        if (data && A32(1)) MEM8(data) = 0;
+        RET(1, 4);
+    default:
+        if (act >= 0x0004u && act <= 0x0099u && (act & 0x1u) && act != 0x0030)   /* an SPI_SET_* (odd action) */
+            RET(1, 4);
+        if (win32hle_trace) fprintf(stderr, "[user32] SystemParametersInfoA(0x%X): not answered\n", act);
+        RET(0, 4);
+    }
+}
 static void u_ClientToScreen(void) {
     win_t *x = W(A32(0));
     int ox = 0, oy = 0;
@@ -2184,6 +2225,50 @@ static void u_CheckMenuItem(void)   { mitem *it = menu_find(MENU(A32(0)), A32(1)
 static void u_EnableMenuItem(void)  { mitem *it = menu_find(MENU(A32(0)), A32(1), A32(2)); uint32_t old = it ? (it->flags & (MF_GRAYED | MF_DISABLED)) : 0xFFFFFFFFu; if (it) { it->flags &= ~(MF_GRAYED | MF_DISABLED); it->flags |= A32(2) & (MF_GRAYED | MF_DISABLED); } RET(old, 3); }
 static void u_GetMenuState(void)    { mitem *it = menu_find(MENU(A32(0)), A32(1), A32(2)); RET(it ? it->flags : 0xFFFFFFFFu, 3); }
 static void u_CheckMenuRadioItem(void) { menu_t *m = MENU(A32(0)); for (uint32_t id = A32(1); m && id <= A32(2); id++) { mitem *it = menu_find(m, id, A32(4)); if (it) { if (id == A32(3)) it->flags |= MF_CHECKED; else it->flags &= ~MF_CHECKED; } } RET(1, 5); }
+/* CheckRadioButton(dlg, first, last, check): the dialog's own buttons: one
+ * checked, the rest of the group cleared (BM_SETCHECK, as CheckDlgButton). */
+static void u_CheckRadioButton(void) {
+    int ok = 1;
+    for (uint32_t id = A32(1); id <= A32(2); id++) {
+        uint32_t c = dlg_item(A32(0), id);
+        if (!c) { ok = 0; continue; }
+        hle_send(c, 0xF1u /* BM_SETCHECK */, id == A32(3) ? 1u : 0u, 0);
+    }
+    RET(ok, 4);
+}
+/* GetMenuItemInfoA(menu, item, byPosition, &MENUITEMINFOA): cbSize +0,
+ * fMask +4; out fType +8, fState +12, wID +16, hSubMenu +20, dwTypeData +36,
+ * cch +40. Only the fields fMask names are written. */
+static void u_GetMenuItemInfoA(void) {
+    menu_t *m = MENU(A32(0));
+    mitem *it = menu_find(m, A32(1), A32(2) & MF_BYPOSITION);
+    uint32_t mi = A32(3);
+    if (!it || !mi) RET(0, 4);
+    uint32_t mask = MEM32(mi + 4);
+    if (mask & 0x1u /* MIIM_STATE */) MEM32(mi + 12) = it->flags & (MF_CHECKED | MF_GRAYED | MF_DISABLED | 0x80u /* MF_HILITE */);
+    if (mask & 0x2u /* MIIM_ID */) MEM32(mi + 16) = it->sub ? 0u : it->id;
+    if (mask & 0x4u /* MIIM_SUBMENU */) MEM32(mi + 20) = it->sub;
+    if (mask & 0x100u /* MIIM_FTYPE */) MEM32(mi + 8) = it->flags & (MF_POPUP | MF_SEPARATOR | 0x1000u /* MF_DEFAULT */ | 0x200u /* MF_RADIOCHECK */);
+    if (mask & 0x30u /* MIIM_TYPE or MIIM_STRING */) {
+        MEM32(mi + 8) = it->flags & (MF_POPUP | MF_SEPARATOR | 0x1000u | 0x200u);
+        uint32_t buf = MEM32(mi + 36), cch = MEM32(mi + 40);
+        if (buf && cch) { size_t n = strlen(it->text); if (n >= cch) n = cch - 1; memcpy(hle_ptr(buf), it->text, n); MEM8(buf + (uint32_t)n) = 0; MEM32(mi + 40) = (uint32_t)n; }
+    }
+    RET(1, 4);
+}
+static void menu_clear_default(menu_t *m) {
+    if (!m) return;
+    for (int i = 0; i < m->n; i++) { m->it[i].flags &= ~0x1000u; if (m->it[i].sub) menu_clear_default(MENU(m->it[i].sub)); }
+}
+static void u_SetMenuDefaultItem(void) {                 /* (menu, item, byPosition) */
+    menu_t *m = MENU(A32(0));
+    if (!m) RET(0, 3);
+    menu_clear_default(m);
+    if (A32(1) == 0xFFFFFFFFu) RET(1, 3);                /* -1: no default item */
+    mitem *it = menu_find(m, A32(1), A32(2) & MF_BYPOSITION);
+    if (it) it->flags |= 0x1000u;                        /* MF_DEFAULT */
+    RET(it ? 1u : 0u, 3);
+}
 static void u_SetMenu(void)         { win_t *x = W(A32(0)); if (x) x->menu = A32(1); RET(1, 2); }
 static void u_DrawMenuBar(void)     { RET(1, 1); }
 static void u_HiliteMenuItem(void)  { RET(1, 4); }
@@ -2329,6 +2414,8 @@ const win32hle_shim win32hle_user32[] = {
     { "DeleteMenu", u_DeleteMenu }, { "RemoveMenu", u_RemoveMenu }, { "GetMenuItemCount", u_GetMenuItemCount },
     { "GetSubMenu", u_GetSubMenu }, { "GetMenuItemID", u_GetMenuItemID }, { "CheckMenuItem", u_CheckMenuItem },
     { "EnableMenuItem", u_EnableMenuItem }, { "GetMenuState", u_GetMenuState }, { "CheckMenuRadioItem", u_CheckMenuRadioItem },
+    { "CheckRadioButton", u_CheckRadioButton },
+    { "GetMenuItemInfoA", u_GetMenuItemInfoA }, { "SetMenuDefaultItem", u_SetMenuDefaultItem },
     { "SetMenu", u_SetMenu }, { "DrawMenuBar", u_DrawMenuBar }, { "HiliteMenuItem", u_HiliteMenuItem },
     { "TrackPopupMenu", u_TrackPopupMenu },
     { "GetCursor", u_GetCursor }, { "OpenClipboard", u_OpenClipboard }, { "CloseClipboard", u_CloseClipboard },
@@ -2348,8 +2435,10 @@ const win32hle_shim win32hle_user32[] = {
     { "EndDeferWindowPos", u_EndDeferWindowPos },
     { "SetWindowLongA", u_SetWindowLongA }, { "GetWindowLongA", u_GetWindowLongA },
     { "GetWindowContextHelpId", u_GetWindowContextHelpId }, { "GetMenu", u_GetMenu },
-    { "GetSystemMetrics", u_GetSystemMetrics }, { "GetClientRect", u_GetClientRect },
-    { "GetWindowRect", u_GetWindowRect }, { "ClientToScreen", u_ClientToScreen },
+    { "GetSystemMetrics", u_GetSystemMetrics }, { "SystemParametersInfoA", u_SystemParametersInfoA },
+    { "GetClientRect", u_GetClientRect },
+    { "GetWindowRect", u_GetWindowRect }, { "GetWindowPlacement", u_GetWindowPlacement },
+    { "ClientToScreen", u_ClientToScreen },
     { "ScreenToClient", u_ScreenToClient }, { "MapWindowPoints", u_MapWindowPoints },
     { "WindowFromPoint", u_WindowFromPoint }, { "ChildWindowFromPoint", u_ChildWindowFromPoint },
     { "InvalidateRect", u_InvalidateRect }, { "ValidateRect", u_ValidateRect }, { "GetUpdateRect", u_GetUpdateRect },

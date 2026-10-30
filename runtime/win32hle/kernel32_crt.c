@@ -32,12 +32,13 @@
 /* A thread's handle object: how many ResumeThreads it still waits for
  * (CREATE_SUSPENDED), and once it has ended, its exit code, so a wait on the
  * handle returns. Never freed: CloseHandle can come while it still runs. */
-struct thread_arg { uint32_t start, param, tid; volatile int suspend, done; uint32_t code; };
+struct thread_arg { uint32_t start, param, tid; volatile int suspend, done, kill; uint32_t code; };
 static __thread struct thread_arg *t_self;
 static void *thread_trampoline(void *p) {
     struct thread_arg *a = (struct thread_arg *)p;
     hle_thread_id_adopt(a->tid);                     /* the id CreateThread gave out (PostThreadMessageA) */
-    while (a->suspend > 0) usleep(1000);
+    while (a->suspend > 0 && !a->kill) usleep(1000);
+    if (a->kill) { a->done = 1; return NULL; }       /* TerminateThread before it started */
     t_self = a;
     uint32_t args[1] = { a->param };
     a->code = hle_call_guest(a->start, 1, args);
@@ -61,6 +62,22 @@ static void k_ResumeThread(void) {
     int prev = a->suspend;
     if (prev > 0) a->suspend = prev - 1;
     RET((uint32_t)prev, 1);
+}
+static void k_SuspendThread(void) {
+    struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
+    if (!a) RET(0xFFFFFFFFu, 1);
+    int prev = a->suspend++;
+    RET((uint32_t)prev, 1);
+}
+/* TerminateThread(h, code): a suspended thread never starts; a running one
+ * cannot be stopped inside a lifted call, so the handle is marked ended (a
+ * wait on it returns) and the thread stops before its next entry. Windows'
+ * own contract forbids relying on the thread's state after this call. */
+static void k_TerminateThread(void) {
+    struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
+    if (!a) RET(0, 2);
+    a->kill = 1, a->code = A32(1), a->done = 1;
+    RET(1, 2);
 }
 /* ExitThread from lifted code: the machine is given up first (the thread
  * will never hand it back), then the thread ends where it stands. */

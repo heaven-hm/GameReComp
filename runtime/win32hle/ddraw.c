@@ -683,6 +683,12 @@ static void x_DirectDrawCreate(void) {                   /* (guid, &out, outer) 
     MEM32(A32(1)) = g_dd;
     RET(DD_OK, 3);
 }
+static void x_DirectDrawCreateEx(void) {                 /* (guid, &out, iid, outer): IID_IDirectDraw7 or IDirectDraw4 */
+    vtables();
+    MEM32(g_dd + 4)++;
+    MEM32(A32(1)) = g_dd;                                /* the object serves every DirectDraw version */
+    RET(DD_OK, 4);
+}
 static void x_DirectDrawEnumerateA(void) {               /* (callback, ctx): the primary display */
     static uint32_t desc, name;                          /* the guest may keep them */
     if (!desc) desc = hle_guest_strdup("Primary Display Driver"), name = hle_guest_strdup("display");
@@ -690,8 +696,18 @@ static void x_DirectDrawEnumerateA(void) {               /* (callback, ctx): the
     if (A32(0)) hle_call_guest(A32(0), 4, a);
     RET(DD_OK, 2);
 }
+/* EnumDisplayDevicesA's shape (device, description, monitor, ctx); the flags
+ * ask for all devices but this host has the one display. */
+static void x_DirectDrawEnumerateExA(void) {
+    static uint32_t desc, name;
+    if (!desc) desc = hle_guest_strdup("Primary Display Driver"), name = hle_guest_strdup("display");
+    uint32_t a[4] = { 0, desc, name, A32(1) };
+    if (A32(0)) hle_call_guest(A32(0), 4, a);
+    RET(DD_OK, 3);
+}
 
 const win32hle_shim win32hle_ddraw[] = {
-    { "DirectDrawCreate", x_DirectDrawCreate }, { "DirectDrawEnumerateA", x_DirectDrawEnumerateA },
+    { "DirectDrawCreate", x_DirectDrawCreate }, { "DirectDrawCreateEx", x_DirectDrawCreateEx },
+    { "DirectDrawEnumerateA", x_DirectDrawEnumerateA }, { "DirectDrawEnumerateExA", x_DirectDrawEnumerateExA },
     { 0, 0 }
 };
