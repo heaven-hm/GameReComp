@@ -263,7 +263,7 @@ class Boundary(Exception):
 class Model:
     """The rewrite, applied to one function."""
 
-    def __init__(self, segment_base, layouts=None):
+    def __init__(self, segment_base, layouts=None, segment_span=0x10000):
         self.layouts = layouts or {}
         self.frame_name = None
         self.frame_type = None
@@ -277,6 +277,12 @@ class Model:
         self.image_lo, self.image_hi = 0x00400000, 0x80000000
         self.callee_names = {}      # callee VA -> generated function name
         self.segment_base = segment_base
+        # How far past segment_base a constant offset may reach. The data
+        # segment is the bound, not a guess: Doukutsu's .data is 0x2F048
+        # bytes, so an offset of 92136 is an ordinary member of it, while
+        # the old fixed 0x10000 refused it as unbounded. A caller that
+        # does not know the extent keeps the conservative bound.
+        self.segment_span = max(int(segment_span or 0), 0x10000)
         self.va_locals = {}        # var name -> width (a pointer that became a VA)
         self.scalar_locals = {}    # var name -> width
         self.notes = []
@@ -395,7 +401,7 @@ class Model:
                         off = int(other_node.value.rstrip("UuLl"), 0)
                     except ValueError:
                         off = None
-                    if off is not None and 0 <= off <= 0x10000:
+                    if off is not None and 0 <= off < self.segment_span:
                         return VA
                     raise Boundary(f"{where}: an unbounded offset on a VA does not preserve "
                                    f"VA-ness - refusing rather than guessing")
@@ -792,7 +798,7 @@ class Model:
 
 
 def rewrite(body, segment_base, own_va=None, layouts=None, frames=False,
-            signatures=None, callee_names=None):
+            signatures=None, callee_names=None, segment_span=0x10000):
     """(C source for the function with guest-VA pointers, notes) or Unsupportable."""
     import re as _pre
     # `undef(T)` is the provider's own marker for a value it could not define -
@@ -858,7 +864,7 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False,
     if not (fn.body.block_items or []):
         raise Unsupportable("the provider body is EMPTY: it named an address it could not "
                             "decompile, so there is nothing to generate")
-    model = Model(segment_base, layouts)
+    model = Model(segment_base, layouts, segment_span=segment_span)
     model.address = own_va or 0
     model.signatures = signatures or {}
     model.hidden_return = hidden_return

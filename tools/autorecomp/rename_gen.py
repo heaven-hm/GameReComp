@@ -33,6 +33,29 @@ GENERIC = {"generic8_t": "uint8_t", "generic16_t": "uint16_t",
            "generic32_t": "uint32_t", "generic64_t": "uint64_t"}
 
 
+def data_span(pe_path, base):
+    """How far past the data base the image actually reaches.
+
+    An offset into the data segment is bounded by the image, not by a constant.
+    Doukutsu's .data runs 0x2F048 bytes, so the old fixed 0x10000 refused ordinary
+    members of it as "unbounded" -- 20 closures at the last measurement.
+    """
+    import struct
+    d = Path(pe_path).read_bytes()
+    pe = struct.unpack_from("<I", d, 0x3C)[0]
+    nsec = struct.unpack_from("<H", d, pe + 6)[0]
+    optsz = struct.unpack_from("<H", d, pe + 20)[0]
+    image_base = struct.unpack_from("<I", d, pe + 24 + 28)[0]
+    sec = pe + 24 + optsz
+    far = base
+    for i in range(nsec):
+        off = sec + 40 * i
+        vsz, va, rsz, _raw = struct.unpack_from("<IIII", d, off + 8)
+        end = image_base + va + max(vsz, rsz)
+        far = max(far, end)
+    return max(far - base, 0x10000)
+
+
 def data_base(pe_path):
     for name, va, vsize, roff, rsize in pe_loaded(pe_path)["secs"]:
         if name == ".data":
@@ -205,10 +228,12 @@ def generate_closure(pe_path, address, revng_dir, names, evidence, signatures,
             callee_names[va] = fn["name"]
         else:
             callee_names[va] = f"function_{va:08X}"
+    _span = data_span(pe_path, data_base(pe_path))
     out = []
     for va in order:
         text, why = generate(pe_path, va, revng_dir, names, evidence, frames=frames,
-                             extra={"signatures": signatures, "callee_names": callee_names})
+                             extra={"signatures": signatures, "callee_names": callee_names,
+                                    "segment_span": _span})
         if text is None:
             return [], f"0x{va:08X} (in the closure of 0x{address:08X}): {why}"
         out.append((va, text))
@@ -270,7 +295,8 @@ def generate(pe_path, address, revng_dir, names, evidence, frames=False, extra=N
         _extra = extra or {}
         ast_source, ast_notes = rename_ast.rewrite(
             body, base, own_va=address, frames=frames,
-            signatures=_extra.get("signatures"), callee_names=_extra.get("callee_names"))
+            signatures=_extra.get("signatures"), callee_names=_extra.get("callee_names"),
+            segment_span=_extra.get("segment_span") or 0x10000)
     except rename_ast.Unsupportable as e:
         return None, f"the AST model refuses this body: {e}"
     # the provider's comment block stays as provenance, then our header
@@ -383,11 +409,19 @@ def closure_blockers(pe_path, revng_c, header, signatures, layouts, cap=256):
         bodies[va] = "\n".join(out)
     callee_names = {va: f"function_{va:08X}" for va in bodies}
 
+    # The measurement has to use the SAME data base and extent the generator uses,
+    # or it measures a machine nobody runs. It used to hard-code 0x0049B000 and no
+    # span, so an offset into .data was judged against a base 0x4000 away from the
+    # real one and a 64 KB limit -- which is why "unbounded offset" stayed the top
+    # class through a fix that had already removed it from the generator's path.
+    base = data_base(pe_path)
+    span = data_span(pe_path, base)
+
     def generates(va):
         try:
-            rename_ast.rewrite(bodies[va], 0x0049B000, own_va=va, layouts=layouts,
+            rename_ast.rewrite(bodies[va], base, own_va=va, layouts=layouts,
                                frames=True, signatures=signatures,
-                               callee_names=callee_names)
+                               callee_names=callee_names, segment_span=span)
             return True, None
         except rename_ast.Unsupportable as e:
             return False, str(e)
@@ -475,7 +509,9 @@ def main(argv=None):
                       "pipeline can be checked, not so a game can run with it.",
               "functions": []}
     for va in addresses:
-        text, why = generate(args.pe, va, args.revng, names, evidence)
+        text, why = generate(args.pe, va, args.revng, names, evidence,
+                             frames=getattr(args, "frames", False),
+                             extra={"segment_span": data_span(args.pe, data_base(args.pe))})
         if text is None:
             print(f'0x{va:08X}: NOT GENERATED - {why}')
             continue
