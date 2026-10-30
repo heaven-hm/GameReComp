@@ -173,6 +173,40 @@ conflates a function start with "some address worth disassembling"), reported
 here rather than fixed here: changing the inventory changes every game's generated
 source, and the regression baseline is recorded against the current one.
 
+## The direction nobody was looking at: functions rev.ng has and we do not
+
+Comparing rev.ng's Doukutsu output (955 declared functions) with our discovery
+(3,260, of which 2,019 even) gives the two differences:
+
+- **2,397 in ours, not rev.ng's** — the over-approximation already known.
+- **92 in rev.ng's, not ours** — the direction that would be serious if real: a
+  function the original calls that we never lifted has no body, so the call lands
+  in whatever is at that address: a plausible wrong answer, not a crash.
+
+Measured, three ways, before believing it:
+
+1. **Classification of the 92** (the three-way walk): 59 are even and not a
+   boundary of any of our walks (`start_not_lifted`, candidates), 2 are
+   boundaries inside another function, 31 are not any boundary at all (phantoms
+   in rev.ng's output too).
+2. **Reachability**: a 15-second Doukutsu run executed 2,939,862 dispatched calls
+   with **0** "no lifted function" fatals; statically, **0** of the 92 are call
+   targets anywhere in our lifted code, and **1** is a jump target
+   (`0x00487F13`, jumped to from `0x00487DD0`). So the risk is latent, not active
+   in the frame loop, and it would need a specific code path to bite.
+3. **What the provider actually produced for the 59 candidates**: 50 are EMPTY
+   bodies (`void f(void) { }`), 6 abort (`revng_abort`) or read through an address
+   below `0x1000` (lost pointer), and 3 have plausible C. Of those 3, the bytes
+   are `00 00` padding (`add byte ptr [eax], al`), an `ljmp` into nonsense, and
+   `daa` — none is a function.
+
+**Conclusion: this is not a lifter gap.** rev.ng's discovery over-approximates in
+this direction exactly as it does in the other, and its empty bodies are the
+evidence — it named addresses it could not decompile. More importantly, three of
+its "plausible" bodies were decompiled garbage: **plausible-looking C from a
+provider is not evidence that an address is a function**, which is why the oracle
+(the bytes) is the gate and the provider is an input.
+
 ## The ruling: what a plain-C replacement can be verified for
 
 **`HIGH_LEVEL_VERIFIED` means registers and memory for a plain-C replacement.**
