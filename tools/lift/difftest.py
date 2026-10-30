@@ -1103,6 +1103,9 @@ def main():
     ap.add_argument('--address', action='append', default=[],
                     help='a VA to compare (repeatable); default is the project\'s replaced functions')
     ap.add_argument('--cases', type=int, default=8, help='entry states to drive (default 8)')
+    ap.add_argument('--frame-size', type=int, default=0,
+                    help='bytes of guest stack frame below the entry esp to compare; '
+                         'without it a frame function would certify on eax alone')
     ap.add_argument('--json', help='write the per-address report here')
     ap.add_argument('--source', help='certify a GENERATED module file instead of the project\'s '
                                      'own body (used with --project for the runtime headers)')
@@ -1134,7 +1137,7 @@ def main():
         print(f'per-function oracle: {args.project} against {args.pe}')
         rows = oracle(args.project, args.pe, addrs, args.cases,
                       source=args.source, symbol=args.symbol,
-                      compare_flags=args.flags)
+                      compare_flags=args.flags, frame_size=args.frame_size)
         if args.json:
             Path(args.json).write_text(json.dumps(
                 {"tool": "tools/lift/difftest.py --project",
@@ -1399,7 +1402,7 @@ PAGES_
 
 
 def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, source_file=None,
-                        stack_va=None):
+                        stack_va=None, frame_size=0):
     """Compile a harness that drives the project's own body over `cases`."""
     project_dir = Path(project_dir)
     gen = project_dir / "src" / "recomp" / "gen"
@@ -1411,6 +1414,14 @@ def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, sou
     pages = []
     for a in named + [stack_va]:
         pages.append(f"    hle_vm_reserve(0x{a & ~0xFFF:08X}u, 0x1000u);")
+    frame_seed = frame_report = ""
+    if frame_size and stack_va:
+        fb = stack_va - frame_size
+        frame_seed = ("\n" + "\n".join(
+            f'        MEM8(0x{fb + k:08X}u) = 0x{FRAME_PATTERN:02X}u;' for k in range(frame_size)))
+        frame_report = ("\n" + "\n".join(
+            f'        printf("F %08X %02X\\n", 0x{fb + k:08X}u, MEM8(0x{fb + k:08X}u));'
+            for k in range(frame_size)))
     # The seed must vary WITH the case, so it is emitted as C over the loop
     # counter, not precomputed here: a constant per address made every case the
     # same case and every comparison a divergence.
@@ -1420,8 +1431,8 @@ def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, sou
     report = "\n".join(f'        printf("M %08X %02X\\n", 0x{a + k:08X}u, MEM8(0x{a + k:08X}u));'
                        for a in named for k in range(4))
     source = (ORACLE_HARNESS
-              .replace("@FOREACH@", seeds)
-              .replace("@REPORT@", report)
+              .replace("@FOREACH@", seeds + frame_seed)
+              .replace("@REPORT@", report + frame_report)
               .replace("ADDR_", target)
               .replace("STACK_", f"0x{(stack_va or ORACLE_STACK):08X}u")
               .replace("SENTINEL_", f"0x{ORACLE_SENTINEL:08X}u")
@@ -1541,7 +1552,19 @@ def oracle_window(pe_path):
     return base, ((hi - base) + 0x1FFF) & ~0xFFF
 
 
-def run_unicorn_function(pe_path, va, named, seed_of, cases):
+FRAME_PATTERN = 0xA5     # a known byte, not zero: two wrong bodies that both leave
+                         # zeros would agree, which is the failure this session has
+                         # found four times in different clothes
+
+
+def frame_region(stack, frame_size):
+    """The guest stack frame: [stack - size, stack). The buffer is IN the mapped
+    stack page, so it is guest memory and is named the same way as any other VA -
+    one comparison path, not two."""
+    return stack - frame_size, frame_size
+
+
+def run_unicorn_function(pe_path, va, named, seed_of, cases, frame_size=0):
     """The ORIGINAL's bytes at `va`, driven over the same entry states."""
     win_lo, win_size = oracle_window(pe_path)
     stack = win_lo + win_size          # one page beyond the image
@@ -1580,6 +1603,11 @@ def run_unicorn_function(pe_path, va, named, seed_of, cases):
         for a in named:
             for k in range(4):
                 mem[a + k] = mu.mem_read(a + k, 1)[0]
+        if frame_size:
+            fb, fn = frame_region(stack, frame_size)
+            raw = bytes(mu.mem_read(fb, fn))
+            for k, b in enumerate(raw):
+                mem[fb + k] = b
         results.append({'regs': {n: mu.reg_read(UC_REGS[n]) for n in REGS},
                         'eflags': mu.reg_read(X.UC_X86_REG_EFLAGS),   # the REAL flags, not zero:
                         # a hard-coded zero made the flag comparison vacuous - it only ever
@@ -1609,7 +1637,7 @@ class OracleFault(Exception):
 
 
 def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
-           source=None, symbol=None, compare_flags=False):
+           source=None, symbol=None, compare_flags=False, frame_size=0):
     """Per address: the ORIGINAL's bytes against the project's own body.
 
     One entry per address, each carrying the input set it was driven over, the
@@ -1681,7 +1709,8 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
             target = symbol or target
         _lo, _size = oracle_window(pe_path)
         binary, err = build_project_cases(project_dir, target, named, seed_of, cases, cc,
-                                          source_file=source, stack_va=_lo + _size)
+                                          source_file=source, stack_va=_lo + _size,
+                                          frame_size=frame_size)
         if binary is None:
             out.append({"address": f"0x{address:08X}", "verdict": "harness-failed",
                         "detail": err, "pe": str(pe_path), "pe_sha256": pe_sha})
@@ -1689,14 +1718,15 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
         r = subprocess.run([str(binary)], capture_output=True, text=True, timeout=600)
         lifted = parse_output(r.stdout)
         try:
-            real = run_unicorn_function(pe_path, address, named, seed_of, cases)
+            real = run_unicorn_function(pe_path, address, named, seed_of, cases,
+                                        frame_size=frame_size)
         except OracleFault as e:
             out.append({"address": f"0x{address:08X}", "verdict": "original-faulted",
                         "detail": str(e), "pe": str(pe_path), "pe_sha256": pe_sha,
                         "symbol_compared": target})
             continue
 
-        if not named:
+        if not named and not frame_size:
             # A comparison that compares nothing is not a pass - but a PURE
             # function's only observable IS its return value, so "no named memory"
             # does not mean "no subject". Distinguish the two instead of treating
@@ -1765,6 +1795,10 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
         eax_only = bool(rows) and all(
             {fl["field"] for fl in r["fields"]} == {"eax"} for r in rows if r["fields"])
         verdict = "agree" if diverged == 0 else "diverge"
+        if diverged == 0 and frame_size:
+            # the frame was compared, and that is a different claim from a
+            # register-and-named-memory pass: say so in the verdict itself
+            verdict = "agree-frame"
         if diverged and void_body and eax_only:
             verdict = "agree-memory"
         out.append({
@@ -1786,11 +1820,23 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
                 "agree": "eax (for a generated module) and the named memory both match",
                 "agree-memory": "the named memory matches; eax is NOT comparable because the "
                                 "provider recovered the function as returning nothing",
+                "agree-frame": "the guest stack frame was compared byte for byte on both sides, "
+                               "in addition to eax and any named memory - the frame's extent and "
+                               "base are in the record",
                 "diverge": "a real difference in the compared state",
                 "nothing-compared": "no subject to compare - never a pass",
                 "original-faulted": "the reference machine could not drive the function from "
                                     "the seeded entry state",
             }.get(verdict, verdict),
+            "frame": ({"extent": frame_size,
+                       "base": f"0x{(_lo + _size) - frame_size:08X}",
+                       "compared": True,
+                       "note": "the guest stack frame is guest memory below the entry esp; it is "
+                               "seeded with a known pattern on both sides and compared byte for "
+                               "byte, so a frame function cannot certify on eax alone"}
+                      if frame_size else {"compared": False,
+                                          "note": "no frame size was requested: frame traffic was "
+                                                  "NOT compared"}),
             "input_set": {"cases": cases, "named_addresses": [f"0x{a:08X}" for a in named],
                           "seeded": "each named address holds (case+1) on both sides - small "
                                     "values so a table index stays inside the mapped window and the "
