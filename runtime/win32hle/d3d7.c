@@ -146,6 +146,8 @@ static int load_gl(void) {
 
 static const uint8_t IID_IUNKNOWN[16] = {0,0,0,0,0,0,0,0,0xC0,0,0,0,0,0,0,0x46};
 static const uint8_t IID_IDIRECT3D7[16] = {0x78,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
+static const uint8_t IID_IDIRECT3DDEVICE7[16] = {0x79,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
+static const uint8_t IID_IDIRECT3DVERTEXBUFFER7[16] = {0x7D,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
 static uint32_t g_d3d_vt, g_d3d;
 static uint32_t g_dev_vt;
 static uint32_t g_vb_vt;
@@ -316,10 +318,10 @@ static void d3d_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!ou
     MEM32(out)=0; RET(E_NOINTERFACE,3); }
 static void d3d_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void d3d_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){hle_com_free(s);if(g_d3d==s)g_d3d=0;} RET(r,1); }
-static void dev_qi(void) { uint32_t s=A32(0),out=A32(2); if(!out) RET(E_POINTER,3); MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
+static void dev_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!out) RET(E_POINTER,3); if(memcmp(hle_ptr(iid),IID_IUNKNOWN,16)&&memcmp(hle_ptr(iid),IID_IDIRECT3DDEVICE7,16)){MEM32(out)=0;RET(E_NOINTERFACE,3);} MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
 static void dev_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void dev_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);if(g_device==s){g_device=0;release_surface_ref(g_texture_surface);g_texture_surface=0;release_surface_ref(g_render_target);g_render_target=0;if(g_gl_texture&&load_gl())p_delete_textures(1,&g_gl_texture);g_gl_texture=0;}} RET(r,1); }
-static void vb_qi(void) { uint32_t s=A32(0),out=A32(2); if(!out) RET(E_POINTER,3); MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
+static void vb_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!out) RET(E_POINTER,3); if(memcmp(hle_ptr(iid),IID_IUNKNOWN,16)&&memcmp(hle_ptr(iid),IID_IDIRECT3DVERTEXBUFFER7,16)){MEM32(out)=0;RET(E_NOINTERFACE,3);} MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
 static void vb_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void vb_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);} RET(r,1); }
 
@@ -693,30 +695,74 @@ static void apply_color_material_state(void) {
     } else p_disable(GL_COLOR_MATERIAL);
 }
 
-static void dev_set_render_state(void) { uint32_t s=A32(1),v=A32(2);if((s==145||s==147)&&v>1)RET(D3DERR_NOTAVAILABLE,3);if((s==146||s==148)&&v!=0)RET(D3DERR_NOTAVAILABLE,3);if(!load_gl())RET(D3DERR_NOTAVAILABLE,3);if(s<256)g_render[s]=v;
-    switch(s){case 7:if(v)p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);break;
-    case 8:p_polygon(GL_FRONT_AND_BACK,v==1?GL_POINT:v==2?GL_LINE:GL_FILL);break;
-    case 9:p_shade(v==1?GL_FLAT:GL_SMOOTH);break;
-    case 19:case 20:p_blend(gl_blend(g_render[19]?g_render[19]:2),gl_blend(g_render[20]?g_render[20]:1));break;
-    case 22:if(v==1)p_disable(GL_CULL_FACE);else {p_enable(GL_CULL_FACE);p_cull(0x0404);p_front(v==2?0x0900:0x0901);}break;
-    case 23:p_depth_func(gl_cmp(v));break;
-    case 24:case 25:p_alpha(gl_cmp(g_render[25]?g_render[25]:8),(float)(g_render[24]&255)/255.f);break;
-    case 27:if(v)p_enable(GL_BLEND);else p_disable(GL_BLEND);break;
-    case 28:if(v)p_enable(GL_FOG);else p_disable(GL_FOG);break;
-    case 34:{float f[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_fogfv(0x0B66,f);break;}
-    case 36:case 37:case 38:{float f;memcpy(&f,&v,4);p_fogf(s==36?0x0B63:s==37?0x0B64:0x0B62,f);break;}
-    case 137:if(v)p_enable(GL_LIGHTING);else p_disable(GL_LIGHTING);break;
-    case 139:{float a[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,a);break;}
-    case 141:apply_color_material_state();break;
-    case 143:if(v)p_enable(GL_NORMALIZE);else p_disable(GL_NORMALIZE);break;
-    case 29:apply_material();break;
-    case 142:p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,v?1:0);break;
-    case 145:case 147:
-        apply_color_material_state();break;
-    case 146:case 148:
-        break;
-    default:break;} RET(D3D_OK,3); }
-static void dev_get_render_state(void) { uint32_t s=A32(1),p=A32(2);if(!p)RET(E_POINTER,3);MEM32(p)=s<256?g_render[s]:0;RET(D3D_OK,3); }
+static int render_state_supported(uint32_t state) {
+    switch(state) {
+    case 7: case 8: case 9: case 19: case 20: case 22: case 23: case 24: case 25:
+    case 27: case 28: case 29: case 34: case 36: case 37: case 38:
+    case 137: case 139: case 141: case 142: case 143: case 145: case 146: case 147: case 148:
+        return 1;
+    default:
+        return 0;
+    }
+}
+static int render_state_value_valid(uint32_t state,uint32_t value) {
+    switch(state) {
+    case 7: case 27: case 28: case 29: case 137: case 141: case 142: case 143: case 145: case 147:
+        return value<=1;
+    case 8: case 22:
+        return value>=1 && value<=3;
+    case 9:
+        return value>=1 && value<=3;
+    case 19: case 20:
+        return value>=1 && value<=11;
+    case 23: case 25:
+        return value>=1 && value<=8;
+    case 24:
+        return value<=255;
+    case 146: case 148:
+        return value==0;
+    default:
+        return 1;
+    }
+}
+static void dev_set_render_state(void) {
+    uint32_t s=A32(1),v=A32(2);
+    if(!s || s>=256) RET(D3DERR_INVALIDCALL,3);
+    if(!render_state_supported(s)) RET(D3DERR_NOTAVAILABLE,3);
+    if(!render_state_value_valid(s,v)) RET(D3DERR_INVALIDCALL,3);
+    if(s==9 && v==3) RET(D3DERR_NOTAVAILABLE,3);
+    if(!load_gl()) RET(D3DERR_NOTAVAILABLE,3);
+    g_render[s]=v;
+    switch(s) {
+    case 7: if(v)p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);break;
+    case 8: p_polygon(GL_FRONT_AND_BACK,v==1?GL_POINT:v==2?GL_LINE:GL_FILL);break;
+    case 9: p_shade(v==1?GL_FLAT:GL_SMOOTH);break;
+    case 19: case 20: p_blend(gl_blend(g_render[19]?g_render[19]:2),gl_blend(g_render[20]?g_render[20]:1));break;
+    case 22: if(v==1)p_disable(GL_CULL_FACE);else {p_enable(GL_CULL_FACE);p_cull(0x0404);p_front(v==2?0x0900:0x0901);}break;
+    case 23: p_depth_func(gl_cmp(v));break;
+    case 24: case 25: p_alpha(gl_cmp(g_render[25]?g_render[25]:8),(float)(g_render[24]&255)/255.f);break;
+    case 27: if(v)p_enable(GL_BLEND);else p_disable(GL_BLEND);break;
+    case 28: if(v)p_enable(GL_FOG);else p_disable(GL_FOG);break;
+    case 34: {float f[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_fogfv(0x0B66,f);break;}
+    case 36: case 37: case 38: {float f;memcpy(&f,&v,4);p_fogf(s==36?0x0B63:s==37?0x0B64:0x0B62,f);break;}
+    case 137: if(v)p_enable(GL_LIGHTING);else p_disable(GL_LIGHTING);break;
+    case 139: {float a[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,a);break;}
+    case 141: case 145: case 147: apply_color_material_state();break;
+    case 143: if(v)p_enable(GL_NORMALIZE);else p_disable(GL_NORMALIZE);break;
+    case 29: apply_material();break;
+    case 142: p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,v?1:0);break;
+    case 146: case 148: break;
+    }
+    RET(D3D_OK,3);
+}
+static void dev_get_render_state(void) {
+    uint32_t s=A32(1),p=A32(2);
+    if(!p) RET(E_POINTER,3);
+    if(!s || s>=256) RET(D3DERR_INVALIDCALL,3);
+    if(!render_state_supported(s)) RET(D3DERR_NOTAVAILABLE,3);
+    MEM32(p)=g_render[s];
+    RET(D3D_OK,3);
+}
 static void dev_draw_primitive(void) { uint32_t n=A32(4);RET(draw_vertices(A32(1),A32(2),A32(3),n,0,0)?D3D_OK:D3DERR_INVALIDCALL,6); }
 static void dev_draw_indexed_primitive(void) { RET(draw_vertices(A32(1),A32(2),A32(3),A32(4),A32(5),A32(6))?D3D_OK:D3DERR_INVALIDCALL,8); }
 static void dev_draw_vb(void) { uint32_t vb=A32(2),start=A32(3),count=A32(4),stride=vertex_stride(MEM32(vb+16));RET(draw_vertices(A32(1),MEM32(vb+16),MEM32(vb+8)+start*stride,count,0,0)?D3D_OK:D3DERR_INVALIDCALL,6); }
