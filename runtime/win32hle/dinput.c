@@ -39,6 +39,12 @@
 #include <SDL2/SDL.h>
 #include "win32hle.h"
 
+/* input_rec.c: record the device state this shim returns, and replay it. */
+int  hle_input_recording(void);
+int  hle_input_replaying(void);
+void hle_input_record(const char *what, const void *data, size_t n);
+int  hle_input_replay(const char *what, void *data, size_t n);
+
 /* HRESULTs. */
 #define DI_OK                 0x00000000u
 #define DIERR_INVALIDPARAM    0x80070057u
@@ -206,10 +212,23 @@ static void dev_GetDeviceState(void) {
     uint32_t size = A32(1), buf = A32(2);
     if (i < 0 || !buf) RET(DIERR_INVALIDPARAM, 3);
     if (!g_dev[i].acquired) RET(DIERR_NOTACQUIRED, 3);
-    SDL_PumpEvents();
     int want = (int)size;
+    if (want < 0) want = 0;
     if (g_dev[i].kind == 1) {
         if (want > DIK_SIZE) want = DIK_SIZE;
+    } else if (want > 16) {
+        want = 16;                       /* the mouse's three axes and four buttons */
+    }
+    /* What the guest is handed, so a replay hands back the same bytes. The
+     * recorded value is the shim's answer, not the device's state: at replay
+     * time SDL is not consulted at all, which is what makes the transcript
+     * device-neutral and lets a recorder on another machine produce the same
+     * file. */
+    const char *what = g_dev[i].kind == 1 ? "dikeys" : "dimouse";
+    if (want > 0 && hle_input_replaying() && hle_input_replay(what, hle_ptr(buf), (size_t)want))
+        RET(DI_OK, 3);
+    SDL_PumpEvents();
+    if (g_dev[i].kind == 1) {
         memset(hle_ptr(buf), 0, (size_t)want);
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
         int n = 0;
@@ -233,6 +252,7 @@ static void dev_GetDeviceState(void) {
             if (want >= DIMOFS_BUTTON0 + b + 1)
                 MEM8(buf + DIMOFS_BUTTON0 + b) = (uint8_t)((buttons >> b) & 1u ? 0x80 : 0);
     }
+    if (want > 0 && hle_input_recording()) hle_input_record(what, hle_ptr(buf), (size_t)want);
     RET(DI_OK, 3);
 }
 static void dev_GetDeviceData(void) {

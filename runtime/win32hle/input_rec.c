@@ -28,17 +28,24 @@
 #include "win32hle.h"
 
 static FILE *g_rec;                  /* the recording being written */
+static unsigned g_pending;           /* records since the last flush */
 static FILE *g_rep;                  /* the recording being replayed */
 static int g_init = -1;
 
 void hle_clock_config(char *buf, size_t n);       /* clock.c */
+static void input_rec_flush(void);
 
 /* What this recorder covers, and what it does not. Written into every
  * recording: a transcript of three keypresses that looked like "a gameplay
  * scenario" would be the same overclaim as calling a title screen a working
  * game. */
-#define INPUT_COVERS "SDL_GetKeyState SDL_PollEvent SDL_GetMouseState"
-#define INPUT_NOT_COVERS "DirectInput GetDeviceState/GetDeviceData, SDL joystick, raw input, window messages"
+#define INPUT_COVERS "SDL_GetKeyState SDL_PollEvent SDL_GetMouseState, DirectInput GetDeviceState"
+/* Named individually, because the two DirectInput reads are not the same: this
+ * layer answers GetDeviceData with "no event stream is buffered", so there is
+ * nothing to record from it, and saying "DirectInput" without saying which would
+ * overstate the coverage. */
+#define INPUT_NOT_COVERS "DirectInput GetDeviceData (answers 'no event stream is buffered'), " \
+                         "SDL joystick, raw input, window messages"
 
 static void write_header(FILE *f) {
     char clk[32];
@@ -80,7 +87,7 @@ static void input_rec_init(void) {
     if (rec && *rec) {
         g_rec = fopen(rec, "w");
         if (!g_rec) fprintf(stderr, "[input] cannot write the recording %s\n", rec);
-        else write_header(g_rec);
+        else { write_header(g_rec); atexit(input_rec_flush); }
     }
     if (rep && *rep) {
         g_rep = fopen(rep, "r");
@@ -123,8 +130,15 @@ void hle_input_record(const char *what, const void *data, size_t n) {
     fprintf(g_rec, "%s ", what);
     put_hex(g_rec, data, n);
     fputc('\n', g_rec);
-    fflush(g_rec);                   /* a crash mid-run still leaves the transcript */
+    /* Flushed in batches, not per record. A flush per record is 10,000 writes
+     * and, measured on Doukutsu, it slows the recording thread enough to change
+     * how the guest's threads interleave - so the recording perturbs the very
+     * run it is recording. The cost of batching is that a killed run loses the
+     * tail of the transcript, which the header's record count makes visible. */
+    if (++g_pending >= 1024) { fflush(g_rec); g_pending = 0; }
 }
+
+static void input_rec_flush(void) { if (g_rec) fflush(g_rec); }
 
 /* Replay one input value: 1 and the value filled in if the transcript has a
  * record of this kind, 0 if it does not - the caller then falls back to the

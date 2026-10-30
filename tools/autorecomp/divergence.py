@@ -112,7 +112,7 @@ def is_tagged(calls):
     return any(tid is not None for tid, _ in calls)
 
 
-def locate(a, b):
+def locate(a, b, prefix=False):
     """Where two traces first part, per thread when they are thread-tagged.
 
     Returns (kind, payload). `kind` is "same" when the traces match, "early"
@@ -133,10 +133,19 @@ def locate(a, b):
             if tid not in ta:
                 problems.append((tid, "only in the second trace"))
                 continue
+            # A thread whose sequence is a strict prefix of the other's is a
+            # divergence too: comparing only the common prefix would call a run
+            # that stopped short "the same".
+            if len(ta[tid]) != len(tb[tid]) and not prefix:
+                problems.append((tid, (min(len(ta[tid]), len(tb[tid])),
+                                       f"{len(ta[tid])} calls", f"{len(tb[tid])} calls")))
+                continue
             d = first_divergence(ta[tid], tb[tid])
             if d is not None:
                 problems.append((tid, d))
         if not problems:
+            if prefix:
+                return "same", (sum(min(len(ta[t]), len(tb.get(t, []))) for t in ta), len(ta))
             if len(a) == len(b):
                 return "same", (sum(len(v) for v in ta.values()), len(ta))
             short, long_ = (a, b) if len(a) < len(b) else (b, a)
@@ -162,11 +171,11 @@ def thread_sequences(calls):
     return {None: [n for _, n in calls]}
 
 
-def report(a, b, label_a="baseline", label_b="candidate", context=5):
+def report(a, b, label_a="baseline", label_b="candidate", context=5, prefix=False):
     """The divergence report, as text."""
     out = []
     a, b = as_calls(a), as_calls(b)
-    kind, payload = locate(a, b)
+    kind, payload = locate(a, b, prefix)
     if is_tagged(a) or is_tagged(b):
         ta, tb = by_thread(a), by_thread(b)
         out.append(f"{label_a}: {len(a)} calls on {len(ta)} thread(s) | "
@@ -420,6 +429,9 @@ def main(argv=None):
     ap.add_argument("candidate", nargs="?", help="the trace to compare against it")
     ap.add_argument("--selftest", action="store_true", help="check the classifier on synthetic traces")
     ap.add_argument("--context", type=int, default=5, help="calls of context to show (default 5)")
+    ap.add_argument("--prefix", action="store_true",
+                    help="per thread, compare only up to the shorter trace: the question a replay "
+                         "fidelity check asks, since a global call cap splits between threads")
     ap.add_argument("--labels", help="names for the two traces, as A,B (default baseline,candidate)")
     ap.add_argument("--bisect-run", action="store_true",
                     help="binary-search the call cap at which the two binaries stop matching")
@@ -452,7 +464,7 @@ def main(argv=None):
     la, lb = ("baseline", "candidate")
     if args.labels and "," in args.labels:
         la, lb = args.labels.split(",", 1)
-    code, lines = report(parse(args.baseline), parse(args.candidate), la, lb, args.context)
+    code, lines = report(parse(args.baseline), parse(args.candidate), la, lb, args.context, args.prefix)
     print("\n".join(lines))
     return code
 
