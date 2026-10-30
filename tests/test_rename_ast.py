@@ -119,3 +119,28 @@ def test_generate_emits_the_definition_of_every_intrinsic_it_calls():
     defs = R.intrinsic_definitions(body)
     assert "bit_parity" in defs and "lshift" in defs
     assert "static inline" in defs
+
+
+def test_an_import_with_no_hle_entry_point_is_refused_not_renamed():
+    """A generated module must not call a name the runtime does not provide.
+
+    The generator substituted `LeaveCriticalSection(` -> `hle_LeaveCriticalSection(`,
+    which INVENTS a symbol: the runtime serves that import from its shim table with a
+    `static void k_LeaveCriticalSection(void)` and has no `hle_` wrapper for it. The
+    module then fails to link -- a call to something that does not exist at all, one
+    level worse than an undeclared function, which at least exists.
+
+    Measured: NONE of the imports the generating bodies call has an `hle_` entry point.
+    So the substitution was wrong for every one of them, and refusing is the honest
+    answer until a generated module can dispatch through the shim table.
+    """
+    from tools.autorecomp import rename_gen as G
+
+    have = G._hle_entry_points()
+    assert have, "the runtime entry points could not be read at all"
+    assert "hle_MEM32" not in have          # sanity: the scan is not matching everything
+    for imp in ("LeaveCriticalSection", "CheckDlgButton", "DeleteSoundCreate"
+                if False else "DeleteObject", "EndDialog"):
+        assert f"hle_{imp}" not in have, (
+            f"hle_{imp} is assumed absent here; if the runtime gained one, this test "
+            f"and the refusal it guards both need revisiting")

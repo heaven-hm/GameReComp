@@ -667,3 +667,50 @@ doing its job.
 **Not yet measured:** the remaining new entries. My census run and the Lead's differ
 (346 vs 371 bodies) because my closure walk requires evidence for every callee, so the
 nine-odd remaining subjects are a to-do rather than a count.
+
+## The import path invented a symbol, and now refuses instead
+
+`0x004812DE` and `0x0048136B` failed to link, and the reason was not in the generator's
+logic but in one line of text substitution: `LeaveCriticalSection(` was rewritten to
+`hle_LeaveCriticalSection(` without checking that such an entry point exists. **It does
+not.** The runtime serves that import from its shim table --
+`{ "LeaveCriticalSection", k_LeaveCriticalSection }` with a `static void
+k_LeaveCriticalSection(void)` -- and has no `hle_` wrapper for it.
+
+That is one level worse than the eighteen undeclared shims found the same way: those
+were calls to a function that existed and was not declared; this is a call to a function
+that **does not exist at all**. The substitution invented a name.
+
+Measured, and the measurement is why this is a refusal rather than a rename:
+
+    imports the generating bodies call     8
+    of those with an hle_ entry point      0
+
+So the substitution was wrong for **every** import call, not one. There is nothing to
+rename to. The generator now checks the runtime's own entry points (181 of them, read
+from its headers rather than assumed) and refuses with the reason:
+
+    0x004812DE calls the import LeaveCriticalSection, which the runtime serves from its
+    shim table with no hle_LeaveCriticalSection entry point -- substituting the name
+    would invent a symbol and the module could not link
+
+Eleven generating bodies call imports, so eleven modules that could never have linked are
+now refused at generation time with a message that says why. What would unblock them is
+**shim-table dispatch in a generated module**, which is real work and is not done.
+
+### And a correction to the closure count
+
+The `39` multi-function closures reported after the intrinsic work was measured with
+`rename_ast.rewrite()`, not with `generate()`. The pipeline's entry point enforces the
+ABI and evidence checks that `rewrite()` does not, so the number is an upper bound:
+
+    sample of 6 closures through generate()
+      4  all members generate
+      2  refused -- "the provider's prototype takes 0 argument(s) but the original
+                     reads edx before writing it", "field offset_32 of struct_4384:
+                     no layout in the header"
+
+**The defensible count is the coder's 28, not the census's 39.** The census measures the
+transform; only the pipeline measures the product. That distinction has now produced a
+wrong number four times in this report, and it is the same mistake each time.
+

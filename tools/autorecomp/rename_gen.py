@@ -240,6 +240,32 @@ def generate_closure(pe_path, address, revng_dir, names, evidence, signatures,
     return out, {"size": len(order), "capped": False}
 
 
+_HLE_ENTRY_CACHE = {}
+
+
+def _hle_entry_points():
+    """Every `hle_` symbol the runtime actually provides.
+
+    Read from the runtime's own headers rather than assumed, because the failure
+    being prevented is exactly an assumed entry point: a generated module that
+    calls `hle_LeaveCriticalSection` when the runtime only has a table-dispatched
+    `k_LeaveCriticalSection` links to nothing.
+    """
+    if "names" in _HLE_ENTRY_CACHE:
+        return _HLE_ENTRY_CACHE["names"]
+    import re as _re
+    root = Path(__file__).resolve().parents[2] / "runtime" / "win32hle"
+    found = set()
+    for pat in ("*.h", "*.c"):
+        for f in root.glob(pat):
+            try:
+                found |= set(_re.findall(r"\b(hle_[A-Za-z0-9_]+)\s*\(", f.read_text(errors="replace")))
+            except OSError:
+                continue
+    _HLE_ENTRY_CACHE["names"] = found
+    return found
+
+
 def generate(pe_path, address, revng_dir, names, evidence, frames=False, extra=None):
     """(file text, name) for one function, or (None, reason)."""
     rev = Path(revng_dir) / f'0x{address:08X}.c'
@@ -310,9 +336,23 @@ def generate(pe_path, address, revng_dir, names, evidence, frames=False, extra=N
         if rec["kind"] != "import_call":
             continue
         name = rec.get("name") or ""
-        if name and re.match(r"^[A-Za-z_]\w*$", name):
-            typed = re.sub(rf"(?<![A-Za-z_0-9.h>]){re.escape(name)}\s*\(",
-                           f"hle_{name}(", typed)
+        if not name or not re.match(r"^[A-Za-z_]\w*$", name):
+            continue
+        # The substitution below turns `LeaveCriticalSection()` into
+        # `hle_LeaveCriticalSection()`. That is only valid if such an entry point
+        # EXISTS: the runtime dispatches some shims through its table instead,
+        # with a `static void k_LeaveCriticalSection(void)` and no `hle_` wrapper.
+        # Substituting blindly INVENTS a name, and the module then fails to link --
+        # a call to something that does not exist, one level worse than the
+        # eighteen undeclared shims found the same way. Fail here instead, where
+        # the reason can be said.
+        if name not in _hle_entry_points():
+            return None, (f"0x{address:08X} calls the import {name}, which the runtime "
+                          f"serves from its shim table with no hle_{name} entry point -- "
+                          f"substituting the name would invent a symbol and the module "
+                          f"could not link")
+        typed = re.sub(rf"(?<![A-Za-z_0-9.h>]){re.escape(name)}\s*\(",
+                       f"hle_{name}(", typed)
     local_names = {ident: g["name"] for ident, g in names["globals"].items() if g["name"]}
     typed, decls, refusals = fuse_memory(typed, local_names)
     for note in ast_notes:
