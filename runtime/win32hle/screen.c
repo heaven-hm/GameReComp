@@ -36,6 +36,9 @@
 
 static SDL_Window *g_win;
 static SDL_Renderer *g_ren;
+static SDL_GLContext g_glctx;
+static int g_gl_requested;
+static int g_screen_opened;
 static SDL_Texture *g_tex;
 static int g_tex_w, g_tex_h, g_tex_fmt;
 static unsigned g_shown_seq = ~0u;
@@ -78,6 +81,33 @@ const char *hle_screen_settings(int *bars, int *fullscreen) {
 }
 static uint32_t *g_conv;                                 /* 8-bit frames converted */
 static size_t g_conv_n;
+typedef void (*gl_void_fn)(void);
+typedef void (*gl_attrib_fn)(unsigned);
+typedef void (*gl_enable_fn)(unsigned);
+typedef void (*gl_viewport_fn)(int,int,int,int);
+typedef void (*gl_matrix_mode_fn)(unsigned);
+typedef void (*gl_ortho_fn)(double,double,double,double,double,double);
+typedef void (*gl_raster_pos_fn)(int,int);
+typedef void (*gl_pixel_zoom_fn)(float,float);
+typedef void (*gl_pixel_store_fn)(unsigned,int);
+typedef void (*gl_draw_pixels_fn)(int,int,unsigned,unsigned,const void *);
+typedef void (*gl_clear_color_fn)(float,float,float,float);
+typedef void (*gl_clear_fn)(unsigned);
+static struct {
+    gl_attrib_fn push_attrib;
+    gl_void_fn pop_attrib,push_matrix,pop_matrix,load_identity;
+    gl_enable_fn enable,disable;
+    gl_viewport_fn viewport;
+    gl_matrix_mode_fn matrix_mode;
+    gl_ortho_fn ortho;
+    gl_raster_pos_fn raster_pos;
+    gl_pixel_zoom_fn pixel_zoom;
+    gl_pixel_store_fn pixel_store;
+    gl_draw_pixels_fn draw_pixels;
+    gl_clear_color_fn clear_color;
+    gl_clear_fn clear;
+    int loaded;
+} g_gl_present;
 void (*hle_screen_frame_hook)(const uint8_t *px, int w, int h, int pitch, int bpp);   /* a recorder, a checksum */
 /* A host's own picture at twice the size (an HD layer): fills out with 2w x
  * 2h XRGB from the 16-bit frame and returns 1, or returns 0 for the 1x. */
@@ -182,6 +212,65 @@ static void to_game(int x, int y, int *gx, int *gy) {
     if (*gy >= h) *gy = h - 1;
 }
 
+static int load_present_gl(void) {
+    if (g_gl_present.loaded) return 1;
+#define GL_LOAD(field,type,symbol) do { *(void **)(&g_gl_present.field)=SDL_GL_GetProcAddress(symbol); if(!g_gl_present.field)return 0; } while(0)
+    GL_LOAD(push_attrib,gl_attrib_fn,"glPushAttrib"); GL_LOAD(pop_attrib,gl_void_fn,"glPopAttrib");
+    GL_LOAD(disable,gl_enable_fn,"glDisable"); GL_LOAD(viewport,gl_viewport_fn,"glViewport");
+    GL_LOAD(matrix_mode,gl_matrix_mode_fn,"glMatrixMode"); GL_LOAD(push_matrix,gl_void_fn,"glPushMatrix");
+    GL_LOAD(pop_matrix,gl_void_fn,"glPopMatrix"); GL_LOAD(load_identity,gl_void_fn,"glLoadIdentity");
+    GL_LOAD(ortho,gl_ortho_fn,"glOrtho"); GL_LOAD(raster_pos,gl_raster_pos_fn,"glRasterPos2i");
+    GL_LOAD(pixel_zoom,gl_pixel_zoom_fn,"glPixelZoom"); GL_LOAD(pixel_store,gl_pixel_store_fn,"glPixelStorei");
+    GL_LOAD(draw_pixels,gl_draw_pixels_fn,"glDrawPixels"); GL_LOAD(clear_color,gl_clear_color_fn,"glClearColor");
+    GL_LOAD(clear,gl_clear_fn,"glClear");
+#undef GL_LOAD
+    g_gl_present.loaded=1;
+    return 1;
+}
+
+static void present_gl(const uint8_t *px,int w,int h,int pitch,int bpp,const uint32_t *pal) {
+    if(!g_glctx || !load_present_gl()) return;
+    int ww=0,wh=0; SDL_GL_GetDrawableSize(g_win,&ww,&wh);
+    if(ww<=0 || wh<=0 || w<=0 || h<=0) return;
+    if((long long)ww*h>(long long)wh*w) g_dst.h=wh,g_dst.w=(int)((long long)wh*w/h);
+    else g_dst.w=ww,g_dst.h=(int)((long long)ww*h/w);
+    if(g_mode==4) { int k=ww/w<wh/h?ww/w:wh/h; if(k<1)k=1;g_dst.w=w*k;g_dst.h=h*k; }
+    g_dst.x=(ww-g_dst.w)/2;g_dst.y=(wh-g_dst.h)/2;
+    unsigned format=0x1907u,type=0x1401u; const void *pixels=px;
+    if(bpp==8) {
+        if(g_conv_n<(size_t)w*h) { free(g_conv);g_conv_n=(size_t)w*h;g_conv=(uint32_t *)malloc(g_conv_n*4); }
+        if(!g_conv)return;
+        for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
+            uint32_t e=pal?pal[px[(size_t)y*pitch+x]]:0;
+            g_conv[(size_t)y*w+x]=0xFF000000u|((e&0xFFu)<<16)|(e&0xFF00u)|((e>>16)&0xFFu);
+        }
+        pixels=g_conv;format=0x80E1u;pitch=w*4;bpp=32;
+    } else if(bpp==16) type=0x8363u;
+    else if(bpp==24) format=0x80E0u;
+    else if(bpp==32) format=0x80E1u;
+    else return;
+    g_gl_present.push_attrib(0x000FFFFFu);
+    g_gl_present.viewport(0,0,ww,wh);
+    g_gl_present.disable(0x0DE1u); /* texture */
+    g_gl_present.disable(0x0B71u); /* depth */
+    g_gl_present.disable(0x0BE2u); /* blend */
+    g_gl_present.disable(0x0BC0u); /* alpha */
+    g_gl_present.disable(0x0C11u); /* scissor */
+    g_gl_present.disable(0x0B90u); /* stencil */
+    g_gl_present.clear_color(0.f,0.f,0.f,1.f);g_gl_present.clear(0x00004000u);
+    g_gl_present.matrix_mode(0x1701u);g_gl_present.push_matrix();g_gl_present.load_identity();
+    g_gl_present.ortho(0,ww,0,wh,-1,1);
+    g_gl_present.matrix_mode(0x1700u);g_gl_present.push_matrix();g_gl_present.load_identity();
+    g_gl_present.raster_pos(g_dst.x,wh-g_dst.y);
+    g_gl_present.pixel_zoom((float)g_dst.w/(float)w,-(float)g_dst.h/(float)h);
+    g_gl_present.pixel_store(0x0CF5u,1);g_gl_present.pixel_store(0x0CF2u,pitch/(bpp/8));
+    g_gl_present.draw_pixels(w,h,format,type,pixels);
+    g_gl_present.pixel_zoom(1.f,1.f);g_gl_present.pixel_store(0x0CF2u,0);g_gl_present.pixel_store(0x0CF5u,4);
+    g_gl_present.matrix_mode(0x1700u);g_gl_present.pop_matrix();
+    g_gl_present.matrix_mode(0x1701u);g_gl_present.pop_matrix();g_gl_present.pop_attrib();
+    SDL_GL_SwapWindow(g_win);
+}
+
 static void present(void) {
     const uint8_t *px;
     const uint32_t *pal;
@@ -195,7 +284,10 @@ static void present(void) {
     if (now - g_last_present < 15) return;
     g_shown_seq = seq, g_last_present = now;
     if (hle_screen_frame_hook) hle_screen_frame_hook(px, w, h, pitch, bpp);
-    if (!g_ren) return;
+    if (!g_ren) {
+        if (g_glctx) present_gl(px,w,h,pitch,bpp,pal);
+        return;
+    }
     int hd = 0, ov = 0, ovx = 0, ovy = 0, ovw = 0, ovh = 0;
     if (bpp == 16 && hle_screen_overlay_hook) {        /* 1x base scaled on the GPU + an Nx overlay */
         if (g_ov_n < (size_t)w * h * 9) {              /* sized for the largest scale (3x) */
@@ -631,15 +723,27 @@ static void primary_changed(void) {
 }
 
 int hle_screen_open(const char *title, int fullscreen, int headless) {
+    g_screen_opened = 1;
     g_headless = headless, g_fullscreen = fullscreen;
     hle_set_pump_hook(hle_screen_pump);
     hle_gdi_window_hook = present;                       /* a GDI game's blit shows, pumping or not (a loading bar) */
     if (headless) return 0;
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");      /* SIGINT and SIGTERM end the process: SDL would make them a close the game can refuse */
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) { fprintf(stderr, "[screen] SDL: %s\n", SDL_GetError()); return -1; }
-    g_win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960,
-                             SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | (fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
+    Uint32 flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI |
+                   (fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    if (g_gl_requested) flags |= SDL_WINDOW_OPENGL;
+    g_win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960, flags);
     if (!g_win) { fprintf(stderr, "[screen] window: %s\n", SDL_GetError()); return -1; }
+    if (g_gl_requested) {
+        g_glctx = SDL_GL_CreateContext(g_win);
+        if (!g_glctx) { fprintf(stderr, "[screen] OpenGL context: %s\n", SDL_GetError()); return -1; }
+        g_video_thread = pthread_self();
+        hle_dd_primary_hook = primary_changed;
+        fprintf(stderr, "[screen] %s, OpenGL context, scaling %s (F12), fullscreen F11\n",
+                SDL_GetCurrentVideoDriver(), k_modes[g_mode]);
+        return 0;
+    }
     g_ren = SDL_CreateRenderer(g_win, -1, SDL_RENDERER_PRESENTVSYNC);
     if (!g_ren) g_ren = SDL_CreateRenderer(g_win, -1, SDL_RENDERER_SOFTWARE);
     if (!g_ren) { fprintf(stderr, "[screen] renderer: %s\n", SDL_GetError()); return -1; }
@@ -652,4 +756,32 @@ int hle_screen_open(const char *title, int fullscreen, int headless) {
     hle_dd_primary_hook = primary_changed;
     fprintf(stderr, "[screen] %s, renderer %s, scaling %s (F12), fullscreen F11\n", SDL_GetCurrentVideoDriver(), ri.name, k_modes[g_mode]);
     return 0;
+}
+
+/* Request the screen's SDL window be created with an OpenGL context. This
+ * must be called before hle_screen_open; the same window then owns both GL
+ * rendering and event pumping. */
+int hle_screen_request_opengl(void) {
+    if (g_screen_opened) return g_glctx != NULL;
+    g_gl_requested = 1;
+    return 1;
+}
+
+int hle_screen_gl_active(void) { return g_glctx != NULL; }
+void hle_screen_gl_swap(void) {
+    if (g_win && g_glctx && pthread_equal(pthread_self(), g_video_thread)) {
+        hle_screen_pump();
+        SDL_GL_SwapWindow(g_win);
+    }
+}
+
+void hle_screen_gl_viewport(int x, int y, int width, int height) {
+    if (!g_win || !g_glctx || !pthread_equal(pthread_self(), g_video_thread)) return;
+    int drawable_w = 0, drawable_h = 0;
+    SDL_GL_GetDrawableSize(g_win, &drawable_w, &drawable_h);
+    if (width < 0 || height < 0) return;
+    typedef void (*viewport_fn)(int, int, int, int);
+    viewport_fn viewport = (viewport_fn)SDL_GL_GetProcAddress("glViewport");
+    if (viewport) viewport(x, drawable_h - y - height, width, height);
+    (void)drawable_w;
 }
