@@ -578,8 +578,11 @@ static void dev_set_texture(void) {
     if (stage) RET(D3DERR_NOTAVAILABLE,3);
     if (surface) {
         uint8_t *pixels; int w,h,pitch,bpp;
-        if (!hle_dd_surface_pixels(surface,&pixels,&w,&h,&pitch,&bpp)) RET(D3DERR_INVALIDCALL,3);
-        (void)pixels; (void)w; (void)h; (void)pitch; (void)bpp;
+        if (!hle_dd_surface_is_texture(surface) ||
+            !hle_dd_surface_pixels(surface,&pixels,&w,&h,&pitch,&bpp)) RET(D3DERR_INVALIDCALL,3);
+        if(w<=0 || h<=0 || (bpp!=16 && bpp!=24 && bpp!=32) || pitch<w*(bpp/8))
+            RET(D3DERR_NOTAVAILABLE,3);
+        (void)pixels;
     }
     if (surface==g_texture_surface) RET(D3D_OK,3);
     uint32_t old=g_texture_surface;
