@@ -6,6 +6,7 @@ still runs so the failure is inspectable.
 """
 
 import contextlib
+from collections import Counter
 import hashlib
 import io
 import json
@@ -114,7 +115,7 @@ class Pipeline:
                  timeout=30.0, headless=True, oracle=None, jobs=None,
                  split=1000, build=True, run_binary=True, on_event=None,
                  split_bytes=MAX_UNIT_BYTES, build_timeout=None,
-                 reuse_build=False, fresh_build=False):
+                 reuse_build=False, fresh_build=False, import_trace=False):
         self.pe_path = Path(pe_path).expanduser().resolve()
         self.project_dir = Path(project_dir or projectgen.default_project_dir(self.pe_path)).resolve()
         self.assets_dir = Path(assets_dir).expanduser().resolve() if assets_dir else self.pe_path.parent
@@ -129,6 +130,7 @@ class Pipeline:
         self.do_run = run_binary
         self.reuse_build = reuse_build
         self.fresh_build = fresh_build
+        self.import_trace = import_trace
         self.on_event = on_event
 
         self.info = None
@@ -479,6 +481,13 @@ class Pipeline:
         if self.headless:
             env["SDL_VIDEODRIVER"] = "dummy"
             env["SDL_AUDIODRIVER"] = "dummy"
+        # RECOMP_TRACE makes the runtime log every import it dispatches. That
+        # log is the difference between "the process stayed alive" and "the
+        # process ran a game loop": a loop of Blt/PeekMessage/GetDeviceState/
+        # Sleep is evidence, a spin is not. Kept as an explicit option because
+        # it is large and it slows the run down.
+        if self.import_trace:
+            env["RECOMP_TRACE"] = "1"
         cmd = [str(self.binary), str(self.pe_path)]
         t0 = time.time()
         status, rc, timed_out = "exited", None, False
@@ -513,6 +522,11 @@ class Pipeline:
                 status = "exited"
 
         unresolved = sorted(set(re.findall(r"\[pe\] unresolved import (\S+)", output)))
+        # The import-call profile of the run, most-called first: the artifact a
+        # verification report can carry to show what the process actually did.
+        calls = Counter(re.findall(r"^\[hle\] ([A-Za-z_][\w:]*)$", output, re.M))
+        import_profile = [{"import": name, "calls": n}
+                          for name, n in calls.most_common(40)]
         boot_m = re.search(r"\[host\] .* booted: entry 0x([0-9A-Fa-f]+), (\d+) unresolved imports", output)
         bound_m = re.search(r"\[pe\] bound (\d+) imports, (\d+) unresolved", output)
         result = {
@@ -529,6 +543,9 @@ class Pipeline:
             "unresolved_import_count": int(boot_m.group(2)) if boot_m else None,
             "bound_imports": int(bound_m.group(1)) if bound_m else None,
             "unresolved_imports": unresolved,
+            "import_trace_enabled": self.import_trace,
+            "import_profile": import_profile,
+            "import_calls_total": sum(calls.values()),
             "log_stdout": str(stdout_path),
             "log_stderr": str(stderr_path),
             "stdout_tail": stdout,

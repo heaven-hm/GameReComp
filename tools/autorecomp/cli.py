@@ -79,6 +79,11 @@ def build_parser():
                              "recorded source digest matches the freshly "
                              "generated source, skipping recompilation; "
                              "refuses (fail-closed) on any mismatch")
+    parser.add_argument("--import-trace", action="store_true",
+                        help="record every import the rebuilt process dispatches "
+                             "(RECOMP_TRACE) and put the call profile in the "
+                             "report; evidence that a run reached a game loop "
+                             "rather than a spin, at some cost in speed")
     parser.add_argument("--fresh-build", action="store_true",
                         help="delete build/ before configuring, so a cached "
                              "CMakeCache.txt cannot pin paths from an "
@@ -116,6 +121,7 @@ def main(argv=None):
         split_bytes=args.split_bytes, build_timeout=args.build_timeout,
         build=not args.no_build, run_binary=not args.no_run,
         reuse_build=args.reuse_build, fresh_build=args.fresh_build,
+        import_trace=args.import_trace,
         on_event=_progress)
     try:
         run_pipeline(pipeline)
