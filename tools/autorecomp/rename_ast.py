@@ -569,6 +569,17 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False):
     # `len(re.findall(r"\bundef\s*\(", src))`). An earlier comment here said 14;
     # the number in the refusal message is what the code finds, so the comment is
     # the thing that was wrong.
+    # LLVM intrinsics: declared, not implemented. An unimplemented intrinsic is a
+    # function that compiles and computes something else, so it is a refusal class
+    # of its own (measured: 184 bit_cast, 59 bit_parity, 50 lshift, 31
+    # llvm_umin_i32, 18 llvm_fshl_i32 across the provider bodies).
+    intr = _pre.findall(r"\b(bit_cast|bit_parity|lshift|rshift|llvm_[a-z0-9_]+)\s*\(", body)
+    if intr:
+        kinds = sorted(set(intr))
+        raise Unsupportable(f"the provider body uses LLVM intrinsic helper(s) "
+                            f"{', '.join(kinds)} that are declared in runtime-library.h but "
+                            f"have no implementation here: the body would compile and compute "
+                            f"something else")
     n_undef = len(_pre.findall(r"\bundef\s*\(", body))
     if n_undef:
         raise Unsupportable(f"the provider body contains {n_undef} undefined value(s) "

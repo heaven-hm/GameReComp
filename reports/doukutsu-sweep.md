@@ -328,3 +328,29 @@ callee's effect is brought into the comparison (e.g. compare the callee's own
 named-memory set after driving the caller) or the module embedding the callee is
 exercised as a whole. That is the next design question after the marshal, and it
 should be answered before any marshal-using module is certified.
+
+## The intrinsics are a provider-dependency refusal class, sized
+
+The provider's LLVM intrinsic helpers are **declared** in `runtime-library.h` and
+**not implemented** here, so a body using one would compile and compute something
+else. They are now refused with the intrinsic named:
+
+    353 intrinsic calls across 75 bodies (excluding the undef-refused):
+      bit_cast 184 | bit_parity 55 | lshift 50 | llvm_umin_i32 31
+      llvm_fshl_i32 17 | llvm_smin_i32 8 | llvm_smin_i16 4 | llvm_smax_i32 3
+      llvm_umax_i32 1
+
+That is the same shape of number as the `undef()` rate (24 bodies, 2,331 undefined
+values): together they describe how much of this binary's decompilation depends on
+things this project does not have. An unimplemented intrinsic is worse than an
+`undef()` value in one respect - `undef()` is marked as unknown, while an intrinsic
+looks computable and is silently something else.
+
+## The closure cap is justified, and the cap is not the constraint
+
+The closure-linking verification needs a size cap so a recursive call graph cannot
+blow up the harness or make a divergence unlocalisable. Measured over the first 400
+provider bodies: **median closure 1 function, maximum 109** (0x00401D10 reaches 109,
+0x00422510 reaches 105). No closure reached a 256 cap. So the cap is a guard rather
+than a limit the real call graphs run into, and the report can say a verified caller
+typically linked one function and at most 109.
