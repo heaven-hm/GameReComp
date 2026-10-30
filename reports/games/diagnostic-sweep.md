@@ -1,6 +1,6 @@
 # Permissive-boot diagnostic sweep
 
-Generated 2026-10-30T04:39:57Z by `python3 tools/autorecomp/diagnose.py --timeout 15` (timeout 15s per game).
+Generated 2026-10-30T04:40:33Z by `python3 tools/autorecomp/diagnose.py --timeout 15` (timeout 15s per game).
 
 Each rebuilt binary is started with `RECOMP_PERMISSIVE=1`, which binds unresolved imports to the runtime's self-naming stub. The guest runs until it calls an unimplemented import; the runtime then prints and aborts:
 

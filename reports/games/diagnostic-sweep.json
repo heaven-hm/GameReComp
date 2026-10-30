@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated_at": "2026-10-30T04:39:57Z",
+  "generated_at": "2026-10-30T04:40:33Z",
   "command": "python3 tools/autorecomp/diagnose.py --timeout 15",
   "timeout_seconds": 15.0,
   "method": "each rebuilt binary is launched as `<binary> <absolute PE path>` from the game's own directory, with RECOMP_PERMISSIVE=1 and the dummy SDL video/audio drivers (the pipeline's run-stage settings); the runtime binds unresolved imports to a self-naming stub that aborts on first call, so first_import is what the running guest actually reached. The permissive loader line always reads 0 unresolved because a stub counts as resolved, so each binary is launched a second time without RECOMP_PERMISSIVE and that strict run's unresolved count is recorded under `strict`",
@@ -146,7 +146,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.04,
+      "duration_seconds": 0.06,
       "boot_line": {
         "entry": "0x00481D27",
         "unresolved_iat_imports": 0
@@ -169,7 +169,7 @@
           "SHLWAPI.dll!PathRemoveFileSpecA"
         ],
         "unresolved_name_count": 4,
-        "duration_seconds": 0.09
+        "duration_seconds": 0.39
       },
       "runtime": {
         "files": 33,
@@ -196,7 +196,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.04,
+      "duration_seconds": 0.05,
       "boot_line": {
         "entry": "0x004032C1",
         "unresolved_iat_imports": 0
@@ -217,7 +217,7 @@
           "USER32.dll!CheckRadioButton"
         ],
         "unresolved_name_count": 2,
-        "duration_seconds": 0.03
+        "duration_seconds": 0.05
       },
       "runtime": {
         "files": 28,
@@ -265,7 +265,7 @@
           "USER32.dll!SetMenuDefaultItem"
         ],
         "unresolved_name_count": 2,
-        "duration_seconds": 0.04
+        "duration_seconds": 0.06
       },
       "runtime": {
         "files": 28,
@@ -292,7 +292,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.03,
+      "duration_seconds": 0.04,
       "boot_line": {
         "entry": "0x0049767D",
         "unresolved_iat_imports": 0
@@ -391,7 +391,7 @@
           "SDL.dll!SDL_RWFromFile"
         ],
         "unresolved_name_count": 162,
-        "duration_seconds": 0.03
+        "duration_seconds": 0.05
       },
       "runtime": {
         "files": 29,
@@ -418,7 +418,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.03,
+      "duration_seconds": 0.04,
       "boot_line": {
         "entry": "0x004109DC",
         "unresolved_iat_imports": 0
@@ -523,7 +523,7 @@
       "exit_code": -10,
       "signal": "SIGBUS",
       "timed_out": false,
-      "duration_seconds": 0.04,
+      "duration_seconds": 0.05,
       "boot_line": {
         "entry": "0x0042D49C",
         "unresolved_iat_imports": 0
@@ -547,7 +547,7 @@
           "KERNEL32.DLL!SuspendThread"
         ],
         "unresolved_name_count": 5,
-        "duration_seconds": 0.04
+        "duration_seconds": 0.05
       },
       "runtime": {
         "files": 33,
@@ -592,7 +592,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.04,
+      "duration_seconds": 0.07,
       "boot_line": {
         "entry": "0x00518F68",
         "unresolved_iat_imports": 0
@@ -691,7 +691,7 @@
           "oleaut32.dll!SafeArrayGetLBound"
         ],
         "unresolved_name_count": 159,
-        "duration_seconds": 0.04
+        "duration_seconds": 0.06
       },
       "runtime": {
         "files": 28,
@@ -718,7 +718,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.04,
+      "duration_seconds": 0.06,
       "boot_line": {
         "entry": "0x005841A4",
         "unresolved_iat_imports": 0
@@ -844,7 +844,7 @@
       "exit_code": 1,
       "signal": null,
       "timed_out": false,
-      "duration_seconds": 0.04,
+      "duration_seconds": 0.05,
       "boot_line": {
         "entry": "0x0040BA76",
         "unresolved_iat_imports": 0
@@ -862,7 +862,7 @@
         "iat_unresolved": 0,
         "unresolved_names": [],
         "unresolved_name_count": 0,
-        "duration_seconds": 0.04
+        "duration_seconds": 0.05
       },
       "runtime": {
         "files": 28,
@@ -889,7 +889,7 @@
       "exit_code": 1,
       "signal": null,
       "timed_out": false,
-      "duration_seconds": 0.11,
+      "duration_seconds": 0.13,
       "boot_line": {
         "entry": "0x00401000",
         "unresolved_iat_imports": 0
@@ -916,7 +916,7 @@
           "bulletml.dll!_ZNK14BulletMLRunner5isEndEv"
         ],
         "unresolved_name_count": 8,
-        "duration_seconds": 0.04
+        "duration_seconds": 0.06
       },
       "runtime": {
         "files": 33,
@@ -943,7 +943,7 @@
       "exit_code": -10,
       "signal": "SIGBUS",
       "timed_out": false,
-      "duration_seconds": 0.05,
+      "duration_seconds": 0.06,
       "boot_line": {
         "entry": "0x00420E2C",
         "unresolved_iat_imports": 0
@@ -1042,7 +1042,7 @@
           "bulletml.dll!_BulletMLRunner_set_doChangeSpeed"
         ],
         "unresolved_name_count": 90,
-        "duration_seconds": 0.04
+        "duration_seconds": 0.05
       },
       "runtime": {
         "files": 28,
@@ -1087,7 +1087,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.03,
+      "duration_seconds": 0.07,
       "boot_line": {
         "entry": "0x00401000",
         "unresolved_iat_imports": 0
@@ -1186,7 +1186,7 @@
           "msvcrt.dll!_findclose"
         ],
         "unresolved_name_count": 145,
-        "duration_seconds": 0.04
+        "duration_seconds": 0.06
       },
       "runtime": {
         "files": 28,
@@ -1213,7 +1213,7 @@
       "exit_code": -10,
       "signal": "SIGBUS",
       "timed_out": false,
-      "duration_seconds": 0.05,
+      "duration_seconds": 0.07,
       "boot_line": {
         "entry": "0x004254EC",
         "unresolved_iat_imports": 0
@@ -1312,7 +1312,7 @@
           "bulletml.dll!_BulletMLRunner_set_createSimpleBullet"
         ],
         "unresolved_name_count": 94,
-        "duration_seconds": 0.04
+        "duration_seconds": 0.08
       },
       "runtime": {
         "files": 28,
@@ -1357,7 +1357,7 @@
       "exit_code": -10,
       "signal": "SIGBUS",
       "timed_out": false,
-      "duration_seconds": 0.08,
+      "duration_seconds": 0.05,
       "boot_line": {
         "entry": "0x004187D0",
         "unresolved_iat_imports": 0
@@ -1456,7 +1456,7 @@
           "bulletml.dll!_BulletMLRunner_set_getBulletSpeed"
         ],
         "unresolved_name_count": 86,
-        "duration_seconds": 0.06
+        "duration_seconds": 0.07
       },
       "runtime": {
         "files": 28,
@@ -1501,7 +1501,7 @@
       "exit_code": -6,
       "signal": "SIGABRT",
       "timed_out": false,
-      "duration_seconds": 0.08,
+      "duration_seconds": 0.11,
       "boot_line": {
         "entry": "0x00433569",
         "unresolved_iat_imports": 0
@@ -1526,7 +1526,7 @@
           "USER32.dll!CheckRadioButton"
         ],
         "unresolved_name_count": 6,
-        "duration_seconds": 0.12
+        "duration_seconds": 0.05
       },
       "runtime": {
         "files": 28,
