@@ -121,6 +121,18 @@ int  win32hle_register(const win32hle_shim *shims);
 /* Synthetic VA for a registered shim, or 0 if unknown. */
 uint32_t hle_resolve(const char *name);
 
+/* A DATA import's guest address, or 0 if the name is not one (msvcrt.c: _iob,
+ * _pctype, _ctype, _fmode, __mb_cur_max). The IAT slot for one of these must
+ * hold the address of the object itself, not a shim entry point: writing a
+ * code VA into a data slot would hand the guest a pointer into the shim
+ * registry and fail only when it dereferenced it. The loader asks here first,
+ * then falls back to hle_resolve().
+ *
+ * host.c defines a weak default that returns 0; msvcrt.c's strong definition
+ * replaces it. A weak *declaration* with no definition links as 0 on ELF but
+ * fails the link on Mach-O, so the default has to be a real definition. */
+uint32_t hle_msvcrt_data(const char *name);
+
 /* Like hle_resolve, but registers a self-naming "unimplemented" stub for an
  * unknown name and returns its VA (used as the resolver for a permissive bind,
  * so an unresolved import aborts with its name when first called, not at bind). */

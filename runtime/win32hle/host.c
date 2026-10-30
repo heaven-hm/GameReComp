@@ -35,6 +35,38 @@ void recomp_host_init(void) {
     hle_dsound_register_com();
 }
 
+/* Weak default: no data imports until msvcrt.c is linked in, which is when
+ * the five msvcrt data names stop being reported unresolved. A weak
+ * definition, not a weak declaration -- a declaration with no definition
+ * links as 0 on ELF but breaks the Mach-O link. */
+__attribute__((weak)) uint32_t hle_msvcrt_data(const char *name) {
+    (void)name;
+    return 0;
+}
+
+/* A DATA import's guest address, or 0. */
+static uint32_t data_import(const char *name) {
+    return hle_msvcrt_data(name);
+}
+
+/* The IAT resolver for a real bind: a data import first (its slot must hold the
+ * object's own address), then a function shim. Both the strict and the
+ * permissive boot go through here, so a data import resolves the same way
+ * either way. */
+static uint32_t hle_resolve_import(const char *name) {
+    uint32_t data = data_import(name);
+    return data ? data : hle_resolve(name);
+}
+
+/* Permissive bind: data import, then a shim, then a self-naming stub. The
+ * data step has to come first -- a stub VA in a data slot is a pointer into
+ * the shim registry, which the guest would dereference. */
+static uint32_t hle_resolve_import_or_stub(const char *name) {
+    uint32_t data = data_import(name);
+    if (data) return data;
+    return hle_resolve_or_stub(name);
+}
+
 static int boot(const char *path, uint32_t (*resolve)(const char *)) {
     if (recomp_pe_map(path, &g_img) != 0) return 1;
     char guest[1024];
@@ -48,10 +80,10 @@ static int boot(const char *path, uint32_t (*resolve)(const char *)) {
 }
 
 int recomp_host_boot(const char *path) {
-    return boot(path, hle_resolve) ? 2 : 0;         /* fail if anything unresolved */
+    return boot(path, hle_resolve_import) ? 2 : 0;  /* fail if anything unresolved */
 }
 int recomp_host_boot_permissive(const char *path) {
-    boot(path, hle_resolve_or_stub);                /* unresolved -> self-naming stub */
+    boot(path, hle_resolve_import_or_stub);         /* unresolved -> self-naming stub */
     return g_booted ? 0 : 1;
 }
 
