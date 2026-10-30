@@ -20,6 +20,10 @@
 #include <sched.h>
 #include "win32hle.h"
 
+/* Run this thread's FLS destructors (defined with the FLS shims below);
+ * ExitProcess calls it, and kernel32_crt.c's thread trampoline does too. */
+void hle_fls_thread_exit(void);
+
 /* kernel32_crt.c's codepage-1252 conversions (it owns the mapping); the W
  * calls here share them rather than carrying a second copy. */
 int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
@@ -105,7 +109,11 @@ static void k_GetCommandLineW(void) {
 }
 static void k_GetCurrentProcess(void)   { RET(0xFFFFFFFFu, 0); }        /* pseudo-handle */
 static void k_GetCurrentProcessId(void) { RET((uint32_t)getpid(), 0); }
-static void k_ExitProcess(void)         { fprintf(stderr, "[win32hle] ExitProcess(%u)\n", A32(0)); hle_exit((int)A32(0)); }
+static void k_ExitProcess(void)         {
+    fprintf(stderr, "[win32hle] ExitProcess(%u)\n", A32(0));
+    hle_fls_thread_exit();                           /* the exiting thread's FLS destructors */
+    hle_exit((int)A32(0));
+}
 static void k_TerminateProcess(void) {
     if (A32(0) == 0xFFFFFFFFu) { fprintf(stderr, "[win32hle] TerminateProcess(self, %u)\n", A32(1)); hle_exit((int)A32(1)); }
     g_last_error = ERROR_INVALID_HANDLE;
@@ -536,6 +544,20 @@ static void k_WaitForMultipleObjects(void) {             /* (n, handles, all, ti
     RET(hle_wait((int)n, hs, A32(2) != 0, A32(3)), 4);
 }
 
+/* --- critical sections: the spin-count form the CRT calls --- */
+/* InitializeCriticalSectionAndSpinCount(cs, spinCount): the same guest
+ * CRITICAL_SECTION InitializeCriticalSection makes, with the count recorded
+ * where Windows keeps it (+20).  This layer's own lock fields are the ones
+ * hle_enter_cs/hle_leave_cs use; the spin count is the guest's to read. */
+static void k_InitializeCriticalSectionAndSpinCount(void) {
+    uint32_t cs = A32(0);
+    if (!cs) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 2); }
+    memset(hle_ptr(cs), 0, 24);
+    MEM32(cs + 4) = 0xFFFFFFFFu;
+    MEM32(cs + 20) = A32(1);
+    RET(1, 2);
+}
+
 /* --- thread-local storage: per host thread --- */
 #define TLS_SLOTS 64
 static __thread uint32_t g_tls[TLS_SLOTS];
@@ -547,6 +569,56 @@ static void k_TlsAlloc(void) {
 static void k_TlsFree(void) { uint32_t i = A32(0); if (i < TLS_SLOTS) g_tls_used[i] = 0; RET(1, 1); }
 static void k_TlsGetValue(void) { uint32_t i = A32(0); g_last_error = 0; RET(i < TLS_SLOTS ? g_tls[i] : 0u, 1); }
 static void k_TlsSetValue(void) { uint32_t i = A32(0); if (i < TLS_SLOTS) g_tls[i] = A32(1); RET(i < TLS_SLOTS ? 1u : 0u, 2); }
+
+/* --- fibre-local storage (FLS) ---
+ * FLS is TLS with a destructor: when a thread that has a non-NULL value in a
+ * slot exits, that slot's callback runs with the value.  There are no fibres
+ * here (a fibre is a user-scheduled thread, and this layer's guest threads are
+ * host threads), so the honest implementation is what FLS means without them:
+ * a real per-thread slot table - the same __thread mechanism the Tls* calls
+ * use - plus the guest destructor list, run when a guest thread ends
+ * (hle_fls_thread_exit, called by the thread trampoline and by ExitProcess).
+ * Nothing is answered with success and no storage: a slot holds what the guest
+ * put in it, and an index that was never allocated fails with
+ * ERROR_INVALID_PARAMETER rather than returning a fabricated value. */
+#define FLS_SLOTS 128
+static __thread uint32_t g_fls[FLS_SLOTS];
+static uint8_t g_fls_used[FLS_SLOTS];
+static uint32_t g_fls_cb[FLS_SLOTS];         /* the guest callback per slot */
+static void k_FlsAlloc(void) {               /* (PFLS_CALLBACK_FUNCTION) -> index, or FLS_OUT_OF_INDEXES */
+    for (int i = 0; i < FLS_SLOTS; i++)
+        if (!g_fls_used[i]) { g_fls_used[i] = 1; g_fls_cb[i] = A32(0); g_last_error = 0; RET((uint32_t)i, 1); }
+    g_last_error = ERROR_NOT_ENOUGH_MEMORY;
+    RET(0xFFFFFFFFu, 1);
+}
+static void k_FlsFree(void) {
+    uint32_t i = A32(0);
+    if (i >= FLS_SLOTS || !g_fls_used[i]) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 1); }
+    g_fls_used[i] = 0; g_fls_cb[i] = 0; g_fls[i] = 0;
+    RET(1, 1);
+}
+static void k_FlsGetValue(void) {
+    uint32_t i = A32(0);
+    if (i >= FLS_SLOTS || !g_fls_used[i]) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 1); }
+    g_last_error = 0;
+    RET(g_fls[i], 1);
+}
+static void k_FlsSetValue(void) {
+    uint32_t i = A32(0);
+    if (i >= FLS_SLOTS || !g_fls_used[i]) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 2); }
+    g_fls[i] = A32(1);
+    RET(1, 2);
+}
+/* The callbacks for the thread that is ending, each once, with its value. */
+void hle_fls_thread_exit(void) {
+    for (int i = 0; i < FLS_SLOTS; i++) {
+        if (!g_fls_used[i] || !g_fls[i] || !g_fls_cb[i]) continue;
+        uint32_t v = g_fls[i];
+        g_fls[i] = 0;
+        uint32_t args[1] = { v };
+        hle_call_guest(g_fls_cb[i], 1, args);
+    }
+}
 
 /* --- the console, serial ports, devices: a game links them, a host has none --- */
 static void k_ret1_0(void) { RET(1, 0); }
@@ -742,6 +814,9 @@ const win32hle_shim win32hle_kernel32[] = {
     { "WaitForSingleObject",   k_WaitForSingleObject },
     { "WaitForSingleObjectEx", k_WaitForSingleObjectEx },
     { "WaitForMultipleObjects", k_WaitForMultipleObjects },
+    { "InitializeCriticalSectionAndSpinCount", k_InitializeCriticalSectionAndSpinCount },
+    { "FlsAlloc",           k_FlsAlloc }, { "FlsFree", k_FlsFree },
+    { "FlsGetValue",        k_FlsGetValue }, { "FlsSetValue", k_FlsSetValue },
     { "TlsAlloc",           k_TlsAlloc },
     { "TlsFree",            k_TlsFree },
     { "TlsGetValue",        k_TlsGetValue },

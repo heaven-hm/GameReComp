@@ -21,6 +21,9 @@
 #include <pthread.h>
 #include "win32hle.h"
 
+/* kernel32.c's fibre-local-storage destructors, run when a guest thread ends. */
+void hle_fls_thread_exit(void);
+
 #define ERROR_INSUFFICIENT_BUFFER  122u
 #define ERROR_CALL_NOT_IMPLEMENTED 120u
 #define ERROR_INVALID_PARAMETER     87u
@@ -42,6 +45,7 @@ static void *thread_trampoline(void *p) {
     t_self = a;
     uint32_t args[1] = { a->param };
     a->code = hle_call_guest(a->start, 1, args);
+    hle_fls_thread_exit();                           /* this thread's FLS destructors, as Windows runs them */
     a->done = 1;
     return NULL;
 }
