@@ -808,8 +808,10 @@ static void d3d_create_device(void) {
         g_device=hle_com_new(g_dev_vt,12);
         uint32_t state=hle_va(hle_alloc(4)); MEM32(g_device+8)=state;
         identity(g_world); identity(g_view); identity(g_projection); identity(g_texture_transform);
-        memset(g_render,0,sizeof g_render); g_render[7]=1; g_render[8]=3; g_render[9]=2; g_render[14]=1;
-        p_enable(GL_DEPTH_TEST); p_depth_mask(1); p_disable(GL_ALPHA_TEST); p_disable(GL_FOG); p_disable(GL_DITHER);
+        int depth_bits=0; p_getint(GL_DEPTH_BITS,&depth_bits);
+        memset(g_render,0,sizeof g_render); g_render[7]=depth_bits>0; g_render[8]=3; g_render[9]=2; g_render[14]=1;
+        if(g_render[7])p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);
+        p_depth_mask(1); p_disable(GL_ALPHA_TEST); p_disable(GL_FOG); p_disable(GL_DITHER);
         g_render[137]=1; g_render[141]=1; g_render[145]=1; g_render[147]=0; g_render[148]=0;
         memset(g_material,0,sizeof g_material); memset(g_lights,0,sizeof g_lights);
         memset(g_light_valid,0,sizeof g_light_valid); memset(g_light_enabled,0,sizeof g_light_enabled);
@@ -860,8 +862,17 @@ static void dev_set_target(void) {
     if(flags || !target_info(surface,&pixels,&w,&h,&pitch,&bpp) || g_scene_active) RET(D3DERR_INVALIDCALL,3);
     if(surface==g_render_target) RET(D3D_OK,3);
     if(!hle_screen_gl_active()) RET(D3DERR_NOTAVAILABLE,3);
+    if(!load_gl()) RET(D3DERR_NOTAVAILABLE,3);
+    int old_viewport[4]; p_getint(GL_VIEWPORT,old_viewport);
     if(!bind_render_target(surface)) {
         if(g_render_target) bind_render_target(g_render_target);
+        p_gl_viewport(old_viewport[0],old_viewport[1],old_viewport[2],old_viewport[3]);
+        RET(D3DERR_NOTAVAILABLE,3);
+    }
+    int depth_bits=0; p_getint(GL_DEPTH_BITS,&depth_bits);
+    if(g_render[7] && depth_bits<=0) {
+        if(g_render_target) bind_render_target(g_render_target);
+        p_gl_viewport(old_viewport[0],old_viewport[1],old_viewport[2],old_viewport[3]);
         RET(D3DERR_NOTAVAILABLE,3);
     }
     set_target_viewport(surface,0,0,w,h);
@@ -1269,6 +1280,7 @@ static void dev_set_render_state(void) {
     if(!render_state_value_valid(s,v)) RET(D3DERR_INVALIDCALL,3);
     if(s==9 && v==3) RET(D3DERR_NOTAVAILABLE,3);
     if(!load_gl()) RET(D3DERR_NOTAVAILABLE,3);
+    if(s==7 && v) { int depth_bits=0; p_getint(GL_DEPTH_BITS,&depth_bits); if(depth_bits<=0) RET(D3DERR_NOTAVAILABLE,3); }
     g_render[s]=v;
     switch(s) {
     case 7: if(v)p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);break;
