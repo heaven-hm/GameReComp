@@ -6,7 +6,7 @@ Every game this product knows about, in one table: the locally supplied corpus t
 
 **Port details** are read from each project's own `reports/report.json`: functions recovered, generated C, the rebuilt binary, imports the runtime bound, and the low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed high-level source.
 
-Updated 2026-10-30T03:54:14Z by `python -m tools.gamesdb --matrix`.
+Updated 2026-10-30T04:33:23Z by `python -m tools.gamesdb --matrix`.
 
 ## This repository (measured)
 
@@ -18,7 +18,7 @@ Updated 2026-10-30T03:54:14Z by `python -m tools.gamesdb --matrix`.
 | Cave Story | Windows | i386 (PE32) | 551 fns recovered; 2 units / 5.4 MiB C; binary OrgView 1517 KiB; 120 imports bound, 2 unresolved; low-level 551/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | GeneRally | Windows | i386 (PE32) | 2577 fns recovered; 46 units / 373.9 MiB C; low-level 2577/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/GeneRally/logs/compile.log | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | GeneRally | Windows | i386 (PE32) | 311 fns recovered; 2 units / 7.0 MiB C; binary TrackEditor 2152 KiB; 88 imports bound, 59 unresolved; low-level 311/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Gunroar | Windows | i386 (PE32) | 3288 fns recovered; 5 units / 19.6 MiB C; binary gr 0 KiB; 63 imports bound, 73 unresolved; low-level 3288/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| Gunroar | Windows | i386 (PE32) | 3288 fns recovered; 5 units / 19.6 MiB C; binary gr 7174 KiB; 63 imports bound, 73 unresolved; low-level 3288/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Hero Core | Windows | i386 (PE32) | 12424 fns recovered; 14 units / 59.4 MiB C; binary herocore_gm5 17276 KiB; 353 imports bound, 160 unresolved; low-level 12424/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Hero Core | Windows | i386 (PE32) | 15788 fns recovered; 18 units / 79.6 MiB C; binary herocore_gm7 22159 KiB; 356 imports bound, 176 unresolved; low-level 15788/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Ikachan | Windows | i386 (PE32) | 482 fns recovered; 3 units / 9.6 MiB C; binary dxIka 2175 KiB; 97 imports bound; low-level 482/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |

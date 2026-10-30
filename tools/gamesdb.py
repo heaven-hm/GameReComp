@@ -15,6 +15,7 @@ it. Rows marked with a dagger are upstream project claims, not measurements.
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -652,6 +653,42 @@ def write_table(table_path=TABLE_PATH, **kwargs):
     return table_path
 
 
+README_PATH = REPO_ROOT / "README.md"
+README_BEGIN = "<!-- GAME-MATRIX:BEGIN -->"
+README_END = "<!-- GAME-MATRIX:END -->"
+
+
+def sync_readme(measured_rows, readme_path=README_PATH):
+    """Keep the README's copy of the measured table equal to the matrix.
+
+    The README carries the same rows between two markers so a reader sees the
+    table without following a link. Regenerating the matrix rewrites that block
+    from the same source, so the two can never drift apart. The markers stay in
+    place; only what is between them is replaced.
+    """
+    readme_path = Path(readme_path)
+    try:
+        text = readme_path.read_text()
+    except OSError:
+        return None
+    begin, end = README_BEGIN, README_END
+    if begin in text and end in text:
+        head, rest = text.split(begin, 1)
+        _old, tail = rest.split(end, 1)
+    else:
+        # First run on a README written before the markers existed: put them
+        # around the table that is already there.
+        m = re.search(r"(^\| Name \| OS \| Arch \| Port details \| Working status \|\n"
+                      r"(?:\|.*\n)+)", text, re.M)
+        if not m:
+            return None
+        head = text[:m.start()]
+        tail = text[m.end():]
+    readme_path.write_text(
+        f"{head}{begin}\n{measured_rows}\n{end}{tail}")
+    return readme_path
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Render table.md games database")
     parser.add_argument("--table", default=str(TABLE_PATH))
@@ -660,6 +697,8 @@ def main(argv=None):
                         help="also render the all-games matrix to this path "
                              "(default: docs/GAME_MATRIX.md when --matrix is "
                              "given without a value)")
+    parser.add_argument("--no-readme", action="store_true",
+                        help="do not update the README's GAME-MATRIX block")
     parser.add_argument("--inventory", default=str(INVENTORY_PATH))
     parser.add_argument("--results", default=str(RESULTS_PATH))
     args = parser.parse_args(argv)
@@ -671,6 +710,15 @@ def main(argv=None):
         matrix = write_matrix(Path(target), inventory_path=Path(args.inventory),
                               results_path=Path(args.results))
         print(f"wrote {matrix}")
+    if not args.no_readme:
+        rendered = render_matrix(inventory_path=Path(args.inventory),
+                                 results_path=Path(args.results))
+        m = re.search(r"## This repository \(measured\)\n\n(.*?)\n\n## This repository "
+                      r"\(not measured\)", rendered, re.S)
+        if m:
+            synced = sync_readme(m.group(1).strip())
+            if synced:
+                print(f"updated {synced} (measured table block)")
     return 0
 
 

@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-10-30T03:54:14Z by `python -m tools.gamesdb`. Measured 19; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-10-30T04:33:23Z by `python -m tools.gamesdb`. Measured 19; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **Ikachan** (dxIka.exe) at 93/100, partial: process launched and exited 1; no oracle supplied.
 
