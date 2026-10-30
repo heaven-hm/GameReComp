@@ -95,8 +95,17 @@ bool ProjectModel::load(const QString &dir, QString *error)
             row.symbol = f.value(QStringLiteral("symbol")).toString();
             row.category = f.value(QStringLiteral("category")).toString();
             row.file = f.value(QStringLiteral("module")).toString();
-            row.verifiedBy = f.value(QStringLiteral("provenance")).toObject()
-                                 .value(QStringLiteral("verified_by")).toString();
+            const QJsonObject prov = f.value(QStringLiteral("provenance")).toObject();
+            row.verifiedBy = prov.value(QStringLiteral("verified_by")).toString();
+            row.notProven = prov.value(QStringLiteral("not_proven")).toString();
+            for (const auto &e : prov.value(QStringLiteral("evidence")).toArray())
+                row.evidence << e.toString();
+            // The delivered source is named after the address. If it is not
+            // there the explorer says so instead of showing an empty pane that
+            // looks like a function with no body.
+            const QString rel = QStringLiteral("src/highlevel/%1.c").arg(row.address);
+            if (QFileInfo(QDir(dir).filePath(rel)).isFile())
+                row.sourcePath = rel;
             m_functions.append(row);
         }
     }

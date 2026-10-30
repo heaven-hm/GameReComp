@@ -10,6 +10,7 @@
 #include <QString>
 #include <QVector>
 #include <QJsonObject>
+#include <QStringList>
 
 struct Stage {
     QString name;
@@ -21,8 +22,11 @@ struct FunctionRow {
     QString address;     // "0x00402020"
     QString symbol;
     QString category;    // HIGH_LEVEL_VERIFIED / HIGH_LEVEL_UNVERIFIED / ...
-    QString file;
+    QString file;        // the module the function came from
+    QString sourcePath;  // src/highlevel/<address>.c, empty when not delivered
     QString verifiedBy;  // provenance.verified_by, empty when unverified
+    QString notProven;   // provenance.not_proven, the limit stated by the producer
+    QStringList evidence; // the instruction lines the name was derived from
 };
 
 struct CertifiedRow {

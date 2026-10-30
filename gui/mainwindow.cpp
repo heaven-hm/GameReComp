@@ -104,14 +104,43 @@ void MainWindow::buildUi()
     m_stages->setRootIsDecorated(false);
     m_tabs->addTab(m_stages, QStringLiteral("Stages"));
 
-    m_functions = new QTableWidget(0, 5, m_tabs);
+    // The source explorer: the function list, the generated C, and the
+    // provenance beside it. The three panels are the product's claim in one
+    // screen -- this function, this source, and exactly what was checked.
+    auto *explorer = new QWidget(m_tabs);
+    auto *explorerLayout = new QVBoxLayout(explorer);
+
+    m_search = new QLineEdit(explorer);
+    m_search->setPlaceholderText(QStringLiteral("filter by address or symbol"));
+    explorerLayout->addWidget(m_search);
+
+    auto *split = new QSplitter(Qt::Horizontal, explorer);
+    m_functions = new QTableWidget(0, 4, split);
     m_functions->setHorizontalHeaderLabels({QStringLiteral("Address"), QStringLiteral("Symbol"),
-                                            QStringLiteral("Category"), QStringLiteral("Verified by"),
-                                            QStringLiteral("File")});
-    m_functions->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+                                            QStringLiteral("Category"), QStringLiteral("Verified by")});
+    m_functions->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     m_functions->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_functions->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_functions->verticalHeader()->setVisible(false);
-    m_tabs->addTab(m_functions, QStringLiteral("Source functions"));
+    split->addWidget(m_functions);
+
+    auto *rightSplit = new QSplitter(Qt::Vertical, split);
+    m_sourceView = new QPlainTextEdit(rightSplit);
+    m_sourceView->setReadOnly(true);
+    m_sourceView->setPlaceholderText(QStringLiteral("select a function to see the C that was generated for it"));
+    m_provenanceView = new QPlainTextEdit(rightSplit);
+    m_provenanceView->setReadOnly(true);
+    m_provenanceView->setPlaceholderText(QStringLiteral("provenance: what was verified, and what was not"));
+    rightSplit->addWidget(m_sourceView);
+    rightSplit->addWidget(m_provenanceView);
+    rightSplit->setStretchFactor(0, 3);
+    rightSplit->setStretchFactor(1, 2);
+    split->addWidget(rightSplit);
+    split->setStretchFactor(0, 2);
+    split->setStretchFactor(1, 3);
+    explorerLayout->addWidget(split, 1);
+
+    m_tabs->addTab(explorer, QStringLiteral("Source explorer"));
 
     m_certified = new QTableWidget(0, 6, m_tabs);
     m_certified->setHorizontalHeaderLabels({QStringLiteral("Address"), QStringLiteral("Verdict"),
@@ -139,6 +168,9 @@ void MainWindow::buildUi()
     connect(projReload, &QPushButton::clicked, this, &MainWindow::reloadProject);
     connect(m_runButton, &QPushButton::clicked, this, &MainWindow::runPipeline);
     connect(m_projectDir, &QLineEdit::editingFinished, this, &MainWindow::reloadProject);
+    connect(m_functions, &QTableWidget::cellClicked, this,
+            [this](int row, int) { showFunction(row); });
+    connect(m_search, &QLineEdit::textChanged, this, [this](const QString &) { refresh(); });
 }
 
 void MainWindow::browseProject()
@@ -199,9 +231,11 @@ void MainWindow::refresh()
     m_stages->resizeColumnToContents(0);
     m_stages->resizeColumnToContents(1);
 
-    m_functions->setRowCount(m_model.functions().size());
-    for (int i = 0; i < m_model.functions().size(); ++i) {
-        const auto &f = m_model.functions()[i];
+    const auto &rows = m_model.functions();
+    m_functions->setRowCount(rows.size());
+    const QString filter = m_search ? m_search->text().trimmed() : QString();
+    for (int i = 0; i < rows.size(); ++i) {
+        const auto &f = rows[i];
         m_functions->setItem(i, 0, new QTableWidgetItem(f.address));
         m_functions->setItem(i, 1, new QTableWidgetItem(f.symbol));
         auto *cat = new QTableWidgetItem(f.category);
@@ -209,13 +243,61 @@ void MainWindow::refresh()
             cat->setForeground(QColor(0x2e, 0x7d, 0x32));
         m_functions->setItem(i, 2, cat);
         m_functions->setItem(i, 3, new QTableWidgetItem(f.verifiedBy));
-        m_functions->setItem(i, 4, new QTableWidgetItem(f.file));
+        // Filtering hides rows rather than removing them: the count in the
+        // status bar still describes the project, not the current search.
+        m_functions->setRowHidden(i, !filter.isEmpty()
+                                         && !f.address.contains(filter, Qt::CaseInsensitive)
+                                         && !f.symbol.contains(filter, Qt::CaseInsensitive));
     }
     m_functions->resizeColumnToContents(0);
     m_statusBarLabel->setText(QStringLiteral("%1 stage(s), %2 function(s), %3 certified record(s)")
                                   .arg(m_model.stages().size())
                                   .arg(m_model.functions().size())
                                   .arg(m_model.certified().size()));
+}
+
+void MainWindow::showFunction(int row)
+{
+    const auto &rows = m_model.functions();
+    if (row < 0 || row >= rows.size())
+        return;
+    const auto &f = rows[row];
+
+    if (f.sourcePath.isEmpty()) {
+        m_sourceView->setPlainText(
+            QStringLiteral("no generated source was delivered for %1.\n\n"
+                           "The function is recorded in project.json but its .c is not in "
+                           "src/highlevel/ -- so this project carries a claim about it with no "
+                           "source beside the claim, which is worth knowing rather than hiding.")
+                .arg(f.address));
+    } else {
+        QFile src(QDir(m_model.directory()).filePath(f.sourcePath));
+        if (src.open(QIODevice::ReadOnly))
+            m_sourceView->setPlainText(QString::fromUtf8(src.readAll()));
+        else
+            m_sourceView->setPlainText(QStringLiteral("cannot read %1").arg(f.sourcePath));
+    }
+    m_sourceView->moveCursor(QTextCursor::Start);
+
+    QStringList prov;
+    prov << QStringLiteral("address:   %1").arg(f.address)
+         << QStringLiteral("symbol:    %1").arg(f.symbol)
+         << QStringLiteral("category:  %1").arg(f.category)
+         << QStringLiteral("module:    %1").arg(f.file);
+    if (!f.verifiedBy.isEmpty())
+        prov << QStringLiteral("verified:  %1").arg(f.verifiedBy);
+    else
+        prov << QStringLiteral("verified:  no -- this function records no verified_by, so it is "
+                               "not a certified replacement whatever its category says");
+    if (!f.notProven.isEmpty())
+        prov << QStringLiteral("not proven: %1").arg(f.notProven);
+    if (!f.evidence.isEmpty()) {
+        prov << QString() << QStringLiteral("evidence behind the name:");
+        for (const auto &e : f.evidence)
+            prov << QStringLiteral("  %1").arg(e);
+    }
+    m_provenanceView->setPlainText(prov.join(QLatin1Char('\n')));
+    m_provenanceView->moveCursor(QTextCursor::Start);
 }
 
 void MainWindow::runPipeline()

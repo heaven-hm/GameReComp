@@ -33,6 +33,7 @@ private slots:
 private:
     void buildUi();
     void refresh();
+    void showFunction(int row);
 
     ProjectModel m_model;
     QProcess *m_proc = nullptr;
@@ -44,6 +45,9 @@ private:
     QLabel *m_statusBarLabel = nullptr;
     QTreeWidget *m_stages = nullptr;
     QTableWidget *m_functions = nullptr;
+    QPlainTextEdit *m_sourceView = nullptr;
+    QPlainTextEdit *m_provenanceView = nullptr;
+    QLineEdit *m_search = nullptr;
     QTableWidget *m_certified = nullptr;
     QPlainTextEdit *m_log = nullptr;
     QTabWidget *m_tabs = nullptr;
