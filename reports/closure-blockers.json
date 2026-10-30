@@ -2,8 +2,8 @@
  "generating_callers": 96,
  "by_reason": [
   {
-   "reason": "Invalid expression",
-   "closures_blocked": 14
+   "reason": "an unbounded offset on a VA does not preserve VA-ness - refusing",
+   "closures_blocked": 20
   },
   {
    "reason": "a dereference with no recoverable width",
@@ -15,10 +15,6 @@
   },
   {
    "reason": "it named an address it could not decompile, so there is nothing ",
-   "closures_blocked": 9
-  },
-  {
-   "reason": "an unbounded offset on a VA does not preserve VA-ness - refusing",
    "closures_blocked": 9
   },
   {
@@ -51,6 +47,10 @@
   },
   {
    "reason": "var_3",
+   "closures_blocked": 1
+  },
+  {
+   "reason": "var_4",
    "closures_blocked": 1
   },
   {

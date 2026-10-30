@@ -120,7 +120,18 @@ def synthesize_types(body):
     generation still refuses what it cannot lay out."""
     import re as _re
     names = sorted(set(_re.findall(r"\b(?:struct|union)_\d+", body)))
-    return "\n".join(f"typedef struct {n} {{ int _opaque; }} {n};" for n in names)
+    out = [f"typedef struct {n} {{ int _opaque; }} {n};" for n in names]
+
+    # `cabifunction_N` is how the provider spells an INDIRECT CALL: it emits
+    # `((cabifunction_7596 *) var_2[12U])()`. Nothing declared that type, and
+    # pycparser reports the resulting unknown-type call-through-cast as
+    # ": Invalid expression" with no line number -- which is why this looked like
+    # a parse gap for several rounds and was worth ten closures. A function type
+    # is all the parse needs; the transform refuses the indirect call on its own
+    # grounds, exactly as it refuses a field access through an unknown layout.
+    cabi = sorted(set(_re.findall(r"\bcabifunction_\d+\b", body)))
+    out.extend(f"typedef void {n}(void);" for n in cabi)
+    return "\n".join(out)
 
 
 def prepare(body):
