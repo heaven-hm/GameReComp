@@ -1,0 +1,945 @@
+{
+ "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/ikachan/dxIka.exe",
+ "imports_parsed": 97,
+ "counts": {
+  "functions": 2,
+  "records": 52,
+  "identities": 24
+ },
+ "functions": {
+  "0x0040BA58": {
+   "records": [
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413350",
+     "at": "0x0040BA58",
+     "va": "0x00413350",
+     "width": 1,
+     "evidence": "mov eax, dword ptr [0x413350]"
+    },
+    {
+     "kind": "constant",
+     "identity": "constant:0x000343FD",
+     "at": "0x0040BA5D",
+     "value": "0x000343FD",
+     "evidence": "imul eax, eax, 0x343fd"
+    },
+    {
+     "kind": "constant",
+     "identity": "constant:0x00269EC3",
+     "at": "0x0040BA63",
+     "value": "0x00269EC3",
+     "evidence": "add eax, 0x269ec3"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413350",
+     "at": "0x0040BA68",
+     "va": "0x00413350",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413350], eax"
+    },
+    {
+     "kind": "signature",
+     "identity": "function:0x0040BA58",
+     "ret_form": "ret",
+     "argc": null,
+     "convention": "cdecl",
+     "evidence": "the function ends with `ret`"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413350",
+     "width": 32,
+     "offset": "0x1350",
+     "va": "0x00413350",
+     "evidence": "rev.ng reads a generic32_t at 0x00413350"
+    }
+   ],
+   "instructions": 7,
+   "ret_form": "ret"
+  },
+  "0x00401000": {
+   "records": [
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BE0",
+     "at": "0x00401002",
+     "va": "0x00413BE0",
+     "width": 1,
+     "evidence": "mov byte ptr [0x413be0], 1"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BE0",
+     "at": "0x00401009",
+     "va": "0x00413BE0",
+     "width": 4,
+     "evidence": "mov word ptr [0x413be2], 0xf"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BE4",
+     "at": "0x00401012",
+     "va": "0x00413BE4",
+     "width": 1,
+     "evidence": "mov word ptr [0x413be4], ax"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BE4",
+     "at": "0x00401018",
+     "va": "0x00413BE4",
+     "width": 4,
+     "evidence": "mov byte ptr [0x413be6], al"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BE4",
+     "at": "0x0040101D",
+     "va": "0x00413BE4",
+     "width": 8,
+     "evidence": "mov byte ptr [0x413be7], al"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BE8",
+     "at": "0x00401022",
+     "va": "0x00413BE8",
+     "width": 1,
+     "evidence": "mov word ptr [0x413be8], 0x3e8"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BE8",
+     "at": "0x0040102B",
+     "va": "0x00413BE8",
+     "width": 4,
+     "evidence": "mov word ptr [0x413bea], 0x3e9"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BEC",
+     "at": "0x00401034",
+     "va": "0x00413BEC",
+     "width": 1,
+     "evidence": "mov word ptr [0x413bec], ax"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BEC",
+     "at": "0x0040103A",
+     "va": "0x00413BEC",
+     "width": 4,
+     "evidence": "mov byte ptr [0x413bee], al"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BEC",
+     "at": "0x0040103F",
+     "va": "0x00413BEC",
+     "width": 8,
+     "evidence": "mov byte ptr [0x413bef], al"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BF0",
+     "at": "0x00401044",
+     "va": "0x00413BF0",
+     "width": 1,
+     "evidence": "mov word ptr [0x413bf0], ax"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BF0",
+     "at": "0x0040104A",
+     "va": "0x00413BF0",
+     "width": 4,
+     "evidence": "mov byte ptr [0x413bf2], al"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BF8",
+     "at": "0x0040104F",
+     "va": "0x00413BF8",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413bf8], 0x20c000"
+    },
+    {
+     "kind": "constant",
+     "identity": "constant:0x0020C000",
+     "at": "0x0040104F",
+     "value": "0x0020C000",
+     "evidence": "mov dword ptr [0x413bf8], 0x20c000"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413BFC",
+     "at": "0x00401059",
+     "va": "0x00413BFC",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413bfc], 0x168000"
+    },
+    {
+     "kind": "constant",
+     "identity": "constant:0x00168000",
+     "at": "0x00401059",
+     "value": "0x00168000",
+     "evidence": "mov dword ptr [0x413bfc], 0x168000"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413C00",
+     "at": "0x00401063",
+     "va": "0x00413C00",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413c00], eax"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413C04",
+     "at": "0x00401068",
+     "va": "0x00413C04",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413c04], eax"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413C08",
+     "at": "0x0040106D",
+     "va": "0x00413C08",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413c08], 0x218000"
+    },
+    {
+     "kind": "constant",
+     "identity": "constant:0x00218000",
+     "at": "0x0040106D",
+     "value": "0x00218000",
+     "evidence": "mov dword ptr [0x413c08], 0x218000"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413C0C",
+     "at": "0x00401077",
+     "va": "0x00413C0C",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413c0c], 0x16c000"
+    },
+    {
+     "kind": "constant",
+     "identity": "constant:0x0016C000",
+     "at": "0x00401077",
+     "value": "0x0016C000",
+     "evidence": "mov dword ptr [0x413c0c], 0x16c000"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413C10",
+     "at": "0x00401081",
+     "va": "0x00413C10",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413c10], 0x4000"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413C14",
+     "at": "0x0040108B",
+     "va": "0x00413C14",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413c14], 0x800"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413C18",
+     "at": "0x00401095",
+     "va": "0x00413C18",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413c18], 0xc000"
+    },
+    {
+     "kind": "references_global",
+     "identity": "global:0x00413C1C",
+     "at": "0x0040109F",
+     "va": "0x00413C1C",
+     "width": 1,
+     "evidence": "mov dword ptr [0x413c1c], 0x5800"
+    },
+    {
+     "kind": "signature",
+     "identity": "function:0x00401000",
+     "ret_form": "ret",
+     "argc": null,
+     "convention": "cdecl",
+     "evidence": "the function ends with `ret`"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BE0",
+     "width": 8,
+     "offset": "0x1BE0",
+     "va": "0x00413BE0",
+     "evidence": "rev.ng reads a generic8_t at 0x00413BE0"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BE0",
+     "width": 16,
+     "offset": "0x1BE2",
+     "va": "0x00413BE0",
+     "evidence": "rev.ng reads a generic16_t at 0x00413BE0"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BE4",
+     "width": 16,
+     "offset": "0x1BE4",
+     "va": "0x00413BE4",
+     "evidence": "rev.ng reads a generic16_t at 0x00413BE4"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BE4",
+     "width": 8,
+     "offset": "0x1BE6",
+     "va": "0x00413BE4",
+     "evidence": "rev.ng reads a generic8_t at 0x00413BE4"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BE8",
+     "width": 16,
+     "offset": "0x1BE8",
+     "va": "0x00413BE8",
+     "evidence": "rev.ng reads a generic16_t at 0x00413BE8"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BEC",
+     "width": 16,
+     "offset": "0x1BEC",
+     "va": "0x00413BEC",
+     "evidence": "rev.ng reads a generic16_t at 0x00413BEC"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BEC",
+     "width": 8,
+     "offset": "0x1BEE",
+     "va": "0x00413BEC",
+     "evidence": "rev.ng reads a generic8_t at 0x00413BEC"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BF0",
+     "width": 16,
+     "offset": "0x1BF0",
+     "va": "0x00413BF0",
+     "evidence": "rev.ng reads a generic16_t at 0x00413BF0"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BF0",
+     "width": 8,
+     "offset": "0x1BF2",
+     "va": "0x00413BF0",
+     "evidence": "rev.ng reads a generic8_t at 0x00413BF0"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BF8",
+     "width": 32,
+     "offset": "0x1BF8",
+     "va": "0x00413BF8",
+     "evidence": "rev.ng reads a generic32_t at 0x00413BF8"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413BFC",
+     "width": 32,
+     "offset": "0x1BFC",
+     "va": "0x00413BFC",
+     "evidence": "rev.ng reads a generic32_t at 0x00413BFC"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413C00",
+     "width": 32,
+     "offset": "0x1C00",
+     "va": "0x00413C00",
+     "evidence": "rev.ng reads a generic32_t at 0x00413C00"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413C04",
+     "width": 32,
+     "offset": "0x1C04",
+     "va": "0x00413C04",
+     "evidence": "rev.ng reads a generic32_t at 0x00413C04"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413C08",
+     "width": 32,
+     "offset": "0x1C08",
+     "va": "0x00413C08",
+     "evidence": "rev.ng reads a generic32_t at 0x00413C08"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413C0C",
+     "width": 32,
+     "offset": "0x1C0C",
+     "va": "0x00413C0C",
+     "evidence": "rev.ng reads a generic32_t at 0x00413C0C"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413C10",
+     "width": 32,
+     "offset": "0x1C10",
+     "va": "0x00413C10",
+     "evidence": "rev.ng reads a generic32_t at 0x00413C10"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413C14",
+     "width": 32,
+     "offset": "0x1C14",
+     "va": "0x00413C14",
+     "evidence": "rev.ng reads a generic32_t at 0x00413C14"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413C18",
+     "width": 32,
+     "offset": "0x1C18",
+     "va": "0x00413C18",
+     "evidence": "rev.ng reads a generic32_t at 0x00413C18"
+    },
+    {
+     "kind": "field_access",
+     "identity": "global:0x00413C1C",
+     "width": 32,
+     "offset": "0x1C1C",
+     "va": "0x00413C1C",
+     "evidence": "rev.ng reads a generic32_t at 0x00413C1C"
+    }
+   ],
+   "instructions": 24,
+   "ret_form": "ret"
+  }
+ },
+ "identities": {
+  "global:0x00413350": [
+   {
+    "address": "0x0040BA58",
+    "kind": "references_global",
+    "identity": "global:0x00413350",
+    "at": "0x0040BA58",
+    "va": "0x00413350",
+    "width": 1,
+    "evidence": "mov eax, dword ptr [0x413350]"
+   },
+   {
+    "address": "0x0040BA58",
+    "kind": "references_global",
+    "identity": "global:0x00413350",
+    "at": "0x0040BA68",
+    "va": "0x00413350",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413350], eax"
+   },
+   {
+    "address": "0x0040BA58",
+    "kind": "field_access",
+    "identity": "global:0x00413350",
+    "width": 32,
+    "offset": "0x1350",
+    "va": "0x00413350",
+    "evidence": "rev.ng reads a generic32_t at 0x00413350"
+   }
+  ],
+  "constant:0x000343FD": [
+   {
+    "address": "0x0040BA58",
+    "kind": "constant",
+    "identity": "constant:0x000343FD",
+    "at": "0x0040BA5D",
+    "value": "0x000343FD",
+    "evidence": "imul eax, eax, 0x343fd"
+   }
+  ],
+  "constant:0x00269EC3": [
+   {
+    "address": "0x0040BA58",
+    "kind": "constant",
+    "identity": "constant:0x00269EC3",
+    "at": "0x0040BA63",
+    "value": "0x00269EC3",
+    "evidence": "add eax, 0x269ec3"
+   }
+  ],
+  "function:0x0040BA58": [
+   {
+    "address": "0x0040BA58",
+    "kind": "signature",
+    "identity": "function:0x0040BA58",
+    "ret_form": "ret",
+    "argc": null,
+    "convention": "cdecl",
+    "evidence": "the function ends with `ret`"
+   }
+  ],
+  "global:0x00413BE0": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BE0",
+    "at": "0x00401002",
+    "va": "0x00413BE0",
+    "width": 1,
+    "evidence": "mov byte ptr [0x413be0], 1"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BE0",
+    "at": "0x00401009",
+    "va": "0x00413BE0",
+    "width": 4,
+    "evidence": "mov word ptr [0x413be2], 0xf"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BE0",
+    "width": 8,
+    "offset": "0x1BE0",
+    "va": "0x00413BE0",
+    "evidence": "rev.ng reads a generic8_t at 0x00413BE0"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BE0",
+    "width": 16,
+    "offset": "0x1BE2",
+    "va": "0x00413BE0",
+    "evidence": "rev.ng reads a generic16_t at 0x00413BE0"
+   }
+  ],
+  "global:0x00413BE4": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BE4",
+    "at": "0x00401012",
+    "va": "0x00413BE4",
+    "width": 1,
+    "evidence": "mov word ptr [0x413be4], ax"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BE4",
+    "at": "0x00401018",
+    "va": "0x00413BE4",
+    "width": 4,
+    "evidence": "mov byte ptr [0x413be6], al"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BE4",
+    "at": "0x0040101D",
+    "va": "0x00413BE4",
+    "width": 8,
+    "evidence": "mov byte ptr [0x413be7], al"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BE4",
+    "width": 16,
+    "offset": "0x1BE4",
+    "va": "0x00413BE4",
+    "evidence": "rev.ng reads a generic16_t at 0x00413BE4"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BE4",
+    "width": 8,
+    "offset": "0x1BE6",
+    "va": "0x00413BE4",
+    "evidence": "rev.ng reads a generic8_t at 0x00413BE4"
+   }
+  ],
+  "global:0x00413BE8": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BE8",
+    "at": "0x00401022",
+    "va": "0x00413BE8",
+    "width": 1,
+    "evidence": "mov word ptr [0x413be8], 0x3e8"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BE8",
+    "at": "0x0040102B",
+    "va": "0x00413BE8",
+    "width": 4,
+    "evidence": "mov word ptr [0x413bea], 0x3e9"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BE8",
+    "width": 16,
+    "offset": "0x1BE8",
+    "va": "0x00413BE8",
+    "evidence": "rev.ng reads a generic16_t at 0x00413BE8"
+   }
+  ],
+  "global:0x00413BEC": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BEC",
+    "at": "0x00401034",
+    "va": "0x00413BEC",
+    "width": 1,
+    "evidence": "mov word ptr [0x413bec], ax"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BEC",
+    "at": "0x0040103A",
+    "va": "0x00413BEC",
+    "width": 4,
+    "evidence": "mov byte ptr [0x413bee], al"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BEC",
+    "at": "0x0040103F",
+    "va": "0x00413BEC",
+    "width": 8,
+    "evidence": "mov byte ptr [0x413bef], al"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BEC",
+    "width": 16,
+    "offset": "0x1BEC",
+    "va": "0x00413BEC",
+    "evidence": "rev.ng reads a generic16_t at 0x00413BEC"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BEC",
+    "width": 8,
+    "offset": "0x1BEE",
+    "va": "0x00413BEC",
+    "evidence": "rev.ng reads a generic8_t at 0x00413BEC"
+   }
+  ],
+  "global:0x00413BF0": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BF0",
+    "at": "0x00401044",
+    "va": "0x00413BF0",
+    "width": 1,
+    "evidence": "mov word ptr [0x413bf0], ax"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BF0",
+    "at": "0x0040104A",
+    "va": "0x00413BF0",
+    "width": 4,
+    "evidence": "mov byte ptr [0x413bf2], al"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BF0",
+    "width": 16,
+    "offset": "0x1BF0",
+    "va": "0x00413BF0",
+    "evidence": "rev.ng reads a generic16_t at 0x00413BF0"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BF0",
+    "width": 8,
+    "offset": "0x1BF2",
+    "va": "0x00413BF0",
+    "evidence": "rev.ng reads a generic8_t at 0x00413BF0"
+   }
+  ],
+  "global:0x00413BF8": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BF8",
+    "at": "0x0040104F",
+    "va": "0x00413BF8",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413bf8], 0x20c000"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BF8",
+    "width": 32,
+    "offset": "0x1BF8",
+    "va": "0x00413BF8",
+    "evidence": "rev.ng reads a generic32_t at 0x00413BF8"
+   }
+  ],
+  "constant:0x0020C000": [
+   {
+    "address": "0x00401000",
+    "kind": "constant",
+    "identity": "constant:0x0020C000",
+    "at": "0x0040104F",
+    "value": "0x0020C000",
+    "evidence": "mov dword ptr [0x413bf8], 0x20c000"
+   }
+  ],
+  "global:0x00413BFC": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413BFC",
+    "at": "0x00401059",
+    "va": "0x00413BFC",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413bfc], 0x168000"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413BFC",
+    "width": 32,
+    "offset": "0x1BFC",
+    "va": "0x00413BFC",
+    "evidence": "rev.ng reads a generic32_t at 0x00413BFC"
+   }
+  ],
+  "constant:0x00168000": [
+   {
+    "address": "0x00401000",
+    "kind": "constant",
+    "identity": "constant:0x00168000",
+    "at": "0x00401059",
+    "value": "0x00168000",
+    "evidence": "mov dword ptr [0x413bfc], 0x168000"
+   }
+  ],
+  "global:0x00413C00": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413C00",
+    "at": "0x00401063",
+    "va": "0x00413C00",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413c00], eax"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413C00",
+    "width": 32,
+    "offset": "0x1C00",
+    "va": "0x00413C00",
+    "evidence": "rev.ng reads a generic32_t at 0x00413C00"
+   }
+  ],
+  "global:0x00413C04": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413C04",
+    "at": "0x00401068",
+    "va": "0x00413C04",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413c04], eax"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413C04",
+    "width": 32,
+    "offset": "0x1C04",
+    "va": "0x00413C04",
+    "evidence": "rev.ng reads a generic32_t at 0x00413C04"
+   }
+  ],
+  "global:0x00413C08": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413C08",
+    "at": "0x0040106D",
+    "va": "0x00413C08",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413c08], 0x218000"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413C08",
+    "width": 32,
+    "offset": "0x1C08",
+    "va": "0x00413C08",
+    "evidence": "rev.ng reads a generic32_t at 0x00413C08"
+   }
+  ],
+  "constant:0x00218000": [
+   {
+    "address": "0x00401000",
+    "kind": "constant",
+    "identity": "constant:0x00218000",
+    "at": "0x0040106D",
+    "value": "0x00218000",
+    "evidence": "mov dword ptr [0x413c08], 0x218000"
+   }
+  ],
+  "global:0x00413C0C": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413C0C",
+    "at": "0x00401077",
+    "va": "0x00413C0C",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413c0c], 0x16c000"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413C0C",
+    "width": 32,
+    "offset": "0x1C0C",
+    "va": "0x00413C0C",
+    "evidence": "rev.ng reads a generic32_t at 0x00413C0C"
+   }
+  ],
+  "constant:0x0016C000": [
+   {
+    "address": "0x00401000",
+    "kind": "constant",
+    "identity": "constant:0x0016C000",
+    "at": "0x00401077",
+    "value": "0x0016C000",
+    "evidence": "mov dword ptr [0x413c0c], 0x16c000"
+   }
+  ],
+  "global:0x00413C10": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413C10",
+    "at": "0x00401081",
+    "va": "0x00413C10",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413c10], 0x4000"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413C10",
+    "width": 32,
+    "offset": "0x1C10",
+    "va": "0x00413C10",
+    "evidence": "rev.ng reads a generic32_t at 0x00413C10"
+   }
+  ],
+  "global:0x00413C14": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413C14",
+    "at": "0x0040108B",
+    "va": "0x00413C14",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413c14], 0x800"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413C14",
+    "width": 32,
+    "offset": "0x1C14",
+    "va": "0x00413C14",
+    "evidence": "rev.ng reads a generic32_t at 0x00413C14"
+   }
+  ],
+  "global:0x00413C18": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413C18",
+    "at": "0x00401095",
+    "va": "0x00413C18",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413c18], 0xc000"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413C18",
+    "width": 32,
+    "offset": "0x1C18",
+    "va": "0x00413C18",
+    "evidence": "rev.ng reads a generic32_t at 0x00413C18"
+   }
+  ],
+  "global:0x00413C1C": [
+   {
+    "address": "0x00401000",
+    "kind": "references_global",
+    "identity": "global:0x00413C1C",
+    "at": "0x0040109F",
+    "va": "0x00413C1C",
+    "width": 1,
+    "evidence": "mov dword ptr [0x413c1c], 0x5800"
+   },
+   {
+    "address": "0x00401000",
+    "kind": "field_access",
+    "identity": "global:0x00413C1C",
+    "width": 32,
+    "offset": "0x1C1C",
+    "va": "0x00413C1C",
+    "evidence": "rev.ng reads a generic32_t at 0x00413C1C"
+   }
+  ],
+  "function:0x00401000": [
+   {
+    "address": "0x00401000",
+    "kind": "signature",
+    "identity": "function:0x00401000",
+    "ret_form": "ret",
+    "argc": null,
+    "convention": "cdecl",
+    "evidence": "the function ends with `ret`"
+   }
+  ]
+ }
+}
