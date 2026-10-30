@@ -1,0 +1,73 @@
+{
+ "tool": "tools/lift/difftest.py --project",
+ "what_it_proves": "for each address, the body compared (the project's own, or a GENERATED module file when --source is given) and the ORIGINAL's machine code at that VA agree on the registers, the named flags and the named memory, over the entry states driven",
+ "what_it_does_not_prove": "anything about other entry states, other addresses, or the game as a whole; there is no aggregate verdict",
+ "addresses": [
+  {
+   "address": "0x00484C65",
+   "verdict": "agree-return",
+   "verdict_meaning": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "section": ".text",
+   "bytes_sha256": "9ec18d30b0a743d9fab20c923cc8d323b495076730739f2f5eee36391c57169d",
+   "bytes_read": 4096,
+   "symbol_compared": "sub_00484C65",
+   "cases": [
+    {
+     "case": 0,
+     "seed": "0x00000001",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 1,
+     "seed": "0x00000002",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 2,
+     "seed": "0x00000003",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 3,
+     "seed": "0x00000004",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 4,
+     "seed": "0x00000005",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 5,
+     "seed": "0x00000006",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 6,
+     "seed": "0x00000007",
+     "agree": true,
+     "fields": []
+    },
+    {
+     "case": 7,
+     "seed": "0x00000008",
+     "agree": true,
+     "fields": []
+    }
+   ],
+   "input_set": {
+    "cases": 8,
+    "named_addresses": [],
+    "seeded": "each seed is (case+1) on both sides"
+   }
+  }
+ ]
+}

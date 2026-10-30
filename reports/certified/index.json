@@ -1,8 +1,13 @@
 {
- "what": "the seven `agree` certifications, regenerated and re-run so the README's published count is reconstructable from committed files alone",
+ "what": "all 18 certifications - the seven `agree` and the eleven `agree-return` - regenerated and re-run so the README's published count is reconstructable from committed files alone",
  "how": "python3 -m tools.autorecomp.rename_gen ... then python3 -m tools.lift.difftest --source <module> --symbol sub_XXXX --cases 8",
- "claim": "eax and the bytes of every absolute guest address the body names agree with the original's machine code on 8 entry states",
+ "claim": "for `agree`, eax and the bytes of every absolute guest address the body names agree with the original's machine code on 8 entry states; for `agree-return`, the return value does, and the original writes no guest memory and calls nothing",
  "is_not": "a whole-game claim, a flag comparison, or anything about inputs not driven",
+ "counts": {
+  "agree": 7,
+  "agree_return": 11,
+  "total": 18
+ },
  "rows": [
   {
    "address": "0x00402020",
@@ -107,6 +112,138 @@
    "symbol": "sub_0047B500",
    "verdict_json": "0x0047B500.json",
    "module": "0x0047B500.c"
+  },
+  {
+   "address": "0x00480DAD",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "e05abdff9e3db4f796ed0e2cdc7de255f7a5753e289ec63af41cceac44a96c0a",
+   "symbol": "sub_00480DAD",
+   "verdict_json": "0x00480DAD.json",
+   "module": "0x00480DAD.c"
+  },
+  {
+   "address": "0x00481F9A",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "333cf793b14925f2016a0ddad375abe43b88460cdc0d3c4f364954020f4c89d3",
+   "symbol": "sub_00481F9A",
+   "verdict_json": "0x00481F9A.json",
+   "module": "0x00481F9A.c"
+  },
+  {
+   "address": "0x00484C65",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "9ec18d30b0a743d9fab20c923cc8d323b495076730739f2f5eee36391c57169d",
+   "symbol": "sub_00484C65",
+   "verdict_json": "0x00484C65.json",
+   "module": "0x00484C65.c"
+  },
+  {
+   "address": "0x00486CED",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "83395d5c3e19e69364f68252217701c0c590f2a04e464b4167e4af0a5d04cc23",
+   "symbol": "sub_00486CED",
+   "verdict_json": "0x00486CED.json",
+   "module": "0x00486CED.c"
+  },
+  {
+   "address": "0x00486D31",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "06266f730b59bea8af437395b477923a2616f2b9cd2f40ec38c3d32fb68c3ed7",
+   "symbol": "sub_00486D31",
+   "verdict_json": "0x00486D31.json",
+   "module": "0x00486D31.c"
+  },
+  {
+   "address": "0x00489A5F",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "0b9ac0a9654d4b44f9e5ba316f26f7ccc3b849f0ec90788f11ae5d8967e512ff",
+   "symbol": "sub_00489A5F",
+   "verdict_json": "0x00489A5F.json",
+   "module": "0x00489A5F.c"
+  },
+  {
+   "address": "0x00489CB6",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "ad614cd87d5105ad948ff69da5c737bee77583131838f83e0fbb2e697933a7b8",
+   "symbol": "sub_00489CB6",
+   "verdict_json": "0x00489CB6.json",
+   "module": "0x00489CB6.c"
+  },
+  {
+   "address": "0x00489D84",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "3b80df773de315a526dce720609c2c6aab1d5e12e3e54fa4a4a0b93a437a1f73",
+   "symbol": "sub_00489D84",
+   "verdict_json": "0x00489D84.json",
+   "module": "0x00489D84.c"
+  },
+  {
+   "address": "0x00489EB9",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "48e9070bed19293279f04bea18bdb843e7bf52fba24464869f5859708de0088e",
+   "symbol": "sub_00489EB9",
+   "verdict_json": "0x00489EB9.json",
+   "module": "0x00489EB9.c"
+  },
+  {
+   "address": "0x0048AD5E",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "154c174e337488afa22408b2df08bdb7de09abfc9e94ed719016bed9990dc6de",
+   "symbol": "sub_0048AD5E",
+   "verdict_json": "0x0048AD5E.json",
+   "module": "0x0048AD5E.c"
+  },
+  {
+   "address": "0x0048B2E3",
+   "verdict": "agree-return",
+   "named_memory": [],
+   "compares": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "62a3baa3011451bec0990f5b439c7e66be278ddf179485751674bb08ccb8f986",
+   "symbol": "sub_0048B2E3",
+   "verdict_json": "0x0048B2E3.json",
+   "module": "0x0048B2E3.c"
   }
  ]
 }

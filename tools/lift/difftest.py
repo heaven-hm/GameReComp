@@ -1150,8 +1150,20 @@ def main():
                                            "the game as a whole; there is no aggregate verdict",
                  "addresses": rows}, indent=1))
             print(f'  report: {args.json}')
-        bad = [r for r in rows if r['verdict'] != 'agree']
-        print(f'{len(rows)} address(es): {len(rows) - len(bad)} agree, {len(bad)} not')
+        # Every verdict whose name starts with `agree` is an agreement of some
+        # stated scope; only the others are failures. Counting `== 'agree'` made
+        # an `agree-return` run print "0 agree, 1 not" -- a pass reported as a
+        # failure, which a reader has no way to tell from the summary line.
+        bad = [r for r in rows if not r['verdict'].startswith('agree')]
+        agrees = [r for r in rows if r['verdict'].startswith('agree')]
+        if agrees:
+            by = {}
+            for r in agrees:
+                by[r['verdict']] = by.get(r['verdict'], 0) + 1
+            detail = ', '.join(f'{n} {v}' for v, n in sorted(by.items()))
+            print(f'{len(rows)} address(es): {detail}, {len(bad)} not')
+        else:
+            print(f'{len(rows)} address(es): 0 agree, {len(bad)} not')
         return 1 if bad else 0
 
     cases = [c for c in CASES if not args.filter or args.filter in c.name]
