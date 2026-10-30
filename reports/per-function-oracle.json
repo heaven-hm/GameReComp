@@ -14,7 +14,7 @@
    "generated_unit": "src/highlevel/recomp_highlevel_ikachan.c",
    "symbol_compared": "sub_0040BA58",
    "compares": "the eight general-purpose registers and the bytes of every absolute guest address the generated body names",
-   "does_not_compare": "the arithmetic flags: the generated body keeps its lazy flag state in locals that nothing exposes after the call",
+   "does_not_compare": "DF only: the body publishes g_flag_k/a/b/cf and recomp_eflags() derives CF/PF/AF/ZF/SF/OF from them, but the direction flag is not among the published words",
    "input_set": {
     "cases": 8,
     "named_addresses": [
@@ -86,7 +86,7 @@
    "generated_unit": "src/highlevel/recomp_highlevel_ikachan.c",
    "symbol_compared": "sub_00401000",
    "compares": "the eight general-purpose registers and the bytes of every absolute guest address the generated body names",
-   "does_not_compare": "the arithmetic flags: the generated body keeps its lazy flag state in locals that nothing exposes after the call",
+   "does_not_compare": "DF only: the body publishes g_flag_k/a/b/cf and recomp_eflags() derives CF/PF/AF/ZF/SF/OF from them, but the direction flag is not among the published words",
    "input_set": {
     "cases": 8,
     "named_addresses": [

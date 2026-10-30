@@ -24,12 +24,14 @@ driven. That is a statement about a function and those inputs, nothing more.
 - **Not the game.** There is no aggregate verdict anywhere in the tool or its
   report, deliberately: eight entry states agreeing is not a working game.
 - **Not other inputs.** The input set is named in the report, per address.
-- **Not the flags.** The generated body keeps its lazy flag state in locals that
-  nothing exposes after the call, so the arithmetic flags are not observable from
-  outside it and are excluded from the comparison (`ALL_FLAGS` in `undef`). A
-  flag bug that changes control flow still shows up, because the branch taken
-  changes the result or the memory; a flag bug that does not change either would
-  not be caught. The report states this per address.
+- **Not DF.** Every generated body ends with `RECOMP_FLAGS_OUT()`, which
+  publishes its lazy flag state into `g_flag_k/g_flag_a/g_flag_b/g_flag_cf`, and
+  the harness derives real EFLAGS from that with `recomp_eflags()` — the same
+  function difftest's hand-written cases use. So CF, PF, AF, ZF, SF and OF are
+  compared, not assumed. The **direction flag is not among the published words**,
+  so DF is the one flag excluded (`UNDEF_FOR_PROJECT` in the tool); a function
+  that returned with DF set by a `std` would not be caught, and the report says
+  so per address.
 - **Not other addresses.** A function the project has no generated body for is
   refused (`no-generated-body`), not skipped silently.
 
@@ -56,7 +58,8 @@ For each address:
    replacement exists, and the mechanical body where none does. The report names
    which symbol and which source unit it compared.
 5. The two results are compared with difftest's existing `diff()`; any differing
-   register or byte is a divergence, and a divergence is reported per case.
+   register, named flag or byte is a divergence, and a divergence is reported per
+   case.
 
 ## Measured results (2026-10-30)
 

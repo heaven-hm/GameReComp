@@ -1345,7 +1345,11 @@ PAGES_
         printf("CASE %d\n", cases);
         printf("R %08X %08X %08X %08X %08X %08X %08X %08X\n",
                g_eax, g_ecx, g_edx, g_ebx, g_esp, g_ebp, g_esi, g_edi);
-        printf("F %08X\n", 0u);
+        /* The body ends with RECOMP_FLAGS_OUT(), so its lazy flag state is in
+         * g_flag_* and recomp_eflags() derives real EFLAGS from it - the same
+         * function the hand-written cases use. df is not published, so it is
+         * passed as forward and DF is excluded from the comparison. */
+        printf("F %08X\n", recomp_eflags(g_flag_k, g_flag_a, g_flag_b, g_flag_cf, 1));
         printf("T 0\n");
         @REPORT@
         printf("ENDCASE\n");
@@ -1455,7 +1459,11 @@ def run_unicorn_function(pe_path, va, named, seed_of, cases):
 
 # ------------------------------------------------------------------ the oracle
 
-ALL_FLAGS = ('CF', 'PF', 'AF', 'ZF', 'SF', 'DF', 'OF')
+# DF is the one flag the body does not publish: RECOMP_FLAGS_OUT carries
+# g_flag_k/a/b/cf, not the direction flag, so a comparison of DF would be
+# inventing a value. Everything else is derived from the published state by
+# recomp_eflags(), exactly as the hand-written cases do.
+UNDEF_FOR_PROJECT = ('DF',)
 
 
 class OracleFault(Exception):
@@ -1521,7 +1529,7 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print):
                         "symbol_compared": target})
             continue
 
-        case = Case(name=f"project 0x{address:08X}", code=blob, undef=ALL_FLAGS)
+        case = Case(name=f"project 0x{address:08X}", code=blob, undef=UNDEF_FOR_PROJECT)
         rows, diverged = [], 0
         for i, (got, want) in enumerate(zip(lifted, real)):
             fields = diff(case, got, want)
@@ -1537,8 +1545,9 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print):
             "generated_unit": unit, "symbol_compared": target,
             "compares": "the eight general-purpose registers and the bytes of every absolute "
                         "guest address the generated body names",
-            "does_not_compare": "the arithmetic flags: the generated body keeps its lazy flag "
-                                "state in locals that nothing exposes after the call",
+            "does_not_compare": "DF only: the body publishes g_flag_k/a/b/cf and recomp_eflags() "
+                                "derives CF/PF/AF/ZF/SF/OF from them, but the direction flag is "
+                                "not among the published words",
             "input_set": {"cases": cases, "named_addresses": [f"0x{a:08X}" for a in named],
                           "seeded": "each named address holds 0x9E3779B9*(case+1) on both sides; "
                                     "registers are per-case constants; esp is a stack page whose "
