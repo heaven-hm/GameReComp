@@ -208,3 +208,31 @@ never ran them. Exposure: zero. The certification table was not.
 This is what the measure-before-fixing rule bought: the defect was reachable from a
 count in twenty minutes, and the alternative was publishing 19 with two of them
 wrong.
+
+## A certification can be wrong while the oracle agrees, and this is the measured example
+
+The two modules retracted above (`0x004258B0`, `0x004258C0`) **still certify**. Run
+the oracle on them today and it returns `agree-return`, with the same eight entry
+states and the same named-memory behaviour as any clean certification. The saved
+verdicts are in `reports/retracted/` beside the reconstructed module sources, so the
+claim is checkable rather than asserted.
+
+**The oracle is right about what it measures, and what it measures is not enough.**
+It compares values: `MEM8(var_0)` with `var_0` a host byte happens to read the dword
+the original's table reads, so the values agree and the verdict passes. It cannot see
+that the operand is not a guest VA, because the operand's *provenance* is not part
+of the state it compares.
+
+So the two are not in the 18 because **a rule refused them, not because the oracle
+caught them** — the oracle would have certified both, permanently. That is the
+strongest argument for the rule-based refusals this project has built, and it is a
+different failure from the four vacuous comparisons found today: in those, the
+oracle was needed and the *harness* was wrong. Here the oracle is right and
+insufficient.
+
+> A pass at the oracle is evidence, not proof. It is necessary and not sufficient:
+> it compares what came out, and a wrong read of a wrong address produces the right
+> number often enough to pass.
+
+The host-VA rule exists because the oracle cannot see the difference, and it is the
+only reason those two are not in the count.

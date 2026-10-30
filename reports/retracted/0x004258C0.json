@@ -1,0 +1,24 @@
+{
+ "tool": "tools/lift/difftest.py --project",
+ "what_it_proves": "for each address, the body compared (the project's own, or a GENERATED module file when --source is given) and the ORIGINAL's machine code at that VA agree on the registers, the named flags and the named memory, over the entry states driven",
+ "what_it_does_not_prove": "anything about other entry states, other addresses, or the game as a whole; there is no aggregate verdict",
+ "addresses": [
+  {
+   "address": "0x004258C0",
+   "verdict": "agree-return",
+   "verdict_meaning": "the original writes no guest memory and calls nothing, so its return value in eax is its whole observable contract; this compares that and nothing else",
+   "pe": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "section": ".text",
+   "bytes_sha256": "c4075ba94a0761eb103d51c53e262e29f804b78b47a43d8ac954c898e8273ff0",
+   "bytes_read": 4096,
+   "symbol_compared": "sub_004258C0",
+   "cases": [],
+   "input_set": {
+    "cases": 8,
+    "named_addresses": [],
+    "seeded": "each seed is (case+1) on both sides"
+   }
+  }
+ ]
+}

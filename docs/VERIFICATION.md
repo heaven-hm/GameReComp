@@ -81,6 +81,29 @@ detached from the binary it describes.
 input hash, including failures and `MISSING_INPUT` entries for corpus files
 that are not present on the current host.
 
+## A pass at the oracle is evidence, not proof — with a measured example
+
+The per-function oracle compares **values**: the registers a body leaves and the
+bytes of the guest memory it names. It does not compare the **provenance** of those
+values — whether a memory operand is a guest address at all.
+
+Two generated modules in this repository demonstrate the gap. `0x004258B0` and
+`0x004258C0` were retracted because their bodies emit `MEM8(var_0)` with `var_0` a
+host `uint8_t`, reading guest memory at a host local's *value*. **Run the oracle on
+either today and it returns `agree-return`**: the values coincide on the inputs
+driven, so the verdict passes — and would keep passing.
+
+The modules were removed from the count by a **rule** (no `MEMn` whose operand does
+not provably denote a guest VA), not by the oracle. This is the case that separates
+the two instruments:
+
+- a **divergence** is the oracle finding something the rules cannot see;
+- this is the reverse — a **rule** refusing something the oracle cannot see.
+
+So a certification is necessary and not sufficient. `reports/retracted/` holds both
+modules and both `agree-return` verdicts, so the claim can be checked rather than
+believed.
+
 ## The original-game oracle: decision, not aspiration
 
 **Decision (2026-10-30).** End-to-end comparison against the *original Windows
