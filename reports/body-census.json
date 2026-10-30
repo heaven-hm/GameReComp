@@ -3,16 +3,16 @@
  "binary": "Doukutsu.exe",
  "bodies": 955,
  "by_class": {
-  "generates": 356,
-  "other transform": 177,
-  "transform: not a guest VA": 89,
-  "transform: StructRef": 87,
+  "generates": 371,
+  "other transform": 200,
+  "transform: not a guest VA": 101,
+  "transform: StructRef": 90,
   "provider: nothing to decompile": 78,
-  "provider: unimplemented intrinsic": 77,
-  "parse: other": 31,
-  "transform: no recoverable width": 22,
-  "provider: undef()": 22,
-  "parse: Invalid expression": 16
+  "parse: other": 32,
+  "transform: no recoverable width": 29,
+  "provider: undef()": 23,
+  "parse: Invalid expression": 18,
+  "provider: unimplemented intrinsic": 13
  },
  "rows": [
   {
@@ -67,8 +67,8 @@
   },
   {
    "address": "0x00401FA0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x00401FA0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00402020",
@@ -102,8 +102,8 @@
   },
   {
    "address": "0x00402B30",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: no recoverable width",
+   "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x00402F50",
@@ -113,7 +113,7 @@
   {
    "address": "0x00403400",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :80:29: before: label_0"
+   "reason": "the provider body does not parse as C: :88:29: before: label_0"
   },
   {
    "address": "0x00403740",
@@ -238,7 +238,7 @@
   {
    "address": "0x00408710",
    "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
   },
   {
    "address": "0x00408AB7",
@@ -377,8 +377,8 @@
   },
   {
    "address": "0x0040AFC0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0040B1D0",
@@ -407,18 +407,18 @@
   },
   {
    "address": "0x0040B800",
-   "class": "parse: other",
-   "reason": "the provider body does not parse as C: :45:148: before: NULL"
+   "class": "parse: Invalid expression",
+   "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x0040BE10",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :33:27: before: var_3"
+   "reason": "the provider body does not parse as C: :41:27: before: var_3"
   },
   {
    "address": "0x0040C8B0",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :32:14: before: var_0"
+   "reason": "the provider body does not parse as C: :40:14: before: var_0"
   },
   {
    "address": "0x0040CB30",
@@ -433,12 +433,12 @@
   {
    "address": "0x0040CD50",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :25:12: before: var_0"
+   "reason": "the provider body does not parse as C: :33:12: before: var_0"
   },
   {
    "address": "0x0040CEB0",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :33:14: before: var_3"
+   "reason": "the provider body does not parse as C: :41:14: before: var_3"
   },
   {
    "address": "0x0040CF70",
@@ -507,8 +507,8 @@
   },
   {
    "address": "0x0040DB60",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0040DB70",
@@ -547,8 +547,8 @@
   },
   {
    "address": "0x0040DFE0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0040E770",
@@ -612,8 +612,8 @@
   },
   {
    "address": "0x0040EAC0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_smax_i32, llvm_smin_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0040ED20",
@@ -642,8 +642,8 @@
   },
   {
    "address": "0x0040F130",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "local var_4: union_6329 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x0040F220",
@@ -698,17 +698,17 @@
   {
    "address": "0x00410990",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :37:12: before: var_6"
+   "reason": "the provider body does not parse as C: :45:12: before: var_6"
   },
   {
    "address": "0x00410AB0",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :28:10: before: var_0"
+   "reason": "the provider body does not parse as C: :36:10: before: var_0"
   },
   {
    "address": "0x00410D80",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :26:12: before: var_0"
+   "reason": "the provider body does not parse as C: :34:12: before: var_0"
   },
   {
    "address": "0x00410EE0",
@@ -762,8 +762,8 @@
   },
   {
    "address": "0x00412420",
-   "class": "parse: other",
-   "reason": "the provider body does not parse as C: :42:61: before: NULL"
+   "class": "other transform",
+   "reason": "0x00412420 field base: 'var_1' is neither a VA nor a scalar (unrecovered local)"
   },
   {
    "address": "0x00412BC0",
@@ -777,13 +777,13 @@
   },
   {
    "address": "0x00412C30",
-   "class": "parse: other",
-   "reason": "the provider body does not parse as C: :34:10: before: var_6"
+   "class": "other transform",
+   "reason": "0x00412C30: calls 0x0041D260, whose contract is not in the provider's declarations"
   },
   {
    "address": "0x00412CA0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "parse: other",
+   "reason": "the provider body does not parse as C: :41:10: before: var_1"
   },
   {
    "address": "0x00413570",
@@ -802,8 +802,8 @@
   },
   {
    "address": "0x00413960",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x00413960 memory operand: 'argument_0' is neither a VA nor a scalar (unrecovered local)"
   },
   {
    "address": "0x004139A0",
@@ -847,8 +847,8 @@
   },
   {
    "address": "0x00414310",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004143C0",
@@ -902,8 +902,8 @@
   },
   {
    "address": "0x00416470",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, llvm_smax_i32, llvm_smin_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute some"
+   "class": "transform: no recoverable width",
+   "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x004168C0",
@@ -912,8 +912,8 @@
   },
   {
    "address": "0x00416990",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "parse: other",
+   "reason": "the provider body does not parse as C: :59:35: before: var_7"
   },
   {
    "address": "0x00416AA0",
@@ -927,8 +927,8 @@
   },
   {
    "address": "0x00416B50",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00416B60",
@@ -937,8 +937,8 @@
   },
   {
    "address": "0x00416B70",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "the address of host local var_0: not a guest VA, so it cannot be a memory operand"
   },
   {
    "address": "0x00416C40",
@@ -1027,8 +1027,8 @@
   },
   {
    "address": "0x00418C20",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "provider: undef()",
+   "reason": "the provider body contains 395 undefined value(s) (`undef()`, the decompiler's own marker that it could not define them): with helpers.h it would compile, and it would be wrong"
   },
   {
    "address": "0x00419030",
@@ -1057,8 +1057,8 @@
   },
   {
    "address": "0x00419910",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x00419910: calls 0x00420640, which returns struct_7072 BY VALUE - the hidden-pointer return is a crossing this marshal does not express"
   },
   {
    "address": "0x00419B50",
@@ -1123,7 +1123,7 @@
   {
    "address": "0x0041B380",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :32:27: before: var_1"
+   "reason": "the provider body does not parse as C: :40:27: before: var_1"
   },
   {
    "address": "0x0041B3F0",
@@ -1163,17 +1163,17 @@
   {
    "address": "0x0041BAD0",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :46:17: before: var_5"
+   "reason": "the provider body does not parse as C: :54:17: before: var_5"
   },
   {
    "address": "0x0041C180",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :27:14: before: var_2"
+   "reason": "the provider body does not parse as C: :35:14: before: var_2"
   },
   {
    "address": "0x0041C1E0",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :25:10: before: var_0"
+   "reason": "the provider body does not parse as C: :37:15: before: var_2"
   },
   {
    "address": "0x0041C230",
@@ -1183,7 +1183,7 @@
   {
    "address": "0x0041C250",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :33:18: before: var_2"
+   "reason": "the provider body does not parse as C: :42:22: before: var_3"
   },
   {
    "address": "0x0041C2B0",
@@ -1227,13 +1227,13 @@
   },
   {
    "address": "0x0041C7F0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x0041C7F0: calls 0x0041C250, which returns struct_7020 BY VALUE - the hidden-pointer return is a crossing this marshal does not express"
   },
   {
    "address": "0x0041C880",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0041C890",
@@ -1242,8 +1242,8 @@
   },
   {
    "address": "0x0041CFC0",
-   "class": "parse: other",
-   "reason": "the provider body does not parse as C: :39:103: before: NULL"
+   "class": "transform: not a guest VA",
+   "reason": "the address of host local segment_1: not a guest VA, so it cannot be a memory operand"
   },
   {
    "address": "0x0041D610",
@@ -1263,7 +1263,7 @@
   {
    "address": "0x0041E110",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :57:27: before: var_9"
+   "reason": "the provider body does not parse as C: :65:27: before: var_9"
   },
   {
    "address": "0x0041E7B0",
@@ -1282,13 +1282,13 @@
   },
   {
    "address": "0x0041FE70",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "parse: other",
+   "reason": "the provider body does not parse as C: :101:39: before: var_10"
   },
   {
    "address": "0x004200C0",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :30:15: before: var_1"
+   "reason": "the provider body does not parse as C: :38:15: before: var_1"
   },
   {
    "address": "0x004201A0",
@@ -1392,8 +1392,8 @@
   },
   {
    "address": "0x00422510",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x00422510: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00425790",
@@ -1662,8 +1662,8 @@
   },
   {
    "address": "0x0042F9E0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_5856 has no field offset_116 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x0042FE9B",
@@ -1712,8 +1712,8 @@
   },
   {
    "address": "0x00431C20",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004321F0",
@@ -1897,8 +1897,8 @@
   },
   {
    "address": "0x0043AF20",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0043B140",
@@ -2072,8 +2072,8 @@
   },
   {
    "address": "0x00441000",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x00441000 memory operand: a ArrayRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00441101",
@@ -2227,8 +2227,8 @@
   },
   {
    "address": "0x004474C0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x004474C0: calls 0x0040F350, whose contract is not in the provider's declarations"
   },
   {
    "address": "0x00447700",
@@ -2317,8 +2317,8 @@
   },
   {
    "address": "0x0044AEE0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x0044AEE0: calls 0x0040AC90, which returns struct_6766 BY VALUE - the hidden-pointer return is a crossing this marshal does not express"
   },
   {
    "address": "0x0044B080",
@@ -2352,8 +2352,8 @@
   },
   {
    "address": "0x0044CDB0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_5486 has no field offset_116 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x0044D070",
@@ -2447,8 +2447,8 @@
   },
   {
    "address": "0x0044FCB0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00450280",
@@ -2612,8 +2612,8 @@
   },
   {
    "address": "0x00455710",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_4307 has no field offset_116 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x00455850",
@@ -2887,8 +2887,8 @@
   },
   {
    "address": "0x004618B0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004618C0",
@@ -3307,8 +3307,8 @@
   },
   {
    "address": "0x004702D0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "parse: other",
+   "reason": "the provider body does not parse as C: :61:43: before: var_10"
   },
   {
    "address": "0x00470490",
@@ -3492,8 +3492,8 @@
   },
   {
    "address": "0x0047B450",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x0047B460",
@@ -3552,8 +3552,8 @@
   },
   {
    "address": "0x0047E6F0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x0047E6F0: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0047F5BD",
@@ -3607,8 +3607,8 @@
   },
   {
    "address": "0x00480D30",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, llvm_umin_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "the address of host local var_0: not a guest VA, so it cannot be a memory operand"
   },
   {
    "address": "0x00480DAD",
@@ -3622,8 +3622,8 @@
   },
   {
    "address": "0x00480DCF",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x00480DCF: calls 0x0048234A, which returns struct_7276 BY VALUE - the hidden-pointer return is a crossing this marshal does not express"
   },
   {
    "address": "0x00480E61",
@@ -3657,8 +3657,8 @@
   },
   {
    "address": "0x00481100",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: StructRef",
+   "reason": "0x00481100 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00481110",
@@ -3692,8 +3692,8 @@
   },
   {
    "address": "0x004813C0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, llvm_umin_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x004814C0",
@@ -3797,8 +3797,8 @@
   },
   {
    "address": "0x004819CD",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x004819CD: calls 0x00485801, whose contract is not in the provider's declarations"
   },
   {
    "address": "0x00481A9B",
@@ -3862,13 +3862,13 @@
   },
   {
    "address": "0x0048231F",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_5681 has no field offset_8 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x0048234A",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: no recoverable width",
+   "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x004823A7",
@@ -3918,7 +3918,7 @@
   {
    "address": "0x004826F5",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :55:26: before: var_8"
+   "reason": "the provider body does not parse as C: :63:26: before: var_8"
   },
   {
    "address": "0x00482954",
@@ -3932,8 +3932,8 @@
   },
   {
    "address": "0x0048297B",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x0048297B: calls 0x00487B82, whose contract is not in the provider's declarations"
   },
   {
    "address": "0x00482AEC",
@@ -3943,7 +3943,7 @@
   {
    "address": "0x00482AF5",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :35:27: before: var_6"
+   "reason": "the provider body does not parse as C: :43:27: before: var_6"
   },
   {
    "address": "0x00482C7E",
@@ -3957,8 +3957,8 @@
   },
   {
    "address": "0x00482C8A",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: StructRef",
+   "reason": "0x00482C8A memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00482E31",
@@ -3997,8 +3997,8 @@
   },
   {
    "address": "0x0048381A",
-   "class": "parse: other",
-   "reason": "the provider body does not parse as C: :25:12: before: var_1"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00483862",
@@ -4007,23 +4007,23 @@
   },
   {
    "address": "0x0048388D",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, llvm_umin_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "parse: Invalid expression",
+   "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x00483C5C",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: no recoverable width",
+   "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x00483D62",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x00483D62: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00484041",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: no recoverable width",
+   "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x0048433D",
@@ -4083,7 +4083,7 @@
   {
    "address": "0x00485469",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :44:26: before: var_9"
+   "reason": "the provider body does not parse as C: :52:26: before: var_9"
   },
   {
    "address": "0x004856BB",
@@ -4098,7 +4098,7 @@
   {
    "address": "0x004856E2",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :28:10: before: var_1"
+   "reason": "the provider body does not parse as C: :36:10: before: var_1"
   },
   {
    "address": "0x004857DA",
@@ -4142,8 +4142,8 @@
   },
   {
    "address": "0x00485B79",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x00485B79: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00485DB4",
@@ -4158,7 +4158,7 @@
   {
    "address": "0x00485FF5",
    "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
   },
   {
    "address": "0x004861C3",
@@ -4188,7 +4188,7 @@
   {
    "address": "0x0048635A",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :67:30: before: var_21"
+   "reason": "the provider body does not parse as C: :75:30: before: var_21"
   },
   {
    "address": "0x004864D1",
@@ -4213,12 +4213,12 @@
   {
    "address": "0x00486792",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :202:41: before: label_0"
+   "reason": "the provider body does not parse as C: :210:41: before: label_0"
   },
   {
    "address": "0x004868FE",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :32:11: before: var_0"
+   "reason": "the provider body does not parse as C: :40:11: before: var_0"
   },
   {
    "address": "0x00486CED",
@@ -4233,7 +4233,7 @@
   {
    "address": "0x00486D8D",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :42:17: before: var_6"
+   "reason": "the provider body does not parse as C: :50:17: before: var_6"
   },
   {
    "address": "0x00486E90",
@@ -4257,8 +4257,8 @@
   },
   {
    "address": "0x004870A2",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, llvm_smin_i32, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something e"
+   "class": "parse: other",
+   "reason": "the provider body does not parse as C: :48:25: before: var_5"
   },
   {
    "address": "0x004873C6",
@@ -4327,8 +4327,8 @@
   },
   {
    "address": "0x0048789B",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "parse: other",
+   "reason": "the provider body does not parse as C: :125:35: before: var_6"
   },
   {
    "address": "0x00487BC7",
@@ -4338,7 +4338,7 @@
   {
    "address": "0x00487BD7",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :26:52: before: argument_0"
+   "reason": "the provider body does not parse as C: :34:52: before: argument_0"
   },
   {
    "address": "0x00487C44",
@@ -4352,8 +4352,8 @@
   },
   {
    "address": "0x00487DD0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, llvm_umin_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "generates",
+   "reason": null
   },
   {
    "address": "0x00487ED0",
@@ -4437,8 +4437,8 @@
   },
   {
    "address": "0x004881DD",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x004881DD: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x004882D0",
@@ -4457,13 +4457,13 @@
   },
   {
    "address": "0x00488331",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_umin_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x00488331 field base: 'var_0' is neither a VA nor a scalar (unrecovered local)"
   },
   {
    "address": "0x004884BD",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, llvm_umax_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x004884BD field base: 'var_22' is neither a VA nor a scalar (unrecovered local)"
   },
   {
    "address": "0x00488794",
@@ -4498,7 +4498,7 @@
   {
    "address": "0x004888DA",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :47:24: before: var_6"
+   "reason": "the provider body does not parse as C: :55:24: before: var_6"
   },
   {
    "address": "0x0048899A",
@@ -4517,8 +4517,8 @@
   },
   {
    "address": "0x00488B67",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "local var_6: union_6332 has no declared size, so its guest storage cannot be placed"
   },
   {
    "address": "0x00488C2F",
@@ -4532,8 +4532,8 @@
   },
   {
    "address": "0x00488C83",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x00488C83: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00488D42",
@@ -4572,8 +4572,8 @@
   },
   {
    "address": "0x00488FEF",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_3852 has no field offset_12 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x00489066",
@@ -4622,8 +4622,8 @@
   },
   {
    "address": "0x0048966C",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x0048966C: calls 0x0048128B, whose contract is not in the provider's declarations"
   },
   {
    "address": "0x004897FC",
@@ -4657,8 +4657,8 @@
   },
   {
    "address": "0x00489F7C",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x00489F7C: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x00489FF3",
@@ -4667,33 +4667,33 @@
   },
   {
    "address": "0x0048A014",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: no recoverable width",
+   "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x0048A072",
    "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
   },
   {
    "address": "0x0048A0A0",
    "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
   },
   {
    "address": "0x0048A0CD",
    "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
   },
   {
    "address": "0x0048A1AB",
    "class": "parse: other",
-   "reason": "the provider body does not parse as C: :62:22: before: label_0"
+   "reason": "the provider body does not parse as C: :70:22: before: label_0"
   },
   {
    "address": "0x0048A5DF",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: no recoverable width",
+   "reason": "a dereference with no recoverable width"
   },
   {
    "address": "0x0048A86D",
@@ -4702,8 +4702,8 @@
   },
   {
    "address": "0x0048AD36",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x0048AD36: calls 0x00482AE3, whose contract is not in the provider's declarations"
   },
   {
    "address": "0x0048AD5E",
@@ -4757,8 +4757,8 @@
   },
   {
    "address": "0x0048B166",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_parity that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: not a guest VA",
+   "reason": "0x0048B166: a memory operand is a plain scalar, not a guest VA - it cannot address guest memory"
   },
   {
    "address": "0x0048B1CE",
@@ -4772,13 +4772,13 @@
   },
   {
    "address": "0x0048B3DA",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x0048B3DA memory operand: a ArrayRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0048B60C",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) bit_cast, bit_parity, lshift that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: StructRef",
+   "reason": "0x0048B60C memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x0048B692",

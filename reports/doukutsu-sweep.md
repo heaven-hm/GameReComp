@@ -562,3 +562,44 @@ because it stops the next person repeating the work. This report carries four:
    broke; only the measurement names what matters.** The load-bearing classes are
    `StructRef` (28 closures), unimplemented intrinsics (20) and the union-size gap (16),
    and none of them is the one printed in the failure.
+
+## The intrinsics: implemented, with the funnel shift checked against its definition
+
+The unimplemented-intrinsic class was the queue's top entry that was **ours to fix** --
+the other blockers are the provider's (`StructRef`, nothing-to-decompile) or the
+header's (union sizes). rev.ng declares these helpers and never defines them, so a
+generated module that called one would link-fail or, worse, resolve to nothing and
+compute something else. Eight are now implemented, each with its LLVM semantics in
+plain C beside the code:
+
+    bit_parity      ctpop reduced to its low bit (the x86 PF flag)
+    lshift          shl, with the out-of-range case fixed at 0 -- the provider does
+                    emit negative amounts, and "undefined" is not a semantics a
+                    reconstruction may ship
+    llvm_smin_i16   comparisons
+    llvm_smax_i32
+    llvm_smin_i32
+    llvm_umin_i32
+    llvm_umax_i32
+    llvm_fshl_i32   funnel shift left over the 64-bit concatenation (a:b)
+
+    955 bodies, by class:         before      after
+      unimplemented intrinsic        77         13
+      GENERATES                     357        371
+
+    multi-function closures         28         39   (36 of size 2, 3 of size 3)
+    generating call-bearing        126        132
+
+**`llvm_fshl_i32` was wrong the first time and is the argument for checking rather
+than reasoning.** The first version special-cased `c >= 32` because the concatenation
+"obviously" only overlaps there; it disagreed with the LLVM definition in **726 of
+3456 probed cases** while reading as correct C. The shipped version computes the
+definition directly -- `((uint64_t)a << 32) | b`, shift, keep the high word -- and the
+test in `tests/test_rename_ast.py` executes both and compares, so a future rewrite
+cannot quietly reintroduce the branch.
+
+That distinction is the whole rule about intrinsics: **refusing one is not caution
+about whether it is implementable, it is a claim that we do not know what it means.**
+Once the meaning is written down and executed against its own definition, the refusal
+has to go.
+

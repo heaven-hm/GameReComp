@@ -1,17 +1,17 @@
 {
- "generating_callers": 126,
+ "generating_callers": 132,
  "by_reason": [
   {
    "reason": "a StructRef is neither a VA nor a scalar",
-   "closures_blocked": 28
+   "closures_blocked": 29
   },
   {
-   "reason": "the body would compile and compute something else",
-   "closures_blocked": 20
+   "reason": "not a guest VA, so it cannot be a memory operand",
+   "closures_blocked": 18
   },
   {
    "reason": "union_6338 has no declared size, so its guest storage cannot be ",
-   "closures_blocked": 16
+   "closures_blocked": 17
   },
   {
    "reason": "a memory operand is a plain scalar, not a guest VA - it cannot a",
@@ -22,12 +22,12 @@
    "closures_blocked": 9
   },
   {
-   "reason": "calls 0x0040F350, whose contract is not in the provider's declar",
-   "closures_blocked": 7
+   "reason": "a dereference with no recoverable width",
+   "closures_blocked": 8
   },
   {
-   "reason": "a dereference with no recoverable width",
-   "closures_blocked": 6
+   "reason": "calls 0x0040F350, whose contract is not in the provider's declar",
+   "closures_blocked": 7
   },
   {
    "reason": "Invalid expression",
@@ -35,7 +35,11 @@
   },
   {
    "reason": "'var_1' is neither a VA nor a scalar (unrecovered local)",
-   "closures_blocked": 2
+   "closures_blocked": 3
+  },
+  {
+   "reason": "a ArrayRef is neither a VA nor a scalar",
+   "closures_blocked": 3
   },
   {
    "reason": "calls 0x00488DF1, which has a 48-byte guest frame, but this call",
@@ -58,11 +62,7 @@
    "closures_blocked": 1
   },
   {
-   "reason": "a ArrayRef is neither a VA nor a scalar",
-   "closures_blocked": 1
-  },
-  {
-   "reason": "not a guest VA, so it cannot be a memory operand",
+   "reason": "union_6332 has no declared size, so its guest storage cannot be ",
    "closures_blocked": 1
   }
  ],
@@ -81,11 +81,7 @@
   },
   {
    "address": "0x00410EE0",
-   "closures": 1
-  },
-  {
-   "address": "0x0040EAC0",
-   "closures": 1
+   "closures": 2
   }
  ]
 }

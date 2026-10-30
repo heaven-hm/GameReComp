@@ -46,3 +46,53 @@ def test_bit_cast_nested_and_with_parenthesised_argument():
     out = R.prepare(src)
     assert "bit_cast" not in out
     assert out.count("((") >= 2
+
+
+def test_every_implemented_intrinsic_matches_its_llvm_definition():
+    """Each helper we implement must agree with the LLVM semantics it stands in for.
+
+    An unimplemented intrinsic was refused because "it compiles and computes
+    something else". An implemented one has the same obligation in the other
+    direction: it must compute the SAME thing the provider meant. `llvm.fshl` is
+    the one that is easy to get subtly wrong -- a first version split on
+    `c >= 32` and disagreed with the definition in 726 of 3456 probed cases while
+    looking entirely reasonable. So the definition is executed here, not reasoned
+    about.
+    """
+    import subprocess
+    from pathlib import Path
+    from tools.autorecomp import rename_ast as R
+
+    for name in ("llvm_fshl_i32", "bit_parity", "lshift",
+                 "llvm_smax_i32", "llvm_smin_i32", "llvm_umin_i32",
+                 "llvm_umax_i32", "llvm_smin_i16"):
+        assert name in R.IMPLEMENTED_INTRINSICS, name
+
+    body = R.IMPLEMENTED_INTRINSICS["llvm_fshl_i32"].strip()
+    ref = '''
+static uint32_t ref(uint32_t a, uint32_t b, uint32_t c)
+{
+    c %= 64u;
+    if (c == 0u) return a;
+    uint64_t x = ((uint64_t)a << 32) | (uint64_t)b;
+    return (uint32_t)((x << c) >> 32);
+}
+int main(void)
+{
+    uint32_t v[] = {0u, 1u, 0x80000000u, 0xFFFFFFFFu, 0x12345678u, 0xDEADBEEFu};
+    for (int i = 0; i < 6; i++)
+        for (int j = 0; j < 6; j++)
+            for (uint32_t c = 0; c < 96; c++)
+                if (llvm_fshl_i32(v[i], v[j], c) != ref(v[i], v[j], c))
+                    return 1;
+    return 0;
+}
+'''
+    src = "#include <stdint.h>\n" + body + ref
+    path = Path("/tmp/intrinsic_check.c")
+    path.write_text(src)
+    exe = Path("/tmp/intrinsic_check")
+    cc = subprocess.run(["cc", "-o", str(exe), str(path)], capture_output=True, text=True)
+    assert cc.returncode == 0, cc.stderr
+    run = subprocess.run([str(exe)], capture_output=True, text=True)
+    assert run.returncode == 0, "the implemented funnel shift disagrees with its definition"

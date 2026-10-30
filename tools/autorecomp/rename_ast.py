@@ -33,6 +33,72 @@ _RE_FIELD = __import__("re").compile(r"^(?:offset_|padding_at_|member_)(\d+)$")
 # The C types pycparser does not know without a libc header, and the provider's
 # scalar typedefs. Structs/unions are deliberately absent: a body that needs one
 # is refused, because the provider's header was not saved.
+# rev.ng helpers with DEFINED semantics, spelled in exact C. Each is emitted into
+# the generated module so the source is self-contained and a reader can see what the
+# provider's intrinsic means rather than trusting a name.
+#
+#   bit_parity(x)  LLVM ctpop reduced to its low bit: the parity of x's set bits.
+#                  rev.ng emits it for the x86 PF flag.
+#   lshift(a, b)   LLVM shl. The C shift is undefined when b >= 32, so the
+#                  out-of-range case is fixed at 0 rather than left to the compiler:
+#                  the provider does emit negative amounts (they wrap to >= 32),
+#                  and "undefined" is not a semantics a reconstruction may ship.
+IMPLEMENTED_INTRINSICS = {
+    "bit_parity": """
+static inline uint8_t bit_parity(uint8_t x)
+{
+    uint8_t v = x, p = 0;
+    while (v) { p ^= (uint8_t)(v & 1u); v >>= 1; }
+    return p;
+}""",
+    "lshift": """
+static inline uint32_t lshift(uint32_t a, uint32_t b)
+{
+    return b >= 32u ? 0u : (a << b);
+}""",
+    # The signed/unsigned min and max are ordinary comparisons in LLVM. rev.ng
+    # emits them from its own canonicalisation passes; there is no ambiguity in
+    # what they compute, so refusing them was caution rather than ignorance.
+    "llvm_smax_i32": """
+static inline int32_t llvm_smax_i32(int32_t a, int32_t b)
+{ return a > b ? a : b; }""",
+    "llvm_smin_i32": """
+static inline int32_t llvm_smin_i32(int32_t a, int32_t b)
+{ return a < b ? a : b; }""",
+    "llvm_umin_i32": """
+static inline uint32_t llvm_umin_i32(uint32_t a, uint32_t b)
+{ return a < b ? a : b; }""",
+    "llvm_umax_i32": """
+static inline uint32_t llvm_umax_i32(uint32_t a, uint32_t b)
+{ return a > b ? a : b; }""",
+    "llvm_smin_i16": """
+static inline int16_t llvm_smin_i16(int16_t a, int16_t b)
+{ return a < b ? a : b; }""",
+    # llvm.fshl is a FUNNEL shift: concatenate a and b, shift left by c, keep the
+    # top word. It is defined for every shift amount, so unlike a C shift there is
+    # no undefined case to paper over -- the LLVM pseudo-code is the definition.
+    "llvm_fshl_i32": """
+static inline uint32_t llvm_fshl_i32(uint32_t a, uint32_t b, uint32_t c)
+{
+    /* the definition, not a rewrite of it: funnel shift left over the 64-bit
+       concatenation (a:b), keep the high 32 bits. Written branch-free on purpose
+       -- a first version split on c >= 32 and was wrong in 726 of 3456 probed
+       cases, which is why this one is checked against the definition below. */
+    uint64_t x = ((uint64_t)a << 32) | (uint64_t)b;
+    c %= 64u;
+    return c == 0u ? a : (uint32_t)((x << c) >> 32);
+}""",
+}
+
+
+def intrinsic_definitions(body):
+    """The C for every implemented intrinsic this body actually calls."""
+    import re as _re
+    used = [n for n in IMPLEMENTED_INTRINSICS
+            if _re.search(r"\b" + n + r"\s*\(", body)]
+    return "\n".join(IMPLEMENTED_INTRINSICS[n] for n in sorted(used))
+
+
 PRELUDE = """
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
@@ -922,8 +988,14 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False,
     # of its own (measured: 184 bit_cast, 59 bit_parity, 50 lshift, 31
     # llvm_umin_i32, 18 llvm_fshl_i32 across the provider bodies).
     intr = _pre.findall(r"\b(bit_cast|bit_parity|lshift|rshift|llvm_[a-z0-9_]+)\s*\(", body)
-    if intr:
-        kinds = sorted(set(intr))
+    # Two of the rev.ng helpers have DEFINED semantics and an exact C spelling, so
+    # they are implemented rather than refused. The rest stay refused: an
+    # unimplemented intrinsic is a function that compiles and computes something
+    # else, which is worse than a refusal. `bit_cast` is handled by prepare(),
+    # which rewrites it to a cast before the parse.
+    unimplemented = sorted(set(intr) - set(IMPLEMENTED_INTRINSICS) - {"bit_cast"})
+    if unimplemented:
+        kinds = unimplemented
         raise Unsupportable(f"the provider body uses LLVM intrinsic helper(s) "
                             f"{', '.join(kinds)} that are declared in runtime-library.h but "
                             f"have no implementation here: the body would compile and compute "
