@@ -298,6 +298,139 @@ static void g_CreateFontIndirectA(void) {                /* LOGFONTA: height, wi
     RET(SYSTEM_FONT, 1);
 }
 
+/* ---- font enumeration ----
+ * EnumFontFamiliesA(hdc, face, callback, lParam) walks the faces this host can
+ * actually provide and calls the guest's callback once per face with a
+ * LOGFONTA and a NEWTEXTMETRICA.
+ *
+ * "This host can actually provide" is the whole list: the faces the guest
+ * added with AddFontResourceA, plus the families hle_font_file substitutes for
+ * (the Liberation/Arial stand-ins and the two raster faces Windows ships). It
+ * does not invent a font inventory. A program that enumerates to build a font
+ * picker therefore shows the fonts text will really be drawn with, and one
+ * that enumerates looking for a face it shipped finds it because
+ * AddFontResourceA put it there.
+ *
+ * The metrics come from the real TrueType file when it opens; when it does not,
+ * the face is still reported (it is a face the program asked about) with a
+ * zeroed metric block and a line on stderr, because a program that lays text
+ * out on those numbers must not be handed invented ones silently. */
+#define ENUM_TRUETYPE 4u
+#define ENUM_RASTER   1u
+
+/* LOGFONTA is 60 bytes and NEWTEXTMETRICA 76: both fixed by the 32-bit ABI,
+ * and the guest's callback reads them at those offsets. */
+enum { LOGFONTA_SIZE = 60, NEWTEXTMETRICA_SIZE = 76,
+       LF_HEIGHT = 0, LF_WIDTH = 4, LF_ESCAPEMENT = 8, LF_ORIENTATION = 12,
+       LF_WEIGHT = 16, LF_ITALIC = 20, LF_UNDERLINE = 21, LF_STRIKEOUT = 22,
+       LF_CHARSET = 23, LF_OUTPRECISION = 24, LF_CLIPPRECISION = 25,
+       LF_QUALITY = 26, LF_PITCHANDFAMILY = 27, LF_FACENAME = 28 };
+
+static void logfont_write(uint32_t va, const char *face, int height, int weight,
+                          int italic, int charset, int pitch_family) {
+    memset(hle_ptr(va), 0, LOGFONTA_SIZE);
+    MEM32(va + LF_HEIGHT) = (uint32_t)height;
+    MEM32(va + LF_WEIGHT) = (uint32_t)weight;
+    MEM8(va + LF_ITALIC) = (uint8_t)(italic ? 1 : 0);
+    MEM8(va + LF_CHARSET) = (uint8_t)charset;
+    MEM8(va + LF_OUTPRECISION) = 0;                  /* OUT_DEFAULT_PRECIS */
+    MEM8(va + LF_QUALITY) = 0;                       /* DEFAULT_QUALITY */
+    MEM8(va + LF_PITCHANDFAMILY) = (uint8_t)pitch_family;
+    strncpy((char *)hle_ptr(va + LF_FACENAME), face, 31);
+}
+
+/* TEXTMETRICA's leading fields, then the four NEWTEXTMETRICA additions. */
+enum { TM_HEIGHT = 0, TM_ASCENT = 4, TM_DESCENT = 8, TM_INTLEADING = 12,
+       TM_EXTLEADING = 16, TM_AVECHARWIDTH = 20, TM_MAXCHARWIDTH = 24,
+       TM_WEIGHT = 28, TM_OVERHANG = 32, TM_DIGIX = 36, TM_DIGIY = 40,
+       TM_FIRSTCHAR = 44, TM_LASTCHAR = 45, TM_DEFAULTCHAR = 46,
+       TM_BREAKCHAR = 47, TM_ITALIC = 48, TM_UNDERLINED = 49,
+       TM_STRUCKOUT = 50, TM_PITCHANDFAMILY = 51, TM_CHARSET = 52,
+       NTM_FLAGS = 56, NTM_CELLHEIGHT = 60, NTM_AVGWIDTH = 64 };
+
+static void textmetric_write(uint32_t va, const char *file, int height, int weight,
+                            int italic, int charset, int pitch_family) {
+    memset(hle_ptr(va), 0, NEWTEXTMETRICA_SIZE);
+    int ascent = 0, descent = 0, em = height < 0 ? -height : height;
+    if (file) {
+        TTF_Font *f = open_font(file, em > 0 ? em : 11);
+        if (f) {
+            ascent = TTF_FontAscent(f);
+            descent = TTF_FontDescent(f);            /* negative */
+            TTF_CloseFont(f);
+        }
+    }
+    MEM32(va + TM_HEIGHT) = (uint32_t)(ascent - descent);
+    MEM32(va + TM_ASCENT) = (uint32_t)ascent;
+    MEM32(va + TM_DESCENT) = (uint32_t)(-descent);
+    MEM32(va + TM_AVECHARWIDTH) = (uint32_t)(em / 2);
+    MEM32(va + TM_MAXCHARWIDTH) = (uint32_t)em;
+    MEM32(va + TM_WEIGHT) = (uint32_t)weight;
+    MEM32(va + TM_DIGIX) = 96;
+    MEM32(va + TM_DIGIY) = 96;
+    MEM8(va + TM_FIRSTCHAR) = 32;
+    MEM8(va + TM_LASTCHAR) = 255;
+    MEM8(va + TM_DEFAULTCHAR) = '?';
+    MEM8(va + TM_BREAKCHAR) = ' ';
+    MEM8(va + TM_ITALIC) = (uint8_t)(italic ? 1 : 0);
+    MEM8(va + TM_PITCHANDFAMILY) = (uint8_t)pitch_family;
+    MEM8(va + TM_CHARSET) = (uint8_t)charset;
+    MEM32(va + NTM_CELLHEIGHT) = (uint32_t)(ascent - descent);
+    MEM32(va + NTM_AVGWIDTH) = (uint32_t)(em / 2);
+}
+
+/* The families this host draws with. Each entry is what a program asking for
+ * that face gets, which is what hle_font_file's substitution table does. */
+static const struct { const char *face; int pitch_family; } g_enum_faces[] = {
+    { "Arial",          0x22 },   /* FF_SWISS | VARIABLE_PITCH */
+    { "Times New Roman",0x36 },   /* FF_ROMAN | VARIABLE_PITCH */
+    { "Courier New",    0x31 },   /* FF_MODERN | FIXED_PITCH   */
+    { "MS Sans Serif",  0x22 },
+    { "MS Serif",       0x36 },
+    { "Small Fonts",    0x21 },   /* FF_MODERN | FIXED_PITCH, the raster one */
+    { "Terminal",       0x31 },
+    { "Fixedsys",       0x31 },
+};
+
+static void g_EnumFontFamiliesA(void) {                  /* (hdc, face, cb, lParam) */
+    const char *want = ASTR(1);
+    uint32_t cb = A32(2), lparam = A32(3);
+    if (!cb) { RET(0, 4); }
+    uint32_t lf = hle_scratch(LOGFONTA_SIZE);
+    uint32_t tm = hle_scratch(NEWTEXTMETRICA_SIZE);
+    int called = 0;
+
+    /* The guest's own fonts first: it asked about a face it shipped. */
+    for (int i = 0; i < g_nadded; i++) {
+        if (want && *want && strcasecmp(want, g_added[i].family)) continue;
+        logfont_write(lf, g_added[i].family, -12, 400, 0, 0, 0x22);
+        textmetric_write(tm, g_added[i].path, 12, 400, 0, 0, 0x22);
+        called++;
+        uint32_t args[4] = { lf, tm, ENUM_TRUETYPE, lparam };
+        if (!hle_call_guest(cb, 4, args)) { RET(called, 4); }
+    }
+    for (size_t i = 0; i < sizeof g_enum_faces / sizeof *g_enum_faces; i++) {
+        const char *face = g_enum_faces[i].face;
+        if (want && *want && strcasecmp(want, face)) continue;
+        const char *file = hle_font_file(face, 0, 0);
+        if (!file) {
+            fprintf(stderr, "[gdi] EnumFontFamiliesA(\"%s\"): this host has no "
+                            "file for it; reported with zeroed metrics\n", face);
+        }
+        logfont_write(lf, face, -12, 400, 0, 0, g_enum_faces[i].pitch_family);
+        textmetric_write(tm, file, 12, 400, 0, 0, g_enum_faces[i].pitch_family);
+        called++;
+        uint32_t args[4] = { lf, tm,
+                             (face == g_enum_faces[5].face
+                              || face == g_enum_faces[6].face
+                              || face == g_enum_faces[7].face)
+                                 ? ENUM_RASTER : ENUM_TRUETYPE,
+                             lparam };
+        if (!hle_call_guest(cb, 4, args)) break;         /* the callback said stop */
+    }
+    RET(called, 4);
+}
+
 /* ---- GDI objects: brushes, pens, bitmaps ----
  * One handle space (0x0DB1....). A brush/pen carry a COLORREF; a bitmap carries
  * its own pixels so it can be selected into a memory DC and blitted. */
@@ -856,6 +989,7 @@ const win32hle_shim win32hle_gdidc[] = {
     { "SetPixel", g_SetPixel }, { "SetPixelV", g_SetPixel }, { "GetPixel", g_GetPixel },
     { "MoveToEx", g_MoveToEx }, { "LineTo", g_LineTo }, { "BitBlt", g_BitBlt }, { "StretchBlt", g_StretchBlt },
     { "CreateFontA", g_CreateFontA }, { "CreateFontIndirectA", g_CreateFontIndirectA },
+    { "EnumFontFamiliesA", g_EnumFontFamiliesA },
     { "DeleteObject", g_DeleteObject }, { "GetStockObject", g_GetStockObject }, { "SelectObject", g_SelectObject },
     { "SetDIBColorTable", g_SetDIBColorTable },
     { "CreateScalableFontResourceA", g_CreateScalableFontResourceA }, { "AddFontResourceA", g_AddFontResourceA },
