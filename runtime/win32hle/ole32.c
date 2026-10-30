@@ -11,6 +11,10 @@
  *
  * Structured storage, OLE embedding and type libraries are not here: they
  * fail with E_NOTIMPL.
+ *
+ * The DirectMusic COM class and method table below adapt HenryKun55's
+ * igi-recomp shim/src/ole32.c (commit 278eaf6394f7f42c7de6cffef2cf982154f59899),
+ * Copyright (c) 2026 HenryKun55, under MIT; see LICENSES/igi-recomp-MIT.txt.
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -26,6 +30,26 @@
 #define E_FAIL               0x80004005u
 #define REGDB_E_CLASSNOTREG  0x80040154u
 #define CO_E_CLASSSTRING     0x800401F3u
+
+/* DirectMusic's COM class is part of DirectX 7.  A headless runtime can
+ * expose its interface for capability checks while reporting playback and
+ * device operations as unsupported. */
+static const uint8_t CLSID_DIRECTMUSIC[16] = {
+    0x10, 0x9F, 0x6B, 0x63, 0x7D, 0x0C, 0xD1, 0x11,
+    0x95, 0xB2, 0x00, 0x20, 0xAF, 0xDC, 0x74, 0x21
+};
+static const uint8_t IID_DIRECTMUSIC[16] = {
+    0x5A, 0x11, 0x36, 0x65, 0x2D, 0x7B, 0xD2, 0x11,
+    0xBA, 0x18, 0x00, 0x00, 0xF8, 0x75, 0xAC, 0x12
+};
+static const uint8_t IID_DIRECTMUSIC8[16] = {
+    0xF7, 0x29, 0x36, 0x2D, 0x3D, 0x81, 0x39, 0x49,
+    0x85, 0x08, 0xF0, 0x5C, 0x6B, 0x75, 0xFD, 0x97
+};
+static const uint8_t IID_IUNKNOWN[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46
+};
 
 /* ---- GUIDs ---- */
 void hle_guid_string(const uint8_t *g, char *out) {      /* {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx} */
@@ -95,10 +119,56 @@ static uint32_t vcall(uint32_t obj, int slot, int nargs, const uint32_t *args) {
     return hle_call_guest(MEM32(MEM32(obj) + 4u * (uint32_t)slot), nargs + 1, a);
 }
 
+static void dm_QueryInterface(void) {
+    const uint8_t *iid = (const uint8_t *)APTR(1);
+    if (!iid || (memcmp(iid, IID_IUNKNOWN, 16) && memcmp(iid, IID_DIRECTMUSIC, 16) &&
+                 memcmp(iid, IID_DIRECTMUSIC8, 16))) {
+        if (A32(2)) MEM32(A32(2)) = 0;
+        RET(E_NOINTERFACE, 3);
+    }
+    MEM32(A32(0) + 4)++;
+    MEM32(A32(2)) = A32(0);
+    RET(S_OK, 3);
+}
+static void dm_unsupported_2(void) { RET(E_NOTIMPL, 2); }
+static void dm_unsupported_3(void) { RET(E_NOTIMPL, 3); }
+static void dm_unsupported_4(void) { RET(E_NOTIMPL, 4); }
+static void dm_unsupported_5(void) { RET(E_NOTIMPL, 5); }
+static void dm_unsupported_external_clock(void) { RET(E_NOTIMPL, 2); }
+static uint32_t directmusic_vtable(void) {
+    static uint32_t vt;
+    static const win32hle_shim methods[] = {
+        { "IDirectMusic::QueryInterface", dm_QueryInterface },
+        { "IDirectMusic::AddRef", hle_com_AddRef }, { "IDirectMusic::Release", hle_com_Release },
+        { "IDirectMusic::EnumPort", dm_unsupported_3 },
+        { "IDirectMusic::CreateMusicBuffer", dm_unsupported_4 },
+        { "IDirectMusic::CreatePort", dm_unsupported_5 },
+        { "IDirectMusic::EnumMasterClock", dm_unsupported_3 },
+        { "IDirectMusic::GetMasterClock", dm_unsupported_3 },
+        { "IDirectMusic::SetMasterClock", dm_unsupported_2 },
+        { "IDirectMusic::Activate", dm_unsupported_2 },
+        { "IDirectMusic::GetDefaultPort", dm_unsupported_2 },
+        { "IDirectMusic::SetDirectSound", dm_unsupported_3 },
+        { "IDirectMusic8::SetExternalMasterClock", dm_unsupported_external_clock },
+        { NULL, NULL }
+    };
+    if (!vt) vt = hle_com_vtable(methods);
+    return vt;
+}
+
 static void o_CoCreateInstance(void) {                   /* (clsid, outer, ctx, iid, &out) */
     const uint8_t *clsid = (const uint8_t *)APTR(0);
     char s[40];
     if (A32(4)) MEM32(A32(4)) = 0;
+    if (clsid && !memcmp(clsid, CLSID_DIRECTMUSIC, 16)) {
+        const uint8_t *iid = (const uint8_t *)APTR(3);
+        if (!iid || (memcmp(iid, IID_IUNKNOWN, 16) && memcmp(iid, IID_DIRECTMUSIC, 16) &&
+                     memcmp(iid, IID_DIRECTMUSIC8, 16)))
+            RET(E_NOINTERFACE, 5);
+        uint32_t obj = hle_com_new(directmusic_vtable(), 8);
+        if (A32(4)) MEM32(A32(4)) = obj;
+        RET(S_OK, 5);
+    }
     for (int i = 0; clsid && i < g_nclass; i++)
         if (!memcmp(g_class[i].clsid, clsid, 16)) RET(g_class[i].create((const uint8_t *)APTR(3), (uint32_t *)APTR(4)), 5);
     for (int i = 0; clsid && i < MAX_GUEST_CLASSES; i++)

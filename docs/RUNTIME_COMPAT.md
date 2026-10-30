@@ -126,15 +126,17 @@ file in `runtime/win32hle/`; "selftest" means the test the build script runs
 | user32 | `user32.c` | windows, message loop, menus, accelerators (real `RT_ACCELERATOR` parsing and `WM_COMMAND` delivery), window properties, carets, clipboard formats |
 | gdi32 / DCs | `gdi32.c`, `gdidc.c` | DCs, bitmaps and DIB sections, fonts and text through SDL2_ttf, blits, regions, palettes |
 | GDI presentation | `screen.c`, `present.c` | the software presenter: a game's primary surface is what the window shows |
-| DirectDraw | `ddraw.c` | `IDirectDraw`–`IDirectDraw4` and surfaces in software, colour keys, stretches, clippers |
+| DirectDraw | `ddraw.c` | `IDirectDraw`–`IDirectDraw7` interfaces, system-memory surfaces, colour keys, stretches and clippers; primary surfaces present through the shared SDL OpenGL context |
+| Direct3D 7 | `d3d7.c` | generic fixed-function OpenGL bridge for transforms, viewport, clear, common render states, FVF primitive drawing, guest vertex buffers, and one textured stage with 16/24/32-bit surfaces; multi-stage textures, lighting/materials, device enumeration/caps, state blocks, and several less common methods remain unavailable |
 | DirectSound | `dsound.c` | DirectSound buffers on SDL audio |
-| DirectInput | *not implemented* | `DirectInputCreateA`/`Ex` are reported unresolved |
+| DirectInput 3/5/7 | `dinput.c` | keyboard and mouse COM devices, enumeration, acquisition, polled keyboard state and absolute mouse state; buffered `GetDeviceData`, relative mouse motion, joystick devices, focus reacquisition and effects remain unimplemented |
 | SDL 1.2 | `sdl12.c` | video, surfaces and blits, pixel formats, events, keyboard state, joysticks, `SDL_RWops`, BMP/WAV loading, timers, threads, mutexes, and `SDL_OPENGL` video modes with a real `SDL_GLContext` |
 | SDL_mixer 1.2 | `sdlmix.c` | a software mixer on SDL2 audio, RIFF/WAVE decoding into guest chunks, channels, panning, volume, fades. **Music (MOD/OGG/MP3) is deliberately absent** — `Mix_LoadMUS` returns NULL and says why |
-| OpenGL32 / GLU32 | `gl32.c` | every `gl*`/`glu*` name the corpus imports, forwarded to the host's OpenGL through `SDL_GL_GetProcAddress`. `__stdcall`, as the original binaries require |
+| OpenGL32 / GLU32 | `gl32.c` | the registered `gl*`/`glu*` imports are forwarded to the host's OpenGL through SDL's current GL context and `SDL_GL_GetProcAddress` |
 | MSVCRT | `msvcrt.c` | the MSVC C runtime on the host libc: stdio with guest `_iobuf` streams, the guest heap, the ctype table, `errno`, the startup set, `_initterm`, `atexit`. Five data exports (`_iob`, `_pctype`, `_ctype`, `_fmode`, `__mb_cur_max`) resolve to the objects themselves, never to code |
 | MSVCP140 / VCRUNTIME140 | *not implemented* | the C++ runtime and STL internals; without an unwinder a partial bridge would be a wall of fake successes |
-| winmm | `winmm.c` | timers, `mciSendCommandA`, `sndPlaySoundA` |
+| winmm | `winmm.c` | timers, wave output, MMIO RIFF access; MCI commands return `MCIERR_UNSUPPORTED_FUNCTION`, and mixer enumeration reports no device |
+| Video for Windows | `avifil32.c` | AVI file/stream discovery and legacy IC codec imports resolve with explicit unsupported/file errors; AVI decoding is not implemented |
 | Bink / Miles | `bink.c`, `mss.c` | movie and audio decoding through FFmpeg when it is present |
 | OLE32 / OLEAUT32 / storage | `ole32.c`, `storage.c` | COM entry points and structured storage |
 | WSOCK32 | `wsock32.c` | by name and by ordinal |

@@ -343,6 +343,7 @@ uint32_t hle_gdi_make_dib(int w, int h, int bpp, uint8_t *bits, int topdown, con
 void     hle_gdi_release_dc(uint32_t hdc);
 extern const win32hle_shim win32hle_user32[];
 extern const win32hle_shim win32hle_winmm[];
+extern const win32hle_shim win32hle_avifil32[];      /* Video-for-Windows; explicit unsupported-codec errors */
 extern const win32hle_shim win32hle_lz32[];          /* LZOpenFileA & co: SZDD expanded in memory (lz32.c) */
 extern const win32hle_shim win32hle_wsock32[];        /* by name and by ordinal */
 void hle_ws_poll(void);                                /* the pump: WSAAsyncSelect notifications */
@@ -350,6 +351,7 @@ extern const win32hle_shim win32hle_ole32[];          /* OLE32 + OLEAUT32 */
 extern const win32hle_shim win32hle_storage[];        /* structured storage: compound files */
 extern const win32hle_shim win32hle_dsound[];         /* DirectSound on SDL audio (dsound.c) */
 extern const win32hle_shim win32hle_ddraw[];          /* DirectDraw in software (ddraw.c) */
+uint32_t hle_d3d7_create(void);                       /* IDirect3D7 COM object; zero if GL screen is unavailable */
 extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
 extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 audio (sdlmix.c) */
 extern const win32hle_shim win32hle_gl32[];           /* OPENGL32/GLU32 on the host's GL (gl32.c) */
@@ -384,6 +386,10 @@ extern const win32hle_shim win32hle_bink[];           /* binkw32 on ffmpeg (bink
 /* The SDL2 display and input for a DirectDraw game (screen.c): installs
  * itself as the pump hook. headless: no window (a script drives input). */
 int  hle_screen_open(const char *title, int fullscreen, int headless);
+int  hle_screen_request_opengl(void);  /* before open: make the screen window own a GL context */
+int  hle_screen_gl_active(void);
+void hle_screen_gl_swap(void);         /* pump and swap a GL frame on the video thread */
+void hle_screen_gl_viewport(int x, int y, int width, int height); /* D3D top-left viewport to GL bottom-left */
 void hle_screen_pump(void);
 extern int (*hle_screen_key_hook)(int sdl_scancode, int down);   /* nonzero: the host took the key */
 void hle_screen_title(const char *title);

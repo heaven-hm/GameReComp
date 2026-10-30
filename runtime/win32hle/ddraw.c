@@ -1,6 +1,6 @@
 /*
  * ddraw.c - DirectDraw in software: IDirectDraw (and IDirectDraw2), surfaces
- * (IDirectDrawSurface 1-3), palettes and clippers.
+ * (IDirectDrawSurface 1-7), palettes and clippers.
  *
  * Every surface is system memory the game Locks and draws into, or blits
  * between; Blt and BltFast do the copy, colour fill, source colour key and
@@ -81,8 +81,8 @@ typedef struct surf {
 typedef struct { uint32_t entries[256]; int refs; } pal_t;   /* PALETTEENTRY: r, g, b, flags */
 
 static surf_t *g_primary;
-static uint32_t g_vt_dd, g_vt_dd2, g_vt_surf, g_vt_pal, g_vt_clip;
-static uint32_t g_dd, g_dd2;                             /* the one DirectDraw object, both faces */
+static uint32_t g_vt_dd, g_vt_dd2, g_vt_dd4, g_vt_dd7, g_vt_surf, g_vt_pal, g_vt_clip;
+static uint32_t g_dd, g_dd2, g_dd4, g_dd7;
 static volatile unsigned g_frame_seq;                    /* bumped when the primary may have changed */
 
 /* The host state behind an object is in guest memory too (hle_alloc), so
@@ -160,8 +160,21 @@ static void dd_QueryInterface(void) {                    /* (this, iid, &out) */
     char s[40];
     hle_guid_string(iid, s);
     if (trace()) fprintf(stderr, "[ddraw] IDirectDraw::QueryInterface %s\n", s);
-    if (d1 == 0x6C14DB80u || d1 == 0x00000000u) { MEM32(A32(2)) = g_dd, MEM32(g_dd + 4)++; RET(DD_OK, 3); }    /* IDirectDraw, IUnknown */
+    if (d1 == 0xF5049E78u) {
+        uint32_t d3d = hle_d3d7_create();
+        if (d3d) {
+            MEM32(A32(2)) = d3d;
+            MEM32(d3d + 4)++;
+            RET(DD_OK, 3);
+        }
+        MEM32(A32(2)) = 0;
+        RET(0x80004002u, 3);
+    }
+    if (d1 == 0x00000000u) { MEM32(A32(2)) = A32(0), MEM32(A32(0) + 4)++; RET(DD_OK, 3); }                      /* IUnknown: preserve interface identity */
+    if (d1 == 0x6C14DB80u) { MEM32(A32(2)) = g_dd, MEM32(g_dd + 4)++; RET(DD_OK, 3); }                             /* IDirectDraw */
     if (d1 == 0xB3A6F3E0u) { MEM32(A32(2)) = g_dd2, MEM32(g_dd2 + 4)++; RET(DD_OK, 3); }                       /* IDirectDraw2 */
+    if (d1 == 0x9C59509Au) { MEM32(A32(2)) = g_dd4, MEM32(g_dd4 + 4)++; RET(DD_OK, 3); }                       /* IDirectDraw4 */
+    if (d1 == 0x15E65EC0u) { MEM32(A32(2)) = g_dd7, MEM32(g_dd7 + 4)++; RET(DD_OK, 3); }                       /* IDirectDraw7 */
     fprintf(stderr, "[ddraw] QueryInterface(%s): not served\n", s);
     MEM32(A32(2)) = 0;
     RET(0x80004002u, 3);
@@ -187,6 +200,13 @@ static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDES
     int w = primary ? g_mode_w : (int)MEM32(d + 12), h = primary ? g_mode_h : (int)MEM32(d + 8);
     int bpp = !primary && (fl & DDSD_PIXELFORMAT) ? (int)MEM32(d + 72 + 12) : g_mode_bpp;
     if (w <= 0 || h <= 0 || w > 8192 || h > 8192) { fprintf(stderr, "[ddraw] CreateSurface %dx%d: no\n", w, h); RET(DDERR_INVALIDPARAMS, 4); }
+    if (primary && !hle_screen_gl_active()) {
+        if (!hle_screen_request_opengl()) RET(DDERR_UNSUPPORTED,4);
+        const char *driver=getenv("SDL_VIDEODRIVER");
+        int headless=driver && strcmp(driver,"dummy")==0;
+        if (hle_screen_open("DirectDraw / Direct3D 7 application",0,headless)!=0) RET(DDERR_UNSUPPORTED,4);
+        if (!headless && !hle_screen_gl_active()) RET(DDERR_UNSUPPORTED,4);
+    }
     caps = (caps & ~(DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM)) | DDSCAPS_SYSTEMMEMORY;
     if (!primary && !(caps & 0x1000u)) caps |= DDSCAPS_OFFSCREENPLAIN;
     uint32_t o = new_surface(w, h, bpp, primary ? caps | DDSCAPS_VISIBLE | DDSCAPS_FRONTBUFFER : caps, primary);
@@ -200,6 +220,7 @@ static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDES
     }
     if (primary) {
         g_primary = s, g_frame_seq++;
+        if (hle_dd_primary_hook) hle_dd_primary_hook();
         if ((fl & DDSD_BACKBUFFERCOUNT) && MEM32(d + 20)) {   /* a flip chain: one back buffer is all anyone uses */
             uint32_t b = new_surface(w, h, bpp, DDSCAPS_BACKBUFFER | DDSCAPS_SYSTEMMEMORY | (caps & (DDSCAPS_FLIP | DDSCAPS_COMPLEX)), 0);
             s->back = S(b);
@@ -316,13 +337,24 @@ static void dd2_GetAvailableVidMem(void) {               /* (this, &caps, &total
     if (A32(3)) MEM32(A32(3)) = 192u << 20;
     RET(DD_OK, 4);
 }
+static void dd_GetSurfaceFromDC(void) { if(A32(2))MEM32(A32(2))=0; RET(DDERR_NOTFOUND,3); }
+static void dd_RestoreAllSurfaces(void) { RET(DD_OK,1); }
+static void dd_TestCooperativeLevel(void) { RET(DD_OK,1); }
+static void dd_GetDeviceIdentifier(void) { RET(DDERR_UNSUPPORTED,3); }
+static void dd_StartModeTest(void) { RET(DDERR_UNSUPPORTED,4); }
+static void dd_EvaluateMode(void) { if(A32(2))MEM32(A32(2))=0; RET(DDERR_UNSUPPORTED,3); }
 
 /* ---- IDirectDrawSurface ---- */
 static void sf_QueryInterface(void) {
     const uint8_t *iid = (const uint8_t *)APTR(1);
     uint32_t d1 = *(const uint32_t *)iid;
-    /* IUnknown, Surface, Surface2, Surface3: the same object (one vtable is all three) */
-    if (d1 == 0 || d1 == 0x6C14DB81u || d1 == 0x57805885u || d1 == 0xDA044E00u) { MEM32(A32(2)) = A32(0); MEM32(A32(0) + 4)++; RET(DD_OK, 3); }
+    /* The versions share the stable DirectDrawSurface vtable prefix.  The
+     * table includes the appended methods through Surface7, so callers may
+     * query any supported version without receiving a truncated interface. */
+    if (d1 == 0 || d1 == 0x6C14DB81u || d1 == 0x57805885u || d1 == 0xDA044E00u ||
+        d1 == 0x0B2B8630u || d1 == 0x06675A80u) {
+        MEM32(A32(2)) = A32(0); MEM32(A32(0) + 4)++; RET(DD_OK, 3);
+    }
     char s[40];
     hle_guid_string(iid, s);
     fprintf(stderr, "[ddraw] Surface::QueryInterface(%s): not served\n", s);
@@ -582,6 +614,17 @@ static void sf_SetSurfaceDesc(void) {                    /* (this, &desc, flags)
     if (fl & DDSD_HEIGHT) s->h = (int)MEM32(d + 8);
     RET(DD_OK, 3);
 }
+/* Surface4 private-data storage and video-memory scheduling are not modeled.
+ * Keep the methods in their ABI slots and report unsupported explicitly. */
+static void sf_SetPrivateData(void) { RET(DDERR_UNSUPPORTED, 5); }
+static void sf_GetPrivateData(void) { RET(DDERR_UNSUPPORTED, 4); }
+static void sf_FreePrivateData(void) { RET(DDERR_UNSUPPORTED, 2); }
+static void sf_GetUniquenessValue(void) { if (A32(1)) MEM32(A32(1)) = 1; RET(DD_OK, 2); }
+static void sf_ChangeUniquenessValue(void) { RET(DD_OK, 1); }
+static void sf_SetPriority(void) { RET(DDERR_UNSUPPORTED, 2); }
+static void sf_GetPriority(void) { if (A32(1)) MEM32(A32(1)) = 0; RET(DD_OK, 2); }
+static void sf_SetLOD(void) { RET(DDERR_UNSUPPORTED, 2); }
+static void sf_GetLOD(void) { RET(0, 1); }
 
 /* ---- IDirectDrawPalette, IDirectDrawClipper ---- */
 static void pl_Release(void) {
@@ -632,6 +675,22 @@ static void vtables(void) {
     static const win32hle_shim dd2[] = { DD_COMMON("IDirectDraw2::"), { "IDirectDraw2::SetDisplayMode", dd2_SetDisplayMode },
         { "IDirectDraw2::WaitForVerticalBlank", dd_WaitForVerticalBlank },
         { "IDirectDraw2::GetAvailableVidMem", dd2_GetAvailableVidMem }, { 0, 0 } };
+    static const win32hle_shim dd4[] = { DD_COMMON("IDirectDraw4::"), { "IDirectDraw4::SetDisplayMode", dd2_SetDisplayMode },
+        { "IDirectDraw4::WaitForVerticalBlank", dd_WaitForVerticalBlank },
+        { "IDirectDraw4::GetAvailableVidMem", dd2_GetAvailableVidMem },
+        { "IDirectDraw4::GetSurfaceFromDC", dd_GetSurfaceFromDC },
+        { "IDirectDraw4::RestoreAllSurfaces", dd_RestoreAllSurfaces },
+        { "IDirectDraw4::TestCooperativeLevel", dd_TestCooperativeLevel },
+        { "IDirectDraw4::GetDeviceIdentifier", dd_GetDeviceIdentifier }, { 0, 0 } };
+    static const win32hle_shim dd7[] = { DD_COMMON("IDirectDraw7::"), { "IDirectDraw7::SetDisplayMode", dd2_SetDisplayMode },
+        { "IDirectDraw7::WaitForVerticalBlank", dd_WaitForVerticalBlank },
+        { "IDirectDraw7::GetAvailableVidMem", dd2_GetAvailableVidMem },
+        { "IDirectDraw7::GetSurfaceFromDC", dd_GetSurfaceFromDC },
+        { "IDirectDraw7::RestoreAllSurfaces", dd_RestoreAllSurfaces },
+        { "IDirectDraw7::TestCooperativeLevel", dd_TestCooperativeLevel },
+        { "IDirectDraw7::GetDeviceIdentifier", dd_GetDeviceIdentifier },
+        { "IDirectDraw7::StartModeTest", dd_StartModeTest },
+        { "IDirectDraw7::EvaluateMode", dd_EvaluateMode }, { 0, 0 } };
     static const win32hle_shim sf[] = {
         { "IDirectDrawSurface::QueryInterface", sf_QueryInterface }, { "IDirectDrawSurface::AddRef", hle_com_AddRef },
         { "IDirectDrawSurface::Release", sf_Release }, { "IDirectDrawSurface::AddAttachedSurface", sf_AddAttachedSurface },
@@ -655,6 +714,13 @@ static void vtables(void) {
         { "IDirectDrawSurface::UpdateOverlayZOrder", sf_UpdateOverlayZOrder },
         { "IDirectDrawSurface2::GetDDInterface", sf_GetDDInterface }, { "IDirectDrawSurface2::PageLock", sf_PageLock },
         { "IDirectDrawSurface2::PageUnlock", sf_PageUnlock }, { "IDirectDrawSurface3::SetSurfaceDesc", sf_SetSurfaceDesc },
+        { "IDirectDrawSurface4::SetPrivateData", sf_SetPrivateData },
+        { "IDirectDrawSurface4::GetPrivateData", sf_GetPrivateData },
+        { "IDirectDrawSurface4::FreePrivateData", sf_FreePrivateData },
+        { "IDirectDrawSurface4::GetUniquenessValue", sf_GetUniquenessValue },
+        { "IDirectDrawSurface4::ChangeUniquenessValue", sf_ChangeUniquenessValue },
+        { "IDirectDrawSurface7::SetPriority", sf_SetPriority }, { "IDirectDrawSurface7::GetPriority", sf_GetPriority },
+        { "IDirectDrawSurface7::SetLOD", sf_SetLOD }, { "IDirectDrawSurface7::GetLOD", sf_GetLOD },
         { 0, 0 } };
     static const win32hle_shim pl[] = {
         { "IDirectDrawPalette::QueryInterface", hle_com_QueryInterface }, { "IDirectDrawPalette::AddRef", hle_com_AddRef },
@@ -669,12 +735,16 @@ static void vtables(void) {
         { "IDirectDrawClipper::SetHWnd", cl_SetHWnd }, { 0, 0 } };
     g_vt_dd = hle_com_vtable(dd);
     g_vt_dd2 = hle_com_vtable(dd2);
+    g_vt_dd4 = hle_com_vtable(dd4);
+    g_vt_dd7 = hle_com_vtable(dd7);
     g_vt_surf = hle_com_vtable(sf);
     g_vt_pal = hle_com_vtable(pl);
     g_vt_clip = hle_com_vtable(cl);
     g_dd = hle_com_new(g_vt_dd, 12);
     g_dd2 = hle_com_new(g_vt_dd2, 12);
-    MEM32(g_dd + 4) = MEM32(g_dd2 + 4) = 0;              /* held by nobody until DirectDrawCreate: the last Release is 0 */
+    g_dd4 = hle_com_new(g_vt_dd4, 12);
+    g_dd7 = hle_com_new(g_vt_dd7, 12);
+    MEM32(g_dd + 4) = MEM32(g_dd2 + 4) = MEM32(g_dd4 + 4) = MEM32(g_dd7 + 4) = 0;
 }
 
 static void x_DirectDrawCreate(void) {                   /* (guid, &out, outer) */
@@ -685,9 +755,13 @@ static void x_DirectDrawCreate(void) {                   /* (guid, &out, outer) 
 }
 static void x_DirectDrawCreateEx(void) {                 /* (guid, &out, iid, outer): IID_IDirectDraw7 or IDirectDraw4 */
     vtables();
-    MEM32(g_dd + 4)++;
-    MEM32(A32(1)) = g_dd;                                /* the object serves every DirectDraw version */
-    RET(DD_OK, 4);
+    uint32_t iid=A32(2), d1=iid?MEM32(iid):0, obj=0;
+    if(d1==0x9C59509Au)obj=g_dd4;
+    else if(d1==0x15E65EC0u)obj=g_dd7;
+    if(!obj) { if(A32(1))MEM32(A32(1))=0; RET(0x80004002u,4); }
+    if(A32(1))MEM32(A32(1))=obj;
+    MEM32(obj+4)++;
+    RET(DD_OK,4);
 }
 static void x_DirectDrawEnumerateA(void) {               /* (callback, ctx): the primary display */
     static uint32_t desc, name;                          /* the guest may keep them */

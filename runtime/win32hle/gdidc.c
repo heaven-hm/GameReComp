@@ -970,6 +970,7 @@ static void blt(dc_t *dst, int dx, int dy, int w, int h, dc_t *src, int sx, int 
 static void g_BitBlt(void)     { dc_t *d = DC(A32(0)), *s = DC(A32(5)); blt(d,(int)A32(1),(int)A32(2),(int)A32(3),(int)A32(4),s,(int)A32(6),(int)A32(7),(int)A32(3),(int)A32(4)); RET(1, 9); }
 static void g_StretchBlt(void) { dc_t *d = DC(A32(0)), *s = DC(A32(5)); blt(d,(int)A32(1),(int)A32(2),(int)A32(3),(int)A32(4),s,(int)A32(6),(int)A32(7),(int)A32(8),(int)A32(9)); RET(1, 11); }
 static void g_CreateCompatibleDC(void) { RET(new_dc(), 1); }   /* a memory DC; a bitmap is selected into it */
+static void g_CreateICA(void) { RET(new_dc(), 4); }            /* an information context has the same query surface */
 static void g_DeleteDC(void) { hle_gdi_release_dc(A32(0)); RET(1, 1); }
 
 const win32hle_shim win32hle_gdidc[] = {
@@ -978,7 +979,7 @@ const win32hle_shim win32hle_gdidc[] = {
     { "CreateSolidBrush", g_CreateSolidBrush }, { "CreateHatchBrush", g_CreateHatchBrush },
     { "CreateBrushIndirect", g_CreateBrushIndirect }, { "CreatePen", g_CreatePen }, { "CreatePenIndirect", g_CreatePenIndirect },
     { "CreateCompatibleBitmap", g_CreateCompatibleBitmap }, { "CreateBitmap", g_CreateBitmap },
-    { "CreateCompatibleDC", g_CreateCompatibleDC }, { "DeleteDC", g_DeleteDC },
+    { "CreateCompatibleDC", g_CreateCompatibleDC }, { "CreateICA", g_CreateICA }, { "DeleteDC", g_DeleteDC },
     { "CreatePalette", g_CreatePalette }, { "GetPaletteEntries", g_GetPaletteEntries },
     { "SetPaletteEntries", g_SetPaletteEntries }, { "AnimatePalette", g_AnimatePalette },
     { "GetNearestPaletteIndex", g_GetNearestPaletteIndex }, { "SelectPalette", g_SelectPalette },

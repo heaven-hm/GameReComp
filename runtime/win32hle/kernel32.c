@@ -727,6 +727,9 @@ static void k_DuplicateHandle(void) {        /* (srcProc, src, dstProc, &dst, ac
     RET(1, 7);
 }
 static void k_LockFile(void)          { RET(1, 5); }
+/* With no host debugger attached, Windows DebugBreak is not a useful signal
+ * to the translated process. Keep the API call ABI-safe and continue. */
+static void k_DebugBreak(void)         { RETV(0); }
 
 const win32hle_shim win32hle_kernel32[] = {
     { "GetProcessVersion",  k_GetProcessVersion },
@@ -734,6 +737,7 @@ const win32hle_shim win32hle_kernel32[] = {
     { "DuplicateHandle",    k_DuplicateHandle },
     { "LockFile",           k_LockFile },
     { "UnlockFile",         k_LockFile },
+    { "DebugBreak",         k_DebugBreak },
     { "GlobalAddAtomA",     k_GlobalAddAtomA },
     { "GlobalFindAtomA",    k_GlobalFindAtomA },
     { "GlobalDeleteAtom",   k_GlobalDeleteAtom },
