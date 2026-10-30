@@ -132,80 +132,68 @@ only ever passed because the named bits happened to be clear on both sides. With
 the real `EFLAGS` register read, the difference is visible and the honest scope is
 "registers and memory", not "flags included".
 
-## The function inventory is over-approximated by a third, and the odd entries are two different defects
+## The function inventory: a retracted claim, and what parity actually means
 
-The renaming pass needs to know what a function is before it names one, and the
-first Doukutsu-scale run found that the inventory it was handed contains entries
-that are not function starts. `tools/autorecomp/inventory.py` classifies every
-dispatch-table entry by walking the instruction stream from the entry addresses:
+**Retracted (2026-10-30, by the Lead): "the inventory is over-approximated by a
+third" and every "phantom" count derived from it were wrong.** The classifier
+seeded its instruction walk from **even addresses** and stopped each walk at the
+first `ret`, so a real function beginning at an odd offset immediately after
+another function's terminating `ret` was structurally invisible to it - and was
+then labelled "mid-instruction phantom" for the sole reason that the classifier
+could not see it. Disassembling the bytes settled it: Doukutsu's five called
+odd-address functions all begin with coherent code (`mov eax,[edx+4] / and ... /
+ret`, `cmp ecx,[0x498b20] / jne / ret`, `push ebx / push esi / call ...`), and
+**Doukutsu's own PE entry point is at an odd address (0x00481D27)**.
 
-| | entries | even | real start | boundary inside another function | not any boundary |
-|---|---|---|---|---|---|
-| corpus total | 50,942 | 38,997 | 38,997 | 6,484 | 5,461 |
+So the odd-address percentage is a **packing fact, not a phantom count**: this
+linker does not pad function starts, so address parity carries no information
+about whether an address is a function. Corrected classification, seeded from the
+PE entry point and real call targets (`tools/autorecomp/inventory.py`):
 
-23.4% of table entries are at odd addresses. **Control: every even entry IS an
-instruction boundary (PASS)** — so the disassembly walk is sound and the odd
-entries are genuinely not starts. x86 has no alignment requirement, so an odd
-entry is not illegal; a table where a quarter are odd is not a table of functions.
+| | entries | odd | entered from the entry point | not entered |
+|---|---|---|---|---|
+| corpus total | 50,942 | 11,945 (23.4%) | 3,407 (920 odd, 2,487 even) | 47,535 |
 
-The two odd classes are not the same defect, and the Lead's measurement on
-Ikachan's lifted project makes the distinction:
+"Not entered" is not "phantom": a function reached only through an indirect call
+is invisible to a direct-call walk. The number is reported as what it is.
 
-- **phantom** (5,461 corpus-wide; 112 of Ikachan's 175 odd): mid-instruction, so
-  it can never be a legitimate call target. Dead weight — build time and a
-  corrupted ranking, nothing worse.
-- **inside another function** (6,484 corpus-wide; the Lead measured 20 of
-  Ikachan's 175 odd by walking from real starts, where this tool's even-address
-  seeds also produce boundaries that are not real starts, so this count is an
-  upper bound): a real instruction boundary, reachable by a `jmp` — a shared block
-  or tail-merge target. Lifting it as an independent function assumes an entry
-  state (esp, live registers, x87 stack) it does not have, so if the guest jumps
-  there the lifted body is wrong in a way no trace localises.
+The general lesson is worth keeping: **a classifier that quietly excludes its
+subject produces a confident, precise, wrong answer.** This one did it three
+times today - once in the Lead's tool, once in the named-memory window, once in
+the register scope - and each time the only thing that caught it was a control or
+a cross-check, never reading the code.
 
-The true function count for Ikachan is about 307, not 482; every count taken from
-a discovery pass is inflated the same way. The corpus numbers in
-`reports/rename-density.json` already exclude entries this tool refuses, and their
-denominator should read "of 12,726 table entries, of which roughly a third are not
-function starts".
+## The oracle's scope limit: a synthetic entry state cannot certify arguments
 
-This is an upstream defect in the discovery pass (`discover_functions`
-conflates a function start with "some address worth disassembling"), reported
-here rather than fixed here: changing the inventory changes every game's generated
-source, and the regression baseline is recorded against the current one.
+The oracle on a called odd-address function returns `original-faulted`, not
+`agree`: `0x00485FF5` opens with `mov eax,[edx+4]`, so a synthetic entry state
+with a garbage `edx` makes the **original** fault before our body is reached. The
+verdict says "I could not drive this function from a guessed state", which is not
+"our body is wrong". **Functions that dereference their arguments cannot be
+certified by synthetic entry states at all** - the fix, when it is needed, is to
+capture the real entry state from a live run rather than invent one. Recorded
+beside the register-scope limitation, with the same status: a known limit of the
+method, not a finding about the code.
 
-## The direction nobody was looking at: functions rev.ng has and we do not
+## The generator's next gate, measured: pycparser's C coverage
 
-Comparing rev.ng's Doukutsu output (955 declared functions) with our discovery
-(3,260, of which 2,019 even) gives the two differences:
+Of Doukutsu's 955 provider functions the AST model accepts **120**. The 835
+refusals cluster into a handful of C forms, not a fundamental gap:
 
-- **2,397 in ours, not rev.ng's** — the over-approximation already known.
-- **92 in rev.ng's, not ours** — the direction that would be serious if real: a
-  function the original calls that we never lifted has no body, so the call lands
-  in whatever is at that address: a plausible wrong answer, not a crash.
+| refusals | parse error |
+|---|---|
+| 390 | `before: *` |
+| 244 | `Invalid function definition` |
+| 109 | `before: stack` |
+| 55 | `Invalid expression` |
+| 10 | `before: argument_0` |
+| 7 | `Invalid declaration` |
+| ~20 | recovered-pointer / width refusals |
 
-Measured, three ways, before believing it:
-
-1. **Classification of the 92** (the three-way walk): 59 are even and not a
-   boundary of any of our walks (`start_not_lifted`, candidates), 2 are
-   boundaries inside another function, 31 are not any boundary at all (phantoms
-   in rev.ng's output too).
-2. **Reachability**: a 15-second Doukutsu run executed 2,939,862 dispatched calls
-   with **0** "no lifted function" fatals; statically, **0** of the 92 are call
-   targets anywhere in our lifted code, and **1** is a jump target
-   (`0x00487F13`, jumped to from `0x00487DD0`). So the risk is latent, not active
-   in the frame loop, and it would need a specific code path to bite.
-3. **What the provider actually produced for the 59 candidates**: 50 are EMPTY
-   bodies (`void f(void) { }`), 6 abort (`revng_abort`) or read through an address
-   below `0x1000` (lost pointer), and 3 have plausible C. Of those 3, the bytes
-   are `00 00` padding (`add byte ptr [eax], al`), an `ljmp` into nonsense, and
-   `daa` — none is a function.
-
-**Conclusion: this is not a lifter gap.** rev.ng's discovery over-approximates in
-this direction exactly as it does in the other, and its empty bodies are the
-evidence — it named addresses it could not decompile. More importantly, three of
-its "plausible" bodies were decompiled garbage: **plausible-looking C from a
-provider is not evidence that an address is a function**, which is why the oracle
-(the bytes) is the gate and the provider is an input.
+Four or five C forms account for ~815 of them. That is the gate between the
+transform and the hot functions: the census shows the frame loop's core
+(`0x00481BB0`, 6.6 million entries in a 300,000-dispatch run) is refused by the
+*parser*, not by the pointer model.
 
 ## The ruling: what a plain-C replacement can be verified for
 

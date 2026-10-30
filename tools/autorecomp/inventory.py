@@ -40,6 +40,59 @@ from capstone import Cs, CS_ARCH_X86, CS_MODE_32
 from tools.autorecomp.rename_evidence import pe_loaded, project_functions
 
 
+def pe_entry(pe_path):
+    """The PE's entry point VA."""
+    import struct as _s
+    data = pe_loaded(pe_path)["data"]
+    e = _s.unpack_from('<I', data, 0x3C)[0]
+    coff = e + 4
+    optsz = _s.unpack_from('<H', data, coff + 16)[0]
+    opt = coff + 20
+    base = _s.unpack_from('<I', data, opt + 28)[0]
+    rva = _s.unpack_from('<I', data, opt + 16)[0]
+    return base + rva
+
+
+def reachable(pe_path, entries, limit=20000):
+    """Instruction boundaries reachable from the PE entry point and real call
+    targets, as a worklist. NOT seeded by address parity: that assumes the thing
+    being tested, and it is exactly the defect that produced a confident, wrong
+    'phantom' count for three of us today."""
+    loaded = pe_loaded(pe_path)
+    sec = None
+    for cand in loaded["secs"]:
+        if 'text' in cand[0].lower():
+            sec = cand
+            break
+    if sec is None:
+        return set(), set()
+    name, tva, tvsize, troff, trsize = sec
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+    md.detail = True
+    entry_set = set(entries)
+    work = [pe_entry(pe_path)]
+    walked = set()
+    bounds = set()
+    while work and len(walked) < 200000:
+        start = work.pop()
+        if start in walked or not (tva <= start < tva + min(tvsize, trsize)):
+            continue
+        walked.add(start)
+        off = troff + (start - tva)
+        blob = loaded["data"][off:off + (1 << 20)]
+        n = 0
+        for insn in md.disasm(blob, start):
+            bounds.add(insn.address)
+            n += 1
+            if insn.mnemonic in ("ret", "retf", "retn") or n > limit:
+                break
+            if insn.mnemonic in ("call", "jmp") and insn.operands and insn.operands[0].type == 2:
+                t = insn.operands[0].imm & 0xFFFFFFFF
+                if t in entry_set and t not in walked:
+                    work.append(t)
+    return bounds, walked
+
+
 def boundaries(pe_path, seeds, limit=64):
     """The instruction boundaries found by walking from each seed."""
     loaded = pe_loaded(pe_path)
@@ -78,25 +131,25 @@ def boundaries(pe_path, seeds, limit=64):
 
 
 def classify(project_dir, pe_path):
-    """{start, inside_function, phantom} for one project's inventory."""
+    """{entered, not_entered} for one project's inventory.
+
+    Seeded from the PE entry point and real call targets, never from address
+    parity: parity is what the classification is supposed to tell us about, and
+    assuming it produced a confident 'phantom' count that three of us repeated
+    today before the bytes were disassembled. This binary packs functions with no
+    alignment padding - its own entry point is at an ODD address - so an odd
+    start is normal and carries no information."""
     entries = project_functions(project_dir)
     if not entries:
         return None
-    seeds = [a for a in entries if not (a & 1)]
-    bounds, walked = boundaries(pe_path, seeds)
-    inside_other = bound_elsewhere = 0
-    counts = {"total": len(entries), "even": len(seeds), "start": 0,
-              "inside_function": 0, "phantom": 0}
-    detail = {"inside_function": [], "phantom": []}
-    for va in sorted(entries):
-        if va in bounds and va in seeds:
-            counts["start"] += 1
-        elif va in bounds:
-            counts["inside_function"] += 1
-            detail["inside_function"].append(f"0x{va:08X}")
-        else:
-            counts["phantom"] += 1
-            detail["phantom"].append(f"0x{va:08X}")
+    bounds, entered = reachable(pe_path, set(entries))
+    odd = [v for v in entries if v & 1]
+    counts = {"total": len(entries), "odd": len(odd),
+              "entered": sum(1 for v in entries if v in entered),
+              "not_entered": sum(1 for v in entries if v not in entered),
+              "odd_entered": sum(1 for v in odd if v in entered),
+              "even_entered": sum(1 for v in entries if not (v & 1) and v in entered)}
+    detail = {"not_entered": [f"0x{v:08X}" for v in sorted(entries) if v not in entered]}
     return {"project": Path(project_dir).name, "pe": str(pe_path), "counts": counts,
             "detail": detail}
 
@@ -137,25 +190,24 @@ def main(argv=None):
         r = classify(d, pe)
         if r:
             rows.append(r)
-    print(f"{'project':22s} {'total':>7s} {'even':>6s} {'start':>7s} {'inside':>7s} {'phantom':>8s}")
-    tot = {"total": 0, "even": 0, "start": 0, "inside_function": 0, "phantom": 0}
+    print(f"{'project':22s} {'total':>7s} {'odd':>6s} {'entered':>8s} {'not entered':>12s}")
+    tot = {"total": 0, "odd": 0, "entered": 0, "not_entered": 0,
+           "odd_entered": 0, "even_entered": 0}
     for r in rows:
         c = r["counts"]
         for k in tot:
             tot[k] += c[k]
-        print(f"{r['project']:22s} {c['total']:7d} {c['even']:6d} {c['start']:7d} "
-              f"{c['inside_function']:7d} {c['phantom']:8d}")
-    print(f"{'TOTAL':22s} {tot['total']:7d} {tot['even']:6d} {tot['start']:7d} "
-          f"{tot['inside_function']:7d} {tot['phantom']:8d}")
-    odd = tot['total'] - tot['even']
+        print(f"{r['project']:22s} {c['total']:7d} {c['odd']:6d} {c['entered']:8d} "
+              f"{c['not_entered']:12d}")
+    print(f"{'TOTAL':22s} {tot['total']:7d} {tot['odd']:6d} {tot['entered']:8d} "
+          f"{tot['not_entered']:12d}")
     if tot['total']:
-        print(f"\nodd entries: {odd} ({100*odd/tot['total']:.1f}% of the table)")
-        print(f"of those odd entries: {tot['inside_function']} are instruction boundaries inside "
-              f"another function (a shared block / jmp target), {tot['phantom']} are not any "
-              f"boundary (phantom, definitively not code)")
-    bad = [r['project'] for r in rows if r['counts']['even'] != r['counts']['start']]
-    print(f"CONTROL: every even entry must be an instruction boundary -> "
-          f"{'PASS' if not bad else 'FAIL for ' + ', '.join(bad)}")
+        print(f"\nodd addresses: {tot['odd']} ({100*tot['odd']/tot['total']:.1f}% of the table) - "
+              f"a PACKING fact, not a phantom count: this linker does not pad function starts")
+        print(f"entered from the PE entry point and real call targets: {tot['entered']} "
+              f"({tot['odd_entered']} at odd addresses, {tot['even_entered']} at even ones)")
+        print(f"not entered by that walk: {tot['not_entered']} - functions called only "
+              f"indirectly, dead code, or data; not classified as phantom")
     if args.detail:
         for r in rows:
             for va in r["detail"]["inside_function"][:5]:
