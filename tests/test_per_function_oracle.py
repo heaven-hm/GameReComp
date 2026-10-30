@@ -70,8 +70,21 @@ def test_the_seed_varies_per_case():
     assert seed_of(0) == 0x9E3779B9
 
 
-def test_a_case_compares_every_register_and_no_flags():
-    # the oracle's cases exclude the flags deliberately; if someone removes that
-    # exclusion the comparison starts claiming something it cannot observe
-    case = difftest.Case(name="x", code=b"\x90", undef=difftest.ALL_FLAGS)
-    assert set(difftest.ALL_FLAGS) <= set(case.undef)
+def test_only_df_is_excluded_from_the_flag_comparison():
+    # the body publishes g_flag_k/a/b/cf, so recomp_eflags() gives CF/PF/AF/ZF/SF/OF
+    # and those are compared; DF is not published and must stay excluded rather
+    # than be invented
+    assert difftest.UNDEF_FOR_PROJECT == ("DF",)
+    case = difftest.Case(name="x", code=b"\x90", undef=difftest.UNDEF_FOR_PROJECT)
+    assert "DF" in case.undef
+    assert "ZF" not in case.undef
+
+
+def test_the_comparator_catches_a_flag_only_difference():
+    lifted = {"regs": {n: 0 for n in difftest.REGS}, "eflags": 0x202,
+              "mem": {}, "fp_depth": 0, "st": []}
+    real = {"regs": {n: 0 for n in difftest.REGS}, "eflags": 0x246,
+            "mem": {}, "fp_depth": 0, "st": []}
+    fields = difftest.diff(difftest.Case(name="x", code=b"\x90",
+                                         undef=difftest.UNDEF_FOR_PROJECT), lifted, real)
+    assert {f[0] for f in fields} == {"PF", "ZF"}
