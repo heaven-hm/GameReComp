@@ -138,6 +138,7 @@ class Pipeline:
         # highlevel/ directory, which is empty in a fresh checkout.
         self.highlevel_dir = highlevel_dir
         self.highlevel_modules = []
+        self.highlevel_skipped = []
         self.highlevel_by_address = {}
         self.on_event = on_event
 
@@ -249,7 +250,20 @@ class Pipeline:
         # mechanical bodies so a replaced function's body is emitted under its
         # __lowlevel name and the dispatch table points at the adapter.
         root = Path(self.highlevel_dir) if self.highlevel_dir else (_ROOT / "highlevel")
-        self.highlevel_modules, self.highlevel_by_address = highlevel.load_modules(root)
+        # Only modules written for THIS binary. A module names original
+        # addresses, and addresses are not portable between executables: the
+        # synthetic fixture's entry point is 0x00401000, which is Ikachan's
+        # global initialiser, so applying Ikachan's module to the fixture
+        # replaced its entry point with a function that writes to memory the
+        # fixture does not have. Matching by address alone is not enough.
+        sha = _sha256_file(self.pe_path)
+        entry = self.info.image_base + self.info.entry_point_rva
+        self.highlevel_modules, self.highlevel_skipped = highlevel.select_modules(
+            root, sha, entry)
+        self.highlevel_by_address = {
+            fn["address"]: dict(fn, module=m["name"])
+            for m in self.highlevel_modules for fn in m["functions"]
+        }
         replaced = [a for a in self.highlevel_by_address if a in self.functions]
         with contextlib.redirect_stdout(buf):
             lifted = generate_recomp_files(
@@ -353,6 +367,7 @@ class Pipeline:
             "name": self.name,
             "source_categories": categories,
             "high_level_functions": high_level_report,
+            "highlevel_modules_skipped": self.highlevel_skipped,
             "runtime_files": len(record["runtime_files"]),
             "highlevel_files": len(record.get("highlevel_files") or []),
         }

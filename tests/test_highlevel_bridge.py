@@ -34,6 +34,10 @@ import translator  # noqa: E402
 FUNCTION_FIELDS = ("address", "symbol", "category", "convention", "args",
                    "returns", "provenance")
 
+# A module is written against one binary and must say so. The default target is
+# a fixed, valid-looking pair; tests that care override it.
+DEFAULT_TARGET = {"sha256": "a" * 64, "entry_point": "0x00401000"}
+
 
 def write_module(root, name="demo", **overrides):
     """A minimal valid module.
@@ -57,6 +61,7 @@ def write_module(root, name="demo", **overrides):
     }
     fn.update(overrides.pop("fn", {}))
     manifest = {"schema": 1, "name": name, "provider": "hand-written",
+                "target": dict(overrides.pop("target", DEFAULT_TARGET)),
                 "functions": [fn]}
     for key in list(overrides):
         if key in FUNCTION_FIELDS:
@@ -110,6 +115,61 @@ class ModuleValidationTest(unittest.TestCase):
             write_module(tmp, fn={"address": "401000"})
             with self.assertRaises(highlevel.ModuleError):
                 highlevel.load_module(Path(tmp) / "demo")
+
+
+class TargetTest(unittest.TestCase):
+    """A module names original addresses, and addresses are not portable.
+
+    The synthetic fixture's entry point is 0x00401000; Ikachan's 0x00401000 is a
+    global initialiser that writes to 0x413BE0. Applying one binary's module to
+    the other replaced the fixture's entry point with a function writing to
+    memory the fixture does not have -- it crashed, which is how it was found.
+    """
+
+    def test_a_module_without_a_target_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            module_dir = Path(tmp) / "demo"
+            module_dir.mkdir(parents=True)
+            (module_dir / "module.json").write_text(json.dumps({
+                "schema": 1, "functions": [{"address": "0x00401000",
+                                            "symbol": "f",
+                                            "category": "HIGH_LEVEL_UNVERIFIED"}]}))
+            (module_dir / "impl.c").write_text("void f(void) {}\n")
+            with self.assertRaises(highlevel.ModuleError) as caught:
+                highlevel.load_module(module_dir)
+            self.assertIn("'target' is required", str(caught.exception))
+
+    def test_a_malformed_target_sha_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_module(tmp, target={"sha256": "not-a-hash",
+                                      "entry_point": "0x00401000"})
+            with self.assertRaises(highlevel.ModuleError):
+                highlevel.load_module(Path(tmp) / "demo")
+
+    def test_a_module_for_another_binary_is_skipped_not_applied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_module(tmp)          # target sha = "aaa..."
+            applied, skipped = highlevel.select_modules(tmp, "b" * 64, 0x401000)
+        self.assertEqual(applied, [])
+        self.assertEqual(len(skipped), 1)
+        self.assertIn("sha256 does not match", skipped[0]["reason"])
+
+    def test_a_matching_target_is_applied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_module(tmp)
+            applied, skipped = highlevel.select_modules(
+                tmp, "a" * 64, 0x00401000)
+        self.assertEqual(len(applied), 1)
+        self.assertEqual(skipped, [])
+
+    def test_a_matching_sha_with_a_different_entry_point_is_skipped(self):
+        """The same bytes loaded at a different base are a different target."""
+        with tempfile.TemporaryDirectory() as tmp:
+            write_module(tmp)
+            applied, skipped = highlevel.select_modules(
+                tmp, "a" * 64, 0x00402000)
+        self.assertEqual(applied, [])
+        self.assertIn("entry_point does not match", skipped[0]["reason"])
 
 
 class AdapterTest(unittest.TestCase):

@@ -33,5 +33,9 @@
         "not_proven": "inputs other than the listed seeds, and behaviour that only appears in a full game run. Equivalence is scoped to the differential harness, not proved for all inputs."
       }
     }
-  ]
+  ],
+  "target": {
+    "sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+    "entry_point": "0x0040BA76"
+  }
 }

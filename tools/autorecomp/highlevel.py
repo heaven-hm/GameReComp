@@ -126,6 +126,23 @@ def load_module(path):
 
     if data.get("schema") != 1:
         raise ModuleError(f"{manifest}: unsupported schema {data.get('schema')!r}")
+
+    # A module is written against ONE binary. Addresses are not portable: a
+    # fixture whose entry is 0x00401000 and Ikachan, whose 0x00401000 is a
+    # global initialiser, would otherwise silently exchange implementations.
+    # That is not a hypothetical -- it happened, and the only reason it was
+    # caught is that the synthetic fixture crashed instead of doing something
+    # subtly wrong. So the target is required, not optional.
+    target = data.get("target")
+    if not isinstance(target, dict):
+        raise ModuleError(f"{manifest}: 'target' is required -- a module applies "
+                          f"to one binary, named by sha256 and entry_point")
+    sha = str(target.get("sha256") or "").strip().lower()
+    if len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha):
+        raise ModuleError(f"{manifest}: target.sha256 must be the 64-hex SHA-256 "
+                          f"of the original executable, got {target.get('sha256')!r}")
+    entry = _addr(target.get("entry_point"), f"{manifest}: target.entry_point")
+
     entries = data.get("functions")
     if not isinstance(entries, list) or not entries:
         raise ModuleError(f"{manifest}: 'functions' must be a non-empty list")
@@ -194,15 +211,21 @@ def load_module(path):
         "name": data.get("name") or path.name,
         "game": data.get("game"),
         "provider": data.get("provider") or "unspecified",
+        "target": {"sha256": sha, "entry_point": entry},
         "functions": functions,
         "sources": sources,
         "by_address": {f["address"]: f for f in functions},
     }
 
 
-def load_modules(root):
-    """Every module under a directory, keyed by address. Later modules lose to
-    earlier ones on a duplicate address, and the clash is an error."""
+def load_modules(root, sha256=None, entry_point=None):
+    """Every module under a directory, keyed by address.
+
+    When `sha256` is given, only modules whose `target.sha256` matches are
+    loaded -- the rest are skipped, because a module written for another binary
+    must never be applied to this one. `select_modules` reports which were
+    skipped and why, for the run's evidence.
+    """
     root = Path(root)
     if not root.is_dir():
         return [], {}
@@ -212,6 +235,10 @@ def load_modules(root):
         if not entry.is_dir() or not (entry / "module.json").is_file():
             continue
         module = load_module(entry)
+        if sha256 and module["target"]["sha256"] != sha256.lower():
+            continue
+        if entry_point is not None and module["target"]["entry_point"] != entry_point:
+            continue
         for fn in module["functions"]:
             other = by_address.get(fn["address"])
             if other is not None:
@@ -222,6 +249,41 @@ def load_modules(root):
             by_address[fn["address"]] = fn
         modules.append(module)
     return modules, by_address
+
+
+def select_modules(root, sha256, entry_point):
+    """(applied, skipped) for one binary.
+
+    A module whose target does not match is skipped with the reason recorded,
+    never applied. `--highlevel` pointing at a directory of modules for other
+    games is a normal thing to do; silently using the wrong one is not.
+    """
+    root = Path(root)
+    if not root.is_dir():
+        return [], []
+    applied, skipped = [], []
+    for entry in sorted(root.iterdir()):
+        if not entry.is_dir() or not (entry / "module.json").is_file():
+            continue
+        module = load_module(entry)
+        if module["target"]["sha256"] != sha256.lower():
+            skipped.append({
+                "module": module["name"],
+                "reason": "target.sha256 does not match this executable",
+                "module_sha256": module["target"]["sha256"],
+                "executable_sha256": sha256.lower(),
+            })
+            continue
+        if module["target"]["entry_point"] != entry_point:
+            skipped.append({
+                "module": module["name"],
+                "reason": "target.entry_point does not match this executable",
+                "module_entry_point": f"0x{module['target']['entry_point']:08X}",
+                "executable_entry_point": f"0x{entry_point:08X}",
+            })
+            continue
+        applied.append(module)
+    return applied, skipped
 
 
 def adapter_source(fn):
