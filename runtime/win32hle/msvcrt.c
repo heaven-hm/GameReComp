@@ -130,6 +130,7 @@ typedef struct {
     int      own;       /* we opened it: fclose it and recycle its _iobuf */
     int      mode;      /* _setmode's mode: recorded, see c_setmode */
     uint32_t iobuf;     /* the guest _iobuf, recycled after fclose */
+    pthread_mutex_t lock;   /* _lock_file/_unlock_file take this for real */
 } ms_stream;
 static ms_stream g_stream[MS_MAXSTREAM];
 
@@ -304,6 +305,7 @@ static void g_stream_init(void) {
     g_stream[1].fp = stdout, g_stream[1].fd = 1;
     g_stream[2].fp = stderr, g_stream[2].fd = 2;
     for (int i = 0; i < 3; i++) g_stream[i].mode = O_TEXT;
+    for (int i = 0; i < MS_MAXSTREAM; i++) pthread_mutex_init(&g_stream[i].lock, NULL);
     for (int i = 3; i < MS_MAXSTREAM; i++) g_stream[i].fd = -1;
 }
 
@@ -1295,6 +1297,103 @@ static void u_p_commode(void) { ms_init(); RETC(g_commode_va); }
 /* _set_fmode(mode): set the default file translation mode. */
 static void u_set_fmode(void) { ms_init(); MEM32(g_fmode_va) = A32(0); RETC(0); }
 
+/* ---- the rest of the api-ms-win-crt modules ----
+ * string/time/convert/utility/file-system calls a Windows 10 SDK build imports
+ * from the other API sets.  Each is the CRT function it names, on the host's
+ * libc, with the guest's path translated the way every other file call in this
+ * layer translates it. */
+static void u_atof(void) { ms_init(); fp_push_impl(g_st, &g_fp_top, atof(ASTR(0) ? ASTR(0) : "0")); RETC(0); }
+static void u_chdir(void) {
+    ms_init();
+    char path[1024];
+    if (!ASTR(0) || !hle_host_path(ASTR(0), path, sizeof path) || chdir(path) != 0) { ms_seterrno(ENOENT); RETC(0xFFFFFFFFu); }
+    RETC(0);
+}
+static void u_mkdir(void) {
+    ms_init();
+    char path[1024];
+    /* the write helper FILLS the host path; its return says whether the path
+     * already existed, which for a directory about to be created it does not. */
+    if (!ASTR(0)) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    hle_host_path_for_write(ASTR(0), path, sizeof path, 0);
+    if (mkdir(path, 0777) != 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    RETC(0);
+}
+static void u_unlink(void) {
+    ms_init();
+    char path[1024];
+    if (!ASTR(0) || !hle_host_path(ASTR(0), path, sizeof path) || unlink(path) != 0) { ms_seterrno(ENOENT); RETC(0xFFFFFFFFu); }
+    RETC(0);
+}
+/* _lock_file/_unlock_file take the stream's own mutex.  The stream operations
+ * above run on the guest thread under the machine lock, so they never contend
+ * for it - a game that locks around its own calls gets the exclusion it asked
+ * for, which is what these are for. */
+static void u_lock_file(void) {
+    ms_init();
+    ms_stream *st = ms_slot_of_va(A32(0));
+    if (!st) { ms_seterrno(EBADF); RETCV(); }
+    pthread_mutex_lock(&st->lock);
+    RETCV();
+}
+static void u_unlock_file(void) {
+    ms_init();
+    ms_stream *st = ms_slot_of_va(A32(0));
+    if (!st) { ms_seterrno(EBADF); RETCV(); }
+    pthread_mutex_unlock(&st->lock);
+    RETCV();
+}
+/* _fseeki64(stream, offset, whence): the 64-bit seek. */
+static void u_fseeki64(void) {
+    ms_init();
+    ms_stream *st = ms_slot_of_va(A32(0));
+    if (!st) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    int64_t off = (int64_t)((uint64_t)A32(1) | ((uint64_t)A32(2) << 32));
+    RETC(fseeko(st->fp, (off_t)off, (int)A32(3)) == 0 ? 0u : 0xFFFFFFFFu);
+}
+/* _time64(&t): the 64-bit time, in edx:eax and in the caller's cell. */
+static void u_time64(void) {
+    ms_init();
+    int64_t now = (int64_t)time(NULL);
+    if (A32(0)) { MEM32(A32(0)) = (uint32_t)now; MEM32(A32(0) + 4) = (uint32_t)((uint64_t)now >> 32); }
+    g_eax = (uint32_t)now;
+    g_edx = (uint32_t)((uint64_t)now >> 32);
+    g_esp += 4u;
+    return;
+}
+/* _get_stream_buffer_pointers(stream, &base, &ptr, &cnt): the guest _iobuf's
+ * own fields, which is where this layer keeps them (they are not used for
+ * buffering - the host stream owns its buffer, as msvcrt.c's header says). */
+static void u_get_stream_buffer_pointers(void) {
+    ms_init();
+    ms_stream *st = ms_slot_of_va(A32(0));
+    if (!st) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    if (A32(1)) MEM32(A32(1)) = MEM32(st->iobuf + IOB_BASE);
+    if (A32(2)) MEM32(A32(2)) = MEM32(st->iobuf + IOB_PTR);
+    if (A32(3)) MEM32(A32(3)) = (uint32_t)(int32_t)MEM32(st->iobuf + IOB_CNT);
+    RETC(0);
+}
+/* __stdio_common_vsprintf(options, buffer, bufsize, format, locale, argptr):
+ * the UCRT's own printf engine, where argptr IS a guest va_list - a pointer
+ * into the guest stack, which is exactly what hle_guest_format reads.  options
+ * is a 64-bit mask on the stack (two words), and the two the CRT sets for a
+ * plain vsprintf are the ones that matter here: the secure variant (which
+ * returns -1 for an overlong result) and the _s variant (same, with a buffer
+ * size).  Both are honoured by the size check below. */
+static void u_stdio_common_vsprintf(void) {
+    ms_init();
+    /* options is the first 64-bit argument: words 0 and 1 */
+    uint32_t buffer = A32(2), bufsize = A32(3);
+    const char *fmt = (const char *)hle_ptr(A32(4));
+    uint32_t args = A32(6);
+    char *out = (char *)hle_ptr(buffer);
+    if (!out || !fmt) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, args);
+    if (bufsize && (uint32_t)n >= bufsize) { memcpy(out, t_fmt, bufsize - 1); out[bufsize - 1] = 0; RETC(0xFFFFFFFFu); }
+    memcpy(out, t_fmt, (size_t)n + 1);
+    RETC((uint32_t)n);
+}
+
 /* ---- vcruntime140 ----
  * The MSVC C++ runtime is a deliberate non-goal (see README: msvcp140 and the
  * exception machinery need guest SEH and a C++ library ABI).  These five are
@@ -1551,6 +1650,16 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "_configthreadlocale",          u_configthreadlocale },
     { "__p__commode",                 u_p_commode },
     { "_set_fmode",                   u_set_fmode },
+    { "atof",                         u_atof },
+    { "_chdir",                       u_chdir },
+    { "_mkdir",                       u_mkdir },
+    { "_unlink",                      u_unlink },
+    { "_lock_file",                   u_lock_file },
+    { "_unlock_file",                 u_unlock_file },
+    { "_fseeki64",                    u_fseeki64 },
+    { "_time64",                      u_time64 },
+    { "_get_stream_buffer_pointers",  u_get_stream_buffer_pointers },
+    { "__stdio_common_vsprintf",      u_stdio_common_vsprintf },
     { "__std_exception_copy",         u_std_exception_copy },
     { "__std_exception_destroy",      u_std_exception_destroy },
     { "__telemetry_main_invoke_trigger", u_telemetry_trigger },
