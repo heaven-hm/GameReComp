@@ -25,13 +25,18 @@ What it reports:
   * when one trace is a prefix of the other, that it ended early, and what the
     longer one did next -- which is the shape of a crash or an early exit.
 
-What it deliberately does not do: it does not re-run anything. Bisecting *runs*
-(shrinking a replay until the divergence disappears) needs a deterministic clock
-and a way to cap a run, and neither exists in the runtime yet; until they do, a
-comparison of two traces is the honest half. The `--selftest` mode checks the
-classifier against synthetic traces, so the tool is verifiable without a game.
+It also **bisects runs**, which is the half that locates rather than reports:
+`--bisect-run` runs the two binaries again and again with the runtime's
+`RECOMP_CALL_CAP` set to a different call count each time, and binary-searches
+the smallest cap at which their traces stop matching. The invariant that makes
+bisection valid is that matching is monotone in the cap: if two runs agree up to
+call N they agree up to every smaller count, so the search converges on the call
+where they part. With `RECOMP_CLOCK=virtual` the two runs are comparable in the
+first place, which is why the clock had to exist before this could.
 
     python3 -m tools.autorecomp.divergence base.trace cand.trace
+    python3 -m tools.autorecomp.divergence --bisect-run \
+        --baseline-binary A --candidate-binary B --exe game.exe --cwd DIR --hi 400000
     python3 -m tools.autorecomp.divergence --selftest
 """
 
@@ -148,6 +153,98 @@ def report(a, b, label_a="baseline", label_b="candidate", context=5):
     return (1 if kind == "timing" else 2), out
 
 
+def run_capped(binary, exe, cwd, cap, env_extra, timeout):
+    """Run a binary with the call cap set, and return its call trace.
+
+    The cap is the runtime's: RECOMP_CALL_CAP=N stops after N shim dispatches,
+    prints a marker and exits 70, so a capped run is never mistaken for a real
+    outcome. The trace is what the run did before stopping."""
+    import os
+    import subprocess
+    env = dict(os.environ)
+    env["RECOMP_TRACE"] = "1"
+    env["RECOMP_CALL_CAP"] = str(cap)
+    env.setdefault("SDL_VIDEODRIVER", "dummy")
+    env.setdefault("SDL_AUDIODRIVER", "dummy")
+    for k, v in (env_extra or {}).items():
+        env[k] = v
+    try:
+        p = subprocess.run([binary, exe], cwd=cwd, env=env, capture_output=True, timeout=timeout)
+        err, rc = p.stderr.decode("utf-8", "replace"), p.returncode
+    except subprocess.TimeoutExpired as e:
+        err = (e.stderr or b"").decode("utf-8", "replace") if isinstance(e.stderr, bytes) else (e.stderr or "")
+        rc = None
+    names = [m.group(1) for line in err.splitlines() if (m := LINE.match(line.rstrip("\n")))]
+    return names, rc
+
+
+def bisect_run(baseline_binary, candidate_binary, exe, cwd, lo, hi, env_extra=None,
+               timeout=120.0, repeat=2, trace=print):
+    """The smallest call cap at which the two runs *reproducibly* stop matching.
+
+    Matching is monotone in the cap - both runs execute the same prefix, so if
+    they agree up to N they agree up to anything smaller - which is what makes
+    this a bisection rather than a scan.
+
+    `repeat` matters more than it looks. A divergence that is *nondeterministic*
+    (two threads interleaving differently) lands at a different call every run,
+    so a single pair per cap would report a precise-looking threshold that is
+    really noise. Each cap is therefore run `repeat` times and only counts as
+    differing if every pair differs, and the divergence index is checked for
+    stability across those pairs: if it moves, the answer is "not reproducible",
+    not a location."""
+
+    def pair(cap):
+        a, _ = run_capped(baseline_binary, exe, cwd, cap, env_extra, timeout)
+        b, _ = run_capped(candidate_binary, exe, cwd, cap, env_extra, timeout)
+        d = first_divergence(a, b)
+        return (d[0] if d is not None else (None if len(a) == len(b) else min(len(a), len(b)))), a, b
+
+    trace(f"bisecting between cap {lo} and {hi}, {repeat} pair(s) per cap")
+    idx, a, b = pair(hi)
+    if idx is None:
+        trace(f"the runs match all the way to cap {hi}: nothing to bisect")
+        return None
+    steps = 0
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        idxs = [pair(mid)[0] for _ in range(repeat)]
+        steps += 1
+        differs = all(i is not None for i in idxs)
+        trace(f"  cap {mid:8d}: {'DIFFER' if differs else 'match'} at {idxs}  ({steps} step)")
+        if differs:
+            hi = mid
+        else:
+            lo = mid
+    trace(f"first cap where they differ: {hi} (they matched at {lo})")
+    # The verdict needs more than one pair, because a divergence that is
+    # intermittent looks exactly like a located one from a single sample.
+    samples = [pair(hi) for _ in range(max(repeat, 2))]
+    idxs = [s[0] for s in samples]
+    matched = [i for i in idxs if i is None]
+    differed = [i for i in idxs if i is not None]
+    if matched:
+        trace(f"  NOT REPRODUCIBLE: at cap {hi}, {len(matched)} of {len(idxs)} pairs matched "
+              f"and {len(differed)} differed ({idxs}).")
+        trace(f"  The runs sometimes agree and sometimes do not, so there is no single call "
+              f"to point at: this is nondeterminism between runs - thread interleaving, or a "
+              f"clock that is not fully controlled - not a located divergence. A single-pair "
+              f"bisection would have reported a number here that means nothing.")
+        return hi
+    if len(set(differed)) != 1:
+        trace(f"  NOT REPRODUCIBLE: the divergence lands at different calls each time "
+              f"({differed}); nothing stable to point at.")
+        return hi
+    trace(f"  reproducible: every pair diverges at call {differed[0]}")
+    code, lines = report(samples[0][1], samples[0][2], "baseline", "candidate", 4)
+    for line in lines:
+        trace("  " + line)
+    code, lines = report(a, b, "baseline", "candidate", 4)
+    for line in lines:
+        trace("  " + line)
+    return hi
+
+
 def selftest():
     """Check the classifier on traces whose answer is known by construction."""
     failures = 0
@@ -201,9 +298,28 @@ def main(argv=None):
     ap.add_argument("--selftest", action="store_true", help="check the classifier on synthetic traces")
     ap.add_argument("--context", type=int, default=5, help="calls of context to show (default 5)")
     ap.add_argument("--labels", help="names for the two traces, as A,B (default baseline,candidate)")
+    ap.add_argument("--bisect-run", action="store_true",
+                    help="binary-search the call cap at which the two binaries stop matching")
+    ap.add_argument("--baseline-binary", help="the known-good rebuilt binary (--bisect-run)")
+    ap.add_argument("--candidate-binary", help="the binary under test (--bisect-run)")
+    ap.add_argument("--exe", help="the original .exe to pass to both (--bisect-run)")
+    ap.add_argument("--cwd", help="working directory for both (--bisect-run)")
+    ap.add_argument("--lo", type=int, default=0, help="a cap at which they are known to match (default 0)")
+    ap.add_argument("--hi", type=int, default=200000, help="a cap at which they differ (default 200000)")
+    ap.add_argument("--timeout", type=float, default=120.0, help="per run, seconds (default 120)")
+    ap.add_argument("--repeat", type=int, default=2,
+                    help="pairs of runs per cap; a cap only counts as differing if every "
+                         "pair differs, and a moving index is reported as nondeterminism (default 2)")
     args = ap.parse_args(argv)
     if args.selftest:
         return selftest()
+    if args.bisect_run:
+        for need in ("baseline_binary", "candidate_binary", "exe"):
+            if not getattr(args, need):
+                ap.error(f"--{need.replace('_', '-')} is needed with --bisect-run")
+        hi = bisect_run(args.baseline_binary, args.candidate_binary, args.exe,
+                        args.cwd or ".", args.lo, args.hi, None, args.timeout, args.repeat)
+        return 2 if hi is not None else 0
     if not args.baseline or not args.candidate:
         ap.error("two trace files are needed (or --selftest)")
     la, lb = ("baseline", "candidate")
