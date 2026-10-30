@@ -12,13 +12,15 @@ read and edit, builds a native executable **from exactly that source**, runs it,
 and writes a fail-closed report on what was and was not proved. The desktop GUI
 over the same backend is designed but not shipped; the CLI is the product today.
 
-> **Status: v0.1.0 — first vertical slice.** The whole pipeline runs end to end and
-> is measured: 19 corpus rows, one game (Ikachan) that binds every import and
-> launches, fourteen that compile to a native binary and then stop in the PE
-> loader on imports the runtime does not yet answer, four PE32+ inputs refused
-> honestly. **No game has passed a gameplay scenario yet, and every generated
-> function is still `LOW_LEVEL_FALLBACK` register-transfer C rather than
-> reconstructed high-level source.** Those are the two gates that matter next,
+> **Status: v0.1.0 — first vertical slice, and the first game runs.** The pipeline
+> goes end to end and is measured on a 19-row corpus. Eleven games now bind every
+> import; **Cave Story (Doukutsu.exe) reaches a frame loop and renders** — 192,303
+> blits and 8,399 message-pump iterations in 12 seconds, no failed indirect calls,
+> with frames captured. Typed, readable C is compiled into the rebuilt game for
+> two functions, both shown equivalent to their mechanical bodies by a
+> differential harness. **No game has passed an independent gameplay scenario
+> yet** — the oracle does not exist — and 480 of Ikachan's 482 functions are still
+> `LOW_LEVEL_FALLBACK` register-transfer C. Those are the gates that matter next,
 > and this README does not claim them.
 
 ---
@@ -99,6 +101,74 @@ Windows PE32 game + user-supplied assets
 - Exit codes: `0` scenario-pass, `2` a stage failed, `3` built/ran but unverified
 - Game database and matrix generated from measured runs:
   [`table.md`](table.md), [`docs/GAME_MATRIX.md`](docs/GAME_MATRIX.md)
+
+## What the end result is
+
+**The deliverable is the source, not the binary.** A rebuilt executable is how
+this project *proves* the source is right — it is compiled from exactly the
+delivered C, run, and compared. It is not what you are meant to keep.
+
+The product's output is a source tree you can read, edit, rebuild and maintain:
+
+```text
+projects/<game>/
+  src/highlevel/     typed, readable C — the part meant to be read
+  src/recomp/gen/    register-transfer C — the mechanical fallback, address-tagged
+  src/runtime/       the pinned Win32 runtime the source links against
+  reports/           what was measured, and what was not
+```
+
+Every function carries one of four provenance categories, counted per build:
+
+| Category | Meaning |
+| --- | --- |
+| `HIGH_LEVEL_VERIFIED` | Typed C, compiled into the game, and shown equivalent to its mechanical body by a differential harness. Needs `provenance.verified_by` — the loader refuses the category without it. |
+| `HIGH_LEVEL_UNVERIFIED` | Typed C, compiled in, not yet shown equivalent. |
+| `LOW_LEVEL_FALLBACK` | The mechanical translation. Compiles, runs, is address-traceable, and is **not** readable source. Always present for a replaced function too, as `sub_XXXXXXXX__lowlevel`. |
+| `UNRESOLVED` | Could not be translated. Fails loudly if called. |
+
+A high-level function is ordinary C with real types and no register names. It
+cannot be called directly from the guest, so the pipeline *generates* the
+guest-ABI adapter from the module's declaration — one place, reviewable — and
+the dispatch table calls that. The mechanical body stays compiled beside it, so
+the fallback is visible and counted rather than replaced by a claim.
+
+## Working games
+
+Only games that were measured running are listed here. "Binds every import" is
+not the bar: Ikachan binds 97 of 97 and exits 1.
+
+### Cave Story (Doukutsu.exe) — runs
+
+| | |
+| --- | --- |
+| Original | `Doukutsu.exe`, i386 PE32, 1,478,656 bytes, sha256 `fa18379fe942ecb5…` |
+| Imports | 143 of 143 bound, 0 unresolved |
+| Built | native host executable from the generated source, 8.4 MiB |
+| Run | reached a frame loop and kept rendering and pumping until the deadline |
+| Measured | 12 s: 371,144 import dispatches — 192,303 `IDirectDrawSurface::Blt`, 8,399 `PeekMessageA`, 8,398 `IDirectInputDevice::Poll`, 8,398 `GetDeviceState`, 8,427 `GetTickCount`, 7,855 `Sleep`, **0 failed indirect calls** |
+| Rendered | 640×480, 46–48 colours, 21 distinct screens in the first 22 s: a fade in from black through ~20 animated frames, then a static screen |
+| Verification | `partial` — the process demonstrably ran its loop; no independent original-game oracle exists yet, so nothing stronger is claimed |
+
+![Cave Story intro, frame 4](docs/screenshots/cavestory-doukutsu-01-intro.png)
+![Cave Story intro, frame 20](docs/screenshots/cavestory-doukutsu-02-intro.png)
+![Cave Story, later screen](docs/screenshots/cavestory-doukutsu-03-screen.png)
+
+Frames captured headless by `RECOMP_SCREENSHOT`; they are 640×480 with the
+palette above, and they differ frame to frame. What each screen *depicts* is not
+claimed here — the files are there to look at.
+
+### Others measured to a classified outcome
+
+| Game | Imports | Outcome |
+| --- | --- | --- |
+| Cave Story (OrgView.exe) | 122 / 122 | Returns 0 on its own after DirectSound init — it starts, does its work, exits. Not a frame loop. |
+| Warning Forever (wf.exe) | 136 / 136 | Returns 0 after putting up **its own** message box saying DirectDraw7 is unavailable. The game checked a capability, found it lacking, and reported it to the user — correct behaviour meeting an incomplete runtime. |
+| Gunroar (gr.exe) | 136 / 136 | Binds everything, then dies at `SDL_SetVideoMode(SDL_OPENGL)` returning NULL headless. It needs a display; that is a different failure from a missing import, and is recorded as one. |
+| Ikachan (dxIka.exe) | 97 / 97 | Returns 1. The first game to bind everything, and the reason "0 unresolved" is not the bar. |
+
+Full per-game table: [`docs/GAME_MATRIX.md`](docs/GAME_MATRIX.md). Classification
+vocabulary and raw counts: [`reports/games/classification.md`](reports/games/classification.md).
 
 ## Measured so far
 
@@ -222,12 +292,14 @@ projects/<name>/
 
 ## Roadmap, in the order the evidence supports it
 
-1. **Runtime coverage** — close the measured import gaps so the fourteen built
-   binaries boot. In progress: SDL 1.2, SDL_mixer, OpenGL/GLU, the MSVC CRT and
-   the Win32 atom table have landed.
-2. **High-level source** — a real decompiler provider behind the readability
-   gate, so functions can leave `LOW_LEVEL_FALLBACK` with evidence rather than
-   by assertion.
+1. **Runtime coverage** — eleven games bind every import and one reaches a frame
+   loop. What is left is not more shims but reach: `herocore` and `generally` are
+   149-162 names away, and the two editors are two SEH names from complete.
+2. **High-level source at scale** — the bridge works and is verified for two
+   functions; the next step is a real structural provider (rev.ng) feeding it,
+   so functions leave `LOW_LEVEL_FALLBACK` in numbers rather than by hand. The
+   harness that turns a claim into evidence already exists
+   (`tools/autorecomp/hlverify.py`).
 3. **Independent verification** — an original-process oracle, deterministic
    scenario replay and frame/input evidence, so a status above `partial` can be
    earned.
