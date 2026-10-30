@@ -61,7 +61,8 @@ enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_SOURCE0_ALPHA=0x8588, GL_SOURCE1_ALPHA=0x8589,
        GL_OPERAND0_RGB=0x8590, GL_OPERAND1_RGB=0x8591,
        GL_OPERAND0_ALPHA=0x8598, GL_OPERAND1_ALPHA=0x8599,
-       GL_PRIMARY_COLOR=0x8577, GL_PREVIOUS=0x8578,
+       GL_CONSTANT=0x8576, GL_PRIMARY_COLOR=0x8577, GL_PREVIOUS=0x8578,
+       GL_TEXTURE_ENV_COLOR=0x2201,
        GL_BGR=0x80E0, GL_BGRA=0x80E1, GL_UNSIGNED_BYTE=0x1401,
        GL_UNSIGNED_SHORT_5_6_5=0x8363, GL_TEXTURE_MIN_FILTER=0x2801,
        GL_TEXTURE_MAG_FILTER=0x2800, GL_TEXTURE_WRAP_S=0x2802,
@@ -97,6 +98,7 @@ typedef void (*gl_tex_image_2d_fn)(unsigned,int,int,int,int,int,unsigned,unsigne
 typedef void (*gl_tex_parameter_i_fn)(unsigned,unsigned,int);
 typedef void (*gl_pixel_store_i_fn)(unsigned,int);
 typedef void (*gl_tex_envi_fn)(unsigned,unsigned,int);
+typedef void (*gl_tex_envfv_fn)(unsigned,unsigned,const float *);
 typedef void (*gl_delete_textures_fn)(int,const unsigned *);
 typedef void (*gl_materialfv_fn)(unsigned,unsigned,const float *);
 typedef void (*gl_materialf_fn)(unsigned,unsigned,float);
@@ -144,6 +146,7 @@ static gl_tex_image_2d_fn p_tex_image_2d;
 static gl_tex_parameter_i_fn p_tex_parameter_i;
 static gl_pixel_store_i_fn p_pixel_store_i;
 static gl_tex_envi_fn p_tex_envi;
+static gl_tex_envfv_fn p_tex_envfv;
 static gl_delete_textures_fn p_delete_textures;
 static gl_materialfv_fn p_materialfv; static gl_materialf_fn p_materialf;
 static gl_lightfv_fn p_lightfv; static gl_lightf_fn p_lightf;
@@ -197,6 +200,7 @@ static int load_gl(void) {
     LOAD_GL(p_tex_parameter_i, gl_tex_parameter_i_fn, "glTexParameteri");
     LOAD_GL(p_pixel_store_i, gl_pixel_store_i_fn, "glPixelStorei");
     LOAD_GL(p_tex_envi, gl_tex_envi_fn, "glTexEnvi");
+    LOAD_GL(p_tex_envfv, gl_tex_envfv_fn, "glTexEnvfv");
     LOAD_GL(p_delete_textures, gl_delete_textures_fn, "glDeleteTextures");
     LOAD_GL(p_materialfv, gl_materialfv_fn, "glMaterialfv");
     LOAD_GL(p_materialf, gl_materialf_fn, "glMaterialf");
@@ -397,6 +401,7 @@ static void dev_get_render_state(void);
 static void dev_draw_primitive(void);
 static void dev_draw_indexed_primitive(void);
 static int stage0_texture_active(void);
+static int stage0_factor_active(void);
 static void dev_draw_vb(void);
 static void dev_draw_indexed_vb(void);
 static void d3d_create_vb(void);
@@ -572,6 +577,15 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
         p_pixel_store_i(GL_UNPACK_ROW_LENGTH,packed?0:pitch/bytes_per_pixel);
         p_tex_image_2d(GL_TEXTURE_2D,0,bpp==32?GL_RGBA:GL_RGB,w,h,0,format,type,upload_pixels);
         free(packed);
+        p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0); p_pixel_store_i(GL_UNPACK_ALIGNMENT,4);
+        apply_stage0_state();
+    } else if(stage0_factor_active() && !stage0_texture_active()) {
+        static const uint8_t white[4]={255,255,255,255};
+        if(!g_gl_texture) p_gen_textures(1,&g_gl_texture);
+        if(!g_gl_texture) return 0;
+        p_enable(GL_TEXTURE_2D); p_bind_texture(GL_TEXTURE_2D,g_gl_texture);
+        p_pixel_store_i(GL_UNPACK_ALIGNMENT,1); p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0);
+        p_tex_image_2d(GL_TEXTURE_2D,0,GL_RGBA,1,1,0,GL_RGBA,GL_UNSIGNED_BYTE,white);
         p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0); p_pixel_store_i(GL_UNPACK_ALIGNMENT,4);
         apply_stage0_state();
     } else p_disable(GL_TEXTURE_2D);
@@ -813,6 +827,7 @@ static void d3d_create_device(void) {
         g_render[7]=depth_bits>0; g_render[8]=3; g_render[9]=2; g_render[14]=1;
         g_render[19]=2; g_render[20]=1; g_render[22]=3; g_render[23]=4; g_render[25]=8;
         g_render[37]=0x3f800000u; g_render[38]=0x3f800000u;
+        g_render[60]=0xffffffffu;
         if(g_render[7])p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);
         p_depth_func(GL_LEQUAL); p_blend(GL_ONE,GL_ZERO);
         p_enable(GL_CULL_FACE); p_cull(0x0404); p_front(0x0901);
@@ -904,12 +919,22 @@ static int stage0_uses_texture(uint32_t op,uint32_t arg1,uint32_t arg2) {
     if(op==4) return arg1==2 || arg2==2;
     return 0;
 }
+static int stage0_uses_factor(uint32_t op,uint32_t arg1,uint32_t arg2) {
+    if(op==2) return arg1==3;
+    if(op==3) return arg2==3;
+    if(op==4) return arg1==3 || arg2==3;
+    return 0;
+}
 static int stage0_texture_active(void) {
     return stage0_uses_texture(g_stage_state[1],g_stage_state[2],g_stage_state[3]) ||
            stage0_uses_texture(g_stage_state[4],g_stage_state[5],g_stage_state[6]);
 }
+static int stage0_factor_active(void) {
+    return stage0_uses_factor(g_stage_state[1],g_stage_state[2],g_stage_state[3]) ||
+           stage0_uses_factor(g_stage_state[4],g_stage_state[5],g_stage_state[6]);
+}
 static unsigned stage0_source(uint32_t arg) {
-    return arg==2?GL_TEXTURE:arg==0?GL_PRIMARY_COLOR:GL_PREVIOUS;
+    return arg==3?GL_CONSTANT:arg==2?GL_TEXTURE:arg==0?GL_PRIMARY_COLOR:GL_PREVIOUS;
 }
 static void apply_stage_channel(uint32_t op,uint32_t arg1,uint32_t arg2,
                                 unsigned combine,unsigned source0,unsigned source1,
@@ -928,6 +953,10 @@ static int gl_address(uint32_t value) { return value==3?GL_CLAMP_TO_EDGE:GL_REPE
 static void apply_stage0_state(void) {
     if (!load_gl()) return;
     apply_texture_transform();
+    uint32_t factor=g_render[60];
+    float color[4]={(float)((factor>>16)&255u)/255.f,(float)((factor>>8)&255u)/255.f,
+                    (float)(factor&255u)/255.f,(float)(factor>>24)/255.f};
+    p_tex_envfv(GL_TEXTURE_ENV,GL_TEXTURE_ENV_COLOR,color);
     if (!g_gl_texture) return;
     p_bind_texture(GL_TEXTURE_2D,g_gl_texture);
     p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,gl_filter(g_stage_state[17]));
@@ -983,7 +1012,7 @@ static void dev_set_tss(void) {
                   state!=13 && state!=14 && state!=16 && state!=17 && state!=24))
         RET(D3DERR_NOTAVAILABLE,4);
     if ((state==1 || state==4) && (value<1 || value>4)) RET(D3DERR_NOTAVAILABLE,4);
-    if ((state==2 || state==3 || state==5 || state==6) && value>2) RET(D3DERR_NOTAVAILABLE,4);
+    if ((state==2 || state==3 || state==5 || state==6) && value>3) RET(D3DERR_NOTAVAILABLE,4);
     if ((state==13 || state==14) && (value<1 || value>5)) RET(D3DERR_INVALIDCALL,4);
     if ((state==13 || state==14) && value!=1 && value!=3) RET(D3DERR_NOTAVAILABLE,4);
     if ((state==16 || state==17) && (value<1 || value>6)) RET(D3DERR_INVALIDCALL,4);
@@ -1006,7 +1035,7 @@ static void dev_validate(void) {
     for(unsigned op_index=0;op_index<2;op_index++) {
         unsigned base=op_index?4u:1u;
         uint32_t op=g_stage_state[base],arg1=g_stage_state[base+1],arg2=g_stage_state[base+2];
-        if(op<1 || op>4 || arg1>2 || arg2>2) RET(D3DERR_NOTAVAILABLE,2);
+        if(op<1 || op>4 || arg1>3 || arg2>3) RET(D3DERR_NOTAVAILABLE,2);
     }
     MEM32(passes)=1;
     RET(D3D_OK,2);
@@ -1243,7 +1272,7 @@ static void apply_fog_state(void) {
 
 static int render_state_supported(uint32_t state) {
     switch(state) {
-    case 7: case 8: case 9: case 14: case 15: case 19: case 20: case 22: case 23: case 24: case 25: case 26:
+    case 7: case 8: case 9: case 14: case 15: case 19: case 20: case 22: case 23: case 24: case 25: case 26: case 60:
     case 27: case 28: case 29: case 34: case 35: case 36: case 37: case 38:
     case 137: case 139: case 140: case 141: case 142: case 143: case 145: case 146: case 147: case 148: case 152:
         return 1;
@@ -1306,6 +1335,7 @@ static void dev_set_render_state(void) {
     case 34: {float f[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_fogfv(0x0B66,f);break;}
     case 35: case 140: apply_fog_state();break;
     case 36: case 37: case 38: {float f;memcpy(&f,&v,4);p_fogf(s==36?0x0B63:s==37?0x0B64:0x0B62,f);break;}
+    case 60: apply_stage0_state();break;
     case 137: if(v)p_enable(GL_LIGHTING);else p_disable(GL_LIGHTING);break;
     case 139: {float a[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,a);break;}
     case 141: case 145: case 147: apply_color_material_state();break;
