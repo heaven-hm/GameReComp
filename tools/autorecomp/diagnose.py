@@ -37,6 +37,7 @@ if str(ROOT) not in sys.path:
 DEFAULT_PROJECTS_DIR = ROOT / "projects"
 DEFAULT_JSON = ROOT / "reports" / "games" / "diagnostic-sweep.json"
 DEFAULT_MD = ROOT / "reports" / "games" / "diagnostic-sweep.md"
+DEFAULT_RESULTS = ROOT / "reports" / "games" / "results.json"
 
 # hle_fatal("unimplemented import %s (0x%08X) called from guest 0x%08X", ...)
 UNIMPLEMENTED_RE = re.compile(
@@ -100,6 +101,68 @@ def classify(exit_code, timed_out, hit):
     return "exited-error"
 
 
+def signal_name(exit_code):
+    """'SIGBUS' for a process killed by signal 10, else None."""
+    if exit_code is None or exit_code >= 0:
+        return None
+    try:
+        return signal.Signals(-exit_code).name
+    except (ValueError, AttributeError):
+        return f"signal {-exit_code}"
+
+
+UNRESOLVED_RE = re.compile(r"\[pe\] unresolved import (\S+)")
+
+
+def strict_measurement(binary, pe_path, timeout=10.0):
+    """Boot the same binary *without* RECOMP_PERMISSIVE.
+
+    The permissive loader line always reads "0 unresolved" because the stub
+    resolver counts a stub as a resolved import, so the honest unresolved
+    count comes from a strict launch. This is a second real launch, not a
+    re-reading of the first one's output.
+    """
+    run = run_permissive(binary, pe_path, timeout=timeout, permissive=False)
+    text = run["stdout"] + "\n" + run["stderr"]
+    boot = parse_boot_line(text) or {}
+    bound = parse_bound_line(text) or {}
+    names = UNRESOLVED_RE.findall(text)
+    return {
+        "exit_code": run["exit_code"],
+        "timed_out": run["timed_out"],
+        "launch_error": run["launch_error"],
+        "unresolved_iat_imports": boot.get("unresolved_iat_imports"),
+        "iat_bound": bound.get("iat_bound"),
+        "iat_unresolved": bound.get("iat_unresolved"),
+        "unresolved_names": sorted(set(names))[:80],
+        "unresolved_name_count": len(set(names)),
+        "duration_seconds": run["duration_seconds"],
+    }
+
+
+TRACE_RE = re.compile(r"^\[hle\]\s+(\S+)", re.MULTILINE)
+
+
+def trace_crash(binary, pe_path, timeout=10.0, tail=12):
+    """Re-run a crashed game with RECOMP_TRACE=1 and list the last dispatches.
+
+    A crash inside lifted code leaves no clue in the normal log: no stub was
+    called, so nothing names itself. The trace shows which shims the guest did
+    reach before it died, which is the difference between "a shim returned
+    NULL" and "the guest jumped somewhere it should not have".
+    """
+    run = run_permissive(binary, pe_path, timeout=timeout,
+                         env_extra={"RECOMP_TRACE": "1"})
+    text = run["stdout"] + "\n" + run["stderr"]
+    names = TRACE_RE.findall(text)
+    return {
+        "exit_code": run["exit_code"],
+        "dispatched_import_count": len(names),
+        "last_dispatched": names[-tail:],
+        "stderr_tail": run["stderr"][-TAIL_CHARS:],
+    }
+
+
 def project_pe_path(project_dir):
     """The original PE a project was generated from, from project.json."""
     cfg = project_dir / "project.json"
@@ -111,6 +174,45 @@ def project_pe_path(project_dir):
     return pe.get("path"), record.get("name")
 
 
+def project_pe_info(project_dir):
+    """PE path, type, sha256 and CMake target name from project.json."""
+    try:
+        record = json.loads((Path(project_dir) / "project.json").read_text())
+    except (OSError, ValueError):
+        return None
+    pe = record.get("pe") or {}
+    if not pe.get("path"):
+        return None
+    return {"path": pe["path"], "pe_type": pe.get("pe_type"),
+            "sha256": pe.get("sha256"), "name": record.get("name")}
+
+
+def canonical_project_dirs(results_path=None):
+    """Project dir per corpus game, from the committed sweep record.
+
+    reports/games/results.json names the project directory each recorded run
+    was measured from (its `evidence` field). Several project directories can
+    exist for one game - the generator's default names a project after the
+    executable stem, and a run can pass --project-dir - so that record is the
+    authority on which directory is the measured one. Returns {sha256: dir}.
+    """
+    results_path = Path(results_path or DEFAULT_RESULTS)
+    try:
+        record = json.loads(results_path.read_text())
+    except (OSError, ValueError):
+        return {}
+    canonical = {}
+    for run in record.get("runs") or []:
+        evidence = run.get("evidence") or ""
+        parts = Path(evidence).parts
+        if len(parts) < 2 or parts[0] != "projects":
+            continue
+        sha = run.get("input_sha256")
+        if sha:
+            canonical[sha] = parts[1]
+    return canonical
+
+
 def binary_path(project_dir, name=None):
     """The built binary: build/<cmake target name> (falls back to dir name)."""
     if not name:
@@ -120,21 +222,70 @@ def binary_path(project_dir, name=None):
     return project_dir / "build" / project_dir.name
 
 
-def discover_projects(projects_dir, only=None):
-    """Every PE32 project directory that has a project.json, sorted by name."""
-    found = []
-    for project_dir in sorted(Path(projects_dir).iterdir()):
+def _is_stem_name(project_dir, pe_path):
+    """True when the directory is just the sanitized executable stem."""
+    stem = Path(pe_path).stem
+    safe = "".join(c if c.isalnum() or c == "_" else "_" for c in stem)
+    return project_dir.name == safe
+
+
+def discover_projects(projects_dir, only=None, canonical=None, dedupe=True,
+                      include_fixtures=False):
+    """One entry per PE32 game, with duplicate project dirs collapsed.
+
+    `only` filters by directory name and bypasses deduplication (an explicit
+    request names the exact tree to measure). Otherwise duplicate directories
+    for the same PE are collapsed to the one the corpus record names, falling
+    back to the more descriptive directory name. Projects built from a PE that
+    lives inside this repository (tests/fixtures) are not corpus games and are
+    skipped unless `include_fixtures`.
+    """
+    projects_dir = Path(projects_dir)
+    groups = {}
+    for project_dir in sorted(projects_dir.iterdir()):
         if not project_dir.is_dir():
             continue
-        if only and project_dir.name not in only:
+        info = project_pe_info(project_dir)
+        if not info or info["pe_type"] != "PE32":
             continue
-        pe_path, name = project_pe_path(project_dir)
-        if not pe_path:
+        if not include_fixtures:
+            try:
+                Path(info["path"]).resolve().relative_to(ROOT)
+                continue        # a repo-internal fixture, not a corpus game
+            except ValueError:
+                pass
+        if only:
+            if project_dir.name in only:
+                groups.setdefault(("only", project_dir.name), []).append(project_dir)
             continue
-        if (project_dir / "project.json").read_text().find('"PE32"') < 0:
+        key = info["sha256"] or str(Path(info["path"]).resolve())
+        groups.setdefault(key, []).append(project_dir)
+
+    found, duplicates = [], []
+    for key, dirs in groups.items():
+        if len(dirs) == 1 or not dedupe:
+            found.extend(dirs)
             continue
-        found.append(project_dir)
-    return found
+        chosen = None
+        if canonical:
+            for candidate in dirs:
+                info = project_pe_info(candidate)
+                if info and canonical.get(info["sha256"]) == candidate.name:
+                    chosen = candidate
+                    break
+        if chosen is None:
+            descriptive = [d for d in dirs
+                           if not _is_stem_name(d, project_pe_info(d)["path"])]
+            chosen = sorted(descriptive or dirs)[0]
+        found.append(chosen)
+        duplicates.append({
+            "project": chosen.name,
+            "pe": project_pe_info(chosen)["path"],
+            "chosen": chosen.name,
+            "also_present": sorted(d.name for d in dirs if d != chosen),
+        })
+    found.sort(key=lambda d: d.name)
+    return found, duplicates
 
 
 def _decode(raw):
@@ -142,7 +293,7 @@ def _decode(raw):
 
 
 def run_permissive(binary, pe_path, cwd=None, timeout=15.0, env_extra=None,
-                   headless=True):
+                   headless=True, permissive=True):
     """Launch one rebuilt binary permissively; capture its real output.
 
     The launch mirrors the pipeline's own run stage: the original PE is passed
@@ -168,7 +319,10 @@ def run_permissive(binary, pe_path, cwd=None, timeout=15.0, env_extra=None,
         "launch_error": None,
     }
     env = dict(os.environ)
-    env["RECOMP_PERMISSIVE"] = "1"
+    if permissive:
+        env["RECOMP_PERMISSIVE"] = "1"
+    else:
+        env.pop("RECOMP_PERMISSIVE", None)
     if headless:
         env["SDL_VIDEODRIVER"] = "dummy"
         env["SDL_AUDIODRIVER"] = "dummy"
@@ -211,8 +365,15 @@ def run_permissive(binary, pe_path, cwd=None, timeout=15.0, env_extra=None,
     return result
 
 
-def measure_project(project_dir, timeout=15.0):
-    """Boot one project permissively and return its measured row."""
+def measure_project(project_dir, timeout=15.0, strict_check=True,
+                    trace_crashes=True):
+    """Boot one project permissively and return its measured row.
+
+    With `strict_check`, the same binary is also launched once without
+    RECOMP_PERMISSIVE, because the permissive loader line cannot report a
+    meaningful unresolved-import count: its resolver stubs everything, so the
+    count is always 0. The strict launch is a second real process.
+    """
     project_dir = Path(project_dir)
     pe_path, name = project_pe_path(project_dir)
     row = {
@@ -226,10 +387,13 @@ def measure_project(project_dir, timeout=15.0):
         "stub_va": None,
         "caller": None,
         "exit_code": None,
+        "signal": None,
         "timed_out": False,
         "duration_seconds": None,
         "boot_line": None,
         "iat_bind": None,
+        "strict": None,
+        "crash_trace": None,
         "raw_error": None,
         "stderr_tail": "",
     }
@@ -247,6 +411,8 @@ def measure_project(project_dir, timeout=15.0):
         return row
     row["binary_exists"] = True
 
+    strict = (strict_measurement(binary, pe_path, timeout=min(timeout, 10.0))
+              if strict_check else None)
     run = run_permissive(binary, pe_path, timeout=timeout)
     row["exit_code"] = run["exit_code"]
     row["timed_out"] = run["timed_out"]
@@ -266,12 +432,21 @@ def measure_project(project_dir, timeout=15.0):
     row["boot_line"] = parse_boot_line(combined)
     row["iat_bind"] = parse_bound_line(combined)
     row["outcome"] = classify(run["exit_code"], run["timed_out"], hit)
+    row["signal"] = signal_name(run["exit_code"])
     if row["outcome"] == "timeout":
         row["raw_error"] = (f"no unimplemented import within {timeout:g}s; "
                             f"process still running, killed")
-    elif row["outcome"] in ("crashed", "exited-error"):
+    elif row["outcome"] == "crashed":
+        row["raw_error"] = (f"killed by {row['signal']} after boot; no "
+                            f"unimplemented import reached")
+    elif row["outcome"] == "exited-error":
         last = [ln for ln in run["stderr"].strip().splitlines() if ln.strip()]
         row["raw_error"] = last[-1] if last else f"exit {run['exit_code']}"
+    if strict is not None:
+        row["strict"] = strict
+    if row["outcome"] == "crashed" and trace_crashes:
+        row["crash_trace"] = trace_crash(binary, pe_path,
+                                         timeout=min(timeout, 10.0))
     return row
 
 
@@ -376,7 +551,7 @@ def rank_imports(rows):
     return ranked
 
 
-def build_report(rows, generated_at, command, timeout):
+def build_report(rows, generated_at, command, timeout, duplicates=None):
     """The JSON document: measured rows plus the ranked blocker table."""
     return {
         "schema": 1,
@@ -389,11 +564,16 @@ def build_report(rows, generated_at, command, timeout):
                    "video/audio drivers (the pipeline's run-stage settings); "
                    "the runtime binds unresolved imports to a self-naming "
                    "stub that aborts on first call, so first_import is what "
-                   "the running guest actually reached"),
+                   "the running guest actually reached. The permissive "
+                   "loader line always reads 0 unresolved because a stub "
+                   "counts as resolved, so each binary is launched a second "
+                   "time without RECOMP_PERMISSIVE and that strict run's "
+                   "unresolved count is recorded under `strict`"),
         "projects_measured": len(rows),
         "projects_reaching_import": sum(1 for r in rows if r.get("first_import")),
         "outcomes": {o: sum(1 for r in rows if r["outcome"] == o)
                      for o in sorted({r["outcome"] for r in rows})},
+        "duplicate_project_dirs": duplicates or [],
         "ranked_first_imports": rank_imports(rows),
         "runs": rows,
     }
@@ -445,16 +625,29 @@ def render_markdown(report):
 
     out.append("## Per-game rows")
     out.append("")
-    out.append("| project | outcome | exit | first import | stub VA | caller |")
-    out.append("|---------|---------|------|--------------|---------|--------|")
+    out.append("`strict` is a second launch of the same binary without "
+               "`RECOMP_PERMISSIVE`; it is the only launch that reports a "
+               "meaningful unresolved-import count.")
+    out.append("")
+    out.append("| project | outcome | exit | first import | stub VA | caller "
+               "| strict exit | strict unresolved |")
+    out.append("|---------|---------|------|--------------|---------|--------"
+               "|-------------|-------------------|")
     for row in rows:
         exit_code = row["exit_code"]
         if row["timed_out"]:
             exit_code = f"{exit_code} (timeout)"
+        strict = row.get("strict") or {}
+        strict_exit = strict.get("exit_code")
+        if strict.get("timed_out"):
+            strict_exit = f"{strict_exit} (timeout)"
+        strict_unresolved = strict.get("unresolved_iat_imports")
         out.append(f"| {row['project']} | {row['outcome']} | "
                    f"{exit_code} | "
                    f"{('`' + row['first_import'] + '`') if row['first_import'] else '-'} | "
-                   f"{row['stub_va'] or '-'} | {row['caller'] or '-'} |")
+                   f"{row['stub_va'] or '-'} | {row['caller'] or '-'} | "
+                   f"{strict_exit if strict_exit is not None else '-'} | "
+                   f"{strict_unresolved if strict_unresolved is not None else '-'} |")
     out.append("")
 
     unmeasured = [r for r in rows
@@ -477,9 +670,40 @@ def render_markdown(report):
                        + (f" - {row['raw_error']}" if row["raw_error"] else ""))
         out.append("")
 
+    traced = [r for r in rows if r.get("crash_trace")]
+    if traced:
+        out.append("## Crashed games: last imports the guest reached")
+        out.append("")
+        out.append("A crash in lifted code names no import, so each crashed "
+                   "game was relaunched with `RECOMP_TRACE=1`. The last "
+                   "dispatch before the fault is the prime suspect.")
+        out.append("")
+        for row in traced:
+            trace = row["crash_trace"]
+            last = trace["last_dispatched"]
+            out.append(f"- **{row['project']}** ({row['signal']}, "
+                       f"{trace['dispatched_import_count']} imports dispatched): "
+                       + (" -> ".join(f"`{n}`" for n in last) if last
+                          else "no import was dispatched at all"))
+        out.append("")
+
     out.append("Raw stderr for every row is in "
                "`reports/games/diagnostic-sweep.json` (`stderr_tail`).")
     out.append("")
+
+    duplicates = report.get("duplicate_project_dirs") or []
+    if duplicates:
+        out.append("## Duplicate project directories collapsed")
+        out.append("")
+        out.append("Several project directories exist for one executable "
+                   "(the generator's default names a project after the "
+                   "executable stem). One row per game is reported, from the "
+                   "directory the committed corpus record names:")
+        out.append("")
+        for dup in duplicates:
+            out.append(f"- measured `{dup['chosen']}`; also present: "
+                       f"{', '.join('`' + d + '`' for d in dup['also_present'])}")
+        out.append("")
     return "\n".join(out)
 
 
@@ -507,12 +731,30 @@ def main(argv=None):
                         help="seconds allowed per project build")
     parser.add_argument("--quiet", action="store_true",
                         help="only print the ranked table")
+    parser.add_argument("--no-dedupe", action="store_true",
+                        help="measure every PE32 project directory, including "
+                             "duplicate directories for the same executable")
+    parser.add_argument("--include-fixtures", action="store_true",
+                        help="also measure projects built from a PE inside "
+                             "this repository (tests/fixtures)")
+    parser.add_argument("--no-crash-trace", action="store_true",
+                        help="skip the RECOMP_TRACE=1 relaunch of a crashed "
+                             "game (the one that lists the last shims reached)")
+    parser.add_argument("--no-strict-check", action="store_true",
+                        help="skip the second, strict launch of each binary "
+                             "(the one that yields the real unresolved count)")
     args = parser.parse_args(argv)
 
-    projects = discover_projects(args.projects_dir, only=args.only)
+    canonical = canonical_project_dirs()
+    projects, duplicates = discover_projects(
+        args.projects_dir, only=args.only, canonical=canonical,
+        dedupe=not args.no_dedupe, include_fixtures=args.include_fixtures)
     if not projects:
         print(f"no PE32 projects under {args.projects_dir}", file=sys.stderr)
         return 1
+    for dup in duplicates:
+        print(f"[duplicate] {dup['pe']}: measuring {dup['chosen']}, "
+              f"also present {', '.join(dup['also_present'])}", file=sys.stderr)
 
     rows = []
     for project_dir in projects:
@@ -537,7 +779,9 @@ def main(argv=None):
                     "stderr_tail": build["log_tail"],
                 })
                 continue
-        row = measure_project(project_dir, timeout=args.timeout)
+        row = measure_project(project_dir, timeout=args.timeout,
+                              strict_check=not args.no_strict_check,
+                              trace_crashes=not args.no_crash_trace)
         rows.append(row)
         if not args.quiet:
             print(f"[{row['outcome']}] {row['project']}: "
@@ -549,7 +793,8 @@ def main(argv=None):
         "%Y-%m-%dT%H:%M:%SZ")
     command = "python3 tools/autorecomp/diagnose.py --timeout " \
               f"{args.timeout:g}" + (" --build" if args.build else "")
-    report = build_report(rows, generated_at, command, args.timeout)
+    report = build_report(rows, generated_at, command, args.timeout,
+                          duplicates=duplicates)
 
     json_path = Path(args.json)
     json_path.parent.mkdir(parents=True, exist_ok=True)

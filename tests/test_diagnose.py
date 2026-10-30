@@ -5,6 +5,7 @@ on the runtime's real fatal line, and the generated entry point keeps strict
 binding as the default while honouring RECOMP_PERMISSIVE=1.
 """
 
+import json
 import subprocess
 import sys
 import unittest
@@ -61,6 +62,73 @@ class ParseFirstImportTest(unittest.TestCase):
         self.assertIsNone(diagnose.parse_boot_line("nothing here"))
 
 
+class SignalTest(unittest.TestCase):
+    def test_names_the_signal_a_process_died_from(self):
+        self.assertEqual(diagnose.signal_name(-6), "SIGABRT")
+        self.assertEqual(diagnose.signal_name(-10), "SIGBUS")
+        self.assertIsNone(diagnose.signal_name(0))
+        self.assertIsNone(diagnose.signal_name(2))
+        self.assertIsNone(diagnose.signal_name(None))
+
+
+class StrictOutputTest(unittest.TestCase):
+    """The strict launch is the only one that reports real unresolved imports."""
+
+    # Verbatim stderr from a strict run of the rebuilt tumiki-fighters binary.
+    STRICT_STDERR = """\
+state
+[pe] unresolved import bulletml.dll!_BulletMLRunner_new_parser
+[pe] unresolved import KERNEL32.DLL!SuspendThread
+[pe] bound 59 imports, 86 unresolved
+[host] tf.exe booted: entry 0x004187D0, 86 unresolved imports
+"""
+
+    def test_unresolved_names_and_counts_come_from_the_loader_lines(self):
+        names = diagnose.UNRESOLVED_RE.findall(self.STRICT_STDERR)
+        self.assertEqual(names, ["bulletml.dll!_BulletMLRunner_new_parser",
+                                 "KERNEL32.DLL!SuspendThread"])
+        self.assertEqual(diagnose.parse_bound_line(self.STRICT_STDERR),
+                         {"iat_bound": 59, "iat_unresolved": 86})
+        self.assertEqual(
+            diagnose.parse_boot_line(self.STRICT_STDERR),
+            {"entry": "0x004187D0", "unresolved_iat_imports": 86})
+
+    def test_permissive_line_must_not_be_read_as_a_strict_count(self):
+        # Under permissive boot the same binary prints 0 unresolved, because
+        # every unresolved name got a stub. The parser reports what it sees;
+        # the tool's job is to keep the two launches apart.
+        permissive = ("[pe] bound 145 imports, 0 unresolved\n"
+                      "[host] tf.exe booted: entry 0x004187D0, "
+                      "0 unresolved imports\n")
+        self.assertEqual(
+            diagnose.parse_boot_line(permissive)["unresolved_iat_imports"], 0)
+        self.assertEqual(diagnose.UNRESOLVED_RE.findall(permissive), [])
+
+
+class TraceTest(unittest.TestCase):
+    """RECOMP_TRACE lines are what names the shims a crashed guest reached."""
+
+    TRACE_STDERR = """\
+[pe] tf.exe mapped at 0x00400000, span 0x3D000
+[host] tf.exe booted: entry 0x004187D0, 0 unresolved imports
+[hle] VirtualAlloc
+[hle] GetVersion
+[hle] EnterCriticalSection
+[hle] VirtualAlloc
+[hle] LeaveCriticalSection
+"""
+
+    def test_collects_every_dispatch_line_not_just_the_first(self):
+        names = diagnose.TRACE_RE.findall(self.TRACE_STDERR)
+        self.assertEqual(names, ["VirtualAlloc", "GetVersion",
+                                 "EnterCriticalSection", "VirtualAlloc",
+                                 "LeaveCriticalSection"])
+
+    def test_a_boot_with_no_dispatch_yields_nothing(self):
+        self.assertEqual(
+            diagnose.TRACE_RE.findall("[pe] mapped\n[host] booted\n"), [])
+
+
 class ClassifyTest(unittest.TestCase):
     def test_timeout_wins_over_an_earlier_import(self):
         # The process was still running at the deadline: that is the outcome,
@@ -97,6 +165,76 @@ class RankImportsTest(unittest.TestCase):
         self.assertEqual(len(ranked), 2)  # a game without an import adds no row
 
 
+class DiscoveryTest(unittest.TestCase):
+    """One row per game: several project dirs can hold the same executable."""
+
+    def _make(self, root, dirname, pe_path, sha, name, pe_type="PE32"):
+        d = root / dirname
+        d.mkdir(parents=True)
+        (d / "project.json").write_text(json.dumps({
+            "schema": 1, "name": name, "pe": {
+                "path": pe_path, "pe_type": pe_type, "sha256": sha}}))
+        return d
+
+    def test_collapses_duplicate_dirs_to_the_corpus_recorded_one(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._make(root, "wf", "/games/warning_forever/wf.exe", "aa", "wf")
+            self._make(root, "warning-forever",
+                       "/games/warning_forever/wf.exe", "aa", "wf")
+            found, duplicates = diagnose.discover_projects(
+                root, canonical={"aa": "warning-forever"})
+            self.assertEqual([d.name for d in found], ["warning-forever"])
+            self.assertEqual(len(duplicates), 1)
+            self.assertEqual(duplicates[0]["also_present"], ["wf"])
+
+    def test_falls_back_to_the_descriptive_dir_without_a_record(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._make(root, "wf", "/games/warning_forever/wf.exe", "aa", "wf")
+            self._make(root, "warning-forever",
+                       "/games/warning_forever/wf.exe", "aa", "wf")
+            found, _dup = diagnose.discover_projects(root, canonical={})
+            self.assertEqual([d.name for d in found], ["warning-forever"])
+
+    def test_keeps_distinct_games_and_skips_non_pe32(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._make(root, "wf", "/games/wf/wf.exe", "aa", "wf")
+            self._make(root, "tf", "/games/tf/tf.exe", "bb", "tf")
+            self._make(root, "cannonball", "/games/cb/cb.exe", "cc", "cb",
+                       pe_type="PE32+")
+            found, duplicates = diagnose.discover_projects(root, canonical={})
+            self.assertEqual([d.name for d in found], ["tf", "wf"])
+            self.assertEqual(duplicates, [])
+
+    def test_explicit_only_bypasses_deduplication(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._make(root, "wf", "/games/wf/wf.exe", "aa", "wf")
+            self._make(root, "warning-forever", "/games/wf/wf.exe", "aa", "wf")
+            found, duplicates = diagnose.discover_projects(
+                root, only=["wf"], canonical={"aa": "warning-forever"})
+            self.assertEqual([d.name for d in found], ["wf"])
+            self.assertEqual(duplicates, [])
+
+    def test_canonical_dirs_come_from_the_corpus_record(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            results = Path(tmp) / "results.json"
+            results.write_text(json.dumps({"schema": 1, "runs": [
+                {"input_sha256": "aa",
+                 "evidence": "projects/warning-forever/reports/report.html"},
+                {"input_sha256": "bb", "evidence": "not-a-project-path"},
+            ]}))
+            self.assertEqual(diagnose.canonical_project_dirs(results),
+                             {"aa": "warning-forever"})
+
+
 class MarkdownTest(unittest.TestCase):
     def test_reports_unlaunchable_games_with_their_raw_error(self):
         rows = [{
@@ -123,8 +261,9 @@ class MainTemplateTest(unittest.TestCase):
             c_path = Path(tmp) / "main.c"
             c_path.write_text(source)
             return subprocess.run(
-                ["cc", "-fsyntax-only", "-I",
-                 str(ROOT / "runtime" / "win32hle"), str(c_path)],
+                ["cc", "-fsyntax-only",
+                 "-I", str(ROOT / "runtime" / "win32hle"),
+                 "-I", str(ROOT / "runtime" / "recomp32"), str(c_path)],
                 capture_output=True, text=True).returncode
 
     def test_template_calls_permissive_only_behind_the_env_var(self):
