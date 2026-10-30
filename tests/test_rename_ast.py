@@ -22,3 +22,27 @@ void function_0x1000_Code_x86(void) {
     ast = c_parser.CParser().parse(prelude)      # parses
     fns = [e for e in ast.ext if hasattr(e, "body")]
     assert fns, "the body parsed into no function"
+
+
+def test_bit_cast_is_rewritten_to_a_cast():
+    """`bit_cast(T, x)` takes a TYPE as its first argument, so it is not valid C.
+
+    pycparser therefore rejected every body containing one with ": Invalid
+    expression" -- no line number, no construct named. It was the single largest
+    cause of unparseable bodies (72 of 955), and the provider uses it 203 times.
+    A reinterpretation is exactly what a cast is, so the rewrite is exact rather
+    than a workaround.
+    """
+    from tools.autorecomp import rename_ast as R
+    out = R.prepare("void f(void){ x = bit_cast(generic8_t *, argument_2); }\n")
+    assert "bit_cast" not in out
+    assert "((generic8_t *)(argument_2))" in out
+
+
+def test_bit_cast_nested_and_with_parenthesised_argument():
+    """The second argument can nest parens; a one-level regex left 5 behind."""
+    from tools.autorecomp import rename_ast as R
+    src = ("void f(void){ a = bit_cast(union_1, bit_cast(generic32_t, (x) + (y & -16U))); }\n")
+    out = R.prepare(src)
+    assert "bit_cast" not in out
+    assert out.count("((") >= 2

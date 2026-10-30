@@ -22,8 +22,12 @@
    "closures_blocked": 6
   },
   {
-   "reason": "var_1",
+   "reason": "Invalid expression",
    "closures_blocked": 5
+  },
+  {
+   "reason": "'var_1' is neither a VA nor a scalar (unrecovered local)",
+   "closures_blocked": 2
   },
   {
    "reason": "calls 0x0040F350, whose contract is not in the provider's declar",
@@ -40,14 +44,6 @@
   {
    "reason": "the C and the header disagree",
    "closures_blocked": 2
-  },
-  {
-   "reason": "var_3",
-   "closures_blocked": 1
-  },
-  {
-   "reason": "var_4",
-   "closures_blocked": 1
   },
   {
    "reason": "not a guest VA, so it cannot be a memory operand",

@@ -131,6 +131,17 @@ def synthesize_types(body):
     # grounds, exactly as it refuses a field access through an unknown layout.
     cabi = sorted(set(_re.findall(r"\bcabifunction_\d+\b", body)))
     out.extend(f"typedef void {n}(void);" for n in cabi)
+
+    # The provider also names the struct a raw function returns by value:
+    # `artificial_struct_returned_by_rawfunction_4 var_1 = GetParent();`. That is
+    # not a `struct_N` name, so the rule above never synthesized it and pycparser
+    # failed with `before: var_1` -- a parse error that names a variable rather
+    # than the missing type, which is why it read as a grammar problem. Same
+    # split as the others: the opaque type lets the body PARSE, and the transform
+    # refuses the struct return on its own grounds.
+    artificial = sorted(set(_re.findall(
+        r"\b(artificial_struct_returned_by_\w+)\b", body)))
+    out.extend(f"typedef struct {{ int _opaque; }} {n};" for n in artificial)
     return "\n".join(out)
 
 
@@ -138,6 +149,55 @@ def prepare(body):
     """The provider's function body as C pycparser can parse."""
     text = re.sub(r'^_ABI\([^)]*\)\s*$', '', body, flags=re.M)
     text = re.sub(r'\b_NORETURN\b', '', text)
+
+    # `bit_cast(T, x)` is a provider macro whose first argument is a TYPE, so as
+    # written it is not valid C and pycparser rejects the whole body with
+    # ": Invalid expression". It is the provider's most common intrinsic (203 uses
+    # here) and it was silently unparseable in 72 bodies -- each of which looked
+    # like a grammar gap. Rewriting to an ordinary cast is exact: bit_cast is a
+    # reinterpretation, which is what a cast is.
+    def _cast(m):
+        return f"(({m.group(1)})({m.group(2)}))"
+
+    # bit_cast nests (a bit_cast inside a bit_cast's argument), so rewrite until
+    # none is left rather than assuming one pass is enough -- a single pass left
+    # 11 behind and they would have been the next round's "grammar gap". The
+    # second argument can contain arbitrary nested parentheses, so this is a
+    # balanced scan rather than a regex: a pattern that only allows one level
+    # missed the 5 deepest uses.
+    def _rewrite_once(s):
+        out, i = [], 0
+        while i < len(s):
+            j = s.find("bit_cast(", i)
+            if j < 0:
+                out.append(s[i:]); break
+            out.append(s[i:j])
+            k = j + len("bit_cast(")
+            depth, comma = 1, None
+            while k < len(s) and depth:
+                c = s[k]
+                if c == "(":
+                    depth += 1
+                elif c == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                elif c == "," and depth == 1 and comma is None:
+                    comma = k
+                k += 1
+            if depth or comma is None:      # malformed: leave it for the parse to report
+                out.append(s[j:]); break
+            ty = s[j + len("bit_cast("):comma].strip()
+            val = s[comma + 1:k].strip()
+            out.append(f"(({ty})({val}))")
+            i = k + 1
+        return "".join(out)
+
+    for _ in range(8):
+        new_text = _rewrite_once(text)
+        if new_text == text:
+            break
+        text = new_text
     return text
 
 
