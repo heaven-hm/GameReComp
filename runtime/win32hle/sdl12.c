@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <pthread.h>
 #include <SDL2/SDL.h>
 #include "win32hle.h"
 
@@ -223,7 +224,9 @@ static void s_WasInit(void) { RETC(SDL_WasInit(A32(0))); }
 static void s_GetError(void) { RETC(hle_guest_strdup(g_error[0] ? g_error : SDL_GetError())); }
 static void s_ClearError(void) { g_error[0] = 0; SDL_ClearError(); RETCV(); }
 static void s_GetTicks(void) { RETC(SDL_GetTicks()); }
-static void s_Delay(void) { SDL_Delay(A32(0)); RETCV(); }
+/* SDL_Delay must let other guest threads run: the machine is given up around
+ * the sleep (hle_block_begin/end), as kernel32's Sleep does. */
+static void s_Delay(void) { uint32_t ms = A32(0); hle_block_begin(); SDL_Delay(ms); hle_block_end(); RETCV(); }
 
 /* Drop whatever the last mode created. */
 static void close_video(void) {
@@ -276,6 +279,234 @@ static void s_SetVideoMode(void) {
 /* In a GL mode SDL_Flip does nothing: the guest swaps with SDL_GL_SwapBuffers
  * (SDL 1.2 only blits for SDL_OPENGLBLIT, which we do not offer). */
 static void s_Flip(void) { if (!g_gl_mode && A32(0) == g_video) present(); RETC(0); }
+/* ---- timers, threads and synchronisation ----
+ * SDL2's SDL_mutex/SDL_sem/SDL_cond/SDL_Thread/SDL_TimerID are host pointers, so
+ * the guest gets handles in guest memory and one table maps them back.  The
+ * objects themselves are SDL2's, so the locking and waiting really happen: a
+ * guest SDL_CondWait blocks the thread that called it, and a guest thread runs
+ * lifted code through hle_call_guest (which takes the machine lock). */
+enum { HS_MUTEX = 1, HS_SEM, HS_COND, HS_THREAD, HS_TIMER, HS_MAX = 64 };
+typedef struct { uint32_t va; void *obj; int kind; } hs_slot;
+static hs_slot g_hs[HS_MAX];
+static uint32_t hs_new(int kind, void *obj) {
+    for (int i = 0; i < HS_MAX; i++)
+        if (!g_hs[i].va) {
+            uint32_t va = hle_va(hle_alloc(8));
+            if (!va) return 0;
+            MEM32(va) = (uint32_t)kind;
+            g_hs[i].va = va; g_hs[i].obj = obj; g_hs[i].kind = kind;
+            return va;
+        }
+    return 0;
+}
+static void *hs_of(uint32_t va, int kind) {
+    if (!va) return NULL;
+    for (int i = 0; i < HS_MAX; i++) if (g_hs[i].va == va && g_hs[i].kind == kind) return g_hs[i].obj;
+    return NULL;
+}
+static void hs_del(uint32_t va, int kind) {
+    for (int i = 0; i < HS_MAX; i++) if (g_hs[i].va == va && g_hs[i].kind == kind) { g_hs[i].va = 0; g_hs[i].obj = NULL; g_hs[i].kind = 0; }
+}
+
+/* ---- timers ---- */
+struct timer_arg { uint32_t cb, param, which; };         /* which: 1 = SDL_SetTimer, 2 = SDL_AddTimer */
+static struct timer_arg g_settimer;                     /* the one SDL_SetTimer installs */
+static uint32_t g_settimer_cb_id;                       /* its SDL2 timer id, so a new call replaces it */
+static Uint32 timer_tramp(Uint32 interval, void *p) {
+    struct timer_arg *a = (struct timer_arg *)p;
+    if (!a->cb) return 0;
+    if (a->which == 1) {                                 /* SDL_TimerCallback(Uint32) -> next interval */
+        uint32_t args[1] = { interval };
+        return (Uint32)hle_call_guest(a->cb, 1, args);
+    }
+    uint32_t args[2] = { interval, a->param };           /* SDL_NewTimerCallback(Uint32, void *) */
+    return (Uint32)hle_call_guest(a->cb, 2, args);
+}
+static void s_AddTimer(void) {                           /* (interval, callback, param) */
+    uint32_t cb = A32(1);
+    if (!cb) { error("SDL_AddTimer: NULL callback"); RETC(0); }
+    struct timer_arg *a = (struct timer_arg *)calloc(1, sizeof *a);
+    if (!a) RETC(0);
+    a->cb = cb; a->param = A32(2); a->which = 2;
+    SDL_TimerID id = SDL_AddTimer((Uint32)A32(0), timer_tramp, a);
+    if (!id) { free(a); error(SDL_GetError()); RETC(0); }
+    uint32_t h = hs_new(HS_TIMER, a);
+    if (!h) { SDL_RemoveTimer(id); free(a); RETC(0); }
+    a->which = 2;
+    MEM32(h + 4) = (uint32_t)(uintptr_t)id;              /* the SDL2 timer id, for RemoveTimer */
+    RETC(h);
+}
+static void s_RemoveTimer(void) {                        /* (SDL_TimerID) */
+    uint32_t h = A32(0);
+    struct timer_arg *a = (struct timer_arg *)hs_of(h, HS_TIMER);
+    if (!a) RETC(0);                                     /* SDL_FALSE: not ours */
+    SDL_TimerID id = (SDL_TimerID)(uintptr_t)MEM32(h + 4);
+    SDL_RemoveTimer(id);
+    hs_del(h, HS_TIMER);
+    free(a);
+    RETC(1);                                             /* SDL_TRUE */
+}
+static void s_SetTimer(void) {                           /* (interval, SDL_TimerCallback) */
+    if (g_settimer.which == 1 && g_settimer.cb) {        /* replace the previous one */
+        if (g_settimer_cb_id) SDL_RemoveTimer((SDL_TimerID)(uintptr_t)g_settimer_cb_id);
+        g_settimer_cb_id = 0;
+    }
+    g_settimer.cb = 0;
+    uint32_t interval = A32(0), cb = A32(1);
+    if (!interval || !cb) RETC(0);                       /* interval 0 stops it: success */
+    g_settimer.cb = cb; g_settimer.param = 0; g_settimer.which = 1;
+    SDL_TimerID id = SDL_AddTimer(interval, timer_tramp, &g_settimer);
+    if (!id) { error(SDL_GetError()); g_settimer.cb = 0; RETC(-1); }
+    g_settimer_cb_id = (uint32_t)(uintptr_t)id;
+    RETC(0);
+}
+
+/* ---- threads ----
+ * SDL 1.2 on Win32 takes four arguments (SDL_thread.h's
+ * SDL_PASSED_BEGINTHREAD_ENDTHREAD): the entry point, its data, and the CRT's
+ * begin/end thread functions, which are not used here. */
+struct thread_arg2 { uint32_t fn, data, tid; int done, status; };
+static void *thread_tramp(void *p) {
+    struct thread_arg2 *a = (struct thread_arg2 *)p;
+    hle_thread_id_adopt(a->tid);
+    uint32_t args[1] = { a->data };
+    a->status = (int)hle_call_guest(a->fn, 1, args);
+    a->done = 1;
+    return NULL;
+}
+static void s_CreateThread(void) {                       /* (fn, data, pfnBegin, pfnEnd) */
+    uint32_t fn = A32(0);
+    if (!fn) { error("SDL_CreateThread: NULL function"); RETC(0); }
+    struct thread_arg2 *a = (struct thread_arg2 *)calloc(1, sizeof *a);
+    if (!a) RETC(0);
+    a->fn = fn; a->data = A32(1); a->tid = hle_thread_id_new();
+    pthread_t t;
+    if (pthread_create(&t, NULL, thread_tramp, a) != 0) { free(a); error("SDL_CreateThread: cannot start a thread"); RETC(0); }
+    uint32_t h = hs_new(HS_THREAD, a);
+    if (!h) { pthread_detach(t); free(a); RETC(0); }
+    pthread_detach(t);
+    RETC(h);
+}
+static void s_WaitThread(void) {                         /* (thread, int *status) */
+    uint32_t h = A32(0), out = A32(1);
+    struct thread_arg2 *a = (struct thread_arg2 *)hs_of(h, HS_THREAD);
+    if (!a) RETCV();
+    /* The guest thread runs lifted code and needs the machine, so this wait
+     * gives it up (hle_block_begin/end) - otherwise waiting for a thread that
+     * can never run is a deadlock.  No guest state is touched until it is
+     * taken back. */
+    hle_block_begin();
+    while (!a->done) SDL_Delay(1);
+    hle_block_end();
+    if (out) MEM32(out) = (uint32_t)a->status;
+    hs_del(h, HS_THREAD);
+    free(a);
+    RETCV();
+}
+static void s_ThreadID(void) { RETC(hle_thread_id()); }
+static void s_GetThreadID(void) {
+    struct thread_arg2 *a = (struct thread_arg2 *)hs_of(A32(0), HS_THREAD);
+    RETC(a ? a->tid : 0);
+}
+
+/* ---- mutexes, semaphores and condition variables ---- */
+static void s_CreateMutex(void) {
+    SDL_mutex *m = SDL_CreateMutex();
+    if (!m) { error(SDL_GetError()); RETC(0); }
+    uint32_t h = hs_new(HS_MUTEX, m);
+    if (!h) { SDL_DestroyMutex(m); RETC(0); }
+    RETC(h);
+}
+static void s_LockMutex(void) {
+    SDL_mutex *m = (SDL_mutex *)hs_of(A32(0), HS_MUTEX);
+    if (!m) RETC(-1);
+    RETC(SDL_LockMutex(m));
+}
+static void s_UnlockMutex(void) {
+    SDL_mutex *m = (SDL_mutex *)hs_of(A32(0), HS_MUTEX);
+    if (!m) RETC(-1);
+    RETC(SDL_UnlockMutex(m));
+}
+static void s_DestroyMutex(void) {
+    uint32_t h = A32(0);
+    SDL_mutex *m = (SDL_mutex *)hs_of(h, HS_MUTEX);
+    if (!m) RETCV();
+    SDL_DestroyMutex(m);
+    hs_del(h, HS_MUTEX);
+    RETCV();
+}
+static void s_CreateSemaphore(void) {
+    SDL_sem *sem = SDL_CreateSemaphore((Uint32)A32(0));
+    if (!sem) { error(SDL_GetError()); RETC(0); }
+    uint32_t h = hs_new(HS_SEM, sem);
+    if (!h) { SDL_DestroySemaphore(sem); RETC(0); }
+    RETC(h);
+}
+static void s_DestroySemaphore(void) {
+    uint32_t h = A32(0);
+    SDL_sem *sem = (SDL_sem *)hs_of(h, HS_SEM);
+    if (!sem) RETCV();
+    SDL_DestroySemaphore(sem);
+    hs_del(h, HS_SEM);
+    RETCV();
+}
+static void s_SemWait(void) {
+    SDL_sem *sem = (SDL_sem *)hs_of(A32(0), HS_SEM);
+    if (!sem) RETC(-1);
+    hle_block_begin();
+    int rc = SDL_SemWait(sem);
+    hle_block_end();
+    RETC(rc);
+}
+static void s_SemTryWait(void)      { SDL_sem *s = (SDL_sem *)hs_of(A32(0), HS_SEM); RETC(s ? (uint32_t)SDL_SemTryWait(s) : (uint32_t)-1); }
+static void s_SemWaitTimeout(void) {
+    SDL_sem *sem = (SDL_sem *)hs_of(A32(0), HS_SEM);
+    uint32_t ms = A32(1);
+    if (!sem) RETC(-1);
+    hle_block_begin();
+    int rc = SDL_SemWaitTimeout(sem, ms);
+    hle_block_end();
+    RETC(rc);
+}
+static void s_SemPost(void)         { SDL_sem *s = (SDL_sem *)hs_of(A32(0), HS_SEM); RETC(s ? (uint32_t)SDL_SemPost(s) : (uint32_t)-1); }
+static void s_SemValue(void)        { SDL_sem *s = (SDL_sem *)hs_of(A32(0), HS_SEM); RETC(s ? SDL_SemValue(s) : 0u); }
+static void s_CreateCond(void) {
+    SDL_cond *c = SDL_CreateCond();
+    if (!c) { error(SDL_GetError()); RETC(0); }
+    uint32_t h = hs_new(HS_COND, c);
+    if (!h) { SDL_DestroyCond(c); RETC(0); }
+    RETC(h);
+}
+static void s_DestroyCond(void) {
+    uint32_t h = A32(0);
+    SDL_cond *c = (SDL_cond *)hs_of(h, HS_COND);
+    if (!c) RETCV();
+    SDL_DestroyCond(c);
+    hs_del(h, HS_COND);
+    RETCV();
+}
+static void s_CondSignal(void)    { SDL_cond *c = (SDL_cond *)hs_of(A32(0), HS_COND); RETC(c ? (uint32_t)SDL_CondSignal(c) : (uint32_t)-1); }
+static void s_CondBroadcast(void) { SDL_cond *c = (SDL_cond *)hs_of(A32(0), HS_COND); RETC(c ? (uint32_t)SDL_CondBroadcast(c) : (uint32_t)-1); }
+static void s_CondWait(void) {
+    SDL_cond *c = (SDL_cond *)hs_of(A32(0), HS_COND);
+    SDL_mutex *m = (SDL_mutex *)hs_of(A32(1), HS_MUTEX);
+    if (!c || !m) RETC(-1);
+    hle_block_begin();                                   /* the signaller is another guest thread */
+    int rc = SDL_CondWait(c, m);
+    hle_block_end();
+    RETC(rc);
+}
+static void s_CondWaitTimeout(void) {
+    SDL_cond *c = (SDL_cond *)hs_of(A32(0), HS_COND);
+    SDL_mutex *m = (SDL_mutex *)hs_of(A32(1), HS_MUTEX);
+    uint32_t ms = A32(2);
+    if (!c || !m) RETC(-1);
+    hle_block_begin();
+    int rc = SDL_CondWaitTimeout(c, m, ms);
+    hle_block_end();
+    RETC(rc);
+}
+
 /* ---- SDL 1.2's OpenGL API ----
  * SDL_GL_GetProcAddress is the one that needs care: a host function pointer is
  * not callable from lifted code, so it answers with the VA of our own gl* shim
@@ -1038,8 +1269,15 @@ static void s_PumpEvents(void) { SDL_PumpEvents(); RETCV(); }
 static void s_WaitEvent(void) {                          /* (SDL_Event *event) */
     events_init();
     uint8_t ev[S12_EVENT_SIZE];
-    if (!queue_pop_enabled(ev) && !(pump_one(-1) && queue_pop_enabled(ev))) RETC(0);
-    if (A32(0)) memcpy(hle_ptr(A32(0)), ev, S12_EVENT_SIZE);
+    uint32_t out = A32(0);
+    int got = queue_pop_enabled(ev);
+    if (!got) {                                          /* waiting: let other threads run */
+        hle_block_begin();
+        got = pump_one(-1) && queue_pop_enabled(ev);
+        hle_block_end();
+    }
+    if (!got) RETC(0);
+    if (out) memcpy(hle_ptr(out), ev, S12_EVENT_SIZE);
     RETC(1);
 }
 static void s_PushEvent(void) {
@@ -1696,5 +1934,15 @@ const win32hle_shim win32hle_sdl12[] = {
     { "SDL_OpenAudio", s_OpenAudio }, { "SDL_CloseAudio", s_CloseAudio }, { "SDL_PauseAudio", s_PauseAudio },
     { "SDL_LockAudio", s_LockAudio }, { "SDL_UnlockAudio", s_UnlockAudio }, { "SDL_GetAudioStatus", s_GetAudioStatus },
     { "SDL_BuildAudioCVT", s_BuildAudioCVT }, { "SDL_ConvertAudio", s_ConvertAudio }, { "SDL_MixAudio", s_MixAudio },
+    { "SDL_SetTimer", s_SetTimer }, { "SDL_AddTimer", s_AddTimer }, { "SDL_RemoveTimer", s_RemoveTimer },
+    { "SDL_CreateThread", s_CreateThread }, { "SDL_WaitThread", s_WaitThread }, { "SDL_ThreadID", s_ThreadID },
+    { "SDL_GetThreadID", s_GetThreadID },
+    { "SDL_CreateMutex", s_CreateMutex }, { "SDL_LockMutex", s_LockMutex }, { "SDL_mutexP", s_LockMutex },
+    { "SDL_UnlockMutex", s_UnlockMutex }, { "SDL_mutexV", s_UnlockMutex }, { "SDL_DestroyMutex", s_DestroyMutex },
+    { "SDL_CreateSemaphore", s_CreateSemaphore }, { "SDL_DestroySemaphore", s_DestroySemaphore },
+    { "SDL_SemWait", s_SemWait }, { "SDL_SemTryWait", s_SemTryWait }, { "SDL_SemWaitTimeout", s_SemWaitTimeout },
+    { "SDL_SemPost", s_SemPost }, { "SDL_SemValue", s_SemValue },
+    { "SDL_CreateCond", s_CreateCond }, { "SDL_DestroyCond", s_DestroyCond }, { "SDL_CondSignal", s_CondSignal },
+    { "SDL_CondBroadcast", s_CondBroadcast }, { "SDL_CondWait", s_CondWait }, { "SDL_CondWaitTimeout", s_CondWaitTimeout },
     { 0, 0 }
 };
