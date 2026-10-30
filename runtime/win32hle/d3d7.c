@@ -36,7 +36,8 @@ enum { GL_POINTS=0x0000, GL_LINES=0x0001, GL_LINE_STRIP=0x0003,
        GL_ONE_MINUS_SRC_ALPHA=0x0303, GL_DST_ALPHA=0x0304,
        GL_ONE_MINUS_DST_ALPHA=0x0305, GL_DST_COLOR=0x0306,
        GL_ONE_MINUS_DST_COLOR=0x0307, GL_SRC_COLOR=0x0300,
-       GL_ONE_MINUS_SRC_COLOR=0x0301, GL_FRONT_AND_BACK=0x0408,
+       GL_ONE_MINUS_SRC_COLOR=0x0301, GL_SRC_ALPHA_SATURATE=0x0308,
+       GL_FRONT_AND_BACK=0x0408,
        GL_POINT=0x1B00, GL_LINE=0x1B01, GL_FILL=0x1B02,
        GL_FLAT=0x1D00, GL_SMOOTH=0x1D01 };
 enum { GL_LIGHTING=0x0B50, GL_COLOR_MATERIAL=0x0B57, GL_LIGHT0=0x4000,
@@ -462,7 +463,7 @@ static unsigned gl_cmp(uint32_t v) {
 }
 static unsigned gl_blend(uint32_t v) {
     static const unsigned t[]={GL_ZERO,GL_ZERO,GL_ONE,GL_SRC_COLOR,GL_ONE_MINUS_SRC_COLOR,GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA,GL_DST_ALPHA,GL_ONE_MINUS_DST_ALPHA,GL_DST_COLOR,GL_ONE_MINUS_DST_COLOR};
-    if (v==11) return GL_SRC_ALPHA;
+    if (v==11) return GL_SRC_ALPHA_SATURATE;
     return v<sizeof(t)/sizeof(t[0])?t[v]:GL_ONE;
 }
 static uint32_t vertex_stride(uint32_t fvf) {
@@ -665,7 +666,8 @@ static void d3d_write_prim_caps(uint32_t p, int depth_bits) {
     MEM32(p+4)=0x70u;                          /* cull none, CW and CCW */
     MEM32(p+8)=depth_bits?0x30u:0x20u;        /* z test when the GL context has depth */
     MEM32(p+12)=depth_bits?0xFFu:0u;          /* all D3D compare functions */
-    MEM32(p+16)=MEM32(p+20)=0x3FFu;           /* blend factors mapped by gl_blend */
+    MEM32(p+16)=0x7FFu;                        /* blend factors, including source alpha saturate */
+    MEM32(p+20)=0x3FFu;                        /* destination factors exclude source-only saturate */
     MEM32(p+24)=0xFFu;                         /* alpha compare functions */
     MEM32(p+28)=0xAu;                           /* flat and Gouraud RGB shading */
     MEM32(p+32)=0xDu;                           /* perspective, alpha, transparency */
@@ -1228,8 +1230,10 @@ static int render_state_value_valid(uint32_t state,uint32_t value) {
         return value>=1 && value<=3;
     case 9:
         return value>=1 && value<=3;
-    case 19: case 20:
+    case 19:
         return value>=1 && value<=11;
+    case 20:
+        return value>=1 && value<=10;
     case 23: case 25:
         return value>=1 && value<=8;
     case 24:
