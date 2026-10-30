@@ -56,6 +56,9 @@ TIMING_CALLS = {
 
 # "[hle] Name" (the default) or "[hle] <guest tid> Name" (RECOMP_TRACE_TID=1).
 LINE = re.compile(r"^\[hle\]\s+(?:(\d+)\s+)?(\S+)\s*$")
+# the checkpoint line the runtime prints at RECOMP_CALL_CAP:
+#   [determinism] state <fnv1a> cap <n> ranges <r>
+STATE = re.compile(r"^\[determinism\] state ([0-9a-fA-F]+) cap (\d+) ranges (\d+)")
 
 
 def parse(path):
@@ -259,9 +262,14 @@ def run_capped(binary, exe, cwd, cap, env_extra, timeout):
     except subprocess.TimeoutExpired as e:
         err = (e.stderr or b"").decode("utf-8", "replace") if isinstance(e.stderr, bytes) else (e.stderr or "")
         rc = None
-    calls = [(int(m.group(1)) if m.group(1) else None, m.group(2))
-             for line in err.splitlines() if (m := LINE.match(line.rstrip("\n")))]
-    return calls, rc
+    calls, state = [], None
+    for line in err.splitlines():
+        line = line.rstrip("\n")
+        if m := STATE.match(line):
+            state = {"hash": m.group(1).lower(), "cap": int(m.group(2)), "ranges": int(m.group(3))}
+        elif m := LINE.match(line):
+            calls.append((int(m.group(1)) if m.group(1) else None, m.group(2)))
+    return {"calls": calls, "rc": rc, "state": state}
 
 
 def bisect_run(baseline_binary, candidate_binary, exe, cwd, lo, hi, env_extra=None,
@@ -281,15 +289,27 @@ def bisect_run(baseline_binary, candidate_binary, exe, cwd, lo, hi, env_extra=No
     not a location."""
 
     def pair(cap):
-        a, _ = run_capped(baseline_binary, exe, cwd, cap, env_extra, timeout)
-        b, _ = run_capped(candidate_binary, exe, cwd, cap, env_extra, timeout)
+        """A signature for "how they differ at this cap", or None if they match.
+
+        State first: the checkpoint hashes the registers and flags plus whatever
+        memory ranges RECOMP_STATE_RANGE names, so a state difference is the
+        stronger claim - two runs can make the same calls and still be in
+        different states. A registers-only fingerprint (ranges 0) is not a state
+        comparison, so it only counts when the sequences also differ."""
+        A = run_capped(baseline_binary, exe, cwd, cap, env_extra, timeout)
+        B = run_capped(candidate_binary, exe, cwd, cap, env_extra, timeout)
+        a, b = A["calls"], B["calls"]
+        sa, sb = A["state"], B["state"]
+        if sa and sb and sa["ranges"] and sb["ranges"]:
+            if sa["hash"] != sb["hash"] or sa["ranges"] != sb["ranges"]:
+                return ("state", sa["hash"], sb["hash"], sa["ranges"], sb["ranges"]), A, B
         kind, payload = locate(a, b)
         if kind == "same":
-            return None, a, b            # None means "they match at this cap"
+            return None, A, B
         if kind == "early":
-            return ("early", payload[0]), a, b
+            return ("early", payload[0]), A, B
         tid, idx, _, _ = payload
-        return (tid, idx), a, b
+        return ("seq", tid, idx), A, B
 
     trace(f"bisecting between cap {lo} and {hi}, {repeat} pair(s) per cap")
     idx, a, b = pair(hi)
@@ -311,25 +331,37 @@ def bisect_run(baseline_binary, candidate_binary, exe, cwd, lo, hi, env_extra=No
     # The verdict needs more than one pair, because a divergence that is
     # intermittent looks exactly like a located one from a single sample.
     samples = [pair(hi) for _ in range(max(repeat, 2))]
-    idxs = [s[0] for s in samples]
-    matched = [i for i in idxs if i is None]
-    differed = [i for i in idxs if i is not None]
+    sigs = [s[0] for s in samples]
+    matched = [i for i in sigs if i is None]
+    differed = [i for i in sigs if i is not None]
     if matched:
-        trace(f"  NOT REPRODUCIBLE: at cap {hi}, {len(matched)} of {len(idxs)} pairs matched "
-              f"and {len(differed)} differed ({idxs}).")
+        trace(f"  NOT REPRODUCIBLE: at cap {hi}, {len(matched)} of {len(sigs)} pairs matched "
+              f"and {len(differed)} differed ({sigs}).")
         trace(f"  The runs sometimes agree and sometimes do not, so there is no single call "
               f"to point at: this is nondeterminism between runs - thread interleaving, or a "
               f"clock that is not fully controlled - not a located divergence. A single-pair "
               f"bisection would have reported a number here that means nothing.")
         return hi
     if len(set(differed)) != 1:
-        trace(f"  NOT REPRODUCIBLE: the divergence lands at different calls each time "
+        trace(f"  NOT REPRODUCIBLE: the divergence lands in different places each time "
               f"({differed}); nothing stable to point at.")
         return hi
-    trace(f"  reproducible: every pair diverges at call {differed[0]}")
-    code, lines = report(samples[0][1], samples[0][2], "baseline", "candidate", 4)
+    sig = differed[0]
+    if sig[0] == "state":
+        _, ha, hb, ra, rb = sig
+        trace(f"  reproducible: STATE divergence at cap {hi}")
+        trace(f"    baseline  state {ha}  ranges {ra}")
+        trace(f"    candidate state {hb}  ranges {rb}")
+        trace(f"  the two runs make the same calls up to that cap and are still in "
+              f"different states, so the difference is in the state and not in the sequence.")
+        return hi
+    trace(f"  reproducible: every pair diverges at {sig[1:]}")
+    code, lines = report(samples[0][1]["calls"], samples[0][2]["calls"], "baseline", "candidate", 4)
     for line in lines:
         trace("  " + line)
+    if samples[0][1]["state"] and samples[0][1]["state"]["ranges"] == 0:
+        trace("  (registers only - ranges 0 - so this is a sequence comparison, not a state one;")
+        trace("   set RECOMP_STATE_RANGE=base:length to make the checkpoint cover memory)")
     code, lines = report(a, b, "baseline", "candidate", 4)
     for line in lines:
         trace("  " + line)
@@ -398,6 +430,9 @@ def main(argv=None):
     ap.add_argument("--lo", type=int, default=0, help="a cap at which they are known to match (default 0)")
     ap.add_argument("--hi", type=int, default=200000, help="a cap at which they differ (default 200000)")
     ap.add_argument("--timeout", type=float, default=120.0, help="per run, seconds (default 120)")
+    ap.add_argument("--state-range",
+                    help="guest memory ranges for the checkpoint fingerprint, base:length[,base:length] "
+                         "(default: registers only, which is NOT a state comparison)")
     ap.add_argument("--repeat", type=int, default=2,
                     help="pairs of runs per cap; a cap only counts as differing if every "
                          "pair differs, and a moving index is reported as nondeterminism (default 2)")
@@ -408,8 +443,9 @@ def main(argv=None):
         for need in ("baseline_binary", "candidate_binary", "exe"):
             if not getattr(args, need):
                 ap.error(f"--{need.replace('_', '-')} is needed with --bisect-run")
+        env_extra = {"RECOMP_STATE_RANGE": args.state_range} if args.state_range else None
         hi = bisect_run(args.baseline_binary, args.candidate_binary, args.exe,
-                        args.cwd or ".", args.lo, args.hi, None, args.timeout, args.repeat)
+                        args.cwd or ".", args.lo, args.hi, env_extra, args.timeout, args.repeat)
         return 2 if hi is not None else 0
     if not args.baseline or not args.candidate:
         ap.error("two trace files are needed (or --selftest)")
