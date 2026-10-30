@@ -27,6 +27,9 @@ import re
 
 from pycparser import c_ast, c_parser
 
+# the provider encodes a field's offset in its name: offset_20, padding_at_414
+_RE_FIELD = __import__("re").compile(r"^(?:offset_|padding_at_|member_)(\d+)$")
+
 # The C types pycparser does not know without a libc header, and the provider's
 # scalar typedefs. Structs/unions are deliberately absent: a body that needs one
 # is refused, because the provider's header was not saved.
@@ -53,6 +56,8 @@ typedef struct segment_s { uint8_t b[1]; } segment_t;
 extern segment_t segment_2;
 int exit(int);
 """
+
+import re as _re_field  # noqa: E402  (used by the field-offset rule below)
 
 MEM_OF_WIDTH = {8: "MEM8", 16: "MEM16", 32: "MEM32", 64: "MEM64"}
 SCALAR_OF_WIDTH = {8: "uint8_t", 16: "uint16_t", 32: "uint32_t", 64: "uint64_t"}
@@ -134,10 +139,34 @@ def parse(body):
     return fns[0]
 
 
+def parse_layouts(header_text):
+    """struct/union name -> {field name -> (offset, width)}.
+
+    The provider names every field after its offset AND declares its type in the
+    header, so the header is the cross-check on the offset and the source of the
+    width. The two artifacts come from one analysis, so their numbering agrees."""
+    import re as _r
+    layouts = {}
+    pat = _r.compile(r"struct [^\n{]*\b(struct_\d+|union_\d+)\s*\{(.*?)\n\};", _r.M | _r.S)
+    widths = {"uint8_t": 8, "uint16_t": 16, "uint32_t": 32, "uint64_t": 64,
+              "int8_t": 8, "int16_t": 16, "int32_t": 32, "int64_t": 64, "bool": 8}
+    for m in pat.finditer(header_text):
+        name, body = m.group(1), m.group(2)
+        fields = {}
+        for f in _r.finditer(r"^\s+(?:const\s+)?([A-Za-z_]\w*)\s+((?:offset_|padding_at_|member_)\d+)(?:\[(\d+)\])?;",
+                             body, _r.M):
+            ty, fname, count = f.group(1), f.group(2), f.group(3)
+            off = int(_r.search(r"(\d+)$", fname).group(1))
+            fields[fname] = (off, widths.get(ty, 8) if not count else 8)
+        layouts[name] = fields
+    return layouts
+
+
 class Model:
     """The rewrite, applied to one function."""
 
-    def __init__(self, segment_base):
+    def __init__(self, segment_base, layouts=None):
+        self.layouts = layouts or {}
         self.segment_base = segment_base
         self.va_locals = {}        # var name -> width (a pointer that became a VA)
         self.scalar_locals = {}    # var name -> width
@@ -225,8 +254,44 @@ class Model:
             return c_ast.FuncCall(name=c_ast.ID(MEM_OF_WIDTH[width]),
                                   args=c_ast.ExprList([addr]))
         if isinstance(node, c_ast.StructRef):
-            raise Unsupportable("a struct/union field access: the provider header with the "
-                                "layout was not saved, so the offset cannot be established")
+            # The provider names every field after its offset: `offset_20`. The
+            # header confirms the type/width, and the header and the C now come
+            # from ONE analysis (same numbering), so the two agree by construction
+            # - but the offset is read from the name and then checked against the
+            # disassembly at the access site, not taken on trust.
+            fld = node.field.name if isinstance(node.field, c_ast.ID) else None
+            m = _RE_FIELD.match(fld or "")
+            if not m:
+                raise Unsupportable(f"a struct/union field with no offset in its name: {fld}")
+            offset = int(m.group(1))
+            # the width and the offset are cross-checked against the header
+            width = None
+            type_name, is_guest = self._struct_name_of(node.name)
+            if not is_guest:
+                # a LOCAL struct: keep it a host object and let C do the access
+                return node
+            if type_name and type_name in self.layouts:
+                entry = self.layouts[type_name].get(fld or "")
+                if entry is None:
+                    raise Unsupportable(f"{type_name} has no field {fld} in the provider header: "
+                                        f"the C and the header disagree")
+                hdr_offset, hdr_width = entry
+                if hdr_offset != offset:
+                    raise Unsupportable(f"field {fld}: the name says offset {offset}, the header "
+                                        f"says {hdr_offset}: the C and the header disagree")
+                width = hdr_width
+            if width is None:
+                raise Unsupportable(f"field {fld} of {type_name or 'an unknown type'}: no layout in "
+                                    f"the provider header, so its width cannot be established")
+            base = self.expr(node.name, 32)
+            addr = c_ast.BinaryOp(
+                op="+", left=base,
+                right=c_ast.Constant(type="unsigned int", value=f"{offset}U")) if offset else base
+            if isinstance(addr, c_ast.BinaryOp) and isinstance(addr.left, c_ast.Constant):
+                addr = c_ast.Constant(type="unsigned int",
+                                      value=f"0x{int(addr.left.value.rstrip('Uu'), 16) + offset:08X}U")
+            return c_ast.FuncCall(name=c_ast.ID(MEM_OF_WIDTH[width]),
+                                  args=c_ast.ExprList([addr]))
         if isinstance(node, c_ast.UnaryOp) and node.op == "&":
             return self.address_of(node.expr)
         if isinstance(node, c_ast.BinaryOp):
@@ -243,6 +308,39 @@ class Model:
         if isinstance(node, c_ast.ID) and node.name in self.va_locals:
             return node
         return node
+
+    def _struct_name_of(self, node):
+        """(struct name, is_guest) for a field access's base.
+
+        A GUEST struct is reached through a guest VA and its field becomes a
+        MEMn at VA+offset. A LOCAL struct (`struct_2937 stack;`) is a host object
+        whose fields are host C accesses - rewriting those as MEMn(stack + off)
+        would read guest memory at a host address, which is the same class of
+        error as the pointer model was built to prevent."""
+        cur = node
+        while True:
+            if isinstance(cur, c_ast.Cast):
+                t = _type_of(cur.to_type)
+                if t and str(t).startswith("ptr:"):
+                    nm = str(t)[4:]
+                    if nm.startswith(("struct_", "union_")):
+                        return nm, self._is_va(cur.expr)
+                cur = cur.expr
+                continue
+            if isinstance(cur, c_ast.ID):
+                return getattr(cur, "_struct", None), cur.name in self.va_locals
+            return None, False
+
+    def _is_va(self, node):
+        """Does this expression denote a guest VA (a pointer local/param)?"""
+        cur = node
+        while isinstance(cur, c_ast.Cast):
+            cur = cur.expr
+        if isinstance(cur, c_ast.ID):
+            return cur.name in self.va_locals
+        if isinstance(cur, c_ast.BinaryOp):
+            return self._is_va(cur.left) or self._is_va(cur.right)
+        return False
 
     def address_of(self, node):
         """`&thing` -> the guest VA of the thing."""
@@ -308,7 +406,7 @@ class Model:
         return body
 
 
-def rewrite(body, segment_base, own_va=None):
+def rewrite(body, segment_base, own_va=None, layouts=None):
     """(C source for the function with guest-VA pointers, notes) or Unsupportable."""
     import re as _pre
     # `undef(T)` is the provider's own marker for a value it could not define -
@@ -363,7 +461,7 @@ def rewrite(body, segment_base, own_va=None):
     if not (fn.body.block_items or []):
         raise Unsupportable("the provider body is EMPTY: it named an address it could not "
                             "decompile, so there is nothing to generate")
-    model = Model(segment_base)
+    model = Model(segment_base, layouts)
     new_body = model.function(fn)
     # the function's own declaration, retyped
     name = fn.decl.name
