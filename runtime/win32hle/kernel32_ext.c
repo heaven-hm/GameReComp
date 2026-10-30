@@ -22,6 +22,11 @@
 #include <sys/mman.h>
 #include "win32hle.h"
 
+/* kernel32_crt.c's codepage-1252 conversions (it owns the mapping the ANSI
+ * calls use); the W file calls share them rather than carrying a second copy. */
+int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
+int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
+
 #ifdef __APPLE__                 /* struct stat's times by their BSD names */
 #define st_mtim st_mtimespec
 #define st_atim st_atimespec
@@ -35,6 +40,7 @@
 #define ERROR_NO_MORE_FILES    18u
 #define ERROR_HANDLE_EOF       38u
 #define ERROR_FILE_EXISTS      80u
+#define ERROR_INVALID_NAME    123u      /* a path the ANSI codepage cannot carry */
 #define ERROR_ALREADY_EXISTS  183u
 #define ERROR_INVALID_FUNCTION  1u
 
@@ -102,17 +108,16 @@ int hle_filetrace(void) {
     return on;
 }
 
-/* CreateFileA(name,access,share,sa,disp,flags,template). access GENERIC_READ
+/* CreateFile(name,access,share,sa,disp,flags,template). access GENERIC_READ
  * 0x80000000, GENERIC_WRITE 0x40000000; disp CREATE_NEW 1, CREATE_ALWAYS 2,
- * OPEN_EXISTING 3, OPEN_ALWAYS 4, TRUNCATE_EXISTING 5. */
-static void k_CreateFileA(void) {
-    const char *name = ASTR(0);
-    uint32_t access = A32(1), disp = A32(4);
+ * OPEN_EXISTING 3, OPEN_ALWAYS 4, TRUNCATE_EXISTING 5.  The body works on the
+ * ANSI path, so CreateFileW converts its UTF-16 one and shares it (codepage
+ * 1252, this layer's ANSI codepage). */
+static uint32_t create_file(const char *what, const char *name, uint32_t access, uint32_t disp, uint32_t flags) {
     char path[1024];
     int exists = 0;
-    if (!name || !*name) { hle_set_last_error(ERROR_PATH_NOT_FOUND); RET(INVALID_HANDLE, 7); }
     if (is_device(name, path, sizeof path)) {
-        if (!path[0]) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(INVALID_HANDLE, 7); }
+        if (!path[0]) { hle_set_last_error(ERROR_FILE_NOT_FOUND); return INVALID_HANDLE; }
         exists = 1;
     } else if ((access & 0x40000000u) || disp == 1 || disp == 2 || disp == 4) {
         /* a write or a create: under a mod's overlay, into the overlay (a file
@@ -134,16 +139,29 @@ static void k_CreateFileA(void) {
     default: break;
     }
     struct stat st;
-    if (exists && stat(path, &st) == 0 && S_ISDIR(st.st_mode) && !(A32(5) & 0x02000000u)) {
+    if (exists && stat(path, &st) == 0 && S_ISDIR(st.st_mode) && !(flags & 0x02000000u)) {
         hle_set_last_error(ERROR_ACCESS_DENIED);    /* a directory, without FILE_FLAG_BACKUP_SEMANTICS */
-        RET(INVALID_HANDLE, 7);
+        return INVALID_HANDLE;
     }
     int fd = open(path, fl | O_CLOEXEC, 0644);
     if (hle_filetrace())
-        fprintf(stderr, "[file] CreateFileA \"%s\" -> %s %s\n", name, path, fd >= 0 ? "ok" : strerror(errno));
-    if (fd < 0) { hle_set_last_error(errno_to_win(errno)); RET(INVALID_HANDLE, 7); }
+        fprintf(stderr, "[file] %s \"%s\" -> %s %s\n", what, name, path, fd >= 0 ? "ok" : strerror(errno));
+    if (fd < 0) { hle_set_last_error(errno_to_win(errno)); return INVALID_HANDLE; }
     hle_set_last_error(exists && (disp == 2 || disp == 4) ? ERROR_ALREADY_EXISTS : 0);
-    RET(new_file(fd), 7);
+    return new_file(fd);
+}
+static void k_CreateFileA(void) {
+    const char *name = ASTR(0);
+    if (!name || !*name) { hle_set_last_error(ERROR_PATH_NOT_FOUND); RET(INVALID_HANDLE, 7); }
+    RET(create_file("CreateFileA", name, A32(1), A32(4), A32(5)), 7);
+}
+/* The W call: the same file, named in UTF-16. */
+static void k_CreateFileW(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024];
+    if (!w || !*w) { hle_set_last_error(ERROR_PATH_NOT_FOUND); RET(INVALID_HANDLE, 7); }
+    if (!hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_INVALID_NAME); RET(INVALID_HANDLE, 7); }
+    RET(create_file("CreateFileW", name, A32(1), A32(4), A32(5)), 7);
 }
 
 static void k_ReadFile(void) {                           /* (h,buf,n,&read,ovl) */
@@ -409,6 +427,7 @@ typedef struct {
     DIR *d, *base;
     char dir[1024], base_dir[1024], mask[260];
     int dots;
+    int wide;                    /* the caller asked for WIN32_FIND_DATAW */
     found_t *names;
     int n, at;
 } hfind;
@@ -443,12 +462,14 @@ static int wild(const char *m, const char *s) {
 }
 
 /* WIN32_FIND_DATAA: attrs, 3 FILETIMEs, size high/low, 2 reserved,
- * cFileName[260], cAlternateFileName[14]: 320 bytes. */
-static void fill_find(uint32_t o, const char *dir, const char *name) {
+ * cFileName[260], cAlternateFileName[14]: 320 bytes.  The W form is the same
+ * fields with WCHAR names: cFileName at 44 (520 bytes) and cAlternateFileName
+ * at 564, so 592 bytes. */
+static void fill_find(uint32_t o, const char *dir, const char *name, int wide) {
     char full[1300];
     struct stat st;
     snprintf(full, sizeof full, "%s/%s", dir, name);
-    memset(hle_ptr(o), 0, 320);
+    memset(hle_ptr(o), 0, wide ? 592 : 320);
     if (stat(full, &st) == 0) {
         MEM32(o) = attrs_of(&st);
         put_ft(o + 4, unix_to_ft(st.st_mtim.tv_sec, st.st_mtim.tv_nsec));
@@ -456,7 +477,12 @@ static void fill_find(uint32_t o, const char *dir, const char *name) {
         put_ft(o + 20, unix_to_ft(st.st_mtim.tv_sec, st.st_mtim.tv_nsec));
         MEM32(o + 28) = (uint32_t)((uint64_t)st.st_size >> 32), MEM32(o + 32) = (uint32_t)st.st_size;
     }
-    strncpy((char *)hle_ptr(o + 44), name, 259);
+    if (!wide) { strncpy((char *)hle_ptr(o + 44), name, 259); return; }
+    uint16_t wname[260];
+    if (hle_ansi_to_wide(name, wname, 260)) {
+        size_t len = strlen(name);
+        memcpy(hle_ptr(o + 44), wname, (len + 1) * sizeof(uint16_t));
+    }
 }
 
 static int listed(const hfind *f, const char *name) {
@@ -477,18 +503,20 @@ static void list_dir(hfind *f, DIR *d, int base) {
 static int find_next(hfind *f, uint32_t out) {
     if (f->at >= f->n) return 0;
     found_t *e = &f->names[f->at++];
-    fill_find(out, e->base ? f->base_dir : f->dir, e->name);
+    fill_find(out, e->base ? f->base_dir : f->dir, e->name, f->wide);
     return 1;
 }
 
-static void k_FindFirstFileA(void) {                     /* (pattern, &data) */
+/* The body of FindFirstFileA/W: `pat` is the ANSI pattern, `wide` picks the
+ * WIN32_FIND_DATA the handle will fill in. */
+static uint32_t find_first(const char *what, const char *pat, uint32_t out, int wide) {
     static int closer_set;
     if (!closer_set) hle_handle_set_closer(HLE_H_FIND, find_closer), closer_set = 1;
-    const char *pat = ASTR(0);
     const char *sl = pat ? pat + strlen(pat) : NULL;
-    if (!pat) RET(INVALID_HANDLE, 2);
+    if (!pat) return INVALID_HANDLE;
     while (sl > pat && sl[-1] != '\\' && sl[-1] != '/' && sl[-1] != ':') sl--;
     hfind *f = (hfind *)calloc(1, sizeof *f);
+    f->wide = wide;
     char gdir[1024];
     snprintf(gdir, sizeof gdir, "%.*s", (int)(sl - pat), pat);
     if (!gdir[0]) snprintf(gdir, sizeof gdir, ".");
@@ -507,30 +535,46 @@ static void k_FindFirstFileA(void) {                     /* (pattern, &data) */
         if (hle_host_path(pat, one, sizeof one) && stat(one, &st) == 0) {
             char *b = strrchr(one, '/');                 /* the overlay's or the game's, wherever it is */
             if (b) *b = 0;
-            fill_find(A32(1), b ? (one[0] ? one : "/") : ".", b ? b + 1 : one);
+            fill_find(out, b ? (one[0] ? one : "/") : ".", b ? b + 1 : one, wide);
             uint32_t h = hle_handle_alloc(HLE_H_FIND, f);
-            RET(h ? h : INVALID_HANDLE, 2);
+            return h ? h : INVALID_HANDLE;
         }
         free(f);
-        if (hle_filetrace()) fprintf(stderr, "[file] FindFirstFileA \"%s\": not found\n", pat);
+        if (hle_filetrace()) fprintf(stderr, "[file] %s \"%s\": not found\n", what, pat);
         hle_set_last_error(ERROR_FILE_NOT_FOUND);
-        RET(INVALID_HANDLE, 2);
+        return INVALID_HANDLE;
     }
     f->d = opendir(f->dir);
     list_dir(f, f->d, 0);
     list_dir(f, f->base, 1);
     if (f->n) qsort(f->names, (size_t)f->n, sizeof *f->names, by_name);
-    if (!f->d || !find_next(f, A32(1))) {
+    if (!f->d || !find_next(f, out)) {
         find_closer(f);
-        if (hle_filetrace()) fprintf(stderr, "[file] FindFirstFileA \"%s\": not found\n", pat);
+        if (hle_filetrace()) fprintf(stderr, "[file] %s \"%s\": not found\n", what, pat);
         hle_set_last_error(ERROR_FILE_NOT_FOUND);
-        RET(INVALID_HANDLE, 2);
+        return INVALID_HANDLE;
     }
-    if (hle_filetrace()) fprintf(stderr, "[file] FindFirstFileA \"%s\" in %s\n", pat, f->dir);
+    if (hle_filetrace()) fprintf(stderr, "[file] %s \"%s\" in %s\n", what, pat, f->dir);
     uint32_t h = hle_handle_alloc(HLE_H_FIND, f);
-    RET(h ? h : INVALID_HANDLE, 2);
+    return h ? h : INVALID_HANDLE;
+}
+static void k_FindFirstFileA(void) {                     /* (pattern, &data) */
+    RET(find_first("FindFirstFileA", ASTR(0), A32(1), 0), 2);
+}
+static void k_FindFirstFileW(void) {                     /* (pattern, &data) */
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char pat[1024];
+    if (!w || !*w) { hle_set_last_error(ERROR_PATH_NOT_FOUND); RET(INVALID_HANDLE, 2); }
+    if (!hle_wide_to_ansi(w, pat, sizeof pat)) { hle_set_last_error(ERROR_INVALID_NAME); RET(INVALID_HANDLE, 2); }
+    RET(find_first("FindFirstFileW", pat, A32(1), 1), 2);
 }
 static void k_FindNextFileA(void) {
+    hfind *f = (hfind *)hle_handle_obj(A32(0), HLE_H_FIND);
+    if (f && find_next(f, A32(1))) RET(1, 2);
+    hle_set_last_error(ERROR_NO_MORE_FILES);
+    RET(0, 2);
+}
+static void k_FindNextFileW(void) {
     hfind *f = (hfind *)hle_handle_obj(A32(0), HLE_H_FIND);
     if (f && find_next(f, A32(1))) RET(1, 2);
     hle_set_last_error(ERROR_NO_MORE_FILES);
@@ -791,7 +835,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "OpenFile", k_OpenFile }, { "_hread", k__lread }, { "_hwrite", k__lwrite },
     { "_lopen", k__lopen }, { "_lcreat", k__lcreat }, { "_lread", k__lread },
     { "_lwrite", k__lwrite }, { "_lclose", k__lclose }, { "_llseek", k__llseek },
-    { "CreateFileA",                k_CreateFileA },
+    { "CreateFileA",                k_CreateFileA }, { "CreateFileW", k_CreateFileW },
     { "ReadFile",                   k_ReadFile },
     { "WriteFile",                  k_WriteFile },
     { "SetFilePointer",             k_SetFilePointer },
@@ -810,8 +854,8 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "DeleteFileA",                k_DeleteFileA },
     { "MoveFileA",                  k_MoveFileA },
     { "CopyFileA",                  k_CopyFileA },
-    { "FindFirstFileA",             k_FindFirstFileA },
-    { "FindNextFileA",              k_FindNextFileA },
+    { "FindFirstFileA",             k_FindFirstFileA }, { "FindFirstFileW", k_FindFirstFileW },
+    { "FindNextFileA",              k_FindNextFileA }, { "FindNextFileW", k_FindNextFileW },
     { "FindClose",                  k_FindClose },
     { "GetDiskFreeSpaceA",          k_GetDiskFreeSpaceA },
     { "GetVolumeInformationA",      k_GetVolumeInformationA },

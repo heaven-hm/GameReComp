@@ -422,6 +422,33 @@ static int to_narrow(uint16_t w) {
     for (int i = 0; i < 32; i++) if (g_cp1252_hi[i] == w) return 0x80 + i;
     return -1;
 }
+/* The same mapping for the W file calls in kernel32_ext.c, which take a guest
+ * UTF-16 path and must hand the layer's ANSI one to hle_host_path.  Returns 0
+ * if a character has no ANSI form (the caller fails the call, as Windows would
+ * with a codepage that cannot represent it) or the string does not fit. */
+int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n) {
+    if (!w || !out || !n) return 0;
+    size_t i = 0;
+    for (; w[i]; i++) {
+        if (i + 1 >= n) return 0;
+        int c = to_narrow(w[i]);
+        if (c < 0) return 0;
+        out[i] = (char)c;
+    }
+    out[i] = 0;
+    return 1;
+}
+/* The other direction, for a WIN32_FIND_DATAW's cFileName. */
+int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n) {
+    if (!s || !out || !n) return 0;
+    size_t i = 0;
+    for (; s[i]; i++) {
+        if (i + 1 >= n) return 0;
+        out[i] = to_wide((uint8_t)s[i]);
+    }
+    out[i] = 0;
+    return 1;
+}
 static void k_MultiByteToWideChar(void) {          /* (cp,fl,src,srcN,dst,dstN) */
     const uint8_t *src = (const uint8_t *)APTR(2);
     int srcN = (int)A32(3), dstN = (int)A32(5);
