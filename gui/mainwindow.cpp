@@ -5,7 +5,9 @@
 #include <QApplication>
 #include <QDir>
 #include <QFileDialog>
+#include <QCheckBox>
 #include <QFileInfo>
+#include <QListWidget>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -96,9 +98,14 @@ void MainWindow::buildUi()
 
     auto *runRow = new QHBoxLayout;
     m_runButton = new QPushButton(QStringLiteral("Run pipeline"), paths);
+    m_capture = new QCheckBox(QStringLiteral("capture frames"), paths);
+    m_capture->setToolTip(QStringLiteral(
+        "Sets RECOMP_SCREENSHOT for the run and shows what the rebuilt game drew. "
+        "Frames are evidence of what was rendered, not of what was played."));
     m_summary = new QLabel(QStringLiteral("no project loaded"), paths);
     m_summary->setWordWrap(true);
     runRow->addWidget(m_runButton);
+    runRow->addWidget(m_capture);
     runRow->addWidget(m_summary, 1);
     form->addRow(QString(), runRow);
 
@@ -189,6 +196,18 @@ void MainWindow::buildUi()
     m_buildView->setPlaceholderText(QStringLiteral("no manifest.json in this project"));
     m_tabs->addTab(m_buildView, QStringLiteral("Build"));
 
+    auto *frames = new QWidget(m_tabs);
+    auto *framesLayout = new QHBoxLayout(frames);
+    m_frameList = new QListWidget(frames);
+    m_frameList->setMaximumWidth(240);
+    m_frameView = new QLabel(frames);
+    m_frameView->setAlignment(Qt::AlignCenter);
+    m_frameView->setMinimumSize(320, 240);
+    m_frameView->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    framesLayout->addWidget(m_frameList);
+    framesLayout->addWidget(m_frameView, 1);
+    m_tabs->addTab(frames, QStringLiteral("Frames"));
+
     m_log = new QPlainTextEdit(m_tabs);
     m_log->setReadOnly(true);
     m_log->setPlaceholderText(QStringLiteral("pipeline output appears here as it runs"));
@@ -208,6 +227,21 @@ void MainWindow::buildUi()
     connect(m_functions, &QTableWidget::cellClicked, this,
             [this](int row, int) { showFunction(row); });
     connect(m_search, &QLineEdit::textChanged, this, [this](const QString &) { refresh(); });
+    connect(m_frameList, &QListWidget::currentRowChanged, this, [this](int row) {
+        const QStringList f = m_model.frames();
+        if (row < 0 || row >= f.size())
+            return;
+        QPixmap px(f[row]);
+        if (px.isNull()) {
+            m_frameView->setText(QStringLiteral("cannot read %1").arg(f[row]));
+            return;
+        }
+        m_frameView->setPixmap(px.scaled(m_frameView->size(), Qt::KeepAspectRatio,
+                                         Qt::SmoothTransformation));
+        m_frameView->setToolTip(QStringLiteral("%1  (%2x%3)")
+                                    .arg(QFileInfo(f[row]).fileName())
+                                    .arg(px.width()).arg(px.height()));
+    });
     connect(m_pePath, &QLineEdit::editingFinished, this, &MainWindow::validatePe);
     refreshToolStatus();
 }
@@ -363,6 +397,20 @@ void MainWindow::refresh()
         m_buildView->moveCursor(QTextCursor::Start);
     }
 
+    m_frameList->clear();
+    for (const QString &f : m_model.frames())
+        m_frameList->addItem(QFileInfo(f).fileName());
+    if (m_model.frames().isEmpty()) {
+        m_frameView->setPixmap(QPixmap());
+        m_frameView->setText(
+            m_model.framesDir().isEmpty()
+                ? QStringLiteral("No frames were captured for this project.\n\n"
+                                 "Tick \"capture frames\" before a run and the rebuilt game's own "
+                                 "drawing is saved here -- that is evidence of what it rendered, "
+                                 "not of what was played.")
+                : QStringLiteral("A screenshots directory exists but is empty."));
+    }
+
     m_stages->resizeColumnToContents(0);
     m_stages->resizeColumnToContents(1);
 
@@ -456,6 +504,14 @@ void MainWindow::runPipeline()
                      QStringLiteral("--timeout"), QStringLiteral("12"), QStringLiteral("--no-table")};
     if (!m_assets->text().trimmed().isEmpty())
         args << QStringLiteral("--assets-dir") << m_assets->text().trimmed();
+
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    if (m_capture->isChecked()) {
+        const QString shots = QDir(dir).filePath(QStringLiteral("screenshots"));
+        QDir().mkpath(shots);
+        env.insert(QStringLiteral("RECOMP_SCREENSHOT"), shots);
+        m_proc->setProcessEnvironment(env);
+    }
 
     m_log->clear();
     m_log->appendPlainText(QStringLiteral("$ ./%1").arg(args.join(QLatin1Char(' '))));

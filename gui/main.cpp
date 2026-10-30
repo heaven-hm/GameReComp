@@ -65,6 +65,10 @@ static int selftest(const QString &dir, const QString &repoRoot)
             out << (b.digestsMatch ? "digests MATCH (binary built from this source)"
                                    : "DIGESTS DIFFER") << "\n";
     }
+    out << "frames:       " << model.frames().size()
+        << (model.framesDir().isEmpty() ? QStringLiteral(" (no screenshots directory)")
+                                        : QStringLiteral(" in %1").arg(model.framesDir()))
+        << "\n";
     out << "toolchain:    " << (present.isEmpty() ? QStringLiteral("none") : present.join(QStringLiteral(", ")))
         << (missing.isEmpty() ? QString() : QStringLiteral(" | missing: ") + missing.join(QStringLiteral(", ")))
         << " | sdl2: " << (sdl ? "present" : "MISSING") << "\n";

@@ -76,6 +76,12 @@ public:
     // loaded separately because it is evidence for the pipeline as a whole.
     void loadCertifiedIndex(const QString &repoRoot);
 
+    // Frames a run captured, as files it actually wrote. Empty when the run was
+    // not asked to capture any -- which is reported rather than shown as "none",
+    // because "did not look" and "looked and found nothing" are different.
+    QStringList frames() const { return m_frames; }
+    QString framesDir() const { return m_framesDir; }
+
     // Counts the GUI shows. They are sums over the rows above, never estimates.
     int countCategory(const QString &category) const;
 
@@ -87,4 +93,6 @@ private:
     QVector<FunctionRow> m_functions;
     QVector<CertifiedRow> m_certified;
     BuildInfo m_build;
+    QStringList m_frames;
+    QString m_framesDir;
 };

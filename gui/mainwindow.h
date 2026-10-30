@@ -16,6 +16,8 @@ class QTableWidget;
 class QTreeWidget;
 class QTabWidget;
 class QPushButton;
+class QListWidget;
+class QCheckBox;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -55,6 +57,9 @@ private:
     QPlainTextEdit *m_buildView = nullptr;
     QTabWidget *m_tabs = nullptr;
     QPushButton *m_runButton = nullptr;
+    QLabel *m_frameView = nullptr;
+    QListWidget *m_frameList = nullptr;
+    QCheckBox *m_capture = nullptr;
     QLabel *m_peCheck = nullptr;
     QLabel *m_tools = nullptr;
 };

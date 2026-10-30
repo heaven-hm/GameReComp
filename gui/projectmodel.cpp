@@ -72,6 +72,18 @@ bool ProjectModel::load(const QString &dir, QString *error)
     // The high-level modules the pipeline actually applied, with their
     // provenance. A category without verified_by is shown as it is recorded;
     // the GUI does not upgrade or downgrade it.
+    m_frames.clear();
+    m_framesDir.clear();
+    // Frames live where a screenshot-enabled run put them. Sorted by name, which
+    // is the order they were written.
+    QDir shots(QDir(dir).filePath(QStringLiteral("screenshots")));
+    if (shots.exists()) {
+        m_framesDir = shots.absolutePath();
+        for (const QString &f : shots.entryList({QStringLiteral("*.png"), QStringLiteral("*.bmp")},
+                                                QDir::Files, QDir::Name))
+            m_frames.append(shots.absoluteFilePath(f));
+    }
+
     m_build = BuildInfo{};
     const QJsonObject manifest = readJson(QDir(dir).filePath(QStringLiteral("manifest.json")), &ok);
     if (ok) {
