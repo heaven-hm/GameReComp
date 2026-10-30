@@ -108,6 +108,42 @@ display changes nothing — confirmed: identical exit code and profile in both
 modes. **NEEDS-DISPLAY is empty for this corpus**, and any earlier claim that
 gunroar SIGBUSes at the GL NULL was wrong; the SDL path is never reached.
 
+### The crash, narrowed
+
+Follow-up measurements (lldb on the rebuilt binary, and the lifted C beside it):
+
+1. The call is a **virtual call**, not the `.CRT$XIA` initializer path: lifted
+   `sub_0041D894` at original `0x0041D8D9` does
+   `eax = [0x4BB200]; edx = [eax]; ICALL([edx+0x60])` after pushing three
+   arguments. (`0x004281FC` is also registered in `.CRT$XIA`; that is not the
+   path taken here.)
+2. Measured at the callee's entry, from the guest stack:
+   `[esp] = 0xdead0000` (the lifted call's synthetic return address) and the
+   arguments `(0x0041DAA4, 0x00000000, 0x10500410)`. `0x0041DAA4` is exactly the
+   constant the lifted caller pushes at `0x0041D8D4`, which confirms the call
+   site.
+3. `eax` at entry is `0x10500400` — the value of the global `[0x4BB200]`, i.e.
+   the receiver of the virtual call. The callee's first act is
+   `mov [ebp-0x1C], eax`, so the object pointer is what it goes on to use.
+4. The callee then takes `ecx = [[ebp-0x1C]+0xC]` (a table the object carries),
+   writes the first argument to `[ecx+0x78]`, and calls lifted `sub_00428714`
+   with that table and the second argument (0) as an index. That helper returns
+   `[table+0x44][0]` **only** when the index lies within
+   `[table+0x38, table+0x3C]` and `[table+0x40] == 1`; otherwise it returns 0.
+   It returned 0, and the caller dereferences it at `+0x28` without a NULL
+   check, exactly as the original does.
+5. The two `GetProcAddress` gaps below were implemented (FLS and
+   `InitializeCriticalSectionAndSpinCount`, commit `b9105bb`) and the crash is
+   **unchanged** — so they are ruled out as the cause.
+
+So the NULL is a **lookup miss on a table the object carries at `+0xC`**: either
+the index is outside the table's bounds or the table's kind field is not 1. The
+next measurement is to read `[0x4BB200]`, the object there, its `+0xC` field and
+that table's `+0x38`/`+0x3C`/`+0x40`/`+0x44` at the fault and compare them with
+what the original would hold. Candidates, none yet confirmed: an object whose
+table was never built because a constructor took an early path, or a field this
+layer leaves zero where Windows leaves something else.
+
 ## Two runtime gaps the sweep turned up on the way
 
 Both are visible in the non-trace output of several rows and are **not** why any
