@@ -43,6 +43,35 @@ markup is not decoration: it carries per-token source locations back to the
 original instructions, which is what a later pass needs to prove that a renamed
 identifier still refers to the same code. So the stripped text is what gets
 compiled and the markup is kept beside it.
+
+## The provider's headers, for bodies that need its types and helpers
+
+`emit-c-as-single-file` strips the function bodies but leaves `#include
+"types-and-globals.h"` and `#include "helpers.h"` at the top, so a body that uses
+a recovered `struct_N`, or the x87 wrappers (`helper_fpush_wrapper`,
+`helper_fstp_*`) that rev.ng emits for float-to-x87 spills, cannot compile without
+them. Three artifacts plus three support headers produce a compiling pair:
+
+    export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"
+    PROJ=highlevel/<game>/.revng-project          # project mode caches the model
+    docker run --platform linux/amd64 --rm -v "$PWD:/work" revng/revng \
+      sh -c "cd /work/$PROJ && revng project init /work/.revng-in/<game>.exe"
+    docker run --platform linux/amd64 --rm -v "$PWD:/work" revng/revng \
+      sh -c "cd /work/$PROJ && revng project artifact emit-helper-header" \
+      > highlevel/<game>/helpers.ptml
+    docker run --platform linux/amd64 --rm -v "$PWD:/work" revng/revng \
+      sh -c "cd /work/$PROJ && revng project artifact emit-type-and-global-header" \
+      > highlevel/<game>/types-and-globals.ptml
+    docker run --platform linux/amd64 --rm -v "$PWD:/work/highlevel/<game>:/out" \
+      revng/revng sh -c 'cp /revng/root/share/revng/include/attributes.h \
+        /revng/root/share/revng/include/primitive-types.h \
+        /revng/root/share/revng/include/runtime-library.h /out/'
+
+then `ptml_to_c` each `.ptml`. `types-and-globals.h` includes the three support
+headers and `helpers.h` needs `types-and-globals.h` first; included in that order
+the pair compiles. Project mode matters: `quick artifact` re-runs the whole
+analysis for each artifact, which on a 1.4 MB game through an emulated container
+is hours apiece, while the cached model makes each extra artifact cheap.
 """
 
 import html

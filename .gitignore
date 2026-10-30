@@ -84,3 +84,12 @@ highlevel/*/revng
 # rev.ng project mode: one analysis, then cheap artifacts.
 .revng-project/
 highlevel/*/.revng-project/
+# rev.ng's generated headers for a whole game: 760 KB of recovered type layouts
+# and x87 helper declarations, derived from the binary. Regenerate with the
+# recipe in tools/autorecomp/revng.py.
+highlevel/*/types-and-globals.h
+highlevel/*/helpers.h
+highlevel/*/attributes.h
+highlevel/*/primitive-types.h
+highlevel/*/runtime-library.h
+highlevel/*/*.ptml
