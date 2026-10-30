@@ -1295,6 +1295,57 @@ static void u_p_commode(void) { ms_init(); RETC(g_commode_va); }
 /* _set_fmode(mode): set the default file translation mode. */
 static void u_set_fmode(void) { ms_init(); MEM32(g_fmode_va) = A32(0); RETC(0); }
 
+/* ---- vcruntime140 ----
+ * The MSVC C++ runtime is a deliberate non-goal (see README: msvcp140 and the
+ * exception machinery need guest SEH and a C++ library ABI).  These five are
+ * not that: they are the small CRT helpers a vcruntime140-linked build calls
+ * around its C++ objects, and each one can be answered for real.
+ *
+ * __std_exception_data is { const char *_What; char _DoFree; } - 8 bytes, the
+ * pointer at 0 and the flag at 4 - and the copy/destroy pair is exactly the
+ * MSVC runtime's: copy the what-string when the source owns it, free it when
+ * the destination owns it.  (Wine's include/msvcrt/vcruntime_exception.h and
+ * the std::exception bodies that use them are the reference.)
+ *
+ * __telemetry_main_invoke_trigger/return_trigger take one argument (the
+ * binary's call site pushes one and pops it: entry0 at 0x00410942 in
+ * TrackEditor.exe) and do nothing here, because there is no telemetry backend
+ * to trigger - the CRT's own path is a no-op with telemetry off. */
+static void u_std_exception_copy(void) {                 /* (const src, dst) */
+    ms_init();
+    uint32_t src = A32(0), dst = A32(1);
+    if (!src || !dst) RETCV();
+    uint32_t what = MEM32(src);
+    MEM32(dst) = what;
+    MEM8(dst + 4) = 0;
+    if (MEM8(src + 4) && what) {                         /* the source owns it: take a copy */
+        const char *p = (const char *)hle_ptr(what);
+        MEM32(dst) = hle_guest_strdup(p);
+        MEM8(dst + 4) = MEM32(dst) ? 1 : 0;
+    }
+    RETCV();
+}
+static void u_std_exception_destroy(void) {              /* (data) */
+    ms_init();
+    uint32_t d = A32(0);
+    if (!d) RETCV();
+    if (MEM8(d + 4) && MEM32(d)) hle_free(hle_ptr(MEM32(d)));
+    MEM32(d) = 0;
+    MEM8(d + 4) = 0;
+    RETCV();
+}
+static void u_telemetry_trigger(void) { ms_init(); RETCV(); }   /* no telemetry backend to trigger */
+/* __vcrt_InitializeCriticalSectionEx(cs, spinCount, flags): the same guest
+ * CRITICAL_SECTION kernel32.c initialises (24 bytes, owner at 0, count at 4). */
+static void u_vcrt_InitializeCriticalSectionEx(void) {
+    ms_init();
+    uint32_t cs = A32(0);
+    if (!cs) RETC(0);
+    memset(hle_ptr(cs), 0, 24);
+    MEM32(cs + 4) = 0xFFFFFFFFu;
+    RETC(1);
+}
+
 /* _crt_atexit: the CRT's own atexit, the same chain msvcrt's atexit uses. */
 static void u_crt_atexit(void) {
     ms_init();
@@ -1500,6 +1551,11 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "_configthreadlocale",          u_configthreadlocale },
     { "__p__commode",                 u_p_commode },
     { "_set_fmode",                   u_set_fmode },
+    { "__std_exception_copy",         u_std_exception_copy },
+    { "__std_exception_destroy",      u_std_exception_destroy },
+    { "__telemetry_main_invoke_trigger", u_telemetry_trigger },
+    { "__telemetry_main_return_trigger", u_telemetry_trigger },
+    { "__vcrt_InitializeCriticalSectionEx", u_vcrt_InitializeCriticalSectionEx },
     { "_initialize_onexit_table",     u_initialize_onexit_table },
     { "_register_onexit_function",    u_register_onexit_function },
     { "_crt_atexit",                  u_crt_atexit },
