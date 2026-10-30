@@ -99,6 +99,14 @@ uint32_t recomp_host_run(void) {
 
 int recomp_host_main(int argc, char **argv) {
     if (argc < 2) { fprintf(stderr, "usage: %s <image.exe> [args...]\n", argv[0]); return 64; }
+    /* RECOMP_TRACE=1 logs every import dispatch. Without a hook the only way
+     * to see which shim a guest reaches was to recompile the layer, which is
+     * what made the last audit report "no shim-level runtime trace" as a
+     * method limit. */
+    {
+        const char *trace = getenv("RECOMP_TRACE");
+        win32hle_trace = trace && *trace && *trace != '0';
+    }
     recomp_host_init();
     int rc = recomp_host_boot(argv[1]);
     if (rc) return rc;
