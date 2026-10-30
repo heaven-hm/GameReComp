@@ -6,42 +6,54 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-10-30T04:33:23Z by `python -m tools.gamesdb`. Measured 19; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-10-30T06:57:44Z by `python -m tools.gamesdb`. Measured 23; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
-Best measured result: **Ikachan** (dxIka.exe) at 93/100, partial: process launched and exited 1; no oracle supplied.
+Best measured result: **Cave Story** (DoConfig.exe) at 85/100, launch-failed: rebuilt process boot-failed (exit 2).
 
 ## Measured by this repository
 
 | Game | Filename | Arch | OS | PASS /100 | Status | Evidence |
 | --- | --- | --- | --- | ---: | --- | --- |
-| Ikachan | dxIka.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/ikachan/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | DoConfig.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/cavestory-doconfig/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | Doukutsu.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/cavestory-doukutsu/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | OrgView.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/cavestory-orgview/reports/report.html (host: Darwin arm64 (host build)) |
 | GeneRally | GeneRally.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/generally/reports/report.html (host: Darwin arm64 (host build)) |
-| GeneRally | TrackEditor.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/generally-trackeditor/reports/report.html (host: Darwin arm64 (host build)) |
-| Gunroar | gr.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/gunroar/reports/report.html (host: Darwin arm64 (host build)) |
-| Hero Core | herocore gm5.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore-gm5/reports/report.html (host: Darwin arm64 (host build)) |
-| Hero Core | herocore gm7.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore-gm7/reports/report.html (host: Darwin arm64 (host build)) |
-| Noiz2sa | noiz2sa.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/noiz2sa/reports/report.html (host: Darwin arm64 (host build)) |
-| Parsec47 | p47.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/parsec47/reports/report.html (host: Darwin arm64 (host build)) |
-| Torus Trooper | tt.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/torus-trooper/reports/report.html (host: Darwin arm64 (host build)) |
-| Tumiki Fighters | tf.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/tumiki-fighters/reports/report.html (host: Darwin arm64 (host build)) |
-| Warning Forever | wf.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/warning-forever/reports/report.html (host: Darwin arm64 (host build)) |
-| rRootage | rr.exe | i386 (PE32) | Windows | 85 | launch-failed: rebuilt process boot-failed (exit 2) | projects/rrootage/reports/report.html (host: Darwin arm64 (host build)) |
+| Gunroar | gr.exe | i386 (PE32) | Windows | 77 | launch-failed: rebuilt process crashed (exit -10) | projects/gr/reports/report.html (host: Darwin arm64 (host build)) |
+| GeneRally | TrackEditor.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/TrackEditor/reports/report.html (host: Darwin arm64 (host build)) |
+| Hero Core | herocore gm5.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore_gm5/reports/report.html (host: Darwin arm64 (host build)) |
+| OpenTyrian | opentyrian.exe | x86-64 (PE32+) | Windows | 10 | not-run: verification did not run | projects/opentyrian/reports/report.html |
+| Pixeltetris | Pixeltetris.exe | x86-64 (PE32+) | Windows | 10 | not-run: verification did not run | projects/Pixeltetris/reports/report.html |
+| Snake | snake-windows-x86_64.exe | x86-64 (PE32+) | Windows | 10 | not-run: verification did not run | projects/snake_windows_x86_64/reports/report.html |
+| data | file0001.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/file0001/reports/report.html |
+| data | file0002.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/file0002/reports/report.html |
+| data | helpme.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/helpme/reports/report.html |
+| data | netarena.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/netarena/reports/report.html |
+| data | netipx.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/netipx/reports/report.html |
+| data | netmodem.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/netmodem/reports/report.html |
+| data | netterm.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/netterm/reports/report.html |
+| data | order.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/order/reports/report.html |
+| data | rtm.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/rtm/reports/report.html |
+| data | setup.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/setup/reports/report.html |
+| data | shipedit.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/shipedit/reports/report.html |
+| data | tyrian.exe | ? (?) | Windows | 10 | not-run: verification did not run | projects/tyrian/reports/report.html |
 | Cannonball | cannonball.exe | x86-64 (PE32+) | Windows | 0 | not-run: verification did not run | projects/cannonball/reports/report.html |
-| OpenTyrian | opentyrian.exe | x86-64 (PE32+) | Windows | 0 | not-run: verification did not run | projects/opentyrian/reports/report.html |
-| Pixeltetris | Pixeltetris.exe | x86-64 (PE32+) | Windows | 0 | not-run: verification did not run | projects/pixeltetris/reports/report.html |
-| Snake | snake-windows-x86_64.exe | x86-64 (PE32+) | Windows | 0 | not-run: verification did not run | projects/snake/reports/report.html |
 
 ## Local corpus (not yet measured)
 
 | Game | Filename | Arch | OS | PASS /100 | Status | Evidence |
 | --- | --- | --- | --- | ---: | --- | --- |
 | Cannonball | cannonball.exe | x86-64 (PE32+) | Windows | 0 | not yet run; PE32+ backend not implemented (pipeline fails closed) | sha256 6a631fecc563 |
+| Hero Core | herocore gm7.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at arpl 0x40113a | sha256 9146fc64eb67 |
+| Ikachan | dxIka.exe | i386 (PE32) | Windows | 0 | legacy engine: built, exited 3 at kernel32.dll!OpenMutexA; PCRecomp experiment reached the title screen | sha256 22923218ba97 |
+| Noiz2sa | noiz2sa.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at arpl; follow-up lifted 384,200/384,200 and built, 60 imports missing | sha256 389af5a46ee8 |
 | OpenTyrian | opentyrian.exe | x86-64 (PE32+) | Windows | 0 | not yet run; PE32+ backend not implemented (pipeline fails closed) | sha256 8eb615e58e38 |
+| Parsec47 | p47.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at jcxz 0x4246df | sha256 41b2f77d2d7a |
 | Pixeltetris | Pixeltetris.exe | x86-64 (PE32+) | Windows | 0 | not yet run; PE32+ backend not implemented (pipeline fails closed) | sha256 3eabbe4a4de9 |
 | Snake | snake-windows-x86_64.exe | x86-64 (PE32+) | Windows | 0 | not yet run; PE32+ backend not implemented (pipeline fails closed) | sha256 207d311be674 |
+| Torus Trooper | tt.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at jcxz; follow-up lifted 126,497/126,497, 102 imports missing | sha256 b3a93b12e110 |
+| Tumiki Fighters | tf.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at jcxz 0x41c69b | sha256 8e77d496d636 |
+| Warning Forever | wf.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at cmpltpd 0x434830 | sha256 5eb8095ed202 |
+| rRootage | rr.exe | i386 (PE32) | Windows | 0 | legacy engine: lift stopped at arpl; follow-up 354,584/354,601 (17 movd unsupported) | sha256 f3d81d702573 |
 
 ### Corpus files that are not PE executables
 

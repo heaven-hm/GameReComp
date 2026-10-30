@@ -6,36 +6,48 @@ Every game this product knows about, in one table: the locally supplied corpus t
 
 **Port details** are read from each project's own `reports/report.json`: functions recovered, generated C, the rebuilt binary, imports the runtime bound, and the low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed high-level source.
 
-Updated 2026-10-30T04:33:23Z by `python -m tools.gamesdb --matrix`.
+Updated 2026-10-30T06:57:44Z by `python -m tools.gamesdb --matrix`.
 
 ## This repository (measured)
 
 | Name | OS | Arch | Port details | Working status |
 | --- | --- | --- | --- | --- |
 | Cannonball | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
-| Cave Story | Windows | i386 (PE32) | 406 fns recovered; 2 units / 4.1 MiB C; binary DoConfig 1301 KiB; 88 imports bound, 2 unresolved; low-level 406/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Cave Story | Windows | i386 (PE32) | 3260 fns recovered; 8 units / 50.7 MiB C; binary Doukutsu 8368 KiB; 137 imports bound, 6 unresolved; low-level 3260/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Cave Story | Windows | i386 (PE32) | 551 fns recovered; 2 units / 5.4 MiB C; binary OrgView 1517 KiB; 120 imports bound, 2 unresolved; low-level 551/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| GeneRally | Windows | i386 (PE32) | 2577 fns recovered; 46 units / 373.9 MiB C; low-level 2577/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/GeneRally/logs/compile.log | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| GeneRally | Windows | i386 (PE32) | 311 fns recovered; 2 units / 7.0 MiB C; binary TrackEditor 2152 KiB; 88 imports bound, 59 unresolved; low-level 311/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Gunroar | Windows | i386 (PE32) | 3288 fns recovered; 5 units / 19.6 MiB C; binary gr 7174 KiB; 63 imports bound, 73 unresolved; low-level 3288/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Hero Core | Windows | i386 (PE32) | 12424 fns recovered; 14 units / 59.4 MiB C; binary herocore_gm5 17276 KiB; 353 imports bound, 160 unresolved; low-level 12424/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Hero Core | Windows | i386 (PE32) | 15788 fns recovered; 18 units / 79.6 MiB C; binary herocore_gm7 22159 KiB; 356 imports bound, 176 unresolved; low-level 15788/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Ikachan | Windows | i386 (PE32) | 482 fns recovered; 3 units / 9.6 MiB C; binary dxIka 2175 KiB; 97 imports bound; low-level 482/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
-| Noiz2sa | Windows | i386 (PE32) | 3024 fns recovered; 6 units / 36.3 MiB C; low-level 3024/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/noiz2sa/logs/compile.log) | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| Cave Story | Windows | i386 (PE32) | 406 fns recovered; 2 units / 4.1 MiB C; binary DoConfig 1486 KiB; 88 imports bound, 2 unresolved; low-level 406/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| Cave Story | Windows | i386 (PE32) | 3260 fns recovered; 8 units / 50.7 MiB C; binary Doukutsu 8537 KiB; 137 imports bound, 6 unresolved; low-level 3260/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| Cave Story | Windows | i386 (PE32) | 551 fns recovered; 2 units / 5.4 MiB C; binary OrgView 1718 KiB; 120 imports bound, 2 unresolved; low-level 551/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| GeneRally | Windows | i386 (PE32) | 2577 fns recovered; 46 units / 373.9 MiB C; binary GeneRally 90321 KiB; 114 imports bound, 92 unresolved; low-level 2577/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| GeneRally | Windows | i386 (PE32) | 311 fns recovered; 2 units / 7.0 MiB C; binary TrackEditor 2302 KiB; 119 imports bound, 28 unresolved; low-level 311/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| Gunroar | Windows | i386 (PE32) | 3288 fns recovered; 5 units / 19.6 MiB C; binary gr 7215 KiB; 136 imports bound; low-level 3288/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process crashed (exit -10) |
+| Hero Core | Windows | i386 (PE32) | 12424 fns recovered; 14 units / 59.4 MiB C; binary herocore_gm5 17443 KiB; 361 imports bound, 152 unresolved; low-level 12424/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | OpenTyrian | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
-| Parsec47 | Windows | i386 (PE32) | 1930 fns recovered; 3 units / 13.2 MiB C; binary p47 4355 KiB; 61 imports bound, 90 unresolved; low-level 1930/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Pixeltetris | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
 | Snake | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
-| Torus Trooper | Windows | i386 (PE32) | 2342 fns recovered; 4 units / 15.1 MiB C; binary tt 5035 KiB; 61 imports bound, 94 unresolved; low-level 2342/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Tumiki Fighters | Windows | i386 (PE32) | 1760 fns recovered; 3 units / 12.0 MiB C; binary tf 3830 KiB; 59 imports bound, 86 unresolved; low-level 1760/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Warning Forever | Windows | i386 (PE32) | 2624 fns recovered; 6 units / 33.6 MiB C; binary wf 7193 KiB; 141 imports bound, 6 unresolved; low-level 2624/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| rRootage | Windows | i386 (PE32) | 3199 fns recovered; 7 units / 41.3 MiB C; binary rr 9895 KiB; 18 imports bound, 146 unresolved; low-level 3199/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid NT Headers signature. Probably a NE file' Traceback (most recent call last): | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid NT Headers signature.' Traceback (most recent call last):   File "/Users/has | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid NT Headers signature.' Traceback (most recent call last):   File "/Users/has | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid NT Headers signature.' Traceback (most recent call last):   File "/Users/has | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid e_lfanew value, probably not a PE file' Traceback (most recent call last): | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid e_lfanew value, probably not a PE file' Traceback (most recent call last): | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid NT Headers signature.' Traceback (most recent call last):   File "/Users/has | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid e_lfanew value, probably not a PE file' Traceback (most recent call last): | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid e_lfanew value, probably not a PE file' Traceback (most recent call last): | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid NT Headers signature. Probably a NE file' Traceback (most recent call last): | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid NT Headers signature. Probably a NE file' Traceback (most recent call last): | NOT RUN |
+| data | Windows | ? (?) | inspect failed: PEFormatError: 'Invalid NT Headers signature.' Traceback (most recent call last):   File "/Users/has | NOT RUN |
 
 ## This repository (not measured)
 
 | Name | OS | Arch | Port details | Working status |
 | --- | --- | --- | --- | --- |
+| Hero Core | Windows | i386 (PE32) | not run by this pipeline | NOT RUN |
+| Ikachan | Windows | i386 (PE32) | not run by this pipeline | NOT RUN |
+| Noiz2sa | Windows | i386 (PE32) | not run by this pipeline | NOT RUN |
+| Parsec47 | Windows | i386 (PE32) | not run by this pipeline | NOT RUN |
+| Torus Trooper | Windows | i386 (PE32) | not run by this pipeline | NOT RUN |
+| Tumiki Fighters | Windows | i386 (PE32) | not run by this pipeline | NOT RUN |
+| Warning Forever | Windows | i386 (PE32) | not run by this pipeline | NOT RUN |
+| rRootage | Windows | i386 (PE32) | not run by this pipeline | NOT RUN |
 | OpenTyrian | DOS | not a PE | data file shipped with the game, not an executable | NOT APPLICABLE |
 | OpenTyrian | DOS | not a PE | data file shipped with the game, not an executable | NOT APPLICABLE |
 | OpenTyrian | DOS | not a PE | data file shipped with the game, not an executable | NOT APPLICABLE |
