@@ -74,7 +74,7 @@ is written for all of these:
 | `storage.c` | structured storage on compound files in Windows' format (`StgCreateDocfile`, `IStorage`, `IStream`, `OleSaveToStream`) |
 | `advapi32.c` | an in-memory registry (seeded by the host, optionally saved to a file); COMCTL32, VERSION, SHELL32 |
 | `present.c` | the plain SDL2 layer for a GDI game: the gdi32 framebuffer in a window |
-| `*_selftest.c` | synthetic lifted guests driving the spine, the loader, the host, the pump and present, headless, and the GDI and mmio shims called as a guest calls them; `build_selftests.sh` builds and runs them |
+| `*_selftest.c` | synthetic lifted guests driving the spine, the loader, the host, the pump and present, headless, and the GDI and mmio shims called as a guest calls them; `d3d7_selftest.c` drives the Direct3D 7 facade and (opt-in) a real device over GL; `build_selftests.sh` builds and runs them |
 
 ## State (what's real, what's next)
 
@@ -179,3 +179,13 @@ same way; `HLE_MEM_BASE=0x100000000000ull` with either puts the guest's memory
 at that fixed address. Prereqs on Debian/Ubuntu: `dpkg --add-architecture i386; apt
 install gcc-multilib libsdl2-dev:i386 libsdl2-ttf-dev:i386` (`libsdl2-dev
 libsdl2-ttf-dev` for `HLE_BASED=1`); on a Mac, `brew install sdl2 sdl2_ttf`.
+
+`d3d7_selftest.c` is the one exception to "headless": the dummy driver has no
+OpenGL, so the script runs it on a GL-capable driver (the caller's
+`SDL_VIDEODRIVER`, else `cocoa`/`x11`) and reports `skip` when none is
+available. It checks the Direct3D 7 facade by default; the device half needs a
+real context and is opt-in:
+
+```
+D3D7_SELFTEST_DEVICE=1 runtime/win32hle/build_selftests.sh
+```
