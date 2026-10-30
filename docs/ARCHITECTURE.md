@@ -43,7 +43,57 @@ project 10, compile 20, run 15, verify 15, report 10). A `partial` verification
 earns 8 of its 15; `not-run` and `launch-failed` earn 0. The score measures
 pipeline completion for the recorded hash, not game equivalence.
 
+## The source pipeline: evidence → name → generate → certify
+
+The stages above produce the low-level fallback. Beside them, and separate on
+purpose, runs a chain that turns a provider's decompilation into typed C and then
+**proves** the result against the original's machine code. None of it is part of
+the scored pipeline, because none of it is needed for a game to run — it exists to
+make the delivered source readable and to say how much of it is verified.
+
+| Step | Tool | Output |
+|---|---|---|
+| decompile | `tools/autorecomp/revng.py` | rev.ng's C for the whole PE, one function at a time |
+| evidence | `tools/autorecomp/rename_evidence.py` | per-identity records: imports called, strings referenced, format strings, constants, global and struct-field accesses with widths, the calling convention from the function's own epilogue |
+| name | `rename_evidence.name_all` | three counts — `named_semantic`, `named_structured`, `no_evidence` — with every name mapped back to the records behind it |
+| generate | `tools/autorecomp/rename_gen.py` | typed C: guest accesses through `MEMn`, `Model.classify()` at every boundary, memory fused into locals, plus a guest-ABI adapter |
+| certify | `tools/lift/difftest.py --project --source` | a verdict per address, from the original's bytes under Unicorn |
+
+Two properties of this chain matter more than its stages.
+
+**The provider is an input, not an authority.** rev.ng emits `undef()` where it
+could not determine a value, empty bodies where it could not decompile, and — as
+measured — coherent-looking C for bytes that are not code. Every one of those is a
+refusal here, not something to reconcile. The frame loop's core, `0x00481BB0`, is
+refused with 180 `undef()` values in its body; the low-level fallback carries it.
+
+**The certification is evidence, not proof.** `diff()` compares a named set of
+observables and the verdict says which. A generated module is plain C, so it models
+its return value and the memory it writes — not the guest's other registers, and not
+its flags. `reports/retracted/` holds the case that justifies the caution: two
+modules the oracle still certifies that the project refuses, because the oracle
+compares **values** and cannot see that a memory operand was a host local's value
+rather than a guest address. The retraction was made by a rule; no amount of oracle
+running would have caught it.
+
+The verdicts, and what each one claims:
+
+| verdict | claim |
+|---|---|
+| `agree` | `eax` and the bytes of every absolute guest address the body names match on the entry states driven |
+| `agree-return` | the return value matches, for a function the original's bytes show writes no guest memory and calls nothing |
+| `agree-memory` | the named memory matches; `eax` is not comparable because the provider recovered the function as returning nothing |
+| `agree-frame` | the guest stack frame was compared byte for byte, in addition to the above |
+| `nothing-compared` | no observable was compared — never a pass |
+| `diverge` | a real difference in the compared state |
+| `original-faulted` | the reference machine could not be driven from the seeded state |
+| `harness-failed` | the comparison could not be built or run |
+
+`reports/certified/` carries every certified address with its generated module and
+its verdict JSON, so the published count can be reconstructed rather than believed.
+
 ## Function recovery
+
 
 `discover_functions()` in `tools/lift/translator.py` seeds the PE entry point
 and every export, then runs the static scanner in `tools/disasm` plus the
