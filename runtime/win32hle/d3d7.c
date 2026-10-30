@@ -332,7 +332,8 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
                          uint32_t vertex_count, uint32_t indices, uint32_t index_count) {
     unsigned mode=gl_primitive(primitive); uint32_t stride=vertex_stride(fvf);
     if(!g_scene_active || !load_gl() || mode==0xffffffffu || !stride || !vertices) return 0;
-    if(vertex_count>1000000u || index_count>3000000u) return 0;
+    if(!vertex_count || (indices && !index_count) || (!indices && index_count) ||
+       vertex_count>1000000u || index_count>3000000u) return 0;
     const uint16_t *idx=indices?(const uint16_t *)hle_ptr(indices):NULL;
     const uint8_t *base=hle_ptr(vertices);
     if(idx) {
@@ -911,10 +912,29 @@ static void dev_get_render_state(void) {
     MEM32(p)=g_render[s];
     RET(D3D_OK,3);
 }
-static void dev_draw_primitive(void) { uint32_t n=A32(4);RET(draw_vertices(A32(1),A32(2),A32(3),n,0,0)?D3D_OK:D3DERR_INVALIDCALL,6); }
-static void dev_draw_indexed_primitive(void) { RET(draw_vertices(A32(1),A32(2),A32(3),A32(4),A32(5),A32(6))?D3D_OK:D3DERR_INVALIDCALL,8); }
-static void dev_draw_vb(void) { uint32_t vb=A32(2),start=A32(3),count=A32(4),stride=vertex_stride(MEM32(vb+16));RET(draw_vertices(A32(1),MEM32(vb+16),MEM32(vb+8)+start*stride,count,0,0)?D3D_OK:D3DERR_INVALIDCALL,6); }
-static void dev_draw_indexed_vb(void) { uint32_t vb=A32(2),start=A32(3),count=A32(4),stride=vertex_stride(MEM32(vb+16));RET(draw_vertices(A32(1),MEM32(vb+16),MEM32(vb+8)+start*stride,count,A32(5),A32(6))?D3D_OK:D3DERR_INVALIDCALL,8); }
+static void dev_draw_primitive(void) {
+    uint32_t n=A32(4);
+    RET(draw_vertices(A32(1),A32(2),A32(3),n,0,0)?D3D_OK:D3DERR_INVALIDCALL,6);
+}
+static void dev_draw_indexed_primitive(void) {
+    uint32_t indices=A32(5),index_count=A32(6);
+    if(!indices || !index_count) RET(D3DERR_INVALIDCALL,8);
+    RET(draw_vertices(A32(1),A32(2),A32(3),A32(4),indices,index_count)?D3D_OK:D3DERR_INVALIDCALL,8);
+}
+static void dev_draw_vb(void) {
+    uint32_t vb=A32(2),start=A32(3),count=A32(4);
+    if(!vb || MEM32(vb)!=g_vb_vt) RET(D3DERR_INVALIDCALL,6);
+    uint32_t fvf=MEM32(vb+16),stride=vertex_stride(fvf),capacity=stride?MEM32(vb+12)/stride:0;
+    if(!stride || start>capacity || count>capacity-start) RET(D3DERR_INVALIDCALL,6);
+    RET(draw_vertices(A32(1),fvf,MEM32(vb+8)+start*stride,count,0,0)?D3D_OK:D3DERR_INVALIDCALL,6);
+}
+static void dev_draw_indexed_vb(void) {
+    uint32_t vb=A32(2),start=A32(3),count=A32(4),indices=A32(5),index_count=A32(6);
+    if(!vb || MEM32(vb)!=g_vb_vt || !indices || !index_count) RET(D3DERR_INVALIDCALL,8);
+    uint32_t fvf=MEM32(vb+16),stride=vertex_stride(fvf),capacity=stride?MEM32(vb+12)/stride:0;
+    if(!stride || start>capacity || count>capacity-start) RET(D3DERR_INVALIDCALL,8);
+    RET(draw_vertices(A32(1),fvf,MEM32(vb+8)+start*stride,count,indices,index_count)?D3D_OK:D3DERR_INVALIDCALL,8);
+}
 
 /* Device methods are added in the next section of this file. */
 uint32_t hle_d3d7_create(void) {
