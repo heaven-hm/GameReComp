@@ -1250,14 +1250,21 @@ def pe_sections(pe_path):
 
 
 def pe_image(pe_path):
-    """{va: bytes} for every section, clipped to the comparison window."""
+    """{va: bytes} for every section, clipped to the comparison window.
+
+    The window is the IMAGE's extent, not a fixed 256 KB: `oracle_window` was
+    fixed for the register/stack side and this function kept the old constant, so
+    a 1.4 MB game's .data was never mapped and every function that reads a global
+    outside 0x440000 faulted on the reference machine. That surfaced as
+    'original-faulted' and was misread as a limit of synthetic entry states."""
     data = Path(pe_path).read_bytes()
     _, secs = pe_sections(pe_path)
+    _lo, _size = oracle_window(pe_path)
     img = {}
     for name, va, vsize, raw_off, raw_size in secs:
         n = min(raw_size, vsize if vsize else raw_size)
-        lo = max(va, BASE)
-        hi = min(va + n, BASE + SIZE)
+        lo = max(va, _lo)
+        hi = min(va + n, _lo + _size)
         if hi <= lo:
             continue
         img[lo] = data[raw_off + (lo - va): raw_off + (hi - va)]
@@ -1490,9 +1497,17 @@ def run_unicorn_function(pe_path, va, named, seed_of, cases):
         mu.mem_write(stack, struct.pack('<I', sentinel))
         for a in named:
             mu.mem_write(a, struct.pack('<I', seed_of(c)))
-        regs = {'eax': 0x11111111 * (c + 1) & 0xFFFFFFFF, 'ecx': 0x22222222 * (c + 1) & 0xFFFFFFFF,
-                'edx': 0x33333333 * (c + 1) & 0xFFFFFFFF, 'ebx': 0x44444444 * (c + 1) & 0xFFFFFFFF,
-                'esi': 0x55555555 * (c + 1) & 0xFFFFFFFF, 'edi': 0x66666666 * (c + 1) & 0xFFFFFFFF,
+        # Every seed - registers and the named memory - holds the SAME value for
+        # a case. Distinct per-register patterns made a coherence test impossible:
+        # __security_check_cookie compares ecx against a cookie in .data, and with
+        # unrelated seeds it always took the failure path, which faults on the
+        # report routine's own reads. That fault was reported as 'original-faulted'
+        # and read as a limit of synthetic entry states; the actual cause was the
+        # seeds disagreeing. A capture is still the better fix (it is coherent by
+        # construction) - this makes the synthetic state coherent by choice.
+        one = seed_of(c)
+        regs = {'eax': one, 'ecx': one, 'edx': one, 'ebx': one,
+                'esi': one, 'edi': one,
                 'ebp': 0, 'esp': stack}
         for name, val in regs.items():
             mu.reg_write(UC_REGS[name], val)

@@ -46,6 +46,11 @@ from tools.autorecomp.rename_evidence import collect
 # Documented facts a name may cite, with where the fact comes from. A pair here
 # is not a guess: these constants together are the specific generator, and the
 # citation is what makes the word in the name traceable.
+# The documented default __security_cookie of the Microsoft C runtime. A function
+# that compares ecx against a global holding it is the stack-cookie check - the
+# value is the citation, not the word.
+SECURITY_COOKIE_DEFAULT = 0xBB40E64E
+
 DOCUMENTED = [
     {
         "constants": (0x000343FD, 0x00269EC3),
@@ -112,12 +117,32 @@ def _block_shape(records):
     return vas[0]
 
 
+def _security_check_cookie(records):
+    """MSVC `__security_check_cookie`, from a documented value and the shape.
+
+    Documented, not guessed: 0xBB40E64E is the default __security_cookie that the
+    Microsoft C runtime initialises, and `cmp ecx, [cookie] / jne / ret` is the
+    check the compiler emits at the end of a function with a stack cookie. The
+    value is the citation - the word is the standard library's, not ours."""
+    globals_ = [r for r in records if r["kind"] == "references_global"]
+    if len(globals_) != 1 or globals_[0].get("initial_value") != SECURITY_COOKIE_DEFAULT:
+        return None
+    text = " ".join(r["evidence"] for r in records)
+    if "cmp ecx" in text and "ret" in text:
+        return "msvc_security_check_cookie"
+    return None
+
+
 def name_function(fn, identities, va=None):
     """(name, kind, evidence records) for one function."""
     va = va or fn.get("address", "0x00000000")
     records = _records(fn)
     imports, calls = _call_counts(records)
     doc = documented_match(records)
+    cookie = _security_check_cookie(records)
+    if cookie:
+        return (cookie, "named_semantic",
+                [r for r in records if r["kind"] == "references_global"])
     block = _block_shape(records)
 
     # A documented constant set is meaning, not shape: the constants ARE the

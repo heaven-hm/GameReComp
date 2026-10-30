@@ -237,6 +237,25 @@ def plausible_start(pe_path, va):
     return True, ""
 
 
+def initial_dword(pe_path, va):
+    """The dword a global holds in the PE image before the program runs, or None.
+
+    For a runtime helper the initial value is often the strongest evidence there
+    is: MSVC's default __security_cookie is 0xBB40E64E, and `cmp ecx, [0x498B20]`
+    against a global holding that value is the documented stack-cookie check."""
+    try:
+        loaded = pe_loaded(pe_path)
+        for name, sva, vsize, roff, rsize in loaded["secs"]:
+            if sva <= va < sva + max(vsize, 1):
+                off = roff + (va - sva)
+                chunk = loaded["data"][off:off + 4]
+                if len(chunk) == 4:
+                    return int.from_bytes(chunk, "little")
+    except Exception:
+        return None
+    return None
+
+
 def evidence_for_function(pe_path, va, imports, revng_dir=None, end=None):
     """The evidence records for one function, keyed by identity."""
     insns, ret_form = function_instructions(pe_path, va, end=end)
@@ -274,6 +293,8 @@ def evidence_for_function(pe_path, va, imports, revng_dir=None, end=None):
                         recs.append({"kind": "references_global", "identity": f"global:0x{tgt & ~3:08X}",
                                      "at": f"0x{at:08X}", "va": f"0x{tgt & ~3:08X}",
                                      "width": 2 ** ((tgt - (tgt & ~3))),
+                                     # the IMAGE value is evidence in its own right
+                                     "initial_value": initial_dword(pe_path, tgt & ~3),
                                      "evidence": f"{mnem} {insn.op_str}"})
             elif op.type == X86_OP_IMM:
                 v = op.imm & 0xFFFFFFFF

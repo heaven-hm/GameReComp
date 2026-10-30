@@ -330,6 +330,14 @@ def rewrite(body, segment_base, own_va=None):
                             f"(e.g. 0x{int(callers[0],16):08X}): a call into another lifted body "
                             f"needs that function's guest-ABI entry, which this module model "
                             f"does not marshal")
+    # an EMPTY provider body means rev.ng named an address it could not
+    # decompile. Generating it produces a function that does nothing where the
+    # original does something - worse than refusing, because it looks certifiable.
+    # The oracle caught exactly this on 0x00480DC1 (a __security_check_cookie that
+    # rev.ng emitted as `{}`), returning 0 where the original returned eax.
+    if not (fn.body.block_items or []):
+        raise Unsupportable("the provider body is EMPTY: it named an address it could not "
+                            "decompile, so there is nothing to generate")
     model = Model(segment_base)
     new_body = model.function(fn)
     # the function's own declaration, retyped
