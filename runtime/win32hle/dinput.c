@@ -297,6 +297,40 @@ static void dev_Release(void) {
     RET(0, 1);
 }
 
+/* ---- IDirectInputDevice2/7 additions ----
+ * A game that asks for IDirectInputDevice7 gets a pointer whose vtable has to
+ * have ALL of the interface's slots, because it indexes them by offset and
+ * cannot know how long the table is. Cave Story's Doukutsu calls slot 0x64
+ * (Poll) once per frame: with a table that stopped at Initialize the read ran
+ * past the end into unrelated guest memory and it called whatever it found
+ * (VA 0x80), every frame, forever.
+ *
+ * So the force-feedback half is present and answers what a keyboard and a mouse
+ * truthfully are: no effects, no feedback state, nothing to escape to. Windows
+ * returns DIERR_UNSUPPORTED for a device with no force feedback, and
+ * DIERR_NOTSUPPORTED is what a caller checks for -- it does not make the game
+ * think a rumble motor exists. */
+static void dev_CreateEffect(void) { RET(DIERR_UNSUPPORTED, 6); }
+static void dev_EnumEffects(void) { RET(DI_OK, 4); }          /* enumerates none */
+static void dev_GetEffectInfo(void) { RET(DIERR_UNSUPPORTED, 3); }
+static void dev_GetForceFeedbackState(void) { RET(DIERR_UNSUPPORTED, 2); }
+static void dev_SendForceFeedbackCommand(void) { RET(DIERR_UNSUPPORTED, 2); }
+static void dev_EnumCreatedEffectObjects(void) { RET(DI_OK, 4); }   /* there are none */
+static void dev_Escape(void) { RET(DIERR_UNSUPPORTED, 3); }   /* no driver-specific escape */
+/* Poll re-reads the device. For a keyboard and a mouse there is no hardware
+ * buffer to drain, so it is the same state GetDeviceState returns; the call is
+ * real, it just has nothing extra to do. */
+static void dev_Poll(void) {
+    int i = dev_index(A32(0));
+    if (i < 0) RET(DIERR_INVALIDPARAM, 1);
+    if (!g_dev[i].acquired) RET(DIERR_NOTACQUIRED, 1);
+    SDL_PumpEvents();
+    RET(DI_OK, 1);
+}
+static void dev_SendDeviceData(void) { RET(DI_OK, 4); }       /* no output report to send */
+static void dev_EnumEffectsInFile(void) { RET(DI_OK, 5); }    /* no effects in the file */
+static void dev_WriteEffectToFile(void) { RET(DIERR_UNSUPPORTED, 5); }
+
 /* ---- IDirectInput ---- */
 static void di_QueryInterface(void) {
     uint32_t self = A32(0), out = A32(2);
@@ -401,6 +435,19 @@ static void build_vtables(void) {
         { "IDirectInputDevice::GetDeviceInfo", dev_GetDeviceInfo },
         { "IDirectInputDevice::RunControlPanel", dev_RunControlPanel },
         { "IDirectInputDevice::Initialize", dev_Initialize },
+        /* IDirectInputDevice2/7. The order is the interface: a caller indexes
+         * by offset, so these must follow Initialize and must all be present. */
+        { "IDirectInputDevice::CreateEffect", dev_CreateEffect },
+        { "IDirectInputDevice::EnumEffects", dev_EnumEffects },
+        { "IDirectInputDevice::GetEffectInfo", dev_GetEffectInfo },
+        { "IDirectInputDevice::GetForceFeedbackState", dev_GetForceFeedbackState },
+        { "IDirectInputDevice::SendForceFeedbackCommand", dev_SendForceFeedbackCommand },
+        { "IDirectInputDevice::EnumCreatedEffectObjects", dev_EnumCreatedEffectObjects },
+        { "IDirectInputDevice::Escape", dev_Escape },
+        { "IDirectInputDevice::Poll", dev_Poll },
+        { "IDirectInputDevice::SendDeviceData", dev_SendDeviceData },
+        { "IDirectInputDevice::EnumEffectsInFile", dev_EnumEffectsInFile },
+        { "IDirectInputDevice::WriteEffectToFile", dev_WriteEffectToFile },
         { 0, 0 }
     };
     g_vt_di = hle_com_vtable(di);
