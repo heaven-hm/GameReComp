@@ -21,7 +21,8 @@ enum { GL_POINTS=0x0000, GL_LINES=0x0001, GL_LINE_STRIP=0x0003,
        GL_DEPTH_BUFFER_BIT=0x0100, GL_STENCIL_BUFFER_BIT=0x0400,
        GL_MODELVIEW=0x1700, GL_PROJECTION=0x1701, GL_TEXTURE=0x1702,
        GL_DEPTH_TEST=0x0B71, GL_BLEND=0x0BE2, GL_CULL_FACE=0x0B44,
-       GL_ALPHA_TEST=0x0BC0, GL_FOG=0x0B60, GL_SCISSOR_TEST=0x0C11,
+       GL_ALPHA_TEST=0x0BC0, GL_FOG=0x0B60, GL_FOG_MODE=0x0B65,
+       GL_EXP=0x0800, GL_EXP2=0x0801, GL_SCISSOR_TEST=0x0C11,
        GL_SCISSOR_BOX=0x0C10, GL_VIEWPORT=0x0BA2, GL_LESS=0x0201,
        GL_COLOR_WRITEMASK=0x0C23, GL_DEPTH_WRITEMASK=0x0B72,
        GL_STENCIL_WRITEMASK=0x0B98, GL_COLOR_CLEAR_VALUE=0x0C22,
@@ -1215,7 +1216,7 @@ static void apply_color_material_state(void) {
 static int render_state_supported(uint32_t state) {
     switch(state) {
     case 7: case 8: case 9: case 14: case 19: case 20: case 22: case 23: case 24: case 25:
-    case 27: case 28: case 29: case 34: case 36: case 37: case 38:
+    case 27: case 28: case 29: case 34: case 35: case 36: case 37: case 38:
     case 137: case 139: case 141: case 142: case 143: case 145: case 146: case 147: case 148: case 152:
         return 1;
     default:
@@ -1240,6 +1241,8 @@ static int render_state_value_valid(uint32_t state,uint32_t value) {
         return value<=255;
     case 146: case 148:
         return value==0;
+    case 35:
+        return value<=3;
     case 152: {
         uint32_t mask=g_max_clip_planes?((1u<<g_max_clip_planes)-1u):0u;
         return (value&~mask)==0;
@@ -1266,8 +1269,14 @@ static void dev_set_render_state(void) {
     case 23: p_depth_func(gl_cmp(v));break;
     case 24: case 25: p_alpha(gl_cmp(g_render[25]?g_render[25]:8),(float)(g_render[24]&255)/255.f);break;
     case 27: if(v)p_enable(GL_BLEND);else p_disable(GL_BLEND);break;
-    case 28: if(v)p_enable(GL_FOG);else p_disable(GL_FOG);break;
+    case 28: if(v && g_render[35])p_enable(GL_FOG);else p_disable(GL_FOG);break;
     case 34: {float f[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_fogfv(0x0B66,f);break;}
+    case 35:
+        if(v==1)p_fogi(GL_FOG_MODE,GL_EXP);
+        else if(v==2)p_fogi(GL_FOG_MODE,GL_EXP2);
+        else if(v==3)p_fogi(GL_FOG_MODE,GL_LINEAR);
+        if(v && g_render[28])p_enable(GL_FOG);else p_disable(GL_FOG);
+        break;
     case 36: case 37: case 38: {float f;memcpy(&f,&v,4);p_fogf(s==36?0x0B63:s==37?0x0B64:0x0B62,f);break;}
     case 137: if(v)p_enable(GL_LIGHTING);else p_disable(GL_LIGHTING);break;
     case 139: {float a[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,a);break;}
