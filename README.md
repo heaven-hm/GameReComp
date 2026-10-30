@@ -1,16 +1,54 @@
-# RevEng-Studio
+# GameReComp
 
 <p align="center">
-  <img src="assets/recomp-studio-logo.png" alt="RevEng-Studio logo" width="220">
+  <img src="assets/recomp-studio-logo.png" alt="GameReComp logo" width="220">
 </p>
 
-**A Windows PC game executable in, inspectable C source and a native binary out — with the verification to prove it.**
+**Turn old Windows PC games into playable, moddable, portable games with genuinely human-readable source code — automatically.**
 
-RevEng-Studio is a source-first reconstruction workbench for Windows PC games. One
-command takes a game you legally own, recovers its code, turns it into C you can
-read and edit, builds a native executable **from exactly that source**, runs it,
-and writes a fail-closed report on what was and was not proved. The desktop GUI
-over the same backend is designed but not shipped; the CLI is the product today.
+**GameReComp** is a game-focused preservation, reconstruction, modding,
+and native-porting platform. Its long-term mission is **broad compatibility
+across legacy Windows PC games**, not one hand-reconstructed game at a time.
+Given a game executable and assets you legally own, the intended unattended
+workflow reconstructs understandable, editable C/C++ source, builds a native
+executable **from that exact source**, checks gameplay against the original,
+and packages the result for preservation, modding, and platform ports.
+
+### What the product is designed to deliver
+
+- **Playable and independently verified:** Rebuilt games should pass
+  reproducible original-vs-rebuilt gameplay scenarios, not merely compile or
+  display a title screen. Verification reports distinguish tested coverage
+  from unverified behaviour.
+- **Actually human-readable C/C++:** Recover meaningful types, identifiers,
+  structs, functions, and natural control flow, not just `eax`/`esp`
+  register-transfer C or prettier pseudocode. Unrecovered functions remain
+  explicitly labelled low-level fallbacks; original developer naming cannot
+  generally be guaranteed from stripped binaries.
+- **Moddable at the source level:** Developers should be able to change game
+  logic, rebuild the native executable, and demonstrate the modification
+  working in-game.
+- **Portable and maintainable:** Reuse a common compatibility runtime and
+  platform backends so recovered game logic can target modern operating
+  systems without a bespoke rewrite for each game.
+- **Broad automated compatibility:** Support many older Windows PC games,
+  engines, executable formats, and middleware through reusable infrastructure
+  and honest compatibility reporting—not a promise that every game works today.
+- **Unattended, non-AI-first processing:** PCRecomp supplies recompilation
+  and Windows-game runtime foundations; rev.ng is the intended primary
+  high-level structural-source provider. Deterministic analysis comes first;
+  AI is **optional** for extra semantic readability. No manual per-function
+  reconstruction should be required by the intended workflow. The desktop
+  GUI is planned over this same backend.
+
+**Differentiator:** Not another decompiler or game-specific recompilation
+script. GameReComp aims to make **verified native game ports with genuinely
+modifiable, human-readable source** reproducible across a large catalogue of
+legacy Windows games.
+
+The current implementation is an early CLI vertical slice; human-readable
+source, verified gameplay, broad native ports, and the GUI described above are
+**product goals, not completed features**.
 
 > **Status: v0.1.0 — first vertical slice.** The whole pipeline runs end to end and
 > is measured: 19 corpus rows, one game (Ikachan) that binds every import and
@@ -37,14 +75,14 @@ licence texts are in [`docs/LICENSES.md`](docs/LICENSES.md) and [`NOTICE`](NOTIC
 Where this repository extends upstream code, the file keeps its upstream notice
 and the change is recorded in [`CHANGELOG.md`](CHANGELOG.md).
 
-## What RevEng-Studio adds
+## What GameReComp adds
 
 pcrecomp is a toolbox: many tools, each doing one job well, driven per project by
-that project's own `run_lift.py`. RevEng-Studio is the **product around that
+that project's own `run_lift.py`. GameReComp is the **product around that
 toolbox** — one command, one self-contained project, one report — with a
 deliberate source-first bias and a fail-closed verification story.
 
-| | pcrecomp (toolbox) | RevEng-Studio (product) |
+| | pcrecomp (toolbox) | GameReComp (product) |
 | --- | --- | --- |
 | Entry point | per-project `run_lift.py` drivers, tools called one at a time | `./RevEng game.exe` — inspect → recover → translate → project → compile → run → verify → report |
 | Output bias | lifted C that reproduces CPU state | the same, **plus** a labelled source-quality split (`HIGH_LEVEL_VERIFIED` / `HIGH_LEVEL_UNVERIFIED` / `LOW_LEVEL_FALLBACK` / `UNRESOLVED`) and a gate that refuses to relabel anything without evidence |
@@ -149,13 +187,13 @@ projects, unmeasured corpus entries and the upstream claims) is
 | Cave Story | Windows | i386 (PE32) | 406 fns recovered; 2 units / 4.1 MiB C; binary DoConfig 1301 KiB; 88 imports bound, 2 unresolved; low-level 406/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Cave Story | Windows | i386 (PE32) | 3260 fns recovered; 8 units / 50.7 MiB C; binary Doukutsu 8368 KiB; 137 imports bound, 6 unresolved; low-level 3260/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Cave Story | Windows | i386 (PE32) | 551 fns recovered; 2 units / 5.4 MiB C; binary OrgView 1517 KiB; 120 imports bound, 2 unresolved; low-level 551/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| GeneRally | Windows | i386 (PE32) | 2577 fns recovered; 46 units / 373.9 MiB C; low-level 2577/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/GeneRally/logs/compile.log | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| GeneRally | Windows | i386 (PE32) | 2577 fns recovered; 46 units / 373.9 MiB C; low-level 2577/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/GameReComp/projects/GeneRally/logs/compile.log | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | GeneRally | Windows | i386 (PE32) | 311 fns recovered; 2 units / 7.0 MiB C; binary TrackEditor 2152 KiB; 88 imports bound, 59 unresolved; low-level 311/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Gunroar | Windows | i386 (PE32) | 3288 fns recovered; 5 units / 19.6 MiB C; binary gr 7174 KiB; 63 imports bound, 73 unresolved; low-level 3288/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Hero Core | Windows | i386 (PE32) | 12424 fns recovered; 14 units / 59.4 MiB C; binary herocore_gm5 17276 KiB; 353 imports bound, 160 unresolved; low-level 12424/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Hero Core | Windows | i386 (PE32) | 15788 fns recovered; 18 units / 79.6 MiB C; binary herocore_gm7 22159 KiB; 356 imports bound, 176 unresolved; low-level 15788/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Ikachan | Windows | i386 (PE32) | 482 fns recovered; 3 units / 9.6 MiB C; binary dxIka 2175 KiB; 97 imports bound; low-level 482/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
-| Noiz2sa | Windows | i386 (PE32) | 3024 fns recovered; 6 units / 36.3 MiB C; low-level 3024/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/noiz2sa/logs/compile.log) | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| Noiz2sa | Windows | i386 (PE32) | 3024 fns recovered; 6 units / 36.3 MiB C; low-level 3024/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/GameReComp/projects/noiz2sa/logs/compile.log) | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | OpenTyrian | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
 | Parsec47 | Windows | i386 (PE32) | 1930 fns recovered; 3 units / 13.2 MiB C; binary p47 4355 KiB; 61 imports bound, 90 unresolved; low-level 1930/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Pixeltetris | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
