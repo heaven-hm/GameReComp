@@ -143,7 +143,79 @@ def ungeneratable_reason(body):
     return None
 
 
-def generate(pe_path, address, revng_dir, names, evidence, frames=False):
+def category_for(address, signatures):
+    """The manifest category a generated function may claim.
+
+    A call-bearing body can be GENERATED but not CERTIFIED: the oracle drives the
+    caller and compares its outputs, while the callee's effect happens inside the
+    call - the callee's named addresses are not in the caller's comparison. Until
+    the transitive closure is linked AND its named memory unioned (the design in
+    docs/VERIFICATION.md), a call-bearing module is HIGH_LEVEL_UNVERIFIED whatever
+    its own body would certify as. Presenting a generation count as a coverage win
+    is the exact overclaim this project exists to refuse.
+    """
+    if signatures.get(address, {}).get("calls"):
+        return "HIGH_LEVEL_UNVERIFIED"
+    return "HIGH_LEVEL_VERIFIED"
+
+
+def closure_of(address, signatures, cap=256):
+    """The caller plus its transitive callees, breadth-first, capped.
+
+    A generated module has to contain everything it calls: a call into a function
+    that is not in the module resolves to nothing. The cap protects the harness and
+    the diagnosis - a verification that quietly linked 200 functions would be slow
+    and would make a divergence hard to localise - and it is recorded in the result
+    either way.
+    """
+    from collections import deque
+    seen, order, q = {address}, [address], deque([address])
+    capped = False
+    while q:
+        cur = q.popleft()
+        for c in signatures.get(cur, {}).get("calls", []):
+            if c not in signatures or c in seen:
+                continue
+            if len(seen) >= cap:
+                capped = True
+                continue
+            seen.add(c)
+            order.append(c)
+            q.append(c)
+    return order, capped
+
+
+def generate_closure(pe_path, address, revng_dir, names, evidence, signatures,
+                     frames=True, cap=256):
+    """Every function in the caller's closure, generated as one module.
+
+    Returns ([(va, text)], reason) - all of them or none, because a module that
+    contains its caller but not a callee does not compile and would be a worse
+    artifact than a refusal.
+    """
+    order, capped = closure_of(address, signatures, cap)
+    if capped:
+        return [], f"the closure exceeds the {cap}-function cap; refusing rather than " \
+                   f"linking a partial module"
+    names_for_module = dict(names.get("functions", {}))
+    callee_names = {}
+    for va in order:
+        fn = names_for_module.get(f'0x{va:08X}')
+        if fn and fn.get("name"):
+            callee_names[va] = fn["name"]
+        else:
+            callee_names[va] = f"function_{va:08X}"
+    out = []
+    for va in order:
+        text, why = generate(pe_path, va, revng_dir, names, evidence, frames=frames,
+                             extra={"signatures": signatures, "callee_names": callee_names})
+        if text is None:
+            return [], f"0x{va:08X} (in the closure of 0x{address:08X}): {why}"
+        out.append((va, text))
+    return out, {"size": len(order), "capped": False}
+
+
+def generate(pe_path, address, revng_dir, names, evidence, frames=False, extra=None):
     """(file text, name) for one function, or (None, reason)."""
     rev = Path(revng_dir) / f'0x{address:08X}.c'
     if not rev.is_file():
@@ -195,7 +267,10 @@ def generate(pe_path, address, revng_dir, names, evidence, frames=False):
     # text transform below is only a fallback for bodies without pointers.
     ast_source, ast_notes = None, []
     try:
-        ast_source, ast_notes = rename_ast.rewrite(body, base, frames=frames)
+        _extra = extra or {}
+        ast_source, ast_notes = rename_ast.rewrite(
+            body, base, own_va=address, frames=frames,
+            signatures=_extra.get("signatures"), callee_names=_extra.get("callee_names"))
     except rename_ast.Unsupportable as e:
         return None, f"the AST model refuses this body: {e}"
     # the provider's comment block stays as provenance, then our header

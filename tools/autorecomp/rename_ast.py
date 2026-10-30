@@ -142,6 +142,58 @@ def parse(body):
     return fns[0]
 
 
+def parse_signatures(source_text, layouts):
+    """Every provider function's contract, from its own declaration and body.
+
+    A call is a boundary in both directions, so a caller has to know three things
+    about its callee before it can cross: what the callee takes, whether the callee
+    has a guest stack frame (and how big), and what the callee returns. All three are
+    in the provider's own C - the declaration for the first and third, the body for
+    the frame - so the contract is established where it is written rather than
+    discovered at link time.
+
+    Returns {va: {"ret", "params", "frame_size", "returns_struct"}}."""
+    import re as _r
+    lines = source_text.splitlines()
+    sigs = {}
+    for i, l in enumerate(lines):
+        m = _r.match(r"^[A-Za-z_]\w*[ \t]+(?:function_0x([0-9a-f]+)_Code_x86)\s*\(([^)]*)\)\s*\{", l)
+        if not m:
+            continue
+        va = int(m.group(1), 16)
+        ret = l.split("function_0x")[0].strip()
+        params = []
+        raw = m.group(2).strip()
+        if raw and raw != "void":
+            for part in raw.split(","):
+                bits = part.strip().rsplit(" ", 1)
+                ty, name = (bits[0], bits[1]) if len(bits) > 1 else (bits[0], "")
+                params.append({"type": ty.strip(), "name": name.strip()})
+        # the body: does it declare a provider stack frame, and how big is it
+        depth = 0
+        body = []
+        opened = False
+        for l2 in lines[i:]:
+            body.append(l2)
+            depth += l2.count("{") - l2.count("}")
+            if "{" in l2:
+                opened = True
+            if opened and depth <= 0:
+                break
+        text = "\n".join(body)
+        frame_size = None
+        fm = _r.search(r"\b(struct_\d+|union_\d+)\s+stack\s*;", text)
+        if fm:
+            frame_size = struct_size(fm.group(1))
+        calls = sorted({int(x, 16) for x in
+                        _r.findall(r"function_0x([0-9a-f]+)_Code_x86\s*\(", text)
+                        if int(x, 16) != va})
+        sigs[va] = {"ret": ret, "params": params, "frame_size": frame_size,
+                    "returns_struct": bool(_r.match(r"(struct|union)_\d+", ret)),
+                    "calls": calls}
+    return sigs
+
+
 def parse_layouts(header_text):
     """struct/union name -> {field name -> (offset, width)}.
 
@@ -207,6 +259,8 @@ class Model:
         self.frames_enabled = False
         self.address = 0
         self.pointer_types = {}     # pointer local -> provider struct it points at
+        self.signatures = {}        # callee VA -> declared contract
+        self.callee_names = {}      # callee VA -> generated function name
         self.segment_base = segment_base
         self.va_locals = {}        # var name -> width (a pointer that became a VA)
         self.scalar_locals = {}    # var name -> width
@@ -299,6 +353,11 @@ class Model:
             right = self.classify(node.right, where)
             if node.op in ("+", "-") and VA in (left, right):
                 return VA
+            # a bit-mask on an address is still an address: `x & 0xFFFFFFFF` is the
+            # provider's most common idiom (180 bodies were refused by treating it
+            # as a mixed-kind expression)
+            if node.op in ("&", "|", "^") and VA in (left, right):
+                return VA
             if left == SCALAR and right == SCALAR:
                 return SCALAR
             raise Boundary(f"{where}: arithmetic mixing a VA and a scalar "
@@ -309,7 +368,7 @@ class Model:
             if a == b:
                 return a
             raise Boundary(f"{where}: a conditional whose arms are {a} and {b} cannot cross")
-        if isinstance(node, c_ast.ExpressionList):
+        if isinstance(node, c_ast.ExprList):
             return SCALAR
         raise Boundary(f"{where}: a {type(node).__name__} is neither a VA nor a scalar")
 
@@ -437,6 +496,9 @@ class Model:
         if isinstance(node, c_ast.ExprList):
             return c_ast.ExprList(exprs=[self.expr(e, want_width) for e in node.exprs])
         if isinstance(node, c_ast.FuncCall):
+            callee = self._callee_va(node.name)
+            if callee is not None:
+                return self.marshal_call(callee, node)
             return c_ast.FuncCall(name=self.expr(node.name, want_width),
                                   args=self.expr(node.args, want_width) if node.args else None)
         if isinstance(node, c_ast.ID) and node.name == "segment_2":
@@ -445,6 +507,69 @@ class Model:
         if isinstance(node, c_ast.ID) and node.name in self.va_locals:
             return node
         return node
+
+    def _callee_va(self, func_node):
+        """The VA of a provider function call, or None for anything else."""
+        nm = getattr(func_node, "name", None)
+        if not nm:
+            return None
+        import re as _r
+        m = _r.fullmatch(r"function_0x([0-9a-f]+)_Code_x86", nm)
+        if not m:
+            return None
+        return int(m.group(1), 16)
+
+    def marshal_call(self, callee_va, node):
+        """Emit a call across the boundary from the callee's declared contract.
+
+        FRAME-FIRST: a callee with a guest stack frame takes that frame as its last
+        argument, so the caller owes it one. The frame nests BELOW the caller's,
+        because the guest stack grows down: callee frame = caller frame - callee
+        size. A caller that has no frame of its own cannot supply one and is
+        refused - never defaulted, because a default at a boundary that must carry
+        a guest VA is a value crossing unproven.
+
+        The RETURN crosses too. A scalar return is an ordinary value; a struct
+        return is the hidden-pointer convention (244 of 955 provider functions) and
+        is refused here rather than silently emitted as a by-value struct."""
+        sig = (self.signatures or {}).get(callee_va)
+        if sig is None:
+            raise Unsupportable(f"0x{self.address:08X}: calls 0x{callee_va:08X}, whose "
+                                f"contract is not in the provider's declarations")
+        name = (self.callee_names or {}).get(callee_va)
+        if name is None:
+            raise Unsupportable(f"0x{self.address:08X}: calls 0x{callee_va:08X}, which has no "
+                                f"generated entry in this module")
+        if sig["returns_struct"]:
+            raise Unsupportable(f"0x{self.address:08X}: calls 0x{callee_va:08X}, which returns "
+                                f"{sig['ret']} BY VALUE - the hidden-pointer return is a crossing "
+                                f"this marshal does not express")
+        args = []
+        actual = node.args.exprs if isinstance(node.args, c_ast.ExprList) else (
+            [node.args] if node.args is not None else [])
+        if len(actual) != len(sig["params"]):
+            raise Unsupportable(f"0x{self.address:08X}: calls 0x{callee_va:08X} with {len(actual)} "
+                                f"argument(s); its declaration takes {len(sig['params'])}")
+        for i, (arg, param) in enumerate(zip(actual, sig["params"])):
+            rewritten = self.expr(arg, 32)
+            try:
+                cls = self.classify(rewritten, f"0x{self.address:08X} call argument {i}")
+            except Boundary as e:
+                raise Unsupportable(str(e))
+            if cls not in (VA, SCALAR):
+                raise Unsupportable(f"0x{self.address:08X} call argument {i}: {cls} cannot cross")
+            args.append(rewritten)
+        if sig["frame_size"]:
+            if not self.frame_name:
+                raise Unsupportable(f"0x{self.address:08X}: calls 0x{callee_va:08X}, which has a "
+                                    f"{sig['frame_size']}-byte guest frame, but this caller has no "
+                                    f"frame of its own to nest it below")
+            nested = c_ast.BinaryOp(op="-", left=c_ast.ID("frame"),
+                                    right=c_ast.Constant(type="unsigned int",
+                                                         value=f"{sig['frame_size']}U"))
+            args.append(nested)
+        return c_ast.FuncCall(name=c_ast.ID(name),
+                              args=c_ast.ExprList(args) if args else None)
 
     def _struct_name_of(self, node):
         """(struct name, is_guest) for a field access's base.
@@ -507,7 +632,8 @@ class Model:
 
     def stmt(self, node):
         if isinstance(node, c_ast.Compound):
-            return c_ast.Compound(block_items=[self.stmt(s) for s in (node.block_items or [])])
+            items = [self.stmt(s) for s in (node.block_items or [])]
+            return c_ast.Compound(block_items=[i for i in items if i is not None])
         if isinstance(node, c_ast.Decl):
             d = self.decl(node)
             if d is None:
@@ -557,7 +683,8 @@ class Model:
         return body
 
 
-def rewrite(body, segment_base, own_va=None, layouts=None, frames=False):
+def rewrite(body, segment_base, own_va=None, layouts=None, frames=False,
+            signatures=None, callee_names=None):
     """(C source for the function with guest-VA pointers, notes) or Unsupportable."""
     import re as _pre
     # `undef(T)` is the provider's own marker for a value it could not define -
@@ -600,11 +727,10 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False):
         callers = [c for c in callers if int(c, 16) != own_va]
     elif callers:
         callers = callers[1:]           # drop the declaration when the VA is unknown
-    if callers:
+    if callers and not (signatures and callee_names):
         raise Unsupportable(f"calls {len(callers)} other lifted function(s) "
-                            f"(e.g. 0x{int(callers[0],16):08X}): a call into another lifted body "
-                            f"needs that function's guest-ABI entry, which this module model "
-                            f"does not marshal")
+                            f"(e.g. 0x{int(callers[0],16):08X}): no declared callee contract was "
+                            f"supplied, so the call cannot be marshalled")
     # `undef(T)` is the provider's own marker for a value it could not define -
     # primitive-types.h reads it from a special location. A body containing one
     # cannot be correct: the decompiler is saying it does not know. The x87
@@ -625,6 +751,8 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False):
                             "decompile, so there is nothing to generate")
     model = Model(segment_base, layouts)
     model.address = own_va or 0
+    model.signatures = signatures or {}
+    model.callee_names = callee_names or {}
     model.frames_enabled = frames
     new_body = model.function(fn)
     # the function's own declaration, retyped
