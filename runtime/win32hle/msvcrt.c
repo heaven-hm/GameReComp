@@ -309,16 +309,21 @@ static void g_stream_init(void) {
     for (int i = 3; i < MS_MAXSTREAM; i++) g_stream[i].fd = -1;
 }
 
+/* A guest FILE* is one of the _iob entries or an _iobuf this layer allocated,
+ * and every one of those is registered on its stream, so the lookup never has
+ * to dereference the pointer the guest passed.  The old fallback read
+ * va->_file, which turned a bad FILE* from a game bug into a host crash; a
+ * pointer that is not one of ours is now simply not a stream (EBADF). */
 static ms_stream *ms_slot_of_va(uint32_t va) {
-    if (!va || !g_iob_va) return NULL;
-    if (va >= g_iob_va && va < g_iob_va + NIOB * IOBUF) {
+    if (!va) return NULL;
+    if (g_iob_va && va >= g_iob_va && va < g_iob_va + NIOB * IOBUF) {
         uint32_t off = va - g_iob_va;
         if (off % IOBUF) return NULL;
         return g_stream[off / IOBUF].fp ? &g_stream[off / IOBUF] : NULL;
     }
-    uint32_t idx = MEM32(va + IOB_FILE);
-    if (idx >= MS_MAXSTREAM) return NULL;
-    return g_stream[idx].fp ? &g_stream[idx] : NULL;
+    for (int i = NIOB; i < MS_MAXSTREAM; i++)
+        if (g_stream[i].iobuf == va) return g_stream[i].fp ? &g_stream[i] : NULL;
+    return NULL;
 }
 static int ms_index(const ms_stream *s) { return (int)(s - g_stream); }
 
