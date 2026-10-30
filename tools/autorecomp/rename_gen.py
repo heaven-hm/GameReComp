@@ -376,9 +376,33 @@ def generate(pe_path, address, revng_dir, names, evidence, frames=False, extra=N
     if returns == "void":
         body = (f"{decls}\n    {call};\n    RETC(0);" if convention == "cdecl"
                 else f"{decls}\n    {call};\n    RET(0, {argc});")
+    # DECLARE THE CALLEES. A closure links several files; the caller's calls need a
+    # prototype in its own translation unit or C invents an implicit-int one and the
+    # frame argument is passed wrong. The declaration comes from the same contract
+    # the marshal checked against.
+    proto_lines = []
+    _sig = (extra or {}).get("signatures") or {}
+    _names = (extra or {}).get("callee_names") or {}
+    for cva, cname in sorted(_names.items()):
+        cs = _sig.get(cva)
+        if not cs:
+            continue
+        parts = []
+        for i, prm in enumerate(cs["params"]):
+            parts.append(f"uint32_t a{i}")
+        if cs.get("returns_struct"):
+            parts.append("uint32_t out")
+        if cs.get("frame_size"):
+            parts.append("uint32_t frame")
+        ret = "void" if cs.get("returns_struct") else (
+            "void" if cs["ret"] == "void" else rename_ast.c_type(cs["ret"]) or "uint32_t")
+        proto_lines.append(f"{ret} {cname}({', '.join(parts) if parts else 'void'});")
+    prototypes = ("/* callee prototypes for this closure: the caller must see each contract\n"
+                  " * or C invents an implicit-int declaration and the frame is passed wrong */\n"
+                  + "\n".join(dict.fromkeys(proto_lines)) + "\n\n") if proto_lines else ""
     adapter = (f"\n/* the guest ABI entry point the dispatch table calls (convention: {convention}, "
                f"{argc} argument(s)) */\nvoid sub_{address:08X}(void) {{\n{body}\n}}\n")
-    return "\n".join(header) + "\n\n" + typed + adapter, None
+    return "\n".join(header) + "\n\n" + prototypes + typed + adapter, None
 
 
 def closure_blockers(pe_path, revng_c, header, signatures, layouts, cap=256):

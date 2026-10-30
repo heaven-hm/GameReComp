@@ -1868,8 +1868,10 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
         # `source` is the module's PATH here, not its text
         _src_text = ""
         if source:
+            # a closure is several files: read them all for the void-body check
+            _files = source if isinstance(source, (list, tuple)) else [source]
             try:
-                _src_text = Path(source).read_text(errors="replace")
+                _src_text = "\n".join(Path(f).read_text(errors="replace") for f in _files)
             except OSError:
                 _src_text = ""
         void_body = re.search(r"\nvoid\s+\w+\s*\(", _src_text) is not None

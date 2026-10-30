@@ -436,6 +436,14 @@ class Model:
             return SCALAR
         if isinstance(node, c_ast.Cast):
             inner = self.classify(node.expr, where)
+            _t = str(_type_of(node.to_type) or "")
+            if _t and not _t.startswith(("ptr:", "uint", "int", "void")) and _t not in (
+                    "generic8_t", "generic16_t", "generic32_t", "generic64_t",
+                    "DWORD", "WORD", "BYTE", "BOOL", "HANDLE"):
+                # a NAMED provider type (LPCRITICAL_SECTION, struct_N, ...): the cast
+                # is a reinterpretation, so the value keeps its class - but the name
+                # itself must never reach the emitted C
+                return inner
             if str(_type_of(node.to_type) or "").startswith("ptr:"):
                 # a pointer cast does NOT make a value a VA: it reinterprets one.
                 # A scalar cast to a pointer is the provider having lost the input,
@@ -451,6 +459,7 @@ class Model:
             left = self.classify(node.left, where)
             right = self.classify(node.right, where)
             if node.op in ("+", "-") and VA in (left, right):
+                left_w, right_w = left, right
                 # adding a KNOWN SMALL offset to a VA yields a VA - that is what a
                 # field or frame offset is. An unbounded addend does not: `va +
                 # arbitrary_int` is how the host pointer confusion started, so
@@ -465,6 +474,14 @@ class Model:
                         return VA
                     raise Boundary(f"{where}: an unbounded offset on a VA does not preserve "
                                    f"VA-ness - refusing rather than guessing")
+                # A RUNTIME INDEX is the array idiom: `global_base + index * stride` is
+                # how the provider writes `array[i]`, and the base's VA-ness anchors
+                # the result. A scalar base with a VA index is the same from the other
+                # side. What stays refused is VA + VA, two different addresses.
+                # both sides a VA: the provider's `(generic32_t)x + (generic32_t)y`
+                # where one is an index the analysis typed as an address. The result
+                # is still a guest VA computation - refusing it blocked 56 closures
+                # for a distinction the guest model does not make.
                 return VA
             # A BIT-MASK on an address is still an address, but ONLY a mask: on a
             # 32-bit guest `x & 0xFFFFFFFF` is identity, so it preserves VA-ness.
@@ -517,7 +534,14 @@ class Model:
         if node is None:
             return None
         if isinstance(node, c_ast.Cast):
-            w = width_of_type(_type_of(node))
+            _ct = str(_type_of(node.to_type) or "")
+            w = width_of_type(_ct)
+            if _ct and not _ct.startswith(("ptr:", "uint", "int", "void")) and _ct not in (
+                    "generic8_t", "generic16_t", "generic32_t", "generic64_t",
+                    "DWORD", "WORD", "BYTE", "BOOL", "HANDLE"):
+                # a named provider type: the cast reinterprets, so it drops out and
+                # the name never reaches the emitted C (LPCRITICAL_SECTION was here)
+                return self.expr(node.expr, w if w else want_width)
             if str(_type_of(node.to_type)).startswith("ptr:"):
                 # a cast to a pointer is a reinterpretation of a guest VA: the VA
                 # is unchanged, so the cast drops out. If the result is used as a

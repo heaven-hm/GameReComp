@@ -443,3 +443,26 @@ void     hle_com_Release(void);
 void     hle_guid_string(const uint8_t *guid, char *out);   /* 39 bytes: {...} */
 
 #endif /* WIN32HLE_H */
+
+/* Shim declarations added because a generated module calls them: a shim that
+ * is defined but not declared makes the call an implicit-int declaration, which
+ * compiles and passes arguments wrong. Found by a closure module failing to build. */
+int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
+void hle_clock_config(char *buf, size_t n);
+uint32_t hle_create_window(uint32_t exstyle, const char *cls, const char *title, uint32_t style, int px, int py, int pw, int ph,
+                           uint32_t parent, uint32_t menu, uint32_t hinst, uint32_t param);
+void hle_fls_thread_exit(void);
+int hle_gdi_dib_delete(uint32_t h);
+uint32_t hle_gdi_make_bitmap(int w, int h, int bpp, uint8_t *px, int owns);
+void hle_input_record(const char *what, const void *data, size_t n);
+int hle_input_recording(void);
+int hle_input_replay(const char *what, void *data, size_t n);
+int hle_input_replaying(void);
+void hle_input_reset(void);
+static uint32_t hle_resolve_import(const char *name);
+static uint32_t hle_resolve_import_or_stub(const char *name);
+int hle_screenshot_active(void);
+int hle_screenshot_count(void);
+uint8_t * hle_szdd_expand(const uint8_t *in, uint32_t n, uint32_t *out_n);
+static void hle_unimplemented(void);
+int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
