@@ -342,6 +342,9 @@ class Model:
         if isinstance(node, c_ast.FuncCall):
             return c_ast.FuncCall(name=self.expr(node.name, want_width),
                                   args=self.expr(node.args, want_width) if node.args else None)
+        if isinstance(node, c_ast.ID) and node.name == "segment_2":
+            # the data base itself is a constant VA, never a host symbol
+            return c_ast.Constant(type="unsigned int", value=f"0x{self.segment_base:08X}U")
         if isinstance(node, c_ast.ID) and node.name in self.va_locals:
             return node
         return node
@@ -619,7 +622,13 @@ def _expr_text(e):
     if isinstance(e, c_ast.UnaryOp):
         return f"{e.op}{_expr_text(e.expr)}"
     if isinstance(e, c_ast.Cast):
-        return f"({_type_of(e.to_type)}){_expr_text(e.expr)}"
+        t = _type_of(e.to_type) or ""
+        if t.startswith("ptr:"):
+            # a pointer cast is a reinterpretation of a VA: the VA is unchanged, so
+            # the cast drops out. Emitting `(ptr:generic32_t)` was the analysis's
+            # internal spelling leaking into C.
+            return _expr_text(e.expr)
+        return f"({c_type(t) or t}){_expr_text(e.expr)}"
     if isinstance(e, c_ast.TernaryOp):
         return f"({_expr_text(e.cond)} ? {_expr_text(e.iftrue)} : {_expr_text(e.iffalse)})"
     if isinstance(e, c_ast.ArrayRef):
