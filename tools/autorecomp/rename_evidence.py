@@ -60,9 +60,38 @@ FORMAT_IMPORTS = {
 
 # ---------------------------------------------------------------- the PE
 
+_CACHE = {}
+
+
+def pe_loaded(pe_path):
+    """{data, base, secs, imports} for a PE, read once."""
+    key = str(Path(pe_path).resolve())
+    if key in _CACHE:
+        return _CACHE[key]
+    data = Path(pe_path).read_bytes()
+    e = struct.unpack_from('<I', data, 0x3C)[0]
+    coff = e + 4
+    nsec = struct.unpack_from('<H', data, coff + 2)[0]
+    optsz = struct.unpack_from('<H', data, coff + 16)[0]
+    opt = coff + 20
+    image_base = struct.unpack_from('<I', data, opt + 28)[0]
+    sec = opt + optsz
+    secs = []
+    for i in range(nsec):
+        s_ = sec + 40 * i
+        name = data[s_:s_ + 8].rstrip(b'\0').decode('latin1')
+        vsize, va, rsize, roff = struct.unpack_from('<IIII', data, s_ + 8)
+        secs.append((name, image_base + va, vsize, roff, rsize))
+    _CACHE[key] = {"data": data, "base": image_base, "secs": secs, "imports": None}
+    return _CACHE[key]
+
+
 def parse_imports(pe_path):
     """[(iat_va, module, name)] from the PE import table."""
-    data = Path(pe_path).read_bytes()
+    loaded = pe_loaded(pe_path)
+    if loaded["imports"] is not None:
+        return loaded["imports"]
+    data = loaded["data"]
     e = struct.unpack_from('<I', data, 0x3C)[0]
     coff = e + 4
     nsec = struct.unpack_from('<H', data, coff + 2)[0]
@@ -120,13 +149,13 @@ def parse_imports(pe_path):
         off += 20
         if len(out) > 4096:
             break
+    loaded["imports"] = out
     return out
 
 
 def section_of(pe_path, va):
     """(name, va, vsize, raw_off, raw_size) containing `va`, or None."""
-    base, secs = pe_sections(pe_path)
-    for name, sva, vsize, roff, rsize in secs:
+    for name, sva, vsize, roff, rsize in pe_loaded(pe_path)["secs"]:
         if sva <= va < sva + max(vsize, rsize):
             return name, sva, vsize, roff, rsize
     return None
@@ -135,8 +164,7 @@ def section_of(pe_path, va):
 def bytes_of(pe_path, section, va, n=256):
     name, sva, vsize, roff, rsize = section
     off = roff + (va - sva)
-    data = Path(pe_path).read_bytes()
-    return data[off:off + n]
+    return pe_loaded(pe_path)["data"][off:off + n]
 
 
 def ascii_at(pe_path, va, limit=96):
@@ -158,17 +186,23 @@ def ascii_at(pe_path, va, limit=96):
 
 # ---------------------------------------------------------------- the function
 
-def function_instructions(pe_path, va, limit=8192):
+def function_instructions(pe_path, va, limit=None, end=None):
     """Disassemble from VA to the function's return, and report the ret form."""
-    base, secs = pe_sections(pe_path)
+    loaded = pe_loaded(pe_path)
     sec = section_of(pe_path, va)
     if not sec:
         raise SystemExit(f'0x{va:08X} is not in a section')
     name, sva, vsize, roff, rsize = sec
     if 'text' not in name.lower():
         raise SystemExit(f'0x{va:08X} is in {name!r}, which is not code')
-    n = min(limit, sva + rsize - va, sva + vsize - va)
-    blob = Path(pe_path).read_bytes()[roff + (va - sva): roff + (va - sva) + n]
+    # A function that ends in a jump to a shared epilogue has no ret of its own,
+    # so the extent also stops at the next function's start when the caller knows
+    # it. Without that a tail-call function swallows its neighbours and its
+    # evidence count is fiction.
+    n = min(limit or 8192, sva + rsize - va, sva + vsize - va)
+    if end and end > va:
+        n = min(n, end - va)
+    blob = loaded["data"][roff + (va - sva): roff + (va - sva) + n]
     md = Cs(CS_ARCH_X86, CS_MODE_32)
     md.detail = True
     insns, ret_form = [], None
@@ -182,9 +216,9 @@ def function_instructions(pe_path, va, limit=8192):
     return insns, ret_form
 
 
-def evidence_for_function(pe_path, va, imports, revng_dir=None):
+def evidence_for_function(pe_path, va, imports, revng_dir=None, end=None):
     """The evidence records for one function, keyed by identity."""
-    insns, ret_form = function_instructions(pe_path, va)
+    insns, ret_form = function_instructions(pe_path, va, end=end)
     iat = {a: (dll, nm) for a, dll, nm in imports}
     recs = []
 
@@ -291,8 +325,7 @@ def evidence_for_function(pe_path, va, imports, revng_dir=None):
 
 def data_section_base(pe_path):
     """The VA of .data: the base rev.ng's `&segment_2` stands for."""
-    base, secs = pe_sections(pe_path)
-    for name, va, vsize, roff, rsize in secs:
+    for name, va, vsize, roff, rsize in pe_loaded(pe_path)["secs"]:
         if name == '.data':
             return va
     return None
@@ -342,15 +375,50 @@ def collect(pe_path, addresses, revng_dir=None):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description='what the bytes say a function is, before naming')
-    ap.add_argument('--pe', required=True, help='the original PE')
+    ap.add_argument('--pe', help='the original PE (needed for --address, not for --rank)')
     ap.add_argument('--address', action='append', default=[], help='a function VA (repeatable)')
     ap.add_argument('--revng', help='the provider directory for this game (highlevel/<game>/revng)')
     ap.add_argument('--json', help='write the evidence here')
     ap.add_argument('--identities', action='store_true', help='also print the shared identity table')
+    ap.add_argument('--rank', metavar='DIRS',
+                    help="rank the corpus's functions by evidence density (a glob, e.g. projects/*)")
+    ap.add_argument('--top', type=int, default=10, help='how many to show from the ranking (default 10)')
     args = ap.parse_args(argv)
+    if args.rank:
+        import glob as _glob
+        dirs = sorted(_glob.glob(args.rank))
+        revng_of = {}
+        for d in dirs:
+            cand = Path('highlevel') / Path(d).name / 'revng'
+            if cand.is_dir():
+                revng_of[Path(d).name] = str(cand)
+        rows = rank(dirs, revng_of, progress=print)
+        by_class = {}
+        for r in rows:
+            by_class[r['classes_fired']] = by_class.get(r['classes_fired'], 0) + 1
+        print(f'\n{len(rows)} function(s) ranked; classes fired histogram:')
+        for n in sorted(by_class, reverse=True):
+            print(f'  {n} class(es): {by_class[n]}')
+        print(f'\ntop {args.top} by evidence density:')
+        for r in rows[:args.top]:
+            print(f'  {r["address"]}  {Path(r["project"]).name:<18} '
+                  f'{r["classes_fired"]} class(es): {",".join(r["classes"]) or "-"}  '
+                  f'({r["records"]} records, {r["globals"]} global(s), {r["instructions"]} insns)')
+        if args.json:
+            Path(args.json).write_text(json.dumps(
+                {"what": "function evidence density: which of the seven evidence classes fire, "
+                         "per function, over the corpus (de-duplicated by PE)",
+                 "not": "names; this says where naming has evidence to stand on, not what anything is",
+                 "corpus": len(rows), "classes": list(CLASSES),
+                 "histogram": {str(k): v for k, v in sorted(by_class.items(), reverse=True)},
+                 "rows": rows}, indent=1))
+            print(f'  density: {args.json}')
+        return 0
     addresses = [int(a, 0) for a in args.address]
-    if not addresses:
-        ap.error('at least one --address is needed')
+    if not addresses and not args.rank:
+        ap.error('at least one --address is needed (or --rank)')
+    if addresses and not args.pe:
+        ap.error('--address needs --pe: the bytes must come from the original')
     data = collect(args.pe, addresses, args.revng)
     for va, fn in data["functions"].items():
         print(f'{va}: {fn["instructions"]} instruction(s), ends with `{fn["ret_form"]}`, '
@@ -365,6 +433,85 @@ def main(argv=None):
         Path(args.json).write_text(json.dumps(data, indent=1))
         print(f'  evidence: {args.json}')
     return 0
+
+
+
+
+# ---------------------------------------------------------------- the corpus
+
+CLASSES = ("import_call", "references_string", "format_string", "field_access",
+           "call_target", "constant")
+
+
+def project_functions(project_dir):
+    """The VAs a project's dispatch table lifts, from the generated table."""
+    import re
+    table = Path(project_dir) / "src" / "recomp" / "gen" / "recomp_dispatch.c"
+    if not table.is_file():
+        return []
+    text = table.read_text(errors="replace")
+    # the table's addresses are not padded to eight digits in every project
+    return [int(m.group(1), 16) for m in re.finditer(r'\{\s*0x([0-9A-Fa-f]{4,8})u\s*,\s*sub_', text)]
+
+
+def density(project_dir, pe_path, revng_dir=None, limit=None):
+    """Per function: which evidence classes fire, and how many records.
+
+    No names. This is the number that says whether the renaming pass has a
+    corpus worth building on: a function where only `signature` fires can be
+    described mechanically but not named."""
+    vas = sorted(project_functions(project_dir))
+    if limit:
+        vas = vas[:limit]
+    rev = Path(revng_dir) if revng_dir else None
+    stats = []
+    for idx, va in enumerate(vas):
+        end = vas[idx + 1] if idx + 1 < len(vas) else None
+        try:
+            recs, insns, ret_form = evidence_for_function(pe_path, va, parse_imports(pe_path),
+                                                          rev if rev and rev.is_dir() else None,
+                                                          end=end)
+        except SystemExit:
+            continue
+        kinds = [r["kind"] for r in recs]
+        fired = [c for c in CLASSES if c in kinds]
+        global_recs = sum(1 for k in kinds if k == "references_global")
+        stats.append({"project": Path(project_dir).name, "address": f"0x{va:08X}",
+                      "instructions": len(insns), "records": len(recs),
+                      "classes": fired, "classes_fired": len(fired),
+                      "globals": global_recs,
+                      "signature": recs[-1]["ret_form"] if recs and recs[-1]["kind"] == "signature" else None})
+    return stats
+
+
+def rank(project_dirs, revng_of=None, limit=None, progress=None):
+    """The corpus's functions by evidence density, de-duplicated by PE.
+
+    Two projects generated from the same PE lift the same functions, so counting
+    both would double every number."""
+    import hashlib
+    seen = {}
+    rows = []
+    for pd in project_dirs:
+        meta = Path(pd) / "project.json"
+        if not meta.is_file():
+            continue
+        try:
+            import json as _json
+            info = _json.loads(meta.read_text())
+            pe = info["pe"]["path"]
+        except Exception:
+            continue
+        key = hashlib.sha256(Path(pe).read_bytes()).hexdigest() if Path(pe).is_file() else pe
+        if key in seen:
+            continue
+        seen[key] = str(pd)
+        rev = (revng_of or {}).get(Path(pd).name)
+        if progress:
+            progress(f"  {Path(pd).name}: {len(project_functions(pd))} function(s)")
+        rows += density(pd, pe, rev, limit)
+    rows.sort(key=lambda r: (-r["classes_fired"], -r["records"]))
+    return rows
 
 
 if __name__ == '__main__':
