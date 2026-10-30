@@ -207,12 +207,27 @@ strict subset of the one before it:
 | Stage | Doukutsu's 955 provider functions |
 | --- | --- |
 | provider bodies that parse and satisfy the module model | 157 at the sweep's rule set |
-| **certify against the original bytes** | **17** |
+| **certify against the original bytes** | **18** |
 
-Seventeen, and the reason is a rule rather than a fix. Seven certified on **`eax`
-and the named guest memory**; ten more certify on the **return value alone**
-because the original's bytes show they write no guest memory and call nothing, so
-`eax` is their whole contract.
+Eighteen, and every one of them is named below so the number can be checked rather
+than believed. Seven certified on **`eax` and the named guest memory**; eleven more
+certify on the **return value alone** because the original's bytes show they write
+no guest memory and call nothing, so `eax` is their whole contract.
+
+| verdict | addresses | what was compared |
+| --- | --- | --- |
+| `agree` | `0x00402020` (1), `0x0040B320` (2), `0x0040F310` (1), `0x0040F320` (1), `0x0041C770` (2), `0x00472940` (1), `0x0047B500` (5) | `eax` + that many named guest-memory words |
+| `agree-return` | `0x00480DAD`, `0x00481F9A`, `0x00484C65`, `0x00486CED`, `0x00486D31`, `0x00489A5F`, `0x00489CB6`, `0x00489D84`, `0x00489EB9`, `0x0048AD5E`, `0x0048B2E3` | the return value only; the original's bytes have no memory operand and no call |
+
+**This read 17 for two commits, and the number was short by one because the list
+behind it was.** An independent audit reconstructed the population from the
+sweep commit's own code — reproducing 157 accepted and exactly 36 compiling — and
+found eleven clean `agree-return` modules where the published derivation yielded
+ten. The eleven have **zero `MEMn`** in their generated bodies and their originals
+have no memory operand and no call, so there is nothing that could have agreed by
+accident. Eighteen is the current toolchain's number; if a historical 15-module
+list ever surfaces and all twelve of its entries are among these eleven, then 17
+was right for that list and 18 is right for the toolchain that ships today.
 
 **The seven do not compare registers, and an earlier version of this README said
 they did.** A generated module is a plain C function: it models its return value
@@ -240,8 +255,8 @@ not. **A count that went down because the rule got stricter is a better number t
 a count that went up because the pattern got looser.**
 
 The honest summary: **the pipeline can prove that a generated function equals the
-original's code, on the inputs it drove, for 17 of 955 functions** — seven of them
-on `eax` and named memory, ten on the return value alone. Naming is the bottleneck,
+original's code, on the inputs it drove, for 18 of 955 functions** — seven of them
+on `eax` and named memory, eleven on the return value alone. Naming is the bottleneck,
 not certification, and the read-this-instead-of-the-assembly goal is still ahead of
 it.
 
