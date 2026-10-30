@@ -40,6 +40,11 @@ desktop.ini
 *.pak
 *.pk3
 
+# The one exception: the synthetic PE32 fixture the test suite and CI build
+# themselves (tests/fixtures/make_pe32_fixture.py). It is our own bytes, it
+# contains no third-party code, and --check fails if it drifts.
+!tests/fixtures/*.exe
+
 # Claude
 .claude/
 
