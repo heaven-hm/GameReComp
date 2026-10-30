@@ -132,6 +132,33 @@ only ever passed because the named bits happened to be clear on both sides. With
 the real `EFLAGS` register read, the difference is visible and the honest scope is
 "registers and memory", not "flags included".
 
+## The ruling: what a plain-C replacement can be verified for
+
+**`HIGH_LEVEL_VERIFIED` means registers and memory for a plain-C replacement.**
+Flags are out of scope, with the reason recorded rather than assumed: typed C has
+no flag model at all — `state = state * 0x343FD + 0x269EC3` sets no CF, and nothing
+in a generated module could, short of hand-writing the flag effects of every
+operation, which is exactly the machine-level detail typed C exists to remove. A
+gate that required flags would forbid every typed replacement, so the scope is
+registers and memory, and `--flags` exists for lifted bodies, the only ones that
+publish a flag state (`RECOMP_FLAGS_OUT`).
+
+**A known behavioural limitation, recorded beside the ruling rather than left
+implicit:** because typed C does not model guest flags, a caller that read flags
+immediately after a call would see stale values where the original saw the
+callee's. Compiled code does not normally rely on this — flags are call-clobbered
+and compilers do not preserve them across calls — but that has not been measured
+here, and "probably never happens" is not "cannot happen". The scope above is a
+verification scope, not a claim that the behaviour is identical.
+
+**And the fact that produced all of this, which is a result in its own right:** the
+first version of this oracle hard-coded the real machine's EFLAGS to 0, so the
+"flags included" comparison passed only because the named flag bits happened to be
+clear on both sides. Reading the real `EFLAGS` register made the difference
+visible immediately — every plain-C replacement diverged. **A comparison whose one
+side is a constant is not a comparison**, and it produced a confident pass. It was
+found by making the tool stricter, not by trusting it.
+
 ## Two bugs found in the tool before it agreed
 
 The first runs disagreed, and per the task the tool was the suspect — correctly:
