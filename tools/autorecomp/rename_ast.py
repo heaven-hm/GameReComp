@@ -176,6 +176,27 @@ def struct_size(name):
     return _SIZE_CACHE.get(name)
 
 
+# ---------------------------------------------------------------------------
+# THE STRUCTURAL BOUNDARY RULE
+#
+# Four leaks this session were the same defect: a value crossing from the
+# provider's model into the emitted C in the SOURCE's vocabulary instead of the
+# destination's - a `ptr:` descriptor emitted raw, `segment_2` emitted as a host
+# symbol, a field access on a base whose struct never got recovered, a call whose
+# argument count no longer matched.
+#
+# Four fixes would leave the fifth case silently crossing. The rule is therefore
+# structural: a value crossing a boundary is a GUEST VA, a PLAIN SCALAR, or a
+# REFUSAL. The boundary is re-established by construction (the VA is a uint32_t,
+# the scalar is a C scalar) and anything that cannot be shown to be one of the two
+# is refused with the reason.
+VA, SCALAR = "va", "scalar"
+
+
+class Boundary(Exception):
+    """A value that cannot be shown to be a guest VA or a plain scalar."""
+
+
 class Model:
     """The rewrite, applied to one function."""
 
@@ -184,6 +205,7 @@ class Model:
         self.frame_name = None
         self.frame_type = None
         self.frames_enabled = False
+        self.address = 0
         self.segment_base = segment_base
         self.va_locals = {}        # var name -> width (a pointer that became a VA)
         self.scalar_locals = {}    # var name -> width
@@ -226,6 +248,65 @@ class Model:
         return decl
 
     # ---- expression rewriting
+    def classify(self, node, where):
+        """Classify a value crossing the boundary: VA, SCALAR, or refuse.
+
+        This is the rule, applied at every crossing. A value is a VA when it comes
+        from the guest address space (a pointer local, a frame offset, a memory
+        read, a constant address); a SCALAR when it is computable without one; and
+        anything else raises Boundary with the reason. Callers use the returned
+        class to decide, never a pattern of the source text."""
+        if node is None:
+            raise Boundary(f"{where}: nothing to classify")
+        if isinstance(node, c_ast.Constant):
+            return VA if node.value.upper().startswith("0X") else SCALAR
+        if isinstance(node, c_ast.ID):
+            if node.name == "segment_2":
+                return VA
+            if node.name == "frame":
+                return VA
+            if node.name in self.va_locals:
+                return VA
+            if node.name in self.scalar_locals:
+                return SCALAR
+            raise Boundary(f"{where}: {node.name!r} is neither a VA nor a scalar "
+                           f"(unrecovered local)")
+        if isinstance(node, c_ast.FuncCall):
+            # MEMn(...) yields a scalar value read from guest memory; the call
+            # itself crosses only if its argument did
+            return SCALAR
+        if isinstance(node, c_ast.Cast):
+            inner = self.classify(node.expr, where)
+            if str(_type_of(node.to_type) or "").startswith("ptr:"):
+                # a pointer cast does NOT make a value a VA: it reinterprets one.
+                # A scalar cast to a pointer is the provider having lost the input,
+                # which is exactly how 0x004258B0's host byte became an address.
+                if inner != VA:
+                    raise Boundary(f"{where}: a plain scalar is cast to a pointer - not a "
+                                   f"guest VA, and there is no proof it ever was one")
+                return VA
+            return inner
+        if isinstance(node, c_ast.UnaryOp) and node.op in ("-", "~", "+", "!"):
+            return SCALAR
+        if isinstance(node, c_ast.BinaryOp):
+            left = self.classify(node.left, where)
+            right = self.classify(node.right, where)
+            if node.op in ("+", "-") and VA in (left, right):
+                return VA
+            if left == SCALAR and right == SCALAR:
+                return SCALAR
+            raise Boundary(f"{where}: arithmetic mixing a VA and a scalar "
+                           f"({left} {node.op} {right}) cannot cross")
+        if isinstance(node, c_ast.TernaryOp):
+            a = self.classify(node.iftrue, where)
+            b = self.classify(node.iffalse, where)
+            if a == b:
+                return a
+            raise Boundary(f"{where}: a conditional whose arms are {a} and {b} cannot cross")
+        if isinstance(node, c_ast.ExpressionList):
+            return SCALAR
+        raise Boundary(f"{where}: a {type(node).__name__} is neither a VA nor a scalar")
+
     def expr(self, node, want_width=None):
         if node is None:
             return None
@@ -263,6 +344,14 @@ class Model:
             if width is None:
                 raise Unsupportable("a dereference with no recoverable width")
             inner = self.expr(src, 32)
+            # THE RULE: a memory operand crosses only as a guest VA
+            try:
+                cls = self.classify(inner, f"0x{self.address:08X} memory operand")
+            except Boundary as e:
+                raise Unsupportable(str(e))
+            if cls != VA:
+                raise Unsupportable(f"0x{self.address:08X}: a memory operand is a plain "
+                                    f"scalar, not a guest VA - it cannot address guest memory")
             return c_ast.FuncCall(name=c_ast.ID(MEM_OF_WIDTH[width]),
                                   args=c_ast.ExprList([inner]))
         if isinstance(node, c_ast.ArrayRef):
@@ -280,17 +369,14 @@ class Model:
             return c_ast.FuncCall(name=c_ast.ID(MEM_OF_WIDTH[width]),
                                   args=c_ast.ExprList([addr]))
         if isinstance(node, c_ast.StructRef):
-            # The provider names every field after its offset: `offset_20`. The
-            # header confirms the type/width, and the header and the C now come
-            # from ONE analysis (same numbering), so the two agree by construction
-            # - but the offset is read from the name and then checked against the
-            # disassembly at the access site, not taken on trust.
-            fld = node.field.name if isinstance(node.field, c_ast.ID) else None
-            m = _RE_FIELD.match(fld or "")
-            if not m:
-                raise Unsupportable(f"a struct/union field with no offset in its name: {fld}")
-            offset = int(m.group(1))
-            # the width and the offset are cross-checked against the header
+            # BOUNDARY: the base must be a guest VA before anything else is decided
+            try:
+                base_cls = self.classify(node.name, f"0x{self.address:08X} field base")
+            except Boundary as e:
+                raise Unsupportable(str(e))
+            if base_cls != VA:
+                raise Unsupportable(f"0x{self.address:08X}: a struct field is accessed through "
+                                    f"a plain scalar, not a guest VA")
             width = None
             type_name, is_guest = self._struct_name_of(node.name)
             if not is_guest:
@@ -504,6 +590,7 @@ def rewrite(body, segment_base, own_va=None, layouts=None, frames=False):
         raise Unsupportable("the provider body is EMPTY: it named an address it could not "
                             "decompile, so there is nothing to generate")
     model = Model(segment_base, layouts)
+    model.address = own_va or 0
     model.frames_enabled = frames
     new_body = model.function(fn)
     # the function's own declaration, retyped
