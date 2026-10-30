@@ -38,6 +38,8 @@ enum { GL_LIGHTING=0x0B50, GL_COLOR_MATERIAL=0x0B57, GL_LIGHT0=0x4000,
        GL_QUADRATIC_ATTENUATION=0x1209, GL_EMISSION=0x1600,
        GL_SHININESS=0x1601, GL_FRONT=0x0404, GL_LIGHT_MODEL_AMBIENT=0x0B53,
        GL_LIGHT_MODEL_LOCAL_VIEWER=0x0B51, GL_NORMALIZE=0x0BA1,
+       GL_DEPTH_BITS=0x0D56, GL_STENCIL_BITS=0x0D57,
+       GL_MAX_TEXTURE_SIZE=0x0D33,
        GL_AMBIENT_AND_DIFFUSE=0x1602 };
 enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_MODULATE=0x2100, GL_REPLACE=0x1E01, GL_RGB=0x1907, GL_RGBA=0x1908,
@@ -159,6 +161,15 @@ static uint8_t g_lights[8][104];
 static uint8_t g_light_valid[8], g_light_enabled[8];
 static unsigned g_max_lights;
 
+#define D3D7_DEVICE_DESC_SIZE 236u
+#define D3D7_PRIM_CAPS_SIZE 56u
+/* A private device ID lets clients choose the implementation returned by
+ * EnumDevices without claiming to be a Direct3D HAL or reference rasterizer. */
+static const uint8_t g_d3d7_gl_device_guid[16] = {
+    0x35,0x90,0xD3,0x91, 0xBA,0x79, 0xB8,0x4D,
+    0x88,0x34, 0x50,0x43,0x52,0x44,0x37,0x01
+};
+
 static void dev_get_direct3d(void);
 static void dev_begin_scene(void);
 static void dev_end_scene(void);
@@ -188,6 +199,8 @@ static void dev_set_light(void);
 static void dev_get_light(void);
 static void dev_light_enable(void);
 static void dev_get_light_enable(void);
+static void dev_get_caps(void);
+static void dev_enum_textures(void);
 static void d3d_enum_z(void);
 static void d3d_evict(void);
 static void vb_lock(void);
@@ -196,7 +209,7 @@ static void vb_get_desc(void);
 static void release_surface_ref(uint32_t surface);
 
 #define UNIMPL(name, argc) static void name(void) { RET(D3DERR_NOTAVAILABLE, argc); }
-UNIMPL(dev_get_caps,2) UNIMPL(dev_enum_textures,3) UNIMPL(dev_set_target,3)
+UNIMPL(dev_set_target,3)
 UNIMPL(dev_get_target,2) UNIMPL(dev_begin_state,1)
 UNIMPL(dev_end_state,2) UNIMPL(dev_preload,2) UNIMPL(dev_set_clip,2)
 UNIMPL(dev_get_clip,2) UNIMPL(dev_draw_strided,6) UNIMPL(dev_draw_indexed_strided,8)
@@ -306,11 +319,123 @@ static void vb_qi(void) { uint32_t s=A32(0),out=A32(2); if(!out) RET(E_POINTER,3
 static void vb_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void vb_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);} RET(r,1); }
 
-static void d3d_enum(void) { RET(D3DERR_NOTAVAILABLE,3); }
-static void d3d_enum_z(void) { RET(D3DERR_NOTAVAILABLE,4); }
+static void d3d_write_prim_caps(uint32_t p, int depth_bits) {
+    MEM32(p)=D3D7_PRIM_CAPS_SIZE;
+    MEM32(p+4)=0x70u;                          /* cull none, CW and CCW */
+    MEM32(p+8)=depth_bits?0x30u:0x20u;        /* z test when the GL context has depth */
+    MEM32(p+12)=depth_bits?0xFFu:0u;          /* all D3D compare functions */
+    MEM32(p+16)=MEM32(p+20)=0x3FFu;           /* blend factors mapped by gl_blend */
+    MEM32(p+24)=0xFFu;                         /* alpha compare functions */
+    MEM32(p+28)=0xAu;                           /* flat and Gouraud RGB shading */
+    MEM32(p+32)=0xDu;                           /* perspective, alpha, transparency */
+    MEM32(p+36)=0x03000303u;                   /* point/linear min and mag filters */
+    MEM32(p+40)=0x42u;                          /* texture select/copy and modulate */
+    MEM32(p+44)=0x5u;                           /* wrap and clamp */
+    MEM32(p+48)=MEM32(p+52)=0;
+}
+
+static void d3d_write_device_desc7(uint32_t p) {
+    int depth_bits=0, max_texture=0, max_lights=0;
+    int mode_w,mode_h,mode_bpp;
+    memset(hle_ptr(p),0,D3D7_DEVICE_DESC_SIZE);
+    p_getint(GL_DEPTH_BITS,&depth_bits);
+    p_getint(GL_MAX_TEXTURE_SIZE,&max_texture);
+    p_getint(GL_MAX_LIGHTS,&max_lights);
+    if(max_lights<0)max_lights=0; else if(max_lights>8)max_lights=8;
+    if(max_texture<1)max_texture=1;
+    hle_dd_mode(&mode_w,&mode_h,&mode_bpp);
+    (void)mode_w;(void)mode_h;
+
+    MEM32(p+0)=0x540u;                         /* system-memory TL/texture, DrawPrimitive TL */
+    d3d_write_prim_caps(p+4,depth_bits);
+    d3d_write_prim_caps(p+60,depth_bits);
+    MEM32(p+116)=mode_bpp==16?0x400u:mode_bpp==24?0x200u:mode_bpp>=32?0x100u:0u;
+    MEM32(p+120)=depth_bits>=32?0x100u:depth_bits>=24?0x200u:depth_bits>=16?0x400u:0u;
+    MEM32(p+124)=MEM32(p+128)=1;
+    MEM32(p+132)=MEM32(p+136)=(uint32_t)max_texture;
+    MEM32(p+140)=MEM32(p+144)=(uint32_t)max_texture;
+    MEM32(p+148)=1;                            /* no anisotropic filtering */
+    MEM32(p+176)=1;                            /* one supported texture coordinate set */
+    MEM32(p+180)=0xFu;                         /* disable/select arg1/select arg2/modulate */
+    MEM16(p+184)=1; MEM16(p+186)=1;            /* one texture stage and texture */
+    MEM32(p+188)=(uint32_t)max_lights;
+    float max_w=1.0e10f; memcpy(hle_ptr(p+192),&max_w,sizeof max_w);
+    memcpy(hle_ptr(p+196),g_d3d7_gl_device_guid,sizeof g_d3d7_gl_device_guid);
+    MEM16(p+212)=0; MEM16(p+214)=0;            /* user clip planes and blend matrices */
+    MEM32(p+216)=0x38u;                        /* directional/positional lights, local viewer */
+}
+
+static void d3d_enum(void) {
+    uint32_t cb=A32(1),ctx=A32(2),desc;
+    static uint32_t description,name;
+    if(!cb)RET(E_POINTER,3);
+    if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,3);
+    if(!description)description=hle_guest_strdup("SDL OpenGL fixed-function Direct3D 7");
+    if(!name)name=hle_guest_strdup("SDL OpenGL");
+    desc=hle_va(hle_alloc(D3D7_DEVICE_DESC_SIZE));
+    if(!desc)RET(D3DERR_NOTAVAILABLE,3);
+    d3d_write_device_desc7(desc);
+    uint32_t args[4]={description,name,desc,ctx};
+    hle_call_guest(cb,4,args);
+    hle_free(hle_ptr(desc));
+    RET(D3D_OK,3);
+}
+
+static void d3d_enum_z(void) {
+    uint32_t iid=A32(1),cb=A32(2),ctx=A32(3);
+    int depth_bits=0;
+    if(!iid||!cb)RET(E_POINTER,4);
+    if(memcmp(hle_ptr(iid),g_d3d7_gl_device_guid,16))RET(D3DERR_NOTAVAILABLE,4);
+    if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,4);
+    p_getint(GL_DEPTH_BITS,&depth_bits);
+    if(depth_bits<16)RET(D3DERR_NOTAVAILABLE,4);
+    uint32_t pf=hle_va(hle_alloc(32));
+    if(!pf)RET(D3DERR_NOTAVAILABLE,4);
+    memset(hle_ptr(pf),0,32);
+    MEM32(pf)=32; MEM32(pf+4)=0x400u;       /* DDPF_ZBUFFER */
+    MEM32(pf+12)=(uint32_t)depth_bits;
+    MEM32(pf+20)=depth_bits>=32?0xFFFFFFFFu:depth_bits>=24?0x00FFFFFFu:0x0000FFFFu;
+    uint32_t args[2]={pf,ctx};
+    hle_call_guest(cb,2,args);
+    hle_free(hle_ptr(pf));
+    RET(D3D_OK,4);
+}
+
+static void dev_get_caps(void) {
+    uint32_t p=A32(1);
+    if(!p)RET(E_POINTER,2);
+    if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,2);
+    d3d_write_device_desc7(p);
+    RET(D3D_OK,2);
+}
+
+static void dev_enum_textures(void) {
+    uint32_t cb=A32(1),ctx=A32(2);
+    if(!cb)RET(E_POINTER,3);
+    if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,3);
+    uint32_t pf=hle_va(hle_alloc(32));
+    if(!pf)RET(D3DERR_NOTAVAILABLE,3);
+    static const uint32_t formats[3][8]={
+        {32,0x40,0,16,0xF800,0x07E0,0x001F,0},
+        {32,0x40,0,24,0xFF0000,0x00FF00,0x0000FF,0},
+        {32,0x41,0,32,0x00FF0000,0x0000FF00,0x000000FF,0xFF000000}
+    };
+    for(unsigned i=0;i<3;i++) {
+        memcpy(hle_ptr(pf),formats[i],sizeof formats[i]);
+        uint32_t args[2]={pf,ctx};
+        if(!hle_call_guest(cb,2,args))break;
+    }
+    hle_free(hle_ptr(pf));
+    RET(D3D_OK,3);
+}
+
 static void d3d_evict(void) { RET(D3D_OK,1); }
 static void d3d_create_device(void) {
-    uint32_t out=A32(3); if(!out)RET(E_POINTER,4); MEM32(out)=0;
+    uint32_t guid=A32(1),target=A32(2),out=A32(3);
+    if(!out)RET(E_POINTER,4); MEM32(out)=0;
+    if(!guid)RET(E_POINTER,4);
+    if(memcmp(hle_ptr(guid),g_d3d7_gl_device_guid,16))RET(D3DERR_NOTAVAILABLE,4);
+    if(!hle_dd_surface_is_primary(target))RET(D3DERR_INVALIDCALL,4);
     if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,4);
     if(!g_dev_vt) {
         static const win32hle_shim m[]={

@@ -371,6 +371,7 @@ int  hle_dd_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bpp, cons
 void hle_dd_mode(int *w, int *h, int *bpp);
 extern void (*hle_dd_primary_hook)(void);            /* the primary's pixels or palette changed (a blit, an Unlock, a Flip) */
 int  hle_dd_surface_pixels(uint32_t obj, uint8_t **px, int *w, int *h, int *pitch, int *bpp);   /* 0: not a surface */
+int  hle_dd_surface_is_primary(uint32_t obj);          /* 1 only for the active DirectDraw primary */
 void hle_dsound_set_master(float gain);              /* 0 mutes */
 void hle_dsound_register_com(void);                  /* CoCreateInstance(CLSID_DirectSound) (recomp_host_init) */
 /* A host's own sound (a movie's), mixed with the game's buffers: interleaved
