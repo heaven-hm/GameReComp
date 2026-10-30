@@ -69,6 +69,8 @@ enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_TEXTURE_WRAP_T=0x2803, GL_NEAREST=0x2600, GL_LINEAR=0x2601,
        GL_REPEAT=0x2901, GL_CLAMP_TO_EDGE=0x812F, GL_UNPACK_ALIGNMENT=0x0CF5,
        GL_UNPACK_ROW_LENGTH=0x0CF2 };
+enum { D3DTA_COMPLEMENT=0x10, D3DTA_ALPHAREPLICATE=0x20,
+       D3DTA_MODIFIER_MASK=0x30, D3DTA_ARGUMENT_MASK=0x0F };
 
 typedef void (*gl_begin_fn)(unsigned); typedef void (*gl_end_fn)(void);
 typedef void (*gl_vertex3_fn)(float,float,float); typedef void (*gl_vertex4_fn)(float,float,float,float);
@@ -914,12 +916,14 @@ static void dev_get_target(void) {
     RET(D3D_OK,2);
 }
 static int stage0_uses_texture(uint32_t op,uint32_t arg1,uint32_t arg2) {
+    arg1&=D3DTA_ARGUMENT_MASK; arg2&=D3DTA_ARGUMENT_MASK;
     if(op==2) return arg1==2;
     if(op==3) return arg2==2;
     if(op==4) return arg1==2 || arg2==2;
     return 0;
 }
 static int stage0_uses_factor(uint32_t op,uint32_t arg1,uint32_t arg2) {
+    arg1&=D3DTA_ARGUMENT_MASK; arg2&=D3DTA_ARGUMENT_MASK;
     if(op==2) return arg1==3;
     if(op==3) return arg2==3;
     if(op==4) return arg1==3 || arg2==3;
@@ -934,19 +938,34 @@ static int stage0_factor_active(void) {
            stage0_uses_factor(g_stage_state[4],g_stage_state[5],g_stage_state[6]);
 }
 static unsigned stage0_source(uint32_t arg) {
+    arg&=D3DTA_ARGUMENT_MASK;
     return arg==3?GL_CONSTANT:arg==2?GL_TEXTURE:arg==0?GL_PRIMARY_COLOR:GL_PREVIOUS;
+}
+static int stage0_arg_valid(uint32_t arg) {
+    return !(arg&~(D3DTA_ARGUMENT_MASK|D3DTA_MODIFIER_MASK)) &&
+           (arg&D3DTA_ARGUMENT_MASK)<=3u;
+}
+static unsigned stage0_operand(uint32_t arg,int alpha_channel) {
+    int alpha_replicate=!alpha_channel && (arg&D3DTA_ALPHAREPLICATE);
+    int complement=(arg&D3DTA_COMPLEMENT)!=0;
+    if(alpha_channel || alpha_replicate)
+        return complement?GL_ONE_MINUS_SRC_ALPHA:GL_SRC_ALPHA;
+    return complement?GL_ONE_MINUS_SRC_COLOR:GL_SRC_COLOR;
 }
 static void apply_stage_channel(uint32_t op,uint32_t arg1,uint32_t arg2,
                                 unsigned combine,unsigned source0,unsigned source1,
-                                unsigned operand0,unsigned operand1,unsigned operand) {
+                                unsigned operand0,unsigned operand1) {
     unsigned mode=op==4?GL_MODULATE:GL_REPLACE;
-    unsigned src0=op==1?GL_PREVIOUS:stage0_source(op==2?arg1:arg2);
-    unsigned src1=stage0_source(op==4?arg2:arg1);
+    uint32_t first=op==1?0u:op==2?arg1:arg2;
+    uint32_t second=arg1;
+    unsigned src0=op==1?GL_PREVIOUS:stage0_source(first);
+    unsigned src1=stage0_source(second);
     p_tex_envi(GL_TEXTURE_ENV,combine,(int)mode);
     p_tex_envi(GL_TEXTURE_ENV,source0,(int)src0);
     p_tex_envi(GL_TEXTURE_ENV,source1,(int)src1);
-    p_tex_envi(GL_TEXTURE_ENV,operand0,(int)operand);
-    p_tex_envi(GL_TEXTURE_ENV,operand1,(int)operand);
+    int alpha_channel=combine==GL_COMBINE_ALPHA;
+    p_tex_envi(GL_TEXTURE_ENV,operand0,(int)stage0_operand(first,alpha_channel));
+    p_tex_envi(GL_TEXTURE_ENV,operand1,(int)stage0_operand(second,alpha_channel));
 }
 static int gl_filter(uint32_t value) { return value==1?GL_NEAREST:GL_LINEAR; }
 static int gl_address(uint32_t value) { return value==3?GL_CLAMP_TO_EDGE:GL_REPEAT; }
@@ -965,9 +984,9 @@ static void apply_stage0_state(void) {
     p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,gl_address(g_stage_state[14]));
     p_tex_envi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE);
     apply_stage_channel(g_stage_state[1],g_stage_state[2],g_stage_state[3],GL_COMBINE_RGB,
-                        GL_SOURCE0_RGB,GL_SOURCE1_RGB,GL_OPERAND0_RGB,GL_OPERAND1_RGB,GL_SRC_COLOR);
+                        GL_SOURCE0_RGB,GL_SOURCE1_RGB,GL_OPERAND0_RGB,GL_OPERAND1_RGB);
     apply_stage_channel(g_stage_state[4],g_stage_state[5],g_stage_state[6],GL_COMBINE_ALPHA,
-                        GL_SOURCE0_ALPHA,GL_SOURCE1_ALPHA,GL_OPERAND0_ALPHA,GL_OPERAND1_ALPHA,GL_SRC_ALPHA);
+                        GL_SOURCE0_ALPHA,GL_SOURCE1_ALPHA,GL_OPERAND0_ALPHA,GL_OPERAND1_ALPHA);
 }
 static void dev_get_texture(void) {
     uint32_t stage=A32(1),out=A32(2);
@@ -1012,7 +1031,7 @@ static void dev_set_tss(void) {
                   state!=13 && state!=14 && state!=16 && state!=17 && state!=24))
         RET(D3DERR_NOTAVAILABLE,4);
     if ((state==1 || state==4) && (value<1 || value>4)) RET(D3DERR_NOTAVAILABLE,4);
-    if ((state==2 || state==3 || state==5 || state==6) && value>3) RET(D3DERR_NOTAVAILABLE,4);
+    if ((state==2 || state==3 || state==5 || state==6) && !stage0_arg_valid(value)) RET(D3DERR_NOTAVAILABLE,4);
     if ((state==13 || state==14) && (value<1 || value>5)) RET(D3DERR_INVALIDCALL,4);
     if ((state==13 || state==14) && value!=1 && value!=3) RET(D3DERR_NOTAVAILABLE,4);
     if ((state==16 || state==17) && (value<1 || value>6)) RET(D3DERR_INVALIDCALL,4);
@@ -1035,7 +1054,7 @@ static void dev_validate(void) {
     for(unsigned op_index=0;op_index<2;op_index++) {
         unsigned base=op_index?4u:1u;
         uint32_t op=g_stage_state[base],arg1=g_stage_state[base+1],arg2=g_stage_state[base+2];
-        if(op<1 || op>4 || arg1>3 || arg2>3) RET(D3DERR_NOTAVAILABLE,2);
+        if(op<1 || op>4 || !stage0_arg_valid(arg1) || !stage0_arg_valid(arg2)) RET(D3DERR_NOTAVAILABLE,2);
     }
     MEM32(passes)=1;
     RET(D3D_OK,2);
