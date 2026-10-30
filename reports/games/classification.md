@@ -136,13 +136,35 @@ Follow-up measurements (lldb on the rebuilt binary, and the lifted C beside it):
    `InitializeCriticalSectionAndSpinCount`, commit `b9105bb`) and the crash is
    **unchanged** — so they are ruled out as the cause.
 
-So the NULL is a **lookup miss on a table the object carries at `+0xC`**: either
-the index is outside the table's bounds or the table's kind field is not 1. The
-next measurement is to read `[0x4BB200]`, the object there, its `+0xC` field and
-that table's `+0x38`/`+0x3C`/`+0x40`/`+0x44` at the fault and compare them with
-what the original would hold. Candidates, none yet confirmed: an object whose
-table was never built because a constructor took an early path, or a field this
-layer leaves zero where Windows leaves something else.
+So the NULL is a **lookup miss on a table the object carries at `+0xC`**. Both
+halves of that are now measured, and the answer is "never populated":
+
+- `[0x4BB200]` is `0x10500400`, a real constructed object: `+0x00` = vtable
+  `0x004B59C8` (whose slot `+0x60` IS the crashing method), `+0x04` = 0,
+  `+0x08` = 1, `+0x0C` = `0x10500460`, `+0x10` = `0x10500424`, `+0x24` =
+  `0x10500438`. Not zero, not garbage.
+- The table at `0x10500460` has `+0x38` = 0 and `+0x3C` = 0 (its bounds), so
+  index 0 already fails the `upper <= index` test; its kind at `+0x40` is 0 as
+  well and the pointer at `+0x44` is 0. The range check fires first.
+- The object is built by `sub_0041D834`: it allocates, copies 16 bytes from the
+  static template at `0x004B5978` (vtable, `+0x04` = 0, `+0x08` = 1,
+  `+0x0C` = 0), publishes it at `[0x4BB200]`, then calls the object's virtual
+  `+0x18`, `sub_00427E30` and `sub_0042779C` — and `sub_0042779C` calls
+  `sub_0041D894`, which makes the crashing `+0x60` call. So the virtual method
+  runs **during the object's own construction**.
+- The function that builds the table is `sub_004039D0` (it writes
+  `obj+0x88`..`obj+0xC4`, including the four fields the lookup reads, and sets
+  `obj+0x0C` from `sub_0041CD70()` at its end). **A breakpoint on it is never
+  hit before the fault**: the run goes straight from the constructor path to the
+  crash, so the table is never built.
+
+That makes this an **initialisation-order** problem rather than a missing shim:
+a virtual method that needs the table is called on an object whose table builder
+has not run. One thing does not fit yet and is the next question: the object's
+`+0x0C` is already `0x10500460` at the fault, but `sub_004039D0` — the function
+that sets it — never ran, so something else wrote it and left the table empty.
+Finding that writer (and what the original's order is around it) is where this
+picks up; it is one function call away from the answer, not a cluster.
 
 ## Two runtime gaps the sweep turned up on the way
 
