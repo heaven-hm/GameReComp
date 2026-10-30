@@ -176,13 +176,29 @@ table builder after all: it is called from `sub_0040370C` (at `0x004037E8`) to
 build a *different* object's fields at `+0x88`..`+0xC4`, and the offset
 coincidence is just two table-shaped structures.
 
-What is still open, and it is the last step: **which code fills this object's
-table at `obj+0x60`** — its `+0x38`/`+0x3C` (bounds), `+0x40` (kind) and `+0x44`
-(pointer). The lead is `sub_0042F184` itself: it has a path that returns 0
-(`0x0042F1A8`) and a path that returns its own first argument (`0x0042F1BD`),
-and this run took the second — the argument being the table address — while the
-table's fields stayed zero. Either the filler is a call this run did not make,
-or `sub_0042F184` was supposed to fill the table on the way through.
+What fills the table at `obj+0x60` is now answered, and the answer is
+**nothing does**: watchpoints on the table's lower bound (`obj+0x98`) and its
+kind (`obj+0xA0`), armed from the constructor's entry, fire only for
+`g_cur_func = 0x0042D59C` — and `sub_0042D59C` is a block fill (it stores `eax`
+into eight dwords, advances 0x20 and loops), i.e. the allocator zeroing the
+block it just handed out. No other write to either field happens before the
+fault.
+
+So the sequence is: allocate and zero the object, copy the 16-byte template into
+it, publish it, call its virtual `+0x18` (which installs `+0x0C` = `obj+0x60`),
+call `sub_00427E30`, call `sub_0042779C` → `sub_0041D894` → virtual `+0x60` —
+which reads a table that has only ever been zeroed.
+
+That reframes the question one last time, and this is where it stands: the
+interesting question is no longer "who fills the table" but **why this call is
+made at all in this run**. Either the original populates the table first on a
+path this run does not take, or the original does not make this call and a
+branch earlier in the constructor chain goes the other way here. The candidates
+for the latter are the values the constructor path gets from the runtime — the
+27 shim calls before the fault are all CRT startup (`VirtualAlloc`, `GetVersion`,
+`GetACP`, `GetCPInfo`, `GetModuleFileNameA`, `GetStdHandle`, `SetHandleCount`,
+the critical-section calls) — so a differential of those return values against
+what Windows gives is the next measurement, not more code reading.
 
 ## Two runtime gaps the sweep turned up on the way
 
