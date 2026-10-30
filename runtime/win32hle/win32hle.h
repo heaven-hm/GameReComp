@@ -352,6 +352,7 @@ extern const win32hle_shim win32hle_storage[];        /* structured storage: com
 extern const win32hle_shim win32hle_dsound[];         /* DirectSound on SDL audio (dsound.c) */
 extern const win32hle_shim win32hle_ddraw[];          /* DirectDraw in software (ddraw.c) */
 uint32_t hle_d3d7_create(void);                       /* IDirect3D7 COM object; zero if GL screen is unavailable */
+uint32_t hle_d3d7_get(void);                          /* the same object, without taking a reference */
 extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
 extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 audio (sdlmix.c) */
 extern const win32hle_shim win32hle_gl32[];           /* OPENGL32/GLU32 on the host's GL (gl32.c) */

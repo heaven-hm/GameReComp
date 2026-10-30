@@ -83,7 +83,10 @@ uint32_t hle_com_vtable(const win32hle_shim *methods) {
     return hle_va(vt);
 }
 /* An object: the vtable pointer, a reference count, then `size` - 8 bytes of
- * the host's own state. */
+ * the host's own state. Returns the object's GUEST VA, like every other
+ * factory here: hle_com_vtable also returns a VA, and the guest dereferences
+ * both as addresses. (A based host's hle_alloc hands out a host pointer, so
+ * returning that would name a different object to the guest.) */
 uint32_t hle_com_new(uint32_t vtable, uint32_t size) {
     uint32_t *o = (uint32_t *)hle_alloc(size < 8 ? 8 : size);
     o[0] = vtable, o[1] = 1;
@@ -116,7 +119,7 @@ static const uint8_t IID_IClassFactory[16] = { 0x01, 0x00, 0x00, 0x00, 0x00, 0x0
 static uint32_t vcall(uint32_t obj, int slot, int nargs, const uint32_t *args) {
     uint32_t a[8] = { obj };
     for (int i = 0; i < nargs; i++) a[1 + i] = args[i];
-    return hle_call_guest(MEM32(MEM32(obj) + 4u * (uint32_t)slot), nargs + 1, a);
+    return hle_call_guest(MEM32(obj + 4u * (uint32_t)slot), nargs + 1, a);
 }
 
 static void dm_QueryInterface(void) {

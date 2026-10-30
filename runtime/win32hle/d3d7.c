@@ -71,6 +71,8 @@ enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_UNPACK_ROW_LENGTH=0x0CF2 };
 enum { D3DTA_COMPLEMENT=0x10, D3DTA_ALPHAREPLICATE=0x20,
        D3DTA_MODIFIER_MASK=0x30, D3DTA_ARGUMENT_MASK=0x0F };
+/* Material colour sources (D3DMCS_*). Only COLOR1 has an equivalent here. */
+enum { D3DMCS_MATERIAL=0, D3DMCS_COLOR1=1, D3DMCS_COLOR2=2 };
 
 typedef void (*gl_begin_fn)(unsigned); typedef void (*gl_end_fn)(void);
 typedef void (*gl_vertex3_fn)(float,float,float); typedef void (*gl_vertex4_fn)(float,float,float,float);
@@ -667,7 +669,10 @@ static void dev_draw_indexed_strided(void) {
     RET(ok?D3D_OK:D3DERR_INVALIDCALL,8);
 }
 
-static void d3d_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!out) RET(E_POINTER,3);
+static void d3d_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!out) RET(E_POINTER,3);
+    /* A NULL iid is a pointer error; an all-zero iid is IID_IUnknown, which is
+     * compared, not tested for truth. */
+    if(!iid) { MEM32(out)=0; RET(E_POINTER,3); }
     const uint8_t *g=hle_ptr(iid); if(!memcmp(g,IID_IUNKNOWN,16)||!memcmp(g,IID_IDIRECT3D7,16)) { MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
     MEM32(out)=0; RET(E_NOINTERFACE,3); }
 static void d3d_addref(void) { RET(++MEM32(A32(0)+4),1); }
@@ -708,6 +713,9 @@ static void d3d_write_device_desc7(uint32_t p) {
     (void)mode_w;(void)mode_h;
 
     MEM32(p+0)=0x540u;                         /* system-memory TL/texture, DrawPrimitive TL */
+    /* D3DDEVCAPS_* that describe what ddraw.c's blitter really does.
+     * (0x200 is EXECUTE, which is not claimed: there is no hardware device.) */
+    MEM32(p+8)=0x100u|0x400u|0x800u;           /* BLT, BLTCOLORFILL, BLTSTRETCH */
     d3d_write_prim_caps(p+4,depth_bits);
     d3d_write_prim_caps(p+60,depth_bits);
     MEM32(p+116)=mode_bpp==16?0x400u:mode_bpp==24?0x200u:mode_bpp>=32?0x100u:0u;
@@ -1271,10 +1279,13 @@ static void dev_get_light_enable(void) {
  * instead of silently claiming to apply a state that has no effect. */
 static void apply_color_material_state(void) {
     if (!load_gl()) return;
+    /* D3DMCS_MATERIAL (0) and D3DMCS_COLOR1 (1) name the same material here:
+     * there is no per-vertex diffuse/specular source, only the current
+     * material. GL_COLOR_MATERIAL overrides the tracked one with glColor. */
     unsigned mode=0;
-    if (g_render[145]==1 && g_render[147]==1) mode=GL_AMBIENT_AND_DIFFUSE;
-    else if (g_render[145]==1) mode=GL_DIFFUSE;
-    else if (g_render[147]==1) mode=GL_AMBIENT;
+    if (g_render[145]==D3DMCS_COLOR1 && g_render[147]==D3DMCS_COLOR1) mode=GL_AMBIENT_AND_DIFFUSE;
+    else if (g_render[145]==D3DMCS_COLOR1) mode=GL_DIFFUSE;
+    else if (g_render[147]==D3DMCS_COLOR1) mode=GL_AMBIENT;
     if (g_render[141] && mode) {
         p_enable(GL_COLOR_MATERIAL);
         p_color_material(GL_FRONT_AND_BACK,mode);
@@ -1301,7 +1312,12 @@ static int render_state_supported(uint32_t state) {
 }
 static int render_state_value_valid(uint32_t state,uint32_t value) {
     switch(state) {
-    case 7: case 14: case 15: case 26: case 27: case 28: case 29: case 137: case 141: case 142: case 143: case 145: case 147:
+    case 146: case 148:
+        return value==0;
+    case 145: case 147:
+        /* Diffuse/ambient: MATERIAL and COLOR1 are the same tracked material. */
+        return value==D3DMCS_MATERIAL || value==D3DMCS_COLOR1;
+    case 7: case 14: case 15: case 26: case 27: case 28: case 29: case 137: case 141: case 142: case 143:
         return value<=1;
     case 8: case 22:
         return value>=1 && value<=3;
@@ -1315,8 +1331,6 @@ static int render_state_value_valid(uint32_t state,uint32_t value) {
         return value>=1 && value<=8;
     case 24:
         return value<=255;
-    case 146: case 148:
-        return value==0;
     case 35:
         return value<=3;
     case 140:
@@ -1404,6 +1418,18 @@ static void dev_draw_indexed_vb(void) {
 
 /* Device methods are added in the next section of this file. */
 uint32_t hle_d3d7_create(void) {
+    /* A brand-new object, or the existing one with a reference taken for the
+     * caller. The create path in a title is QueryInterface(IID_IDirect3D7) on
+     * IDirectDraw7, which uses hle_d3d7_get and takes its own reference. */
+    uint32_t va = hle_d3d7_get();
+    if (va) MEM32(va + 4)++;
+    return va;
+}
+uint32_t hle_d3d7_get(void) {
+    /* The object already exists: hand it back without asking for a screen
+     * again. Headless, hle_screen_open leaves no GL context, so a second
+     * request answers 0 even though the object is perfectly usable. */
+    if (g_d3d) return hle_va(hle_ptr(g_d3d));
     if (!hle_screen_request_opengl()) return 0;
     if (!hle_screen_gl_active()) {
         const char *driver = getenv("SDL_VIDEODRIVER");
@@ -1411,6 +1437,8 @@ uint32_t hle_d3d7_create(void) {
         if (hle_screen_open("Direct3D 7 application", 0, headless) != 0) return 0;
     }
     if(!g_d3d_vt) { static const win32hle_shim m[]={{"IDirect3D7::QueryInterface",d3d_qi},{"IDirect3D7::AddRef",d3d_addref},{"IDirect3D7::Release",d3d_release},{"IDirect3D7::EnumDevices",d3d_enum},{"IDirect3D7::CreateDevice",d3d_create_device},{"IDirect3D7::CreateVertexBuffer",d3d_create_vb},{"IDirect3D7::EnumZBufferFormats",d3d_enum_z},{"IDirect3D7::EvictManagedTextures",d3d_evict},{0,0}}; g_d3d_vt=hle_com_vtable(m); }
+    /* g_d3d is the host pointer, as d3d_qi and d3d_release read it through
+     * MEM32; the guest is handed its VA, as for every COM object here. */
     if(!g_d3d)g_d3d=hle_com_new(g_d3d_vt,8);
-    return g_d3d;
+    return g_d3d ? hle_va(hle_ptr(g_d3d)) : 0;
 }

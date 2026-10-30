@@ -178,20 +178,22 @@ static void dd_QueryInterface(void) {                    /* (this, iid, &out) */
     hle_guid_string(iid, s);
     if (trace()) fprintf(stderr, "[ddraw] IDirectDraw::QueryInterface %s\n", s);
     if (d1 == 0xF5049E78u) {
-        uint32_t d3d = hle_d3d7_create();
+        /* get returns the object, creating it on first use; QueryInterface
+         * hands the caller a reference, so take one here, once. */
+        uint32_t d3d = hle_d3d7_get();
         if (d3d) {
-            MEM32(A32(2)) = d3d;
             MEM32(d3d + 4)++;
+            MEM32(A32(2)) = d3d;
             RET(DD_OK, 3);
         }
         MEM32(A32(2)) = 0;
         RET(0x80004002u, 3);
     }
     if (d1 == 0x00000000u) { MEM32(A32(2)) = A32(0), MEM32(A32(0) + 4)++; RET(DD_OK, 3); }                      /* IUnknown: preserve interface identity */
-    if (d1 == 0x6C14DB80u) { MEM32(A32(2)) = g_dd, MEM32(g_dd + 4)++; RET(DD_OK, 3); }                             /* IDirectDraw */
-    if (d1 == 0xB3A6F3E0u) { MEM32(A32(2)) = g_dd2, MEM32(g_dd2 + 4)++; RET(DD_OK, 3); }                       /* IDirectDraw2 */
-    if (d1 == 0x9C59509Au) { MEM32(A32(2)) = g_dd4, MEM32(g_dd4 + 4)++; RET(DD_OK, 3); }                       /* IDirectDraw4 */
-    if (d1 == 0x15E65EC0u) { MEM32(A32(2)) = g_dd7, MEM32(g_dd7 + 4)++; RET(DD_OK, 3); }                       /* IDirectDraw7 */
+    if (d1 == 0x6C14DB80u) { MEM32(A32(2)) = g_dd, MEM32(g_dd + 4) = 1; RET(DD_OK, 3); }                        /* IDirectDraw */
+    if (d1 == 0xB3A6F3E0u) { MEM32(A32(2)) = g_dd2, MEM32(g_dd2 + 4) = 1; RET(DD_OK, 3); }                     /* IDirectDraw2 */
+    if (d1 == 0x9C59509Au) { MEM32(A32(2)) = g_dd4, MEM32(g_dd4 + 4) = 1; RET(DD_OK, 3); }                     /* IDirectDraw4 */
+    if (d1 == 0x15E65EC0u) { MEM32(A32(2)) = g_dd7, MEM32(g_dd7 + 4) = 1; RET(DD_OK, 3); }                     /* IDirectDraw7 */
     fprintf(stderr, "[ddraw] QueryInterface(%s): not served\n", s);
     MEM32(A32(2)) = 0;
     RET(0x80004002u, 3);
@@ -757,17 +759,18 @@ static void vtables(void) {
     g_vt_surf = hle_com_vtable(sf);
     g_vt_pal = hle_com_vtable(pl);
     g_vt_clip = hle_com_vtable(cl);
+    /* One object per interface, created once. The create calls set the count
+     * to 1 for the caller they hand it to (see x_DirectDrawCreate below). */
     g_dd = hle_com_new(g_vt_dd, 12);
     g_dd2 = hle_com_new(g_vt_dd2, 12);
     g_dd4 = hle_com_new(g_vt_dd4, 12);
     g_dd7 = hle_com_new(g_vt_dd7, 12);
-    MEM32(g_dd + 4) = MEM32(g_dd2 + 4) = MEM32(g_dd4 + 4) = MEM32(g_dd7 + 4) = 0;
 }
 
 static void x_DirectDrawCreate(void) {                   /* (guid, &out, outer) */
     vtables();
-    MEM32(g_dd + 4)++;
     MEM32(A32(1)) = g_dd;
+    MEM32(g_dd + 4) = 1;                                 /* the caller now holds the object's one reference */
     RET(DD_OK, 3);
 }
 static void x_DirectDrawCreateEx(void) {                 /* (guid, &out, iid, outer): IID_IDirectDraw7 or IDirectDraw4 */
@@ -777,7 +780,7 @@ static void x_DirectDrawCreateEx(void) {                 /* (guid, &out, iid, ou
     else if(d1==0x15E65EC0u)obj=g_dd7;
     if(!obj) { if(A32(1))MEM32(A32(1))=0; RET(0x80004002u,4); }
     if(A32(1))MEM32(A32(1))=obj;
-    MEM32(obj+4)++;
+    MEM32(obj+4)=1;                                      /* the caller now holds the object's one reference */
     RET(DD_OK,4);
 }
 static void x_DirectDrawEnumerateA(void) {               /* (callback, ctx): the primary display */

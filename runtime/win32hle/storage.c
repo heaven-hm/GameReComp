@@ -583,10 +583,14 @@ static void s_StgOpenStorage(void) {                     /* (name, priority, mod
 
 /* OleSaveToStream / OleLoadFromStream: the class ID, then the object's own
  * IPersistStream::Save / Load (vtable 6 / 5; GetClassID is 3). */
+/* The object's vtable is at a guest VA, and each slot holds the shim's guest
+ * VA - which is what hle_call_guest takes. Going through MEM32(MEM32(obj)+..)
+ * would read the vtable pointer as a host pointer, which a 64-bit (based)
+ * host truncates into the wrong VA. */
 static uint32_t vcall(uint32_t obj, int slot, int nargs, const uint32_t *args) {
     uint32_t a[8] = { obj };
     for (int i = 0; i < nargs; i++) a[1 + i] = args[i];
-    return hle_call_guest(MEM32(MEM32(obj) + 4u * (uint32_t)slot), nargs + 1, a);
+    return hle_call_guest(MEM32(obj + 4u * (uint32_t)slot), nargs + 1, a);
 }
 static uint32_t save_to_stream(uint32_t ps, uint32_t stm) {
     uint32_t clsid = hle_scratch(16);                    /* scratch, not static: Save may save objects of its own */
