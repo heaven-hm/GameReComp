@@ -81,12 +81,79 @@ detached from the binary it describes.
 input hash, including failures and `MISSING_INPUT` entries for corpus files
 that are not present on the current host.
 
+## The original-game oracle: decision, not aspiration
+
+**Decision (2026-10-30).** End-to-end comparison against the *original Windows
+game* requires a Windows host, and this project does not have one today. That is
+a hardware fact, not a design choice, and it is recorded here so that nothing in
+this repository implies an oracle that does not exist.
+
+Everything this project claims today is therefore one of two things:
+
+| Claim | What backs it |
+| --- | --- |
+| "the rebuilt binary runs" | the process's own exit code, its import-call profile, and its frames |
+| "the typed C equals its mechanical body" | a differential harness linking both entry points from the shipped source |
+| "the game matches the original" | **nothing.** It is not claimed anywhere. |
+
+Three routes to a real oracle, in ascending cost, and what was decided:
+
+1. **A per-function differential against the original bytes.** `difftest.py`
+   already runs x86 in Unicorn and compares it against lifted C. Driving it with
+   a project's own lifted function, against the original PE's bytes at the same
+   address, gives "this function agrees with the original on these inputs" for
+   any recoverable function — with no Windows host. **Chosen**, because it needs
+   nothing this project lacks and it upgrades every function claim from "the
+   lifted C does something plausible" to "it agrees with the original bytes on
+   the inputs driven". It is per-function and per-input-set: it does not, and
+   must not, be summarised as a whole-game claim.
+
+2. **A Windows host or VM, once.** Record the original's side — exit code,
+   stdout/stderr, and, with an IAT-patching DLL or debugger import trace, the
+   same call transcript this runtime already emits, plus the same input
+   transcript. The comparison tools then work unchanged, because the transcripts
+   are the same text format *by construction*. **Deferred, not refused**: this is
+   what would let a report say "same calls, same state" about a real game. When a
+   Windows host exists this becomes a recording job, not a redesign.
+
+3. **Emulating the original end to end under Unicorn with its DLLs.** That is a
+   Windows API emulator inside a CPU emulator — a second project, whose value
+   overlaps with 1 and 2 for far more cost. **Refused.**
+
+What would change this decision: a Windows host or VM becoming available (route
+2), or the corpus containing a game whose original binary is itself redistributable
+and therefore runnable in the same environment (none is). Until then, `scenario-pass`
+remains unreachable in practice, and every report says so in its `oracle_gaps`.
+
+## Determinism: what "two runs agree" means here
+
+`divergence.py` compares runs call-by-call. Getting there needed two things that
+are not free, and both were measured rather than assumed:
+
+- **A controllable clock** (`RECOMP_CLOCK=virtual`). Two runs of a frame-loop
+  game part company on a `timeGetTime` poll within ~118,000 calls otherwise, and
+  once they part the clock difference changes which branch the game takes, so the
+  traces never come back together. Normalising the clock calls out of a trace does
+  not fix it; the clock itself has to be controlled.
+- **Per-guest-thread virtual time.** Even with a virtual clock, a single global
+  sequence across all threads is not comparable: the audio thread's calls land at
+  a different point relative to the main thread's frame loop on every run. With
+  per-thread clocks the runs are identical **per thread**; the global interleaving
+  still varies, and the tools say so rather than averaging it away.
+
+The stable claim is therefore the per-thread one. "Two runs are identical" is
+false as a blanket statement about a threaded game and must not be written as one.
+
 ## Known limits
 
 - No original-Windows oracle harness exists in this repository; `scenario-pass`
   can only be claimed against a user-supplied oracle and is scoped to process
-  observables.
-- No deterministic input replay, frame hashes, audio comparison or save-state
-  checkpoints.
+  observables. See the decision above.
+- Deterministic input replay exists and is exercised on a real game: a recorded
+  transcript of what the input shims returned can be fed to another run, and the
+  per-thread call sequences match exactly. It covers the shims named in the
+  recording's own header, and that header also names what it does **not** cover.
+- No frame hashes, audio comparison or save-state checkpoints yet. Frames can be
+  captured (`RECOMP_SCREENSHOT`) but are not compared.
 - The score is weighted pipeline completion for the recorded hash. It is not
   a measure of game equivalence and must not be read as one.
