@@ -70,21 +70,24 @@ def test_the_seed_varies_per_case():
     assert seed_of(0) == 0x9E3779B9
 
 
-def test_only_df_is_excluded_from_the_flag_comparison():
-    # the body publishes g_flag_k/a/b/cf, so recomp_eflags() gives CF/PF/AF/ZF/SF/OF
-    # and those are compared; DF is not published and must stay excluded rather
-    # than be invented
-    assert difftest.UNDEF_FOR_PROJECT == ("DF",)
-    case = difftest.Case(name="x", code=b"\x90", undef=difftest.UNDEF_FOR_PROJECT)
-    assert "DF" in case.undef
-    assert "ZF" not in case.undef
+def test_flags_are_excluded_by_default_for_a_plain_c_body():
+    # a typed C function does not model the guest's flag state, so comparing the
+    # flags would compare stale globals against the real register; the default
+    # excludes them and the report says why
+    assert difftest.ONLY_DF == ("DF",)
+    assert set(difftest.NO_FLAGS) == {"CF", "PF", "AF", "ZF", "SF", "DF", "OF"}
+    plain = difftest.Case(name="x", code=b"\x90", undef=difftest.NO_FLAGS)
+    lifted = difftest.Case(name="x", code=b"\x90", undef=difftest.ONLY_DF)
+    assert "ZF" in plain.undef and "ZF" not in lifted.undef
 
 
 def test_the_comparator_catches_a_flag_only_difference():
+    # the property the exclusion must not destroy: when flags ARE compared (a
+    # lifted body), a flag-only difference is a divergence
     lifted = {"regs": {n: 0 for n in difftest.REGS}, "eflags": 0x202,
               "mem": {}, "fp_depth": 0, "st": []}
     real = {"regs": {n: 0 for n in difftest.REGS}, "eflags": 0x246,
             "mem": {}, "fp_depth": 0, "st": []}
     fields = difftest.diff(difftest.Case(name="x", code=b"\x90",
-                                         undef=difftest.UNDEF_FOR_PROJECT), lifted, real)
+                                         undef=difftest.ONLY_DF), lifted, real)
     assert {f[0] for f in fields} == {"PF", "ZF"}
