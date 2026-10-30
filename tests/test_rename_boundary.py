@@ -108,3 +108,22 @@ def test_a_constant_address_crosses_as_a_va():
     import pycparser.c_ast as ast
     cls = model.classify(ast.Constant(type="unsigned int", value="0x00400000U"), "positive")
     assert cls == "va"
+
+
+# ---- class 3, recovered: a field whose base is a bare pointer parameter carries
+# its struct type in its DECLARATION, so the field becomes an offset on the VA
+def test_class3_a_bare_pointer_parameter_recovers_its_struct():
+    from tools.autorecomp.rename_ast import parse_layouts
+    from pathlib import Path
+    header = Path("highlevel/doukutsu/types-and-globals.h")
+    if not header.is_file():
+        pytest.skip("the provider header is not present")
+    layouts = parse_layouts(header.read_text(errors="replace"))
+    src, _ = rewrite("""
+void function_0x1000_Code_x86(struct_1 *argument_0) {
+    generic32_t var_0 = argument_0->offset_392;
+    return;
+}
+""", BASE, own_va=VA, layouts=layouts)
+    # offset 392, width 8 from the header: the field is an offset on the VA
+    assert "MEM8((argument_0 + 392U))" in src

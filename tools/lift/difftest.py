@@ -1327,7 +1327,13 @@ def named_addrs_from_code(blob, va, lo=None, hi=None):
 
     Taken from the bytes rather than from the generated source, so the memory
     compared is the memory the function actually touches, whatever the
-    generator emitted and wherever the adapter lives."""
+    generator emitted and wherever the adapter lives.
+
+    ONLY disp-only operands (`[0x499C68]`). `[ebp-4]`/`[esp+8]` are excluded ON
+    PURPOSE: the guest stack frame is compared separately (`--frame-size`, verdict
+    `agree-frame`), so adding base-register operands here would compare the stack
+    twice and make a frame divergence look like a named-memory one. This is
+    correct, not a gap - do not "fix" it."""
     lo = BASE if lo is None else lo
     hi = BASE + SIZE if hi is None else hi
     md = Cs(CS_ARCH_X86, CS_MODE_32)

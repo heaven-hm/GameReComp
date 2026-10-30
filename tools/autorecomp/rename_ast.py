@@ -206,6 +206,7 @@ class Model:
         self.frame_type = None
         self.frames_enabled = False
         self.address = 0
+        self.pointer_types = {}     # pointer local -> provider struct it points at
         self.segment_base = segment_base
         self.va_locals = {}        # var name -> width (a pointer that became a VA)
         self.scalar_locals = {}    # var name -> width
@@ -235,6 +236,11 @@ class Model:
                 # a pointer to an incomplete provider type is still a GUEST VA
                 width = 32
             self.va_locals[name] = width
+            # a pointer to a provider struct carries that struct's name, which is
+            # what a field access through this local needs (class 3)
+            inner_type = str(inner).replace("ptr:", "") if inner else ""
+            if inner_type.startswith(("struct_", "union_")):
+                self.pointer_types[name] = inner_type
             self.notes.append(f"{name}: pointer -> uint32_t guest VA (width {width})")
             new = c_ast.Decl(name=name, quals=[], align=None, storage=[],
                              funcspec=[], type=c_ast.TypeDecl(
@@ -377,6 +383,11 @@ class Model:
             if base_cls != VA:
                 raise Unsupportable(f"0x{self.address:08X}: a struct field is accessed through "
                                     f"a plain scalar, not a guest VA")
+            fld = (node.field.name if isinstance(node.field, c_ast.ID) else None)
+            offm = _RE_FIELD.match(fld or "")
+            if not offm:
+                raise Unsupportable(f"a struct/union field with no offset in its name: {fld}")
+            offset = int(offm.group(1))
             width = None
             type_name, is_guest = self._struct_name_of(node.name)
             if not is_guest:
@@ -454,7 +465,10 @@ class Model:
                 cur = cur.expr
                 continue
             if isinstance(cur, c_ast.ID):
-                return getattr(cur, "_struct", None), cur.name in self.va_locals
+                # class 3: the struct comes from the local's own declaration when
+                # no cast supplies it
+                nm = self.pointer_types.get(cur.name) or getattr(cur, "_struct", None)
+                return nm, cur.name in self.va_locals
             return None, False
 
     def _is_va(self, node):
@@ -522,6 +536,15 @@ class Model:
         return node
 
     def function(self, fn):
+        # register the parameters first: they are the entry values that cross
+        for p in (fn.decl.type.args.params if fn.decl.type.args else []):
+            t = _type_of(p.type) or ""
+            if t.startswith("ptr:"):
+                self.va_locals[p.name] = width_of_type(t[4:]) or 32
+                if t[4:].startswith(("struct_", "union_")):
+                    self.pointer_types[p.name] = t[4:]
+            elif width_of_type(t):
+                self.scalar_locals[p.name] = width_of_type(t)
         body = self.stmt(fn.body)
         # the return type: a pointer return becomes a guest VA
         ret = fn.decl.type.type

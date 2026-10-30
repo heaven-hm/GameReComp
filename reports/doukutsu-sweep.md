@@ -266,3 +266,11 @@ each address compared. The table is a summary of the JSON, not a replacement for
   argument are the same problem - a value crossing a boundary written in the source's
   vocabulary instead of the destination's. The rule to build is structural: every
   value crossing the boundary must be a guest VA, a plain scalar, or a refusal.
+
+## The provider's honest failure rate on this binary
+
+Beyond `0x00481BB0`'s 180: **24 of the 955 provider bodies are refused for
+`undef()` values, carrying 2,331 of them in total.** Every one is the decompiler
+marking a value it could not determine. That is the provider's own measurement of
+what it could not recover on this binary, and it is the number to quote rather than
+the one function that happened to be the frame loop's core.
