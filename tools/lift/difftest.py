@@ -1476,6 +1476,49 @@ def build_project_cases(project_dir, target, named, seed_of, cases, cc=None, sou
     return binary, None
 
 
+def has_memory_observable(pe_path, va):
+    """Does the ORIGINAL at `va` write guest data or call anything?
+
+    A pure function's only observable IS its return value, so a comparison that
+    finds no named memory has not compared nothing - it compared the one thing
+    the function produces. Refusing those is the guard mistaking "narrow" for
+    "vacuous". A function that writes memory the extractor failed to name is a
+    different case: then the comparison really is missing a subject."""
+    from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+    from capstone.x86 import X86_REG_EBP, X86_REG_ESP
+    import struct as _struct
+    data = Path(pe_path).read_bytes()
+    _, secs = pe_sections(pe_path)
+    data_lo = min(sva for _, sva, _, _, _ in secs if sva >= BASE)
+    data_hi = max(sva + max(vs, rs) for _, sva, vs, _, rs in secs)
+    blob, section = pe_bytes_at(pe_path, va, 4096)
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+    md.detail = True
+    for insn in md.disasm(blob, va):
+        if insn.mnemonic in ("call", "callf"):
+            return True
+        for op in insn.operands:
+            if op.type == 3 and op.mem.base == 0 and op.mem.index == 0:
+                addr = op.mem.disp & 0xFFFFFFFF
+                if data_lo <= addr < data_hi and insn.mnemonic.startswith(("mov", "and", "or",
+                                                                          "xor", "add", "sub",
+                                                                          "inc", "dec", "not")):
+                    if insn.operands[0].type == 3:   # the destination is memory
+                        return True
+            if op.type == 3 and insn.operands[0].type == 3 and insn.operands[0].mem.base not in (0,):
+                # a write through a register: [reg+off] as destination. The STACK
+                # frame is not a guest-data observable - `mov [ebp+8], al` writes
+                # an argument slot and was a false positive on 0x004258C0.
+                base = op.mem.base
+                if base in (X86_REG_EBP, X86_REG_ESP):
+                    continue
+                if insn.mnemonic.startswith(("mov", "and", "or", "xor", "add", "sub")):
+                    return True
+        if insn.mnemonic in ("ret", "retn", "retf"):
+            break
+    return False
+
+
 def _eax_only_case(case):
     """Mark every register but eax as not compared, for a plain-C body."""
     class _C(Case):
@@ -1654,17 +1697,41 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
             continue
 
         if not named:
-            # A comparison that compares nothing is not a pass. This exact shape
-            # has now produced three confident, vacuous results today: a fixed
-            # EFLAGS of 0 on the real side, a 256 KB window that clipped every
-            # address in a 1.4 MB image, and the same constant in the named-memory
-            # filter. The guard is one rule at the reporting boundary.
+            # A comparison that compares nothing is not a pass - but a PURE
+            # function's only observable IS its return value, so "no named memory"
+            # does not mean "no subject". Distinguish the two instead of treating
+            # every such function as unverifiable: of the 15 in the Doukutsu sweep
+            # that hit this guard, all 15 write no guest memory and call nothing.
+            if has_memory_observable(pe_path, address):
+                out.append({
+                    "address": f"0x{address:08X}", "verdict": "nothing-compared",
+                    "detail": "the original writes guest memory or calls out, but none of the "
+                              "addresses could be named, so the comparison would miss its "
+                              "subject. Refusing to report a pass.",
+                    "pe": str(pe_path), "pe_sha256": pe_sha, "symbol_compared": target})
+                continue
+            # a pure function: compare the return value, and say that is all
+            case = Case(name=f"project 0x{address:08X}", code=blob, undef=NO_FLAGS)
+            case.eax_only = True
+            rows, diverged = [], 0
+            for i, (got, want) in enumerate(zip(lifted, real)):
+                fields = diff(case, got, want)
+                if fields:
+                    diverged += 1
+                rows.append({"case": i, "seed": f"0x{seed_of(i):08X}", "agree": not fields,
+                             "fields": [{"field": n, "project": a, "original": b}
+                                        for n, a, b in fields]})
             out.append({
-                "address": f"0x{address:08X}", "verdict": "nothing-compared",
-                "detail": "no named guest-memory address was found in the original's instructions, "
-                          "so a register-only comparison would not be a state comparison. Refusing "
-                          "to report a pass.",
-                "pe": str(pe_path), "pe_sha256": pe_sha, "symbol_compared": target})
+                "address": f"0x{address:08X}",
+                "verdict": "agree-return" if diverged == 0 else "diverge",
+                "verdict_meaning": "the original writes no guest memory and calls nothing, so its "
+                                   "return value in eax is its whole observable contract; this "
+                                   "compares that and nothing else",
+                "pe": str(pe_path), "pe_sha256": pe_sha, "section": section,
+                "bytes_sha256": hashlib.sha256(blob).hexdigest(), "bytes_read": len(blob),
+                "symbol_compared": target, "cases": rows,
+                "input_set": {"cases": cases, "named_addresses": [],
+                              "seeded": "each seed is (case+1) on both sides"}})
             continue
         case = Case(name=f"project 0x{address:08X}", code=blob,
                     undef=ONLY_DF if compare_flags else NO_FLAGS)

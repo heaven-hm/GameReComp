@@ -87,3 +87,42 @@ The seven are reached on startup paths, not in the frame loop, so the honest
 sentence is: seven generated replacements, certified against the original bytes,
 dispatched, and called by a game that runs - each once, on a startup path, with the
 frame loop's counts unchanged beside them.
+
+## The `nothing-compared` bucket was 15 certifiable functions in disguise
+
+The guard refused them for having no named guest memory. All 15 write no guest data
+and call nothing - they are pure functions, and a pure function's only observable
+**is its return value**, so "no named memory" was being read as "no subject". That
+is the same category error as the constant EFLAGS, in the opposite direction: the
+guard mistaking **narrow** for **vacuous**.
+
+So the verdict is `agree-return`: for a function the original proves pure (no guest
+data writes, no calls), the comparison drives eax and says the return value is the
+whole contract. The guard still refuses the case it was built for - a function that
+writes memory the extractor failed to name - because there the subject really is
+missing.
+
+    of the 15:  12 agree-return   3 diverge   0 nothing-compared
+
+**And the three divergences are a new class worth having.** All three are pure
+functions whose provider body is a **constant** where the original computes from
+its input registers:
+
+    0x004882D9  provider: returns 0x411      original: 0x0      (10 instructions)
+    0x00489227  provider: returns 0x300      original: 0x320    (49 instructions)
+    0x00489195  provider: returns 0x20000    original: 0x20010  (55 instructions)
+
+The provider's signature for them says `void` (no arguments), so the body could not
+use the inputs it actually has - a `__fastcall`/thiscall-style entry recovered as a
+no-argument function. This is the same family as the empty bodies: **a provider body
+that lost its inputs**. The oracle is the only thing that could have said so, because
+the body compiles, looks plausible, and is wrong.
+
+**Certified count, corrected: 7 + 12 = 19** (7 on registers and named memory, 12 on
+the return value alone), with 3 real divergences found on the way. The README and
+the earlier report understated the pipeline; an understated number is still a wrong
+number.
+
+One false positive found fixing this: `has_memory_observable` counted `mov [ebp+8],
+al` as a guest-data write, but that is an argument slot in the stack frame. The
+stack is not a guest-data observable, and 0x004258C0 was refused because of it.
