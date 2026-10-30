@@ -339,6 +339,38 @@ projects/<name>/
 5. **Desktop GUI** — project wizard, run dashboard, source explorer and
    verification dashboard over the same backend the CLI drives.
 
+
+## Planned Windows PC game targets (not verified)
+
+These are **future integration and test targets**, not working GameReComp ports. A title's release year or reported DirectX version **does not prove** its actual API imports; each game issue requires an edition-specific PE/DLL/API census before implementation. The [independently verified working-games list](#verified-working-games) remains empty until original-Windows-vs-native gameplay and source-rebuild gates pass. Planned games are **not** inserted into the measured/generated [game matrix](docs/GAME_MATRIX.md) without a real locally supplied input.
+
+The [PCRecomp project catalogue](https://github.com/sp00nznet/pcrecomp#the-projects-that-built-this) did not list any of these **Windows PC game titles** as dedicated PCRecomp projects at the 2026-10-30 audit. This does **not** mean there is no reusable PCRecomp code: game-specific renderer/loader techniques and shared runtime infrastructure are reused where applicable. **No games, binaries, DLLs or proprietary assets are bundled.**
+
+| Target original Windows PC game | Year | Expected renderer to verify against actual build | Main implementation dependencies | Game-specific issue / current status |
+| --- | ---: | --- | --- | --- |
+| **Project I.G.I.** | 2000 | Direct3D 7 | [#2 D3D7](https://github.com/heaven-hm/GameReComp/issues/2), [#1 source + oracle](https://github.com/heaven-hm/GameReComp/issues/1) | [#15](https://github.com/heaven-hm/GameReComp/issues/15) — **planned**; existing [issue-2 IGI compatibility branch](https://github.com/heaven-hm/GameReComp/tree/feature/issue-2-igi-compat) under development |
+| **Hitman: Codename 47** | 2000 | Direct3D / OpenGL / Glide; select after renderer-DLL audit | [#9 multi-DLL/SEH](https://github.com/heaven-hm/GameReComp/issues/9), [#2](https://github.com/heaven-hm/GameReComp/issues/2), [#6 Glide](https://github.com/heaven-hm/GameReComp/issues/6) | [#16](https://github.com/heaven-hm/GameReComp/issues/16) — **planned** |
+| **Max Payne** (original PC) | 2001 | Direct3D 8 | [#3 D3D8](https://github.com/heaven-hm/GameReComp/issues/3), [#9 multi-DLL](https://github.com/heaven-hm/GameReComp/issues/9), [#10 multimedia](https://github.com/heaven-hm/GameReComp/issues/10) | [#17](https://github.com/heaven-hm/GameReComp/issues/17) — **planned**; separate from Xbox recompilation |
+| **Hitman 2: Silent Assassin** (2002, not 2018) | 2002 | Direct3D 8 / OpenGL | [#3 D3D8](https://github.com/heaven-hm/GameReComp/issues/3), [#9 multi-DLL](https://github.com/heaven-hm/GameReComp/issues/9) | [#19](https://github.com/heaven-hm/GameReComp/issues/19) — **planned** |
+| **Max Payne 2: The Fall of Max Payne** | 2003 | Direct3D 8 | [#3 D3D8](https://github.com/heaven-hm/GameReComp/issues/3), [#9 multi-DLL](https://github.com/heaven-hm/GameReComp/issues/9) | [#18](https://github.com/heaven-hm/GameReComp/issues/18) — **planned** |
+| **Hitman: Contracts** | 2004 | Direct3D / OpenGL; pin version and imports | [#3 D3D8](https://github.com/heaven-hm/GameReComp/issues/3), [#9 multi-DLL](https://github.com/heaven-hm/GameReComp/issues/9) | [#20](https://github.com/heaven-hm/GameReComp/issues/20) — **planned** |
+| **TrackMania Nations ESWC** | 2006 | Direct3D 9.0c | [#5 D3D9](https://github.com/heaven-hm/GameReComp/issues/5), [#9 runtime](https://github.com/heaven-hm/GameReComp/issues/9) | [#22](https://github.com/heaven-hm/GameReComp/issues/22) — **planned / input-protection gate** |
+| **Hitman: Blood Money** | 2006 | Direct3D 9 | [#5 D3D9](https://github.com/heaven-hm/GameReComp/issues/5), [#9 multi-DLL](https://github.com/heaven-hm/GameReComp/issues/9), [#10 multimedia](https://github.com/heaven-hm/GameReComp/issues/10) | [#21](https://github.com/heaven-hm/GameReComp/issues/21) — **planned** |
+| **TrackMania Nations Forever** | 2008 | Direct3D 9.0c | [#5 D3D9](https://github.com/heaven-hm/GameReComp/issues/5), [#14 verification](https://github.com/heaven-hm/GameReComp/issues/14) | [#23](https://github.com/heaven-hm/GameReComp/issues/23) — **planned**; verify matching `TmForever.map` |
+| **TrackMania United Forever** | 2008 | Direct3D 9.0c | [#5 D3D9](https://github.com/heaven-hm/GameReComp/issues/5), [#14 verification](https://github.com/heaven-hm/GameReComp/issues/14) | [#24](https://github.com/heaven-hm/GameReComp/issues/24) — **planned**, separate binary and asset baseline |
+
+### Codebases to study — references, not game ports to copy
+
+Game-specific issues contain file-level audits and scoped integration tasks. Particularly relevant, verified reference repositories:
+
+- **IGI Direct3D 7:** [HenryKun55/igi-recomp `shim/src/d3d7.c`](https://github.com/HenryKun55/igi-recomp/blob/master/shim/src/d3d7.c), [DirectDraw](https://github.com/HenryKun55/igi-recomp/blob/master/shim/src/ddraw.c), [OpenGL renderer](https://github.com/HenryKun55/igi-recomp/blob/master/shim/src/render_gl.c); compare with [our active D3D7 implementation](https://github.com/heaven-hm/GameReComp/blob/feature/issue-2-igi-compat/runtime/win32hle/d3d7.c) **on the issue-2 branch** before merging, not on current develop.
+- **Hitman/Glacier modules:** [0danny/re47](https://github.com/0danny/re47) for Codename 47 DLL and function inventory; [ReGlacier/ReHitman](https://github.com/ReGlacier/ReHitman) for *Blood Money* engine API research. Neither is a drop-in multiplatform Windows PE recompiler; match binary versions and inspect licences.
+- **Max Payne:** [phobos665/payne-recomp](https://github.com/phobos665/payne-recomp) documents **Xbox PAL** recompilation only; useful as a behavioural reference, never evidence of Windows PC build support.
+- **TrackMania/GBX:** [pixeltris/ModTMNF](https://github.com/pixeltris/ModTMNF) for *Nations Forever* symbol-map and replay research; [BigBang1112/gbx-net](https://github.com/BigBang1112/gbx-net) for GBX format inspection. Do not copy the injector or include commercial map/game data.
+- **Other game-specific compatibility precedents (PCRecomp and external):** [Rogue Squadron legacy DirectDraw/3D façade](https://github.com/sp00nznet/rogue-squadron-recomp/blob/main/src/runtime/display.c), [Nocturne legacy rendering ABI study](https://github.com/sp00nznet/nocturne/blob/main/docs/RENDERER_API.md), [X-Wing Alliance legacy-D3D-to-D3D11 backend](https://github.com/sp00nznet/xwa/blob/main/src/hal/d3d11_renderer.c), and [NFS MW D3D9 bridge](https://github.com/codepdbh/nfsmwpc-recompiled/blob/main/android/app/src/main/cpp/d3d9_bridge.cpp). These are **design/code-reuse candidates**, not native cross-platform HLE modules as-is; analyse ABI, portability and per-file licensing before adapting.
+
+**Implementation rule:** game issues **#15–#24** own individual executable, DLL, assets, edition hashes and gameplay fixtures; shared Windows/DirectX/Input/Audio/PE support belongs to existing [#1–#14](https://github.com/heaven-hm/GameReComp/issues). Require actual original-versus-native gameplay evidence and a rebuilt source-level change for every game; never mark a title playable because it compiles, binds imports, renders a menu or because another project claims playability.
+
 ## Contributing and licence
 
 MIT — see [`LICENSE`](LICENSE). Third-party notices are in [`NOTICE`](NOTICE) and
