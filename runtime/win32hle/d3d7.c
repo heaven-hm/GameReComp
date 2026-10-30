@@ -26,6 +26,10 @@ enum { GL_POINTS=0x0000, GL_LINES=0x0001, GL_LINE_STRIP=0x0003,
        GL_COLOR_WRITEMASK=0x0C23, GL_DEPTH_WRITEMASK=0x0B72,
        GL_STENCIL_WRITEMASK=0x0B98, GL_COLOR_CLEAR_VALUE=0x0C22,
        GL_DEPTH_CLEAR_VALUE=0x0B73, GL_STENCIL_CLEAR_VALUE=0x0B91,
+       GL_PACK_ALIGNMENT=0x0D05, GL_PACK_ROW_LENGTH=0x0D02,
+       GL_FRAMEBUFFER=0x8D40, GL_RENDERBUFFER=0x8D41,
+       GL_COLOR_ATTACHMENT0=0x8CE0, GL_DEPTH_ATTACHMENT=0x8D00,
+       GL_FRAMEBUFFER_COMPLETE=0x8CD5, GL_DEPTH_COMPONENT24=0x81A6,
        GL_LEQUAL=0x0203, GL_GREATER=0x0204, GL_GEQUAL=0x0206,
        GL_EQUAL=0x0202, GL_NOTEQUAL=0x0205, GL_ALWAYS=0x0207,
        GL_NEVER=0x0200, GL_ZERO=0, GL_ONE=1, GL_SRC_ALPHA=0x0302,
@@ -92,6 +96,15 @@ typedef void (*gl_light_modelfv_fn)(unsigned,const float *);
 typedef void (*gl_light_modeli_fn)(unsigned,int);
 typedef unsigned char (*gl_is_enabled_fn)(unsigned);
 typedef void (*gl_scissor_fn)(int,int,int,int);
+typedef void (*gl_gen_objects_fn)(int,unsigned *);
+typedef void (*gl_bind_object_fn)(unsigned,unsigned);
+typedef void (*gl_delete_objects_fn)(int,const unsigned *);
+typedef void (*gl_framebuffer_texture_fn)(unsigned,unsigned,unsigned,unsigned,int);
+typedef unsigned (*gl_check_framebuffer_fn)(unsigned);
+typedef void (*gl_renderbuffer_storage_fn)(unsigned,unsigned,int,int);
+typedef void (*gl_framebuffer_renderbuffer_fn)(unsigned,unsigned,unsigned,unsigned);
+typedef void (*gl_read_pixels_fn)(int,int,int,int,unsigned,unsigned,void *);
+typedef void (*gl_viewport_fn)(int,int,int,int);
 
 static gl_begin_fn p_begin; static gl_end_fn p_end;
 static gl_vertex3_fn p_vertex3; static gl_vertex4_fn p_vertex4;
@@ -126,7 +139,19 @@ static gl_light_modelfv_fn p_light_modelfv;
 static gl_light_modeli_fn p_light_modeli;
 static gl_is_enabled_fn p_is_enabled;
 static gl_scissor_fn p_scissor;
+static gl_gen_objects_fn p_gen_framebuffers,p_gen_renderbuffers;
+static gl_bind_object_fn p_bind_framebuffer,p_bind_renderbuffer;
+static gl_delete_objects_fn p_delete_framebuffers,p_delete_renderbuffers;
+static gl_framebuffer_texture_fn p_framebuffer_texture;
+static gl_check_framebuffer_fn p_check_framebuffer;
+static gl_renderbuffer_storage_fn p_renderbuffer_storage;
+static gl_framebuffer_renderbuffer_fn p_framebuffer_renderbuffer;
+static gl_read_pixels_fn p_read_pixels;
+static gl_viewport_fn p_gl_viewport;
 static int g_gl_loaded;
+static int g_fbo_loaded,g_fbo_available;
+static unsigned g_rt_framebuffer,g_rt_color,g_rt_depth;
+static int g_rt_width,g_rt_height;
 
 #define LOAD_GL(field, type, symbol) do { *(void **)(&(field)) = SDL_GL_GetProcAddress(symbol); if (!(field)) return 0; } while (0)
 static int load_gl(void) {
@@ -167,11 +192,142 @@ static int load_gl(void) {
     LOAD_GL(p_light_modeli, gl_light_modeli_fn, "glLightModeli");
     LOAD_GL(p_is_enabled, gl_is_enabled_fn, "glIsEnabled");
     LOAD_GL(p_scissor, gl_scissor_fn, "glScissor");
+    LOAD_GL(p_gl_viewport, gl_viewport_fn, "glViewport");
     *(void **)(&p_secondary_color3ub)=SDL_GL_GetProcAddress("glSecondaryColor3ub");
     g_gl_loaded = 1;
     return 1;
 }
 #undef LOAD_GL
+
+static void *gl_proc_pair(const char *core,const char *extension) {
+    void *p=SDL_GL_GetProcAddress(core);
+    return p?p:SDL_GL_GetProcAddress(extension);
+}
+static int load_fbo(void) {
+    if(g_fbo_loaded) return g_fbo_available;
+#define LOAD_FBO(field,type,core,extension) do { *(void **)(&(field))=gl_proc_pair(core,extension); if(!(field))goto unavailable; } while(0)
+    LOAD_FBO(p_gen_framebuffers,gl_gen_objects_fn,"glGenFramebuffers","glGenFramebuffersEXT");
+    LOAD_FBO(p_bind_framebuffer,gl_bind_object_fn,"glBindFramebuffer","glBindFramebufferEXT");
+    LOAD_FBO(p_delete_framebuffers,gl_delete_objects_fn,"glDeleteFramebuffers","glDeleteFramebuffersEXT");
+    LOAD_FBO(p_framebuffer_texture,gl_framebuffer_texture_fn,"glFramebufferTexture2D","glFramebufferTexture2DEXT");
+    LOAD_FBO(p_check_framebuffer,gl_check_framebuffer_fn,"glCheckFramebufferStatus","glCheckFramebufferStatusEXT");
+    LOAD_FBO(p_gen_renderbuffers,gl_gen_objects_fn,"glGenRenderbuffers","glGenRenderbuffersEXT");
+    LOAD_FBO(p_bind_renderbuffer,gl_bind_object_fn,"glBindRenderbuffer","glBindRenderbufferEXT");
+    LOAD_FBO(p_delete_renderbuffers,gl_delete_objects_fn,"glDeleteRenderbuffers","glDeleteRenderbuffersEXT");
+    LOAD_FBO(p_renderbuffer_storage,gl_renderbuffer_storage_fn,"glRenderbufferStorage","glRenderbufferStorageEXT");
+    LOAD_FBO(p_framebuffer_renderbuffer,gl_framebuffer_renderbuffer_fn,"glFramebufferRenderbuffer","glFramebufferRenderbufferEXT");
+    LOAD_FBO(p_read_pixels,gl_read_pixels_fn,"glReadPixels","glReadPixels");
+    g_fbo_available=1; g_fbo_loaded=1;
+#undef LOAD_FBO
+    return 1;
+unavailable:
+    g_fbo_available=0; g_fbo_loaded=1;
+#undef LOAD_FBO
+    return 0;
+}
+
+static int target_info(uint32_t surface, uint8_t **pixels, int *w, int *h, int *pitch, int *bpp) {
+    return hle_dd_surface_is_3d_target(surface) &&
+           hle_dd_surface_pixels(surface,pixels,w,h,pitch,bpp) &&
+           *w>0 && *h>0 && (*bpp==16 || *bpp==24 || *bpp==32) &&
+           (int64_t)*pitch>=(int64_t)*w*(*bpp/8);
+}
+
+/* The SDL window's default framebuffer presents the primary. A single
+ * reusable FBO backs other DirectDraw 3D surfaces; EndScene copies it back
+ * into the surface's CPU pixels before that surface can be blitted/flipped. */
+static int bind_render_target(uint32_t surface) {
+    uint8_t *pixels; int w,h,pitch,bpp;
+    if(!load_gl() || !target_info(surface,&pixels,&w,&h,&pitch,&bpp)) return 0;
+    if(hle_dd_surface_is_primary_3d_target(surface)) {
+        if(load_fbo()) p_bind_framebuffer(GL_FRAMEBUFFER,0);
+        return 1;
+    }
+    if(!load_fbo()) return 0;
+    if(!g_rt_framebuffer) {
+        p_gen_framebuffers(1,&g_rt_framebuffer);
+        p_gen_textures(1,&g_rt_color);
+        p_gen_renderbuffers(1,&g_rt_depth);
+        if(!g_rt_framebuffer || !g_rt_color || !g_rt_depth) {
+            if(g_rt_framebuffer) p_delete_framebuffers(1,&g_rt_framebuffer);
+            if(g_rt_color) p_delete_textures(1,&g_rt_color);
+            if(g_rt_depth) p_delete_renderbuffers(1,&g_rt_depth);
+            g_rt_framebuffer=g_rt_color=g_rt_depth=0;
+            return 0;
+        }
+    }
+    int bytes_per_pixel=bpp/8;
+    uint8_t *packed=NULL;
+    const void *source=pixels;
+    if(pitch%bytes_per_pixel) {
+        size_t packed_pitch=(size_t)w*(size_t)bytes_per_pixel;
+        if((size_t)h>SIZE_MAX/packed_pitch) return 0;
+        packed=(uint8_t *)malloc(packed_pitch*(size_t)h);
+        if(!packed) return 0;
+        for(int y=0;y<h;y++) memcpy(packed+(size_t)y*packed_pitch,pixels+(size_t)y*(size_t)pitch,packed_pitch);
+        source=packed;
+    }
+    p_bind_framebuffer(GL_FRAMEBUFFER,g_rt_framebuffer);
+    p_bind_texture(GL_TEXTURE_2D,g_rt_color);
+    p_pixel_store_i(GL_UNPACK_ALIGNMENT,1);
+    if(packed) {
+        p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0);
+    } else p_pixel_store_i(GL_UNPACK_ROW_LENGTH,pitch/bytes_per_pixel);
+    unsigned format=bpp==16?GL_RGB:bpp==24?GL_BGR:GL_BGRA;
+    unsigned type=bpp==16?GL_UNSIGNED_SHORT_5_6_5:GL_UNSIGNED_BYTE;
+    p_tex_image_2d(GL_TEXTURE_2D,0,GL_RGBA,w,h,0,format,type,source);
+    free(packed);
+    p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0);
+    p_pixel_store_i(GL_UNPACK_ALIGNMENT,4);
+    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    p_framebuffer_texture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,g_rt_color,0);
+    p_bind_renderbuffer(GL_RENDERBUFFER,g_rt_depth);
+    if(g_rt_width!=w || g_rt_height!=h) {
+        p_renderbuffer_storage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT24,w,h);
+        g_rt_width=w; g_rt_height=h;
+    }
+    p_framebuffer_renderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,g_rt_depth);
+    if(p_check_framebuffer(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE) {
+        p_bind_framebuffer(GL_FRAMEBUFFER,0);
+        return 0;
+    }
+    p_gl_viewport(0,0,w,h);
+    return 1;
+}
+
+static int store_render_target(uint32_t surface) {
+    uint8_t *pixels; int w,h,pitch,bpp;
+    if(hle_dd_surface_is_primary_3d_target(surface)) return 1;
+    if(!target_info(surface,&pixels,&w,&h,&pitch,&bpp) || !load_fbo()) return 0;
+    size_t row_bytes=(size_t)w*4u;
+    if((size_t)h>SIZE_MAX/row_bytes) return 0;
+    uint8_t *rgba=(uint8_t *)malloc(row_bytes*(size_t)h);
+    if(!rgba) return 0;
+    p_bind_framebuffer(GL_FRAMEBUFFER,g_rt_framebuffer);
+    int old_pack=4,old_row_length=0; p_getint(GL_PACK_ALIGNMENT,&old_pack); p_getint(GL_PACK_ROW_LENGTH,&old_row_length);
+    p_pixel_store_i(GL_PACK_ALIGNMENT,1); p_pixel_store_i(GL_PACK_ROW_LENGTH,0);
+    p_read_pixels(0,0,w,h,GL_RGBA,GL_UNSIGNED_BYTE,rgba);
+    p_pixel_store_i(GL_PACK_ALIGNMENT,old_pack); p_pixel_store_i(GL_PACK_ROW_LENGTH,old_row_length);
+    for(int y=0;y<h;y++) {
+        const uint8_t *src=rgba+(size_t)(h-1-y)*row_bytes;
+        uint8_t *dst=pixels+(size_t)y*(size_t)pitch;
+        if(bpp==32) {
+            for(int x=0;x<w;x++) { dst[x*4]=src[x*4+2]; dst[x*4+1]=src[x*4+1]; dst[x*4+2]=src[x*4]; dst[x*4+3]=src[x*4+3]; }
+        } else if(bpp==24) {
+            for(int x=0;x<w;x++) { dst[x*3]=src[x*4+2]; dst[x*3+1]=src[x*4+1]; dst[x*3+2]=src[x*4]; }
+        } else {
+            for(int x=0;x<w;x++) { uint16_t v=(uint16_t)(((src[x*4]>>3)<<11)|((src[x*4+1]>>2)<<5)|(src[x*4+2]>>3)); memcpy(dst+(size_t)x*2,&v,2); }
+        }
+    }
+    free(rgba);
+    return 1;
+}
+
+static void set_target_viewport(uint32_t surface,int x,int y,int w,int h) {
+    if(hle_dd_surface_is_primary_3d_target(surface)) hle_screen_gl_viewport(x,y,w,h);
+    else p_gl_viewport(x,(int)g_rt_height-y-h,w,h);
+}
 
 static const uint8_t IID_IUNKNOWN[16] = {0,0,0,0,0,0,0,0,0xC0,0,0,0,0,0,0,0x46};
 static const uint8_t IID_IDIRECT3D7[16] = {0x78,0x9E,0x04,0xF5,0x61,0x48,0xD2,0x11,0xA4,0x07,0,0xA0,0xC9,0x06,0x29,0xA8};
@@ -388,7 +544,7 @@ static void d3d_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void d3d_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){hle_com_free(s);if(g_d3d==s)g_d3d=0;} RET(r,1); }
 static void dev_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!out) RET(E_POINTER,3); if(memcmp(hle_ptr(iid),IID_IUNKNOWN,16)&&memcmp(hle_ptr(iid),IID_IDIRECT3DDEVICE7,16)){MEM32(out)=0;RET(E_NOINTERFACE,3);} MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
 static void dev_addref(void) { RET(++MEM32(A32(0)+4),1); }
-static void dev_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);if(g_device==s){g_device=0;g_scene_active=0;hle_screen_d3d7_active(0);release_surface_ref(g_texture_surface);g_texture_surface=0;release_surface_ref(g_render_target);g_render_target=0;if(g_gl_texture&&load_gl())p_delete_textures(1,&g_gl_texture);g_gl_texture=0;}} RET(r,1); }
+static void dev_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);if(g_device==s){g_device=0;g_scene_active=0;hle_screen_d3d7_active(0);release_surface_ref(g_texture_surface);g_texture_surface=0;release_surface_ref(g_render_target);g_render_target=0;if(g_gl_texture&&load_gl())p_delete_textures(1,&g_gl_texture);g_gl_texture=0;if(g_rt_framebuffer&&load_fbo()){p_bind_framebuffer(GL_FRAMEBUFFER,0);p_delete_framebuffers(1,&g_rt_framebuffer);p_delete_textures(1,&g_rt_color);p_delete_renderbuffers(1,&g_rt_depth);}g_rt_framebuffer=g_rt_color=g_rt_depth=0;g_rt_width=g_rt_height=0;}} RET(r,1); }
 static void vb_qi(void) { uint32_t s=A32(0),iid=A32(1),out=A32(2); if(!iid||!out) RET(E_POINTER,3); if(memcmp(hle_ptr(iid),IID_IUNKNOWN,16)&&memcmp(hle_ptr(iid),IID_IDIRECT3DVERTEXBUFFER7,16)){MEM32(out)=0;RET(E_NOINTERFACE,3);} MEM32(out)=s; MEM32(s+4)++; RET(D3D_OK,3); }
 static void vb_addref(void) { RET(++MEM32(A32(0)+4),1); }
 static void vb_release(void) { uint32_t s=A32(0),r=MEM32(s+4); if(r)r--; MEM32(s+4)=r; if(!r){if(MEM32(s+8))hle_free(hle_ptr(MEM32(s+8)));hle_com_free(s);} RET(r,1); }
@@ -506,13 +662,13 @@ static void dev_enum_textures(void) {
 static void d3d_evict(void) { RET(D3D_OK,1); }
 static void d3d_create_device(void) {
     uint32_t guid=A32(1),target=A32(2),out=A32(3);
+    uint8_t *target_pixels; int target_w,target_h,target_pitch,target_bpp;
     if(!out)RET(E_POINTER,4); MEM32(out)=0;
     if(!guid)RET(E_POINTER,4);
     if(memcmp(hle_ptr(guid),g_d3d7_gl_device_guid,16))RET(D3DERR_NOTAVAILABLE,4);
-    if(!hle_dd_surface_is_3d_target(target))RET(D3DERR_INVALIDCALL,4);
-    if(!hle_dd_surface_is_primary_3d_target(target))RET(D3DERR_NOTAVAILABLE,4);
-    if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,4);
+    if(!target_info(target,&target_pixels,&target_w,&target_h,&target_pitch,&target_bpp))RET(D3DERR_INVALIDCALL,4);
     if(g_device && g_render_target!=target)RET(D3DERR_NOTAVAILABLE,4);
+    if(!hle_screen_gl_active()||!load_gl()||!bind_render_target(target))RET(D3DERR_NOTAVAILABLE,4);
     if(!g_dev_vt) {
         static const win32hle_shim m[]={
             {"IDirect3DDevice7::QueryInterface",dev_qi},{"IDirect3DDevice7::AddRef",dev_addref},{"IDirect3DDevice7::Release",dev_release},
@@ -543,9 +699,8 @@ static void d3d_create_device(void) {
         g_max_lights=max_lights<0?0u:max_lights>8?8u:(unsigned)max_lights;
         memset(g_stage_state,0,sizeof g_stage_state); g_stage_state[1]=4; g_stage_state[2]=2; g_stage_state[3]=1;
         g_stage_state[5]=2; g_stage_state[6]=2; g_stage_state[13]=1; g_stage_state[14]=1;
-        int mode_w=640,mode_h=480,mode_bpp=0; hle_dd_mode(&mode_w,&mode_h,&mode_bpp);
-        g_viewport[0]=g_viewport[1]=0;g_viewport[2]=(uint32_t)mode_w;g_viewport[3]=(uint32_t)mode_h;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
-        hle_screen_gl_viewport(0,0,mode_w,mode_h);
+        g_viewport[0]=g_viewport[1]=0;g_viewport[2]=(uint32_t)target_w;g_viewport[3]=(uint32_t)target_h;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
+        set_target_viewport(target,0,0,target_w,target_h);
         p_depth_range(0.0,1.0);
         float ambient[4]={0,0,0,1}; p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,ambient);
         p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,0); p_enable(GL_LIGHTING);
@@ -553,7 +708,7 @@ static void d3d_create_device(void) {
         apply_material();
         g_render_target=target; MEM32(target+4)++;
     } else MEM32(g_device+4)++;
-    hle_screen_d3d7_active(1);
+    hle_screen_d3d7_active(hle_dd_surface_is_primary_3d_target(g_render_target));
     MEM32(out)=g_device; RET(D3D_OK,4);
 }
 
@@ -577,14 +732,23 @@ static void release_surface_ref(uint32_t surface) {
 }
 static void dev_set_target(void) {
     uint32_t surface=A32(1),flags=A32(2);
-    if(flags || !hle_dd_surface_is_3d_target(surface)) RET(D3DERR_INVALIDCALL,3);
-    if(!hle_dd_surface_is_primary_3d_target(surface)) RET(D3DERR_NOTAVAILABLE,3);
-    if(!hle_screen_gl_active()) RET(D3DERR_NOTAVAILABLE,3);
+    uint8_t *pixels; int w,h,pitch,bpp;
+    if(flags || !target_info(surface,&pixels,&w,&h,&pitch,&bpp) || g_scene_active) RET(D3DERR_INVALIDCALL,3);
     if(surface==g_render_target) RET(D3D_OK,3);
+    if(!hle_screen_gl_active()) RET(D3DERR_NOTAVAILABLE,3);
+    if(!bind_render_target(surface)) {
+        if(g_render_target) bind_render_target(g_render_target);
+        RET(D3DERR_NOTAVAILABLE,3);
+    }
+    set_target_viewport(surface,0,0,w,h);
+    g_viewport[0]=g_viewport[1]=0; g_viewport[2]=(uint32_t)w; g_viewport[3]=(uint32_t)h;
+    float min_z,max_z; memcpy(&min_z,&g_viewport[4],4); memcpy(&max_z,&g_viewport[5],4);
+    p_depth_range((double)min_z,(double)max_z);
     MEM32(surface+4)++;
     uint32_t old=g_render_target;
     g_render_target=surface;
     release_surface_ref(old);
+    hle_screen_d3d7_active(hle_dd_surface_is_primary_3d_target(surface));
     RET(D3D_OK,3);
 }
 static void dev_get_target(void) {
@@ -664,7 +828,8 @@ static void dev_begin_scene(void) {
 static void dev_end_scene(void) {
     if(!g_scene_active) RET(D3DERR_INVALIDCALL,1);
     g_scene_active=0;
-    hle_screen_gl_swap();
+    if(!store_render_target(g_render_target)) RET(D3DERR_NOTAVAILABLE,1);
+    if(hle_dd_surface_is_primary_3d_target(g_render_target)) hle_screen_gl_swap();
     RET(D3D_OK,1);
 }
 static void dev_clear(void) {
@@ -727,16 +892,16 @@ static void dev_set_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=tran
 static void dev_get_transform(void) { uint32_t st=A32(1),m=A32(2);float *from=transform_for(st);if(!from||!m)RET(D3DERR_INVALIDCALL,3);memcpy(hle_ptr(m),from,64);RET(D3D_OK,3); }
 static void dev_multiply_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);float a[16],b[16],r[16];memcpy(a,to,64);memcpy(b,hle_ptr(m),64);for(int i=0;i<4;i++)for(int j=0;j<4;j++){r[i*4+j]=0;for(int k=0;k<4;k++)r[i*4+j]+=a[i*4+k]*b[k*4+j];}memcpy(to,r,64);if(st==1||st==2){refresh_modelview();if(st==2)refresh_lights();}if(st==3)load_projection();RET(D3D_OK,3); }
 static void dev_set_viewport(void) {
-    uint32_t p=A32(1),x,y,w,h; int mode_w=0,mode_h=0,mode_bpp=0; float min_z,max_z;
+    uint32_t p=A32(1),x,y,w,h; uint8_t *pixels; int target_w,target_h,pitch,bpp; float min_z,max_z;
     if(!p) RET(E_POINTER,2);
     x=MEM32(p);y=MEM32(p+4);w=MEM32(p+8);h=MEM32(p+12);
     memcpy(&min_z,hle_ptr(p+16),sizeof min_z);memcpy(&max_z,hle_ptr(p+20),sizeof max_z);
-    hle_dd_mode(&mode_w,&mode_h,&mode_bpp);
-    if(!w || !h || (uint64_t)x+w>(uint32_t)mode_w || (uint64_t)y+h>(uint32_t)mode_h ||
+    if(!target_info(g_render_target,&pixels,&target_w,&target_h,&pitch,&bpp)) RET(D3DERR_NOTAVAILABLE,2);
+    if(!w || !h || (uint64_t)x+w>(uint32_t)target_w || (uint64_t)y+h>(uint32_t)target_h ||
        !(min_z>=0.f && max_z<=1.f && min_z<=max_z)) RET(D3DERR_INVALIDCALL,2);
     if(!load_gl()) RET(D3DERR_NOTAVAILABLE,2);
     for(int i=0;i<6;i++)g_viewport[i]=MEM32(p+i*4);
-    hle_screen_gl_viewport((int)x,(int)y,(int)w,(int)h);
+    set_target_viewport(g_render_target,(int)x,(int)y,(int)w,(int)h);
     p_depth_range((double)min_z,(double)max_z);
     RET(D3D_OK,2);
 }
