@@ -72,6 +72,7 @@ typedef void (*gl_color4ub_fn)(unsigned char,unsigned char,unsigned char,unsigne
 typedef void (*gl_secondary_color3ub_fn)(unsigned char,unsigned char,unsigned char);
 typedef void (*gl_normal3_fn)(float,float,float); typedef void (*gl_tex2_fn)(float,float);
 typedef void (*gl_tex1_fn)(float);
+typedef void (*gl_tex3_fn)(float,float,float); typedef void (*gl_tex4_fn)(float,float,float,float);
 typedef void (*gl_matrix_mode_fn)(unsigned); typedef void (*gl_load_matrix_fn)(const float *);
 typedef void (*gl_mult_matrix_fn)(const float *);
 typedef void (*gl_enable_fn)(unsigned); typedef void (*gl_disable_fn)(unsigned);
@@ -119,6 +120,7 @@ static gl_vertex3_fn p_vertex3; static gl_vertex4_fn p_vertex4;
 static gl_color4ub_fn p_color4ub; static gl_normal3_fn p_normal3; static gl_tex2_fn p_tex2;
 static gl_secondary_color3ub_fn p_secondary_color3ub;
 static gl_tex1_fn p_tex1;
+static gl_tex3_fn p_tex3; static gl_tex4_fn p_tex4;
 static gl_matrix_mode_fn p_matrix_mode; static gl_load_matrix_fn p_load_matrix;
 static gl_mult_matrix_fn p_mult_matrix;
 static gl_enable_fn p_enable; static gl_disable_fn p_disable;
@@ -170,6 +172,7 @@ static int load_gl(void) {
     LOAD_GL(p_vertex3, gl_vertex3_fn, "glVertex3f"); LOAD_GL(p_vertex4, gl_vertex4_fn, "glVertex4f");
     LOAD_GL(p_color4ub, gl_color4ub_fn, "glColor4ub"); LOAD_GL(p_normal3, gl_normal3_fn, "glNormal3f");
     LOAD_GL(p_tex2, gl_tex2_fn, "glTexCoord2f"); LOAD_GL(p_tex1, gl_tex1_fn, "glTexCoord1f");
+    LOAD_GL(p_tex3, gl_tex3_fn, "glTexCoord3f"); LOAD_GL(p_tex4, gl_tex4_fn, "glTexCoord4f");
     LOAD_GL(p_matrix_mode, gl_matrix_mode_fn, "glMatrixMode");
     LOAD_GL(p_load_matrix, gl_load_matrix_fn, "glLoadMatrixf"); LOAD_GL(p_mult_matrix, gl_mult_matrix_fn, "glMultMatrixf");
     LOAD_GL(p_enable, gl_enable_fn, "glEnable");
@@ -350,6 +353,7 @@ static uint32_t g_device;
 static uint32_t g_render_target;
 static int g_scene_active;
 static float g_world[16], g_view[16], g_projection[16];
+static float g_texture_transform[16];
 static uint32_t g_render[256];
 static uint32_t g_viewport[6];
 static uint32_t g_texture_surface;
@@ -444,6 +448,14 @@ static void load_projection(void) {
     for (int c=0;c<4;c++) m[c*4+2]=2.f*m[c*4+2]-m[c*4+3];
     p_matrix_mode(GL_PROJECTION); p_load_matrix(m);
 }
+static void apply_texture_transform(void) {
+    if(!load_gl()) return;
+    float matrix[16];
+    uint32_t flags=g_stage_state[24];
+    if(!(flags&7u)) identity(matrix); else memcpy(matrix,g_texture_transform,sizeof matrix);
+    if(!(flags&0x100u)) matrix[3]=matrix[7]=matrix[11]=0.f,matrix[15]=1.f;
+    p_matrix_mode(GL_TEXTURE); p_load_matrix(matrix); p_matrix_mode(GL_MODELVIEW);
+}
 static unsigned gl_cmp(uint32_t v) {
     static const unsigned t[]={GL_NEVER,GL_NEVER,GL_LESS,GL_EQUAL,GL_LEQUAL,GL_GREATER,GL_NOTEQUAL,GL_GEQUAL,GL_ALWAYS};
     return v<sizeof(t)/sizeof(t[0])?t[v]:GL_LEQUAL;
@@ -464,8 +476,7 @@ static uint32_t vertex_stride(uint32_t fvf) {
     if (tc>1) return 0;
     for (uint32_t i=0;i<tc;i++) {
         uint32_t dimcode=(fvf>>(16+i*2))&3;
-        if (dimcode==1 || dimcode==2) return 0;
-        s+=4*(dimcode==3?1:2);
+        s+=4*(dimcode==3?1:dimcode==1?3:dimcode==2?4:2);
     }
     return s;
 }
@@ -490,6 +501,8 @@ static void emit_vertex(const uint8_t *v, uint32_t fvf, int screen_xy) {
     if(((fvf>>8)&15)>0) {
         uint32_t dimcode=(fvf>>16)&3;
         if(dimcode==3) { float u; memcpy(&u,v+off,4); p_tex1(u); }
+        else if(dimcode==1) { float uvw[3]; memcpy(uvw,v+off,12); p_tex3(uvw[0],uvw[1],uvw[2]); }
+        else if(dimcode==2) { float uvwq[4]; memcpy(uvwq,v+off,16); p_tex4(uvwq[0],uvwq[1],uvwq[2],uvwq[3]); }
         else { float uv[2]; memcpy(uv,v+off,8); p_tex2(uv[0],uv[1]); }
     }
     if(screen_xy) {
@@ -582,7 +595,7 @@ static uint32_t pack_strided_vertices(uint32_t fvf,uint32_t desc,uint32_t count)
     if(fvf&0x080u) { if(!strided_field_valid(desc,24,count,4)) return 0; }
     if(tex_count) {
         uint32_t dimcode=(fvf>>16)&3u;
-        tex_bytes=dimcode==3u?4u:8u;
+        tex_bytes=4u*(dimcode==3u?1u:dimcode==1u?3u:dimcode==2u?4u:2u);
         if(!strided_field_valid(desc,32,count,tex_bytes)) return 0;
     }
     size_t total=(size_t)packed_stride*count;
@@ -774,7 +787,7 @@ static void d3d_create_device(void) {
     if(!g_device) {
         g_device=hle_com_new(g_dev_vt,12);
         uint32_t state=hle_va(hle_alloc(4)); MEM32(g_device+8)=state;
-        identity(g_world); identity(g_view); identity(g_projection);
+        identity(g_world); identity(g_view); identity(g_projection); identity(g_texture_transform);
         memset(g_render,0,sizeof g_render); g_render[7]=1; g_render[8]=3; g_render[9]=2;
         g_render[137]=1; g_render[141]=1; g_render[145]=1; g_render[147]=0; g_render[148]=0;
         memset(g_material,0,sizeof g_material); memset(g_lights,0,sizeof g_lights);
@@ -787,7 +800,8 @@ static void d3d_create_device(void) {
         for(unsigned i=0;i<6;i++)p_disable(GL_CLIP_PLANE0+i);
         memset(g_stage_state,0,sizeof g_stage_state); g_stage_state[1]=4; g_stage_state[2]=2; g_stage_state[3]=1;
         g_stage_state[4]=4; g_stage_state[5]=2; g_stage_state[6]=1;
-        g_stage_state[13]=1; g_stage_state[14]=1; g_stage_state[16]=2; g_stage_state[17]=2;
+        g_stage_state[13]=1; g_stage_state[14]=1; g_stage_state[16]=2; g_stage_state[17]=2; g_stage_state[24]=0;
+        apply_texture_transform();
         g_viewport[0]=g_viewport[1]=0;g_viewport[2]=(uint32_t)target_w;g_viewport[3]=(uint32_t)target_h;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
         set_target_viewport(target,0,0,target_w,target_h);
         p_depth_range(0.0,1.0);
@@ -875,7 +889,9 @@ static void apply_stage_channel(uint32_t op,uint32_t arg1,uint32_t arg2,
 static int gl_filter(uint32_t value) { return value==1?GL_NEAREST:GL_LINEAR; }
 static int gl_address(uint32_t value) { return value==3?GL_CLAMP_TO_EDGE:GL_REPEAT; }
 static void apply_stage0_state(void) {
-    if (!load_gl() || !g_gl_texture) return;
+    if (!load_gl()) return;
+    apply_texture_transform();
+    if (!g_gl_texture) return;
     p_bind_texture(GL_TEXTURE_2D,g_gl_texture);
     p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,gl_filter(g_stage_state[17]));
     p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,gl_filter(g_stage_state[16]));
@@ -918,13 +934,13 @@ static void dev_get_tss(void) {
     uint32_t stage=A32(1),state=A32(2),out=A32(3);
     if (!out) RET(E_POINTER,4);
     if (stage || (state!=1 && state!=2 && state!=3 && state!=4 && state!=5 && state!=6 &&
-                  state!=13 && state!=14 && state!=16 && state!=17)) RET(D3DERR_NOTAVAILABLE,4);
+                  state!=13 && state!=14 && state!=16 && state!=17 && state!=24)) RET(D3DERR_NOTAVAILABLE,4);
     MEM32(out)=g_stage_state[state]; RET(D3D_OK,4);
 }
 static void dev_set_tss(void) {
     uint32_t stage=A32(1),state=A32(2),value=A32(3);
     if (stage || (state!=1 && state!=2 && state!=3 && state!=4 && state!=5 && state!=6 &&
-                  state!=13 && state!=14 && state!=16 && state!=17))
+                  state!=13 && state!=14 && state!=16 && state!=17 && state!=24))
         RET(D3DERR_NOTAVAILABLE,4);
     if ((state==1 || state==4) && (value<1 || value>4)) RET(D3DERR_NOTAVAILABLE,4);
     if ((state==2 || state==3 || state==5 || state==6) && value>2) RET(D3DERR_NOTAVAILABLE,4);
@@ -932,8 +948,13 @@ static void dev_set_tss(void) {
     if ((state==13 || state==14) && value!=1 && value!=3) RET(D3DERR_NOTAVAILABLE,4);
     if ((state==16 || state==17) && (value<1 || value>6)) RET(D3DERR_INVALIDCALL,4);
     if ((state==16 || state==17) && value>2) RET(D3DERR_NOTAVAILABLE,4);
+    if(state==24) {
+        uint32_t count=value&7u;
+        if(value&~0x107u) RET(D3DERR_INVALIDCALL,4);
+        if(count>4u || (count==0u && value!=0u) || ((value&0x100u) && count<2u)) RET(D3DERR_INVALIDCALL,4);
+    }
     g_stage_state[state]=value;
-    if (state==1 || state==2 || state==3 || state==4 || state==5 || state==6 || state==13 || state==14 || state==16 || state==17)
+    if (state==1 || state==2 || state==3 || state==4 || state==5 || state==6 || state==13 || state==14 || state==16 || state==17 || state==24)
         apply_stage0_state();
     RET(D3D_OK,4);
 }
@@ -1019,10 +1040,10 @@ static void dev_clear(void) {
     RET(D3D_OK,7);
 }
 
-static float *transform_for(uint32_t state) { if(state==1)return g_world;if(state==2)return g_view;if(state==3)return g_projection;return NULL; }
-static void dev_set_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);memcpy(to,hle_ptr(m),64);if(st==1||st==2){refresh_modelview();if(st==2){refresh_lights();refresh_clip_planes();}}if(st==3)load_projection();RET(D3D_OK,3); }
+static float *transform_for(uint32_t state) { if(state==1)return g_world;if(state==2)return g_view;if(state==3)return g_projection;if(state==16)return g_texture_transform;return NULL; }
+static void dev_set_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);memcpy(to,hle_ptr(m),64);if(st==1||st==2){refresh_modelview();if(st==2){refresh_lights();refresh_clip_planes();}}if(st==3)load_projection();if(st==16)apply_texture_transform();RET(D3D_OK,3); }
 static void dev_get_transform(void) { uint32_t st=A32(1),m=A32(2);float *from=transform_for(st);if(!from||!m)RET(D3DERR_INVALIDCALL,3);memcpy(hle_ptr(m),from,64);RET(D3D_OK,3); }
-static void dev_multiply_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);float a[16],b[16],r[16];memcpy(a,to,64);memcpy(b,hle_ptr(m),64);for(int i=0;i<4;i++)for(int j=0;j<4;j++){r[i*4+j]=0;for(int k=0;k<4;k++)r[i*4+j]+=a[i*4+k]*b[k*4+j];}memcpy(to,r,64);if(st==1||st==2){refresh_modelview();if(st==2){refresh_lights();refresh_clip_planes();}}if(st==3)load_projection();RET(D3D_OK,3); }
+static void dev_multiply_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);float a[16],b[16],r[16];memcpy(a,to,64);memcpy(b,hle_ptr(m),64);for(int i=0;i<4;i++)for(int j=0;j<4;j++){r[i*4+j]=0;for(int k=0;k<4;k++)r[i*4+j]+=a[i*4+k]*b[k*4+j];}memcpy(to,r,64);if(st==1||st==2){refresh_modelview();if(st==2){refresh_lights();refresh_clip_planes();}}if(st==3)load_projection();if(st==16)apply_texture_transform();RET(D3D_OK,3); }
 static void dev_set_viewport(void) {
     uint32_t p=A32(1),x,y,w,h; uint8_t *pixels; int target_w,target_h,pitch,bpp; float min_z,max_z;
     if(!p) RET(E_POINTER,2);
