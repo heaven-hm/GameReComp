@@ -91,6 +91,22 @@ static void k_GetExitCodeThread(void) {        /* (h, &code) */
     if (A32(1)) MEM32(A32(1)) = a && a->done ? a->code : 259u;   /* STILL_ACTIVE */
     RET(a != NULL, 2);
 }
+/* GetThreadContext(hThread, &CONTEXT): refused, deliberately.
+ *
+ * A guest thread here is a host thread running generated C; its guest registers
+ * live in the machine's global file only while that thread holds the machine,
+ * and hle_block_begin is what parks them when it gives the machine up.  There is
+ * no suspended-thread register file to read, and a thread suspended before it
+ * started has no CONTEXT either - it begins in hle_call_guest, not from a
+ * Windows thread start stub.  Filling the guest's CONTEXT with zeros would be
+ * fiction a caller could branch on (Eip/Esp especially), so the call fails and
+ * says so.  ERROR_CALL_NOT_IMPLEMENTED is this layer's answer for a Windows
+ * call it does not provide (see the locale functions at the top of the file). */
+static void k_GetThreadContext(void) {         /* (hThread, LPCONTEXT) */
+    (void)A32(1);
+    hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+    RET(0, 2);
+}
 int hle_thread_done(uint32_t h) {
     struct thread_arg *a = (struct thread_arg *)hle_handle_obj(h, HLE_H_THREAD);
     return a && a->done;
@@ -580,6 +596,9 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "LoadModule",                   k_LoadModule },
     { "CreateThread",                 k_CreateThread },
     { "ResumeThread",                 k_ResumeThread },
+    { "SuspendThread",                k_SuspendThread },
+    { "TerminateThread",              k_TerminateThread },
+    { "GetThreadContext",             k_GetThreadContext },
     { "ExitThread",                   k_ExitThread },
     { "GetExitCodeThread",            k_GetExitCodeThread },
     { "SetThreadPriority",            k_SetThreadPriority },
