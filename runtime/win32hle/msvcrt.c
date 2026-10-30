@@ -155,6 +155,8 @@ static uint32_t g_fp_control = 0x0009001Fu;   /* _PC_53 | _RC_NEAR | _MCW_EM, th
 static uint32_t g_tls_cb[UCRT_MAX_TLS_CB];    /* _register_thread_local_exe_atexit_callback */
 static int g_tls_cb_n;
 static uint32_t g_cmdline_va;                 /* _get_narrow_winmain_command_line */
+static uint32_t g_commode_va;                 /* int __p__commode */
+static uint32_t g_new_mode, g_thread_locale;  /* _set_new_mode, _configthreadlocale */
 static char **g_host_argv;                    /* this process's own arguments */
 static int g_host_argc;
 static int  ms_atexit_add(uint32_t fn);       /* defined with the exit path below */
@@ -254,6 +256,8 @@ static void ms_init_once(void) {
     MEM32(g_pctype_va) = g_ctype_va + 2;
     g_fmode_va = hle_va(hle_alloc(4));
     MEM32(g_fmode_va) = O_TEXT;
+    g_commode_va = hle_va(hle_alloc(4));
+    MEM32(g_commode_va) = 0;                           /* __p__commode */
     g_mbmax_va = hle_va(hle_alloc(4));
     MEM32(g_mbmax_va) = 1;                             /* a single-byte locale */
     g_errno_va = hle_va(hle_alloc(4));
@@ -1256,6 +1260,41 @@ static void ms_run_onexit_table(void) {
     }
 }
 
+/* The rest of the UCRT surface a Windows 10 SDK build imports, module by
+ * module.  The _libm_sse2_*_precise names are the CRT's double-precision sin,
+ * cos, sqrt, atan, pow and log10 - the host libm IS the double-precision
+ * implementation, so these forward to it and return through the same lifted x87
+ * stack as sin/cos above. */
+static void u_libm_sin(void)    { ms_init(); fp_push_impl(g_st, &g_fp_top, sin(ms_argd(0))); RETC(0); }
+static void u_libm_cos(void)    { ms_init(); fp_push_impl(g_st, &g_fp_top, cos(ms_argd(0))); RETC(0); }
+static void u_libm_sqrt(void)   { ms_init(); fp_push_impl(g_st, &g_fp_top, sqrt(ms_argd(0))); RETC(0); }
+static void u_libm_atan(void)   { ms_init(); fp_push_impl(g_st, &g_fp_top, atan(ms_argd(0))); RETC(0); }
+static void u_libm_log10(void)  { ms_init(); fp_push_impl(g_st, &g_fp_top, log10(ms_argd(0))); RETC(0); }
+static void u_libm_pow(void)    { ms_init(); fp_push_impl(g_st, &g_fp_top, pow(ms_argd(0), ms_argd(2))); RETC(0); }
+/* _except1(code, ...): the x87 math exception entry.  With no handler installed
+ * the UCRT's default reports and ends the process, and this layer has no
+ * _set_math_errhandling to install one, so that is what it does rather than
+ * returning a made-up value for a computation that raised. */
+static void u_except1(void) {
+    fprintf(stderr, "[msvcrt] _except1: floating-point exception 0x%X with no handler\n", A32(0));
+    hle_exit(3);
+}
+/* _callnewh(size): run the new handler; none is installed here (there is no
+ * _set_new_handler in this layer), so the allocation failed and the answer is 0. */
+static void u_callnewh(void) { ms_init(); RETC(0); }
+/* _set_new_mode(mode): whether malloc calls the new handler on failure.
+ * Recorded and reported back; nothing here allocates through that path. */
+static void u_set_new_mode(void) { ms_init(); uint32_t was = g_new_mode; g_new_mode = A32(0); RETC(was); }
+/* _configthreadlocale(mode): the UCRT's per-thread locale switch.  Recorded
+ * (this layer's locale is process-wide, see setlocale) and the previous setting
+ * reported, which is what the caller uses to restore it. */
+static void u_configthreadlocale(void) { ms_init(); uint32_t was = g_thread_locale; g_thread_locale = A32(0); RETC(was); }
+/* __p__commode: the "commit mode" int the CRT keeps for streams.  A real guest
+ * cell, like __p__fmode; nothing here buffers to disk behind the guest's back. */
+static void u_p_commode(void) { ms_init(); RETC(g_commode_va); }
+/* _set_fmode(mode): set the default file translation mode. */
+static void u_set_fmode(void) { ms_init(); MEM32(g_fmode_va) = A32(0); RETC(0); }
+
 /* _crt_atexit: the CRT's own atexit, the same chain msvcrt's atexit uses. */
 static void u_crt_atexit(void) {
     ms_init();
@@ -1449,6 +1488,18 @@ const win32hle_shim win32hle_msvcrt[] = {
      * _exit, exit, __set_app_type/_set_app_type) resolve to those shims: the
      * loader looks a name up across the whole registry, so one implementation
      * serves both import spellings.  The rest are the UCRT's startup calls. */
+    { "_libm_sse2_sin_precise",       u_libm_sin },
+    { "_libm_sse2_cos_precise",       u_libm_cos },
+    { "_libm_sse2_sqrt_precise",      u_libm_sqrt },
+    { "_libm_sse2_atan_precise",      u_libm_atan },
+    { "_libm_sse2_log10_precise",     u_libm_log10 },
+    { "_libm_sse2_pow_precise",       u_libm_pow },
+    { "_except1",                     u_except1 },
+    { "_callnewh",                    u_callnewh },
+    { "_set_new_mode",                u_set_new_mode },
+    { "_configthreadlocale",          u_configthreadlocale },
+    { "__p__commode",                 u_p_commode },
+    { "_set_fmode",                   u_set_fmode },
     { "_initialize_onexit_table",     u_initialize_onexit_table },
     { "_register_onexit_function",    u_register_onexit_function },
     { "_crt_atexit",                  u_crt_atexit },
