@@ -248,6 +248,37 @@ differential against a Windows host we do not have.
    can be chosen from evidence instead of taste. Recorded here as the motivating
    example for that work.
 
+## Making the runs comparable: two causes, both eliminated
+
+Comparing two runs of a rebuilt game requires the runs to be comparable at all.
+They were not, and the reason came in two layers, each found by measuring rather
+than assuming:
+
+1. **The clock.** Two Doukutsu runs diverged at call 117,955 on a `timeGetTime`
+   poll, resynced for ~700 calls, then differed for good at normalized call
+   118,727 — a clock difference that changed which branch the game took. Every
+   time-returning shim now reports `hle_clock_*()` (`clock.c`), which is the real
+   monotonic clock unless `RECOMP_CLOCK=virtual` is set, in which case time is a
+   deterministic function of reads and sleeps. **Fixed.** With it on, the same
+   run went 8× further (2.1M calls in 10 s against 274K) — the real sleeps were
+   gone — but the runs still parted, so the clock was the first cause, not the
+   only one.
+2. **The thread interleaving.** The remaining divergence was the audio thread's
+   DirectSound calls landing at a different point against the main thread's
+   frame loop. A single global clock shared by all threads still made each
+   thread's readings depend on how often the *other* thread read it, so the
+   clock itself was reintroducing the race it was meant to remove. **Fixed** by
+   making virtual time per guest thread (`clock.c`, keyed by `hle_thread_id()` —
+   the same id the trace carries with `RECOMP_TRACE_TID=1`), and by comparing
+   traces **per thread** instead of as one global sequence. With both, two
+   Doukutsu runs are identical to 1,000,000 calls — measured at caps 300,000,
+   600,000 and 1,000,000, each pair matching exactly.
+
+That is what makes the bisector meaningful: against a deliberately broken build
+(`GetTickCount` returning 0) it converges to a named call, and against itself it
+correctly reports "nothing to bisect". Before either fix it would have reported
+intermittent divergences near call 118,764 and nothing stable to point at.
+
 ## Two runtime gaps the sweep turned up on the way
 
 Both are visible in the non-trace output of several rows and are **not** why any
