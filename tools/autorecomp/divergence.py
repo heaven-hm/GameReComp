@@ -83,26 +83,44 @@ def first_divergence(a, b):
 
 
 def classify(a, b, index, lookahead=64):
-    """timing or behavioural, judged on the calls around the divergence.
+    """timing, timing-initiated-but-persistent, or behavioural.
 
-    A clock poll shifting by one call makes everything after it line up again
-    one call later; a real divergence does not resynchronise. So the calls in
-    the window are examined: if every call that differs is a timing call, the
-    divergence is timing."""
+    Judged on the calls around the divergence *and* on whether the traces match
+    once timing calls are removed, because the two answers differ and the
+    difference is not cosmetic. A clock poll shifting by one call can resync
+    immediately -- that is genuinely timing. But a clock difference can also
+    change which branch the guest takes and never resync: measured on Doukutsu,
+    two runs diverge at call 117,955 on a clock poll, resync locally for ~700
+    calls, and then differ for good at call 118,727 (one run in GetWindowRect
+    where the other is in its message loop). Calling that "timing" because the
+    first difference was a clock call would hide a real, persistent divergence
+    behind a shrug, so the whole traces are checked, not just the window."""
     window_a = a[index:index + lookahead]
     window_b = b[index:index + lookahead]
     if not window_a or not window_b:
         return "behavioural", "one trace ended here"
-    if window_a[0] in TIMING_CALLS or window_b[0] in TIMING_CALLS:
-        # does it resynchronise once the timing calls are ignored?
-        filtered_a = [n for n in window_a if n not in TIMING_CALLS]
-        filtered_b = [n for n in window_b if n not in TIMING_CALLS]
-        if filtered_a and filtered_b and filtered_a[:len(filtered_b)] == filtered_b[:len(filtered_a)]:
-            return "timing", ("the differing calls are clock/sleep/poll calls and the "
-                              "sequences line up again once they are ignored")
-        if filtered_a[:4] == filtered_b[:4] or not filtered_a or not filtered_b:
-            return "timing", "the difference is in clock/sleep/poll calls"
-    return "behavioural", "the differing calls are not clock, sleep or poll calls"
+    if window_a[0] not in TIMING_CALLS and window_b[0] not in TIMING_CALLS:
+        return "behavioural", "the differing calls are not clock, sleep or poll calls"
+    # the local picture: do the sequences line up again once timing calls go?
+    filtered_a = [n for n in window_a if n not in TIMING_CALLS]
+    filtered_b = [n for n in window_b if n not in TIMING_CALLS]
+    local = (filtered_a and filtered_b and
+             filtered_a[:len(filtered_b)] == filtered_b[:len(filtered_a)])
+    if not local:
+        return "behavioural", ("the divergence starts in a clock call but the calls "
+                              "around it do not line up once timing calls are removed")
+    # the global picture: does the whole trace match with timing calls removed?
+    whole_a = [n for n in a if n not in TIMING_CALLS]
+    whole_b = [n for n in b if n not in TIMING_CALLS]
+    later = first_divergence(whole_a, whole_b)
+    if later is None:
+        return "timing", ("the differing calls are clock/sleep/poll calls and the whole "
+                          "traces match once they are removed")
+    li = later[0]
+    return "timing-initiated but persistent", (
+        f"the first difference is a clock call and resyncs locally, but the traces "
+        f"still differ at normalized call {li} ({later[1]!r} vs {later[2]!r}) - the "
+        f"clock difference changed a branch and never came back")
 
 
 def report(a, b, label_a="baseline", label_b="candidate", context=5):
@@ -127,7 +145,7 @@ def report(a, b, label_a="baseline", label_b="candidate", context=5):
     out.append(f"  context ({lo}..{index + context}):")
     for i in range(lo, min(max(len(a), len(b)), index + context)):
         out.append(f"    {i:8d}  {a[i] if i < len(a) else '--':34s} | {b[i] if i < len(b) else '--'}")
-    return (2 if kind == "behavioural" else 1), out
+    return (1 if kind == "timing" else 2), out
 
 
 def selftest():
@@ -149,6 +167,15 @@ def selftest():
     code, lines = report(base, cand)
     check("a clock shift is timing", code, 1)
     check("... and says so", "TIMING" in "\n".join(lines), True)
+
+    # a clock difference that changes a branch and never comes back: the shape
+    # measured on Doukutsu (diverges on a poll, resyncs locally, then differs for
+    # good hundreds of calls later)
+    base = (["Frame", "timeGetTime", "Draw"] * 40) + ["GetWindowRect", "Blt"]
+    cand = (["Frame", "timeGetTime", "timeGetTime", "Draw"] * 40) + ["PeekMessageA", "Poll"]
+    code, lines = report(base, cand)
+    check("a clock difference that persists is not called timing", code, 2)
+    check("... and says it is persistent", "PERSISTENT" in "\n".join(lines), True)
 
     # a real behavioural divergence
     base = ["Init", "Load", "Draw", "Flip", "Update"]
