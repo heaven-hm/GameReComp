@@ -197,6 +197,12 @@ def name_all(evidence):
     counts = {"named_semantic": 0, "named_structured": 0, "no_evidence": 0,
               "no_evidence_reasons": {}}
     for va, fn in evidence["functions"].items():
+        if fn.get("refused"):
+            functions[va] = {"name": None, "kind": "not_a_function_start",
+                             "evidence": [fn["refused"]], "instructions": 0}
+            counts.setdefault("not_a_function_start", 0)
+            counts["not_a_function_start"] += 1
+            continue
         name, kind, records = name_function(fn, evidence["identities"], va)
         functions[va] = {"name": name, "kind": kind,
                          "evidence": [r["evidence"] for r in records],

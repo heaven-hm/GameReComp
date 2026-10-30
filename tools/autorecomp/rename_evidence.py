@@ -216,6 +216,26 @@ def function_instructions(pe_path, va, limit=None, end=None):
     return insns, ret_form
 
 
+def plausible_start(pe_path, va):
+    """Is this address a plausible function entry?
+
+    x86 has no alignment requirement, so an odd address is *legal* - but a table
+    of functions where 23.6% of the entries are odd is not a table of functions:
+    it is a discovery pass that also found mid-instruction addresses. Rather than
+    name those, the extractor refuses them and says why. This is a data-quality
+    check on the function inventory, not a statement about the instruction set."""
+    if va & 1:
+        return False, ("odd address: legal in x86 but not credible as a function entry, and "
+                       "23.6% of the corpus's table entries are odd - the discovery is finding "
+                       "mid-instruction addresses")
+    sec = section_of(pe_path, va)
+    if not sec:
+        return False, f"0x{va:08X} is not in a section"
+    if 'text' not in sec[0].lower():
+        return False, f"0x{va:08X} is in {sec[0]}, which is not code"
+    return True, ""
+
+
 def evidence_for_function(pe_path, va, imports, revng_dir=None, end=None):
     """The evidence records for one function, keyed by identity."""
     insns, ret_form = function_instructions(pe_path, va, end=end)
@@ -363,6 +383,11 @@ def collect(pe_path, addresses, revng_dir=None):
     imports = parse_imports(pe_path)
     per_func, identities = {}, {}
     for va in addresses:
+        ok, why = plausible_start(pe_path, va)
+        if not ok:
+            per_func[f'0x{va:08X}'] = {"records": [], "instructions": 0, "ret_form": None,
+                                       "refused": why}
+            continue
         recs, insns, ret_form = evidence_for_function(pe_path, va, imports, revng_dir)
         per_func[f'0x{va:08X}'] = {"records": recs, "instructions": len(insns), "ret_form": ret_form}
         for r in recs:
@@ -392,11 +417,12 @@ def main(argv=None):
             cand = Path('highlevel') / Path(d).name / 'revng'
             if cand.is_dir():
                 revng_of[Path(d).name] = str(cand)
-        rows = rank(dirs, revng_of, progress=print)
+        rows, refused = rank(dirs, revng_of, progress=print)
         by_class = {}
         for r in rows:
             by_class[r['classes_fired']] = by_class.get(r['classes_fired'], 0) + 1
-        print(f'\n{len(rows)} function(s) ranked; classes fired histogram:')
+        print(f'\n{len(rows)} function(s) ranked; {refused} refused as not-a-function-start '
+              f'(odd address); classes fired histogram:')
         for n in sorted(by_class, reverse=True):
             print(f'  {n} class(es): {by_class[n]}')
         print(f'\ntop {args.top} by evidence density:')
@@ -409,7 +435,8 @@ def main(argv=None):
                 {"what": "function evidence density: which of the seven evidence classes fire, "
                          "per function, over the corpus (de-duplicated by PE)",
                  "not": "names; this says where naming has evidence to stand on, not what anything is",
-                 "corpus": len(rows), "classes": list(CLASSES),
+                 "corpus": len(rows), "refused_not_a_function_start": refused,
+                 "classes": list(CLASSES),
                  "histogram": {str(k): v for k, v in sorted(by_class.items(), reverse=True)},
                  "rows": rows}, indent=1))
             print(f'  density: {args.json}')
@@ -465,8 +492,13 @@ def density(project_dir, pe_path, revng_dir=None, limit=None):
         vas = vas[:limit]
     rev = Path(revng_dir) if revng_dir else None
     stats = []
+    refused = 0
     for idx, va in enumerate(vas):
         end = vas[idx + 1] if idx + 1 < len(vas) else None
+        ok, why = plausible_start(pe_path, va)
+        if not ok:
+            refused += 1
+            continue
         try:
             recs, insns, ret_form = evidence_for_function(pe_path, va, parse_imports(pe_path),
                                                           rev if rev and rev.is_dir() else None,
@@ -481,7 +513,9 @@ def density(project_dir, pe_path, revng_dir=None, limit=None):
                       "classes": fired, "classes_fired": len(fired),
                       "globals": global_recs,
                       "signature": recs[-1]["ret_form"] if recs and recs[-1]["kind"] == "signature" else None})
-    return stats
+    if stats is not None:
+        stats_refused = refused
+    return {"rows": stats, "refused": refused} if False else stats
 
 
 def rank(project_dirs, revng_of=None, limit=None, progress=None):
@@ -492,6 +526,7 @@ def rank(project_dirs, revng_of=None, limit=None, progress=None):
     import hashlib
     seen = {}
     rows = []
+    refused = 0
     for pd in project_dirs:
         meta = Path(pd) / "project.json"
         if not meta.is_file():
@@ -509,9 +544,13 @@ def rank(project_dirs, revng_of=None, limit=None, progress=None):
         rev = (revng_of or {}).get(Path(pd).name)
         if progress:
             progress(f"  {Path(pd).name}: {len(project_functions(pd))} function(s)")
-        rows += density(pd, pe, rev, limit)
+        from collections import Counter as _C
+        st = density(pd, pe, rev, limit)
+        _vas = project_functions(pd)
+        refused += sum(1 for v in _vas if v & 1)
+        rows += st
     rows.sort(key=lambda r: (-r["classes_fired"], -r["records"]))
-    return rows
+    return rows, refused
 
 
 if __name__ == '__main__':

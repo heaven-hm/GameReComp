@@ -13,6 +13,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.autorecomp import rename_evidence as re_ev
+from tools.autorecomp import rename as rn
 
 PE = Path("/Users/haseeb-mir/Downloads/recomp-apps/games/ikachan/dxIka.exe")
 HAVE = PE.is_file()
@@ -64,3 +65,26 @@ def test_an_address_that_is_not_code_is_refused():
         pytest.skip("the corpus is not present")
     with pytest.raises(SystemExit):
         re_ev.function_instructions(PE, 0x90000000)
+
+
+def test_an_odd_address_is_refused_as_a_function_start():
+    # x86 has no alignment requirement, but 23.6% of the corpus's table entries
+    # being odd means the discovery is finding mid-instruction addresses; naming
+    # those would generate C for garbage
+    if not HAVE:
+        pytest.skip("the corpus is not present")
+    ok, why = re_ev.plausible_start(PE, 0x0040BA59)      # one byte into a real function
+    assert not ok and "odd address" in why
+    ok, why = re_ev.plausible_start(PE, 0x0040BA58)
+    assert ok, why
+
+
+def test_a_refused_entry_is_not_named():
+    if not HAVE:
+        pytest.skip("the corpus is not present")
+    ev = re_ev.collect(PE, [0x0040BA59])
+    named = rn.name_all(ev)
+    fn = named["functions"]["0x0040BA59"]
+    assert fn["kind"] == "not_a_function_start"
+    assert fn["name"] is None
+    assert named["counts"]["not_a_function_start"] == 1
