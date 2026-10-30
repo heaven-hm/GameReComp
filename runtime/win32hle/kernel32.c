@@ -105,7 +105,7 @@ static void k_GetCommandLineW(void) {
 }
 static void k_GetCurrentProcess(void)   { RET(0xFFFFFFFFu, 0); }        /* pseudo-handle */
 static void k_GetCurrentProcessId(void) { RET((uint32_t)getpid(), 0); }
-static void k_ExitProcess(void)         { fprintf(stderr, "[win32hle] ExitProcess(%u)\n", A32(0)); hle_exit((int)A32(0)); }
+static void k_ExitProcess(void)         { fprintf(stderr, "[win32hle] ExitProcess(%u) from guest 0x%08X\n", A32(0), g_cur_func); hle_exit((int)A32(0)); }
 static void k_TerminateProcess(void) {
     if (A32(0) == 0xFFFFFFFFu) { fprintf(stderr, "[win32hle] TerminateProcess(self, %u)\n", A32(1)); hle_exit((int)A32(1)); }
     g_last_error = ERROR_INVALID_HANDLE;
