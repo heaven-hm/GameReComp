@@ -515,3 +515,28 @@ runs over one of these 37 and returns `agree`, every one of them is
 5 compiled -> 0 certified, and "37 closures generate" is the precondition for moving
 the last number, not movement of it.
 
+## The named-typedef casts: measured, and recorded as a do-not-chase
+
+The provider casts to named Win32 types (`LPCRITICAL_SECTION *`, `GUID`, `LARGE_INTEGER`,
+`LPDIRECTDRAW`, `LPDIRECTSOUND`, `_EXCEPTION_POINTERS`, `SIZE_T`, `UINT`,
+`IUnknown_2`, `DWORD`). pycparser does not know them, so it parses the construct as a
+**multiplication**, and the name reaches the C. Two independent attempts were made:
+synthesizing `typedef generic32_t Name` for every unknown cast-position name (the
+Lead's, measured at **+1 body**), and declaring the ten explicitly plus rewriting
+`NULL` (measured here at **126 generating callers, blocker table unchanged**).
+
+**Neither moved the multi-function closure count.** The hypothesis that this class was
+"worth the remaining 27 closures" is refuted by measurement, so it is recorded here
+rather than chased: the 27 stay blocked by `StructRef` (28 closures), unimplemented
+intrinsics (20) and the union-size gap (16), which are the blockers the table names.
+
+**What was worth keeping from the attempt:** `NULL` is referenced **223 times in 213
+lines** of the provider output and was undefined — pycparser runs no preprocessor, so
+`#define NULL 0` is itself a syntax error and the token has to be rewritten. That is an
+independent defect and it is fixed. The ten named types are declared as 32-bit
+aliases, which is the width the guest has.
+
+**The general lesson, which is the fourth negative result:** a class that *looks* like
+the blocker because it is named in the failure message may not be the one that
+determines the count. Only the closure measurement says which class is load-bearing,
+and it said no.

@@ -52,6 +52,14 @@ typedef uint8_t BYTE;
 typedef int32_t BOOL;
 typedef uint32_t HANDLE;
 typedef void *LPVOID;
+typedef uint32_t GUID_u;
+typedef uint32_t LARGE_INTEGER_u;
+typedef uint32_t LPDIRECTDRAW_u;
+typedef uint32_t LPDIRECTSOUND_u;
+typedef uint32_t _EXCEPTION_POINTERS_u;
+typedef uint32_t IUnknown_2;
+typedef uint32_t SIZE_T;
+typedef uint32_t UINT;
 typedef struct segment_s { uint8_t b[1]; } segment_t;
 extern segment_t segment_2;
 int exit(int);
@@ -149,6 +157,11 @@ def prepare(body):
     """The provider's function body as C pycparser can parse."""
     text = re.sub(r'^_ABI\([^)]*\)\s*$', '', body, flags=re.M)
     text = re.sub(r'\b_NORETURN\b', '', text)
+    # NULL: pycparser runs no preprocessor, so `#define NULL 0` is itself a syntax
+    # error; the token is rewritten instead. 223 references in this binary, and it
+    # was undefined - an independent defect from the named-typedef work.
+    text = re.sub(r'(?<![\w.>])NULL(?![\w])',
+                  '((generic32_t)0)', text)
 
     # `bit_cast(T, x)` is a provider macro whose first argument is a TYPE, so as
     # written it is not valid C and pycparser rejects the whole body with
