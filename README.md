@@ -1,27 +1,71 @@
-# RevEng-Studio
+# GameReComp
 
 <p align="center">
-  <img src="assets/recomp-studio-logo.png" alt="RevEng-Studio logo" width="220">
+  <img src="assets/recomp-studio-logo.png" alt="GameReComp logo" width="220">
 </p>
 
-**A Windows PC game executable in, inspectable C source and a native binary out — with the verification to prove it.**
+**Turn old Windows PC games into playable, moddable, portable games with genuinely human-readable source code — automatically.**
 
-RevEng-Studio is a source-first reconstruction workbench for Windows PC games. One
-command takes a game you legally own, recovers its code, turns it into C you can
-read and edit, builds a native executable **from exactly that source**, runs it,
-and writes a fail-closed report on what was and was not proved. The desktop GUI
-over the same backend is designed but not shipped; the CLI is the product today.
+**GameReComp** is a game-focused preservation, reconstruction, modding,
+and native-porting platform. Its long-term mission is **broad compatibility
+across legacy Windows PC games**, not one hand-reconstructed game at a time.
+Given a game executable and assets you legally own, the intended unattended
+workflow reconstructs understandable, editable C/C++ source, builds a native
+executable **from that exact source**, checks gameplay against the original,
+and packages the result for preservation, modding, and platform ports.
 
-> **Status: v0.1.0 — first vertical slice, and the first game runs.** The pipeline
-> goes end to end and is measured on a 19-row corpus. Eleven games now bind every
-> import; **Cave Story (Doukutsu.exe) reaches a frame loop and renders** — 192,303
-> blits and 8,399 message-pump iterations in 12 seconds, no failed indirect calls,
-> with frames captured. Typed, readable C is compiled into the rebuilt game for
-> two functions, both shown equivalent to their mechanical bodies by a
-> differential harness. **No game has passed an independent gameplay scenario
-> yet** — the oracle does not exist — and 480 of Ikachan's 482 functions are still
-> `LOW_LEVEL_FALLBACK` register-transfer C. Those are the gates that matter next,
-> and this README does not claim them.
+### What the product is designed to deliver
+
+- **Playable and independently verified:** Rebuilt games should pass
+  reproducible original-vs-rebuilt gameplay scenarios, not merely compile or
+  display a title screen. Verification reports distinguish tested coverage
+  from unverified behaviour.
+- **Actually human-readable C/C++:** Recover meaningful types, identifiers,
+  structs, functions, and natural control flow, not just `eax`/`esp`
+  register-transfer C or prettier pseudocode. Unrecovered functions remain
+  explicitly labelled low-level fallbacks; original developer naming cannot
+  generally be guaranteed from stripped binaries.
+- **Moddable at the source level:** Developers should be able to change game
+  logic, rebuild the native executable, and demonstrate the modification
+  working in-game.
+- **Portable and maintainable:** Reuse a common compatibility runtime and
+  platform backends so recovered game logic can target modern operating
+  systems without a bespoke rewrite for each game.
+- **Broad automated compatibility:** Support many older Windows PC games,
+  engines, executable formats, and middleware through reusable infrastructure
+  and honest compatibility reporting—not a promise that every game works today.
+- **Unattended, non-AI-first processing:** PCRecomp supplies recompilation
+  and Windows-game runtime foundations; rev.ng is the intended primary
+  high-level structural-source provider. Deterministic analysis comes first;
+  AI is **optional** for extra semantic readability. No manual per-function
+  reconstruction should be required by the intended workflow. The desktop
+  GUI is planned over this same backend.
+
+**Differentiator:** Not another decompiler or game-specific recompilation
+script. GameReComp aims to make **verified native game ports with genuinely
+modifiable, human-readable source** reproducible across a large catalogue of
+legacy Windows games.
+
+The current implementation is an early CLI vertical slice; human-readable
+source, verified gameplay, broad native ports, and the GUI described above are
+**product goals, not completed features**.
+
+> **Status: v0.1.0 — first vertical slice. Zero verified playable games.**
+> The pipeline runs end to end and has measured 19 executable test rows: some
+> compile, some partially launch, some fail, and PE32+ is refused. The gates
+> below are product goals, not completed features, and this README does not
+> claim them.
+>
+> What has changed since that sentence was first written, and is measured:
+> eleven games now bind **every** import; **Cave Story (Doukutsu.exe) reaches a
+> frame loop and renders** — 192,303 blits, 8,399 message-pump iterations and
+> 0 failed indirect calls in 12 seconds, with frames captured; and typed,
+> readable C is compiled into a rebuilt game for two functions, each shown
+> equivalent to its mechanical body by a differential harness. Binding every
+> import is not the bar — Ikachan binds 97 of 97 and exits 1 — and 480 of its
+> 482 functions are still `LOW_LEVEL_FALLBACK` register-transfer C. See
+> [Development status](#development-status), which is deliberately not a
+> supported-games list.
 
 ---
 
@@ -39,14 +83,17 @@ licence texts are in [`docs/LICENSES.md`](docs/LICENSES.md) and [`NOTICE`](NOTIC
 Where this repository extends upstream code, the file keeps its upstream notice
 and the change is recorded in [`CHANGELOG.md`](CHANGELOG.md).
 
-## What RevEng-Studio adds
+## What GameReComp adds
 
 pcrecomp is a toolbox: many tools, each doing one job well, driven per project by
-that project's own `run_lift.py`. RevEng-Studio is the **product around that
-toolbox** — one command, one self-contained project, one report — with a
-deliberate source-first bias and a fail-closed verification story.
+that project's own `run_lift.py`. GameReComp is the **automated,
+game-focused product built around that toolbox**: one reproducible workflow
+for recovering readable source, compiling it into a native game, verifying
+actual gameplay, and enabling source-level modifications and ports across
+many legacy Windows titles. Source readability and verified moddability—not
+merely producing a binary—are the intended distinguishing deliverables.
 
-| | pcrecomp (toolbox) | RevEng-Studio (product) |
+| | pcrecomp (toolbox) | GameReComp (product) |
 | --- | --- | --- |
 | Entry point | per-project `run_lift.py` drivers, tools called one at a time | `./RevEng game.exe` — inspect → recover → translate → project → compile → run → verify → report |
 | Output bias | lifted C that reproduces CPU state | the same, **plus** a labelled source-quality split (`HIGH_LEVEL_VERIFIED` / `HIGH_LEVEL_UNVERIFIED` / `LOW_LEVEL_FALLBACK` / `UNRESOLVED`) and a gate that refuses to relabel anything without evidence |
@@ -100,100 +147,95 @@ Windows PE32 game + user-supplied assets
   source digest still matches
 - Exit codes: `0` scenario-pass, `2` a stage failed, `3` built/ran but unverified
 - Game database and matrix generated from measured runs:
-  [`table.md`](table.md), [`docs/GAME_MATRIX.md`](docs/GAME_MATRIX.md)
+  [`table.md`](table.md), [`docs/GAME_MATRIX.md`](docs/GAME_MATRIX.md).
+  These are diagnostic results, **not** a list of working games.
 
-## What the end result is
+## Development status
 
-**The deliverable is the source, not the binary.** A rebuilt executable is how
-this project *proves* the source is right — it is compiled from exactly the
-delivered C, run, and compared. It is not what you are meant to keep.
+Measured facts about the current build. **This is not a supported-games list**
+and nothing here is a claim of a working port — the bar for that is in
+[Verified working games](#verified-working-games), and nothing has met it yet.
+The full per-game table is [docs/GAME_MATRIX.md](docs/GAME_MATRIX.md).
 
-The product's output is a source tree you can read, edit, rebuild and maintain:
+### Cave Story (Doukutsu.exe) — reaches a frame loop and renders
 
-```text
-projects/<game>/
-  src/highlevel/     typed, readable C — the part meant to be read
-  src/recomp/gen/    register-transfer C — the mechanical fallback, address-tagged
-  src/runtime/       the pinned Win32 runtime the source links against
-  reports/           what was measured, and what was not
-```
-
-Every function carries one of four provenance categories, counted per build:
-
-| Category | Meaning |
-| --- | --- |
-| `HIGH_LEVEL_VERIFIED` | Typed C, compiled into the game, and shown equivalent to its mechanical body by a differential harness. Needs `provenance.verified_by` — the loader refuses the category without it. |
-| `HIGH_LEVEL_UNVERIFIED` | Typed C, compiled in, not yet shown equivalent. |
-| `LOW_LEVEL_FALLBACK` | The mechanical translation. Compiles, runs, is address-traceable, and is **not** readable source. Always present for a replaced function too, as `sub_XXXXXXXX__lowlevel`. |
-| `UNRESOLVED` | Could not be translated. Fails loudly if called. |
-
-A high-level function is ordinary C with real types and no register names. It
-cannot be called directly from the guest, so the pipeline *generates* the
-guest-ABI adapter from the module's declaration — one place, reviewable — and
-the dispatch table calls that. The mechanical body stays compiled beside it, so
-the fallback is visible and counted rather than replaced by a claim.
-
-## Working games
-
-Only games that were measured running are listed here. "Binds every import" is
-not the bar: Ikachan binds 97 of 97 and exits 1.
-
-### Cave Story (Doukutsu.exe) — runs
+The furthest any game has been taken. It is listed here as *evidence of what the
+pipeline can now do*, not as a working port: there is no deterministic input
+replay and no comparison against the original Windows game, so it cannot meet
+the showcase bar.
 
 | | |
 | --- | --- |
-| Original | `Doukutsu.exe`, i386 PE32, 1,478,656 bytes, sha256 `fa18379fe942ecb5…` |
+| Original | `Doukutsu.exe`, i386 PE32, 1,478,656 bytes |
 | Imports | 143 of 143 bound, 0 unresolved |
-| Built | native host executable from the generated source, 8.4 MiB |
 | Run | reached a frame loop and kept rendering and pumping until the deadline |
-| Measured | 12 s: 371,144 import dispatches — 192,303 `IDirectDrawSurface::Blt`, 8,399 `PeekMessageA`, 8,398 `IDirectInputDevice::Poll`, 8,398 `GetDeviceState`, 8,427 `GetTickCount`, 7,855 `Sleep`, **0 failed indirect calls** |
+| Measured (12 s) | 371,144 import dispatches — 192,303 `IDirectDrawSurface::Blt`, 8,399 `PeekMessageA`, 8,398 `IDirectInputDevice::Poll`, 8,398 `GetDeviceState`, 8,427 `GetTickCount`, 7,855 `Sleep`, **0 failed indirect calls** |
 | Rendered | 640×480, 46–48 colours, 21 distinct screens in the first 22 s: a fade in from black through ~20 animated frames, then a static screen |
-| Verification | `partial` — the process demonstrably ran its loop; no independent original-game oracle exists yet, so nothing stronger is claimed |
+| Verification status | `partial` — process-level only |
 
-![Cave Story intro, frame 4](docs/screenshots/cavestory-doukutsu-01-intro.png)
-![Cave Story intro, frame 20](docs/screenshots/cavestory-doukutsu-02-intro.png)
+![Cave Story, frame 4](docs/screenshots/cavestory-doukutsu-01-intro.png)
+![Cave Story, frame 20](docs/screenshots/cavestory-doukutsu-02-intro.png)
 ![Cave Story, later screen](docs/screenshots/cavestory-doukutsu-03-screen.png)
 
-Frames captured headless by `RECOMP_SCREENSHOT`; they are 640×480 with the
-palette above, and they differ frame to frame. What each screen *depicts* is not
-claimed here — the files are there to look at.
+Frames captured headless by `RECOMP_SCREENSHOT=DIR` (see
+[`runtime/win32hle/screenshot.c`](runtime/win32hle/screenshot.c)). They are
+640×480 with the palette above and they differ frame to frame. What each screen
+*depicts* is not claimed here.
 
-### Others measured to a classified outcome
+### Other measured outcomes, kept distinct
 
-| Game | Imports | Outcome |
+These are four different results and flattening them would be dishonest:
+
+| Game | Imports | What actually happened |
 | --- | --- | --- |
-| Cave Story (OrgView.exe) | 122 / 122 | Returns 0 on its own after DirectSound init — it starts, does its work, exits. Not a frame loop. |
-| Warning Forever (wf.exe) | 136 / 136 | Returns 0 after putting up **its own** message box saying DirectDraw7 is unavailable. The game checked a capability, found it lacking, and reported it to the user — correct behaviour meeting an incomplete runtime. |
-| Gunroar (gr.exe) | 136 / 136 | Binds everything, then dies at `SDL_SetVideoMode(SDL_OPENGL)` returning NULL headless. It needs a display; that is a different failure from a missing import, and is recorded as one. |
+| Cave Story (OrgView.exe) | 122 / 122 | Returns 0 on its own after DirectSound init — starts, does its work, exits. Not a frame loop. |
+| Warning Forever (wf.exe) | 136 / 136 | Returns 0 after putting up **its own** message box saying DirectDraw7 is unavailable. The game checked a capability, found it lacking and told the user: correct game behaviour meeting an incomplete runtime. |
+| Gunroar (gr.exe) | 136 / 136 | Binds everything, then dies at `SDL_SetVideoMode(SDL_OPENGL)` returning NULL headless. It needs a display — a different failure from a missing import, and recorded as one. |
 | Ikachan (dxIka.exe) | 97 / 97 | Returns 1. The first game to bind everything, and the reason "0 unresolved" is not the bar. |
 
-Full per-game table: [`docs/GAME_MATRIX.md`](docs/GAME_MATRIX.md). Classification
-vocabulary and raw counts: [`reports/games/classification.md`](reports/games/classification.md).
+## Verified working games
 
-## Measured so far
+**None yet.** No GameReComp-generated native game has passed an independently
+recorded gameplay scenario against the original Windows game. Compilation,
+import binding, launch, title-screen rendering and process-level checks do
+**not** qualify as a working-game demonstration.
 
-19 measured executable rows, each tied to the input's SHA-256.
+Only games with the following evidence may appear in this public showcase:
 
-| Result | Games |
-| --- | --- |
-| 93/100 — boots, binds every import, launches and exits on its own; no oracle, so `partial` | Ikachan (dxIka.exe) |
-| 85/100 — compiled to a native binary, then stopped in the PE loader on unresolved imports (`launch-failed`) | 14 PE32 games: Cave Story (Doukutsu, OrgView, DoConfig), GeneRally (GeneRally.exe, TrackEditor.exe), Gunroar, Hero Core (gm5, gm7), Noiz2sa, Parsec47, rRootage, Torus Trooper, Tumiki Fighters, Warning Forever |
-| 0/100 — PE32+ refused at inspect, recorded honestly as a measured row | Cannonball, OpenTyrian, Pixeltetris, Snake |
+1. A reproducible **native build compiled from the recorded generated source**
+   (source/binary hashes, platform and tool versions).
+2. A recorded **playable gameplay scenario** with deterministic inputs and an
+   independent comparison to the original game, including the exact scope
+   tested and a passing result.
+3. **Screenshots of the rebuilt game in actual gameplay**, preferably alongside
+   an original-game comparison, and supporting logs/artifacts linked from the
+   repository. Screenshots alone do not prove equivalence.
+4. An honest list of known limitations, game assets required, and reproduction
+   instructions. A run that fails or has no gameplay oracle is not “working.”
 
-Runtime coverage is the measured ceiling, not translation: the `launch-failed`
-rows record exit 2 and the exact import names their runtime could not bind.
-Closing those gaps is measurable work, not a hope — registering the MSVC CRT
-bridge alone took Noiz2sa from 121 unresolved imports to 28.
+When a game meets all of these criteria, add a linked proof record here.
+Until then this list remains empty—**no unverified games or upstream projects
+are advertised as GameReComp successes**.
+
+For development diagnostics, see [the full game test matrix](docs/GAME_MATRIX.md)
+and [verification criteria](docs/VERIFICATION.md). The matrix intentionally
+retains unsuccessful and partial runs for engineering transparency; it is
+**not** a supported-games list. Reported upstream PCRecomp achievements belong
+to their respective projects, not to GameReComp's verified-results count.
 
 ## Honest limits
 
-- **All generated functions are `LOW_LEVEL_FALLBACK`.** Register-transfer C:
-  compilable, address-traceable, not yet human-readable. High-level
-  reconstruction is Phase 2 and is not wired into the build.
+- **Most generated functions are `LOW_LEVEL_FALLBACK`.** Register-transfer C:
+  compilable, address-traceable, not human-readable. A high-level path now
+  exists and is compiled into the game, but it is proven for **two functions**;
+  the rest of the corpus is untouched. The pipeline refuses to label a function
+  `HIGH_LEVEL_VERIFIED` without `provenance.verified_by`, so the category cannot
+  be claimed, only earned.
 - **PE32 (i386) only.** PE32+ x86-64 is detected and refused at inspect.
 - **No gameplay verification yet.** Oracle checks are process-level (exit code,
   stdout/stderr, launch); frame, input and audio comparison is a recorded oracle
-  gap in every report.
+  gap in every report. A game reaching a frame loop is not a game that has
+  passed a scenario, and the two are kept apart everywhere in this repository.
 - **No independent original-game oracle process yet.** `--oracle` compares the
   rebuilt process against a user-supplied JSON of expected observables; it does
   not run the original Windows binary.
@@ -205,42 +247,18 @@ bridge alone took Noiz2sa from 121 unresolved imports to 28.
   gitignored; the tracked artifacts are the pipeline, plus the matrix and table
   that record the input hash each row was measured against.
 
-## The games
+## Supported game showcase policy
 
-Every game this product knows about, with what the port produced and its working
-status. Generated by `python -m tools.gamesdb --matrix`; the full table (upstream
-projects, unmeasured corpus entries and the upstream claims) is
-[`docs/GAME_MATRIX.md`](docs/GAME_MATRIX.md).
+The public README lists **only proven working GameReComp ports**, in
+[Verified working games](#verified-working-games). The complete set of
+attempted, failed, partial and unsupported game tests remains available in
+[docs/GAME_MATRIX.md](docs/GAME_MATRIX.md), not duplicated here. Do not
+automatically publish test-corpus rows as working games.
 
-<!-- GAME-MATRIX:BEGIN -->
-| Name | OS | Arch | Port details | Working status |
-| --- | --- | --- | --- | --- |
-| Cannonball | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
-| Cave Story | Windows | i386 (PE32) | 406 fns recovered; 2 units / 4.1 MiB C; binary DoConfig 1301 KiB; 88 imports bound, 2 unresolved; low-level 406/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Cave Story | Windows | i386 (PE32) | 3260 fns recovered; 8 units / 50.7 MiB C; binary Doukutsu 8368 KiB; 137 imports bound, 6 unresolved; low-level 3260/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Cave Story | Windows | i386 (PE32) | 551 fns recovered; 2 units / 5.4 MiB C; binary OrgView 1517 KiB; 120 imports bound, 2 unresolved; low-level 551/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| GeneRally | Windows | i386 (PE32) | 2577 fns recovered; 46 units / 373.9 MiB C; low-level 2577/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/GeneRally/logs/compile.log | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| GeneRally | Windows | i386 (PE32) | 311 fns recovered; 2 units / 7.0 MiB C; binary TrackEditor 2152 KiB; 88 imports bound, 59 unresolved; low-level 311/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Gunroar | Windows | i386 (PE32) | 3288 fns recovered; 5 units / 19.6 MiB C; binary gr 7174 KiB; 63 imports bound, 73 unresolved; low-level 3288/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Hero Core | Windows | i386 (PE32) | 12424 fns recovered; 14 units / 59.4 MiB C; binary herocore_gm5 17276 KiB; 353 imports bound, 160 unresolved; low-level 12424/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Hero Core | Windows | i386 (PE32) | 15788 fns recovered; 18 units / 79.6 MiB C; binary herocore_gm7 22159 KiB; 356 imports bound, 176 unresolved; low-level 15788/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Ikachan | Windows | i386 (PE32) | 482 fns recovered; 3 units / 9.6 MiB C; binary dxIka 2175 KiB; 97 imports bound; low-level 482/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
-| Noiz2sa | Windows | i386 (PE32) | 3024 fns recovered; 6 units / 36.3 MiB C; low-level 3024/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/noiz2sa/logs/compile.log) | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| OpenTyrian | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
-| Parsec47 | Windows | i386 (PE32) | 1930 fns recovered; 3 units / 13.2 MiB C; binary p47 4355 KiB; 61 imports bound, 90 unresolved; low-level 1930/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Pixeltetris | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
-| Snake | Windows | x86-64 (PE32+) | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
-| Torus Trooper | Windows | i386 (PE32) | 2342 fns recovered; 4 units / 15.1 MiB C; binary tt 5035 KiB; 61 imports bound, 94 unresolved; low-level 2342/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Tumiki Fighters | Windows | i386 (PE32) | 1760 fns recovered; 3 units / 12.0 MiB C; binary tf 3830 KiB; 59 imports bound, 86 unresolved; low-level 1760/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| Warning Forever | Windows | i386 (PE32) | 2624 fns recovered; 6 units / 33.6 MiB C; binary wf 7193 KiB; 141 imports bound, 6 unresolved; low-level 2624/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| rRootage | Windows | i386 (PE32) | 3199 fns recovered; 7 units / 41.3 MiB C; binary rr 9895 KiB; 18 imports bound, 146 unresolved; low-level 3199/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-<!-- GAME-MATRIX:END -->
-**Working status** is the pipeline's fail-closed verdict, not an impression:
-`PASS` requires a recorded scenario, `PARTIAL` means the rebuilt process launched
-but no independent scenario was run, `FAIL` means it did not get that far.
-**Port details** are read back from each project's own `reports/report.json`;
-`LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed
-high-level source.
+[Development status](#development-status) exists for the opposite purpose: it
+records what the pipeline currently does, with the measurements behind it, so
+progress is auditable without any of it being read as support. It is kept
+deliberately separate from this list and is not a showcase.
 
 ## Quick start (CLI)
 
