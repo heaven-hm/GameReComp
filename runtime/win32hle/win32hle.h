@@ -299,6 +299,7 @@ extern const win32hle_shim win32hle_storage[];        /* structured storage: com
 extern const win32hle_shim win32hle_dsound[];         /* DirectSound on SDL audio (dsound.c) */
 extern const win32hle_shim win32hle_ddraw[];          /* DirectDraw in software (ddraw.c) */
 extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
+extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 audio (sdlmix.c) */
 extern const win32hle_shim win32hle_msvcrt[];         /* the MSVC CRT on the host libc (msvcrt.c) */
 /* The primary surface, for a presenter: 0 until there is one. seq changes
  * when its pixels or palette may have. */
