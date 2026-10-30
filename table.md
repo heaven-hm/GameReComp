@@ -2,11 +2,11 @@
 
 Every game this project knows about: locally supplied corpus, the legacy engine baseline for the same binaries, and the upstream PCRecomp project table. Filenames and hashes only - no game binaries or assets are stored here.
 
-`PASS /100` is the autorecomp pipeline score for the measured input: weighted stage completion (inspect 10, recover 10, translate 10, project 10, compile 20, run 15, verify 15, report 10; partial verification 8/15). A stage only counts when it succeeded for the recorded hash. Untested rows are 0.
+`PASS /100` is the RevEng pipeline score for the measured input: weighted work, not a verdict. inspect 10, recover 10, translate 10, project 10, compile 20, report 10, run 15 (full when the rebuilt process launched on its own, half when it launched then faulted, none when it never reached its entry), verify 15 (full for a verified scenario, 8 for a launch without an oracle). A stage only counts when it succeeded for the recorded hash, so a binary that never boots scores 70, not 85. Untested rows are 0.
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-10-29T23:01:38Z by `python -m tools.gamesdb`. Measured 19; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-10-30T03:47:46Z by `python -m tools.gamesdb`. Measured 19; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **Ikachan** (dxIka.exe) at 93/100, partial: process launched and exited 1; no oracle supplied.
 

@@ -531,7 +531,7 @@ class Pipeline:
 
         # A boot failure is a classified outcome, not a stage error: verify
         # grades it as launch-failed, so it must not cost the run stage its
-        # points as well.
+        # points as well. It does not earn them either -- see score().
         return f"{status}, exit={rc}, {seconds}s, {len(unresolved)} unresolved imports", result
 
     def stage_verify(self):
@@ -663,6 +663,8 @@ class Pipeline:
         # stage_report (which computes the score it is about to publish) must
         # count it explicitly.
         total = STAGE_WEIGHTS["report"] if include_report else 0
+        run = self.run_result or {}
+        run_status = run.get("status")
         for st in self.stages:
             if st["status"] != "ok":
                 continue
@@ -672,7 +674,22 @@ class Pipeline:
                     total += STAGE_WEIGHTS["verify"]
                 elif vs == "partial":
                     total += 8
-            elif st["name"] in ("compile", "run") and st.get("data", {}).get("skipped"):
+            elif st["name"] == "run":
+                # Completing the stage is not the same as the binary running.
+                # The run stage returns ok for every classified outcome -- a
+                # process that never booted, a crash, and a clean exit all end
+                # the stage cleanly. Award its points for what actually
+                # happened: full for a process that launched and exited on its
+                # own, half for one that launched and then faulted, none for
+                # one that never reached its entry point.
+                if st.get("data", {}).get("skipped") or not run_status:
+                    continue
+                if run_status == "exited":
+                    total += STAGE_WEIGHTS["run"]
+                elif run_status in ("crashed", "timed-out", "signalled"):
+                    total += STAGE_WEIGHTS["run"] // 2
+                # boot-failed earns nothing: the rebuilt binary never started.
+            elif st["name"] == "compile" and st.get("data", {}).get("skipped"):
                 continue
             else:
                 total += STAGE_WEIGHTS[st["name"]]

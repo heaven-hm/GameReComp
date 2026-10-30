@@ -1,12 +1,15 @@
 """Games database: renders table.md from corpus metadata, legacy baseline,
 upstream PCRecomp claims and measured autorecomp runs.
 
-PASS /100 is the autorecomp pipeline score: weighted stage completion
-(inspect 10, recover 10, translate 10, project 10, compile 20, run 15,
-verify 15, report 10), where a partial verification earns 8/15. A score
-only rises when the corresponding stage actually succeeded for the
-recorded input hash. Rows marked with a dagger are upstream project
-claims, not measurements made here.
+PASS /100 is the RevEng pipeline score: weighted work, not a verdict.
+inspect 10, recover 10, translate 10, project 10, compile 20, report 10,
+and the outcome-dependent half: run 15 (full when the rebuilt process
+launched on its own, half when it launched and then faulted, none when it
+never reached its entry point) and verify 15 (full for a verified scenario,
+8 for a launch without an oracle). A stage only counts when it succeeded
+for the recorded input hash, so a binary that never boots scores 70, not 85.
+The verification status is the honest outcome; the score can be higher than
+it. Rows marked with a dagger are upstream project claims, not measurements.
 """
 
 import argparse
@@ -226,6 +229,9 @@ def record_result(project_dir, relative_path=None, results_path=RESULTS_PATH):
         "host": host,
         "input_sha256": inspect.get("sha256"),
         "evidence": _relative_to_repo(project_dir / "reports" / "report.html"),
+        # The project tree the row was measured from, so the matrix can read
+        # the port's own numbers back out of its report.json.
+        "project_dir": _relative_to_repo(project_dir),
         "generated_at": report.get("generated_at", _now()),
     }
 
@@ -318,6 +324,215 @@ def _table(rows):
     return "\n".join(lines)
 
 
+MATRIX_PATH = REPO_ROOT / "docs" / "GAME_MATRIX.md"
+
+# Verification status -> the plain-language verdict a reader wants. The
+# statuses are the pipeline's fail-closed set (docs/VERIFICATION.md); nothing
+# here promotes one.
+STATUS_VERDICT = {
+    "scenario-pass": "PASS - scenario verified",
+    "verified-playable-scope": "PASS - playable within the recorded scope",
+    "partial": "PARTIAL - launches, no scenario oracle",
+    "launch-failed": "FAIL - rebuilt process cannot boot",
+    "compile-failed": "FAIL - generated source does not compile",
+    "trace-diverged": "FAIL - trace diverged from the reference",
+    "not-run": "NOT RUN",
+    "skipped": "NOT RUN - fail-closed",
+}
+
+
+def _project_stage_data(project_dir):
+    """Read the stage data a project's report.json carries, or {}."""
+    report = _load_json(Path(project_dir) / "reports" / "report.json", {})
+    stages = {s.get("name"): s for s in report.get("stages", [])}
+    return report, stages
+
+
+def _port_details(run):
+    """One line describing what the port actually produced, from measured data.
+
+    Recovered function count, generated source size, the rebuilt binary and its
+    size, and how many imports the runtime could not bind. Every number comes
+    from the project's own report.json; a missing stage leaves its slot out
+    rather than guessing.
+    """
+    project_dir = run.get("project_dir")
+    if not project_dir:
+        # Rows recorded before project_dir was stored: recover it from the
+        # evidence path (projects/<name>/reports/report.html).
+        evidence = run.get("evidence") or ""
+        if evidence.endswith("/reports/report.html"):
+            project_dir = evidence[: -len("/reports/report.html")]
+    if not project_dir:
+        return "-"
+    _report, stages = _project_stage_data(project_dir)
+    if not stages:
+        return "no report.json"
+
+    bits = []
+    recover = (stages.get("recover") or {}).get("data") or {}
+    if recover.get("count") is not None:
+        bits.append(f"{recover['count']} fns recovered")
+    translate = (stages.get("translate") or {}).get("data") or {}
+    if translate.get("source_units") is not None:
+        mib = translate.get("source_bytes", 0) / (1024 * 1024)
+        bits.append(f"{translate['source_units']} units / {mib:.1f} MiB C")
+    compile_data = (stages.get("compile") or {}).get("data") or {}
+    if compile_data.get("binary"):
+        binary = Path(compile_data["binary"])
+        size = compile_data.get("binary_bytes") or (
+            binary.stat().st_size if binary.exists() else 0)
+        bits.append(f"binary {binary.name} {size / 1024:.0f} KiB")
+    run_data = (stages.get("run") or {}).get("data") or {}
+    bound = run_data.get("bound_imports")
+    unresolved = run_data.get("unresolved_import_count")
+    if bound is not None:
+        bits.append(f"{bound} imports bound"
+                    + (f", {unresolved} unresolved" if unresolved else ""))
+    cats = ((stages.get("project") or {}).get("data") or {}).get("source_categories")
+    if cats:
+        bits.append(f"low-level {cats.get('LOW_LEVEL_FALLBACK', 0)}"
+                    f"/ high-level verified {cats.get('HIGH_LEVEL_VERIFIED', 0)}")
+    return "; ".join(bits) if bits else "-"
+
+
+def _matrix_table(rows):
+    lines = ["| Name | OS | Arch | Port details | Working status |",
+             "| --- | --- | --- | --- | --- |"]
+    for row in rows:
+        lines.append(
+            f"| {_esc(row['game'])} | {_esc(row['os'])} | {_esc(row['arch'])} "
+            f"| {_esc(row['details'])} | {_esc(row['status'])} |")
+    return "\n".join(lines)
+
+
+def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
+    """The all-games matrix: this corpus, the upstream PCRecomp projects, and
+    every row's working status in plain language."""
+    inventory = _load_json(inventory_path, {})
+    runs = load_results(results_path)
+    corpus = _corpus_rows(inventory) if inventory else []
+    known = [r for r in corpus if r["kind"] in ("valid", "pe32plus")]
+    invalid = [r for r in corpus if r["kind"] == "invalid"]
+
+    rows = []
+    for run in sorted(runs, key=lambda r: (r.get("game", "?"),
+                                           r.get("filename", "?"))):
+        status = run.get("verification") or "not-run"
+        verdict = STATUS_VERDICT.get(status, status)
+        reason = run.get("status") or ""
+        if reason and status in ("launch-failed", "compile-failed", "partial",
+                                 "trace-diverged"):
+            verdict = f"{verdict} - {reason}"
+        rows.append({
+            "game": run.get("game", "?"),
+            "filename": run.get("filename", "?"),
+            "os": run.get("os", "Windows"),
+            "arch": run.get("arch", "?"),
+            "details": _port_details(run),
+            "status": verdict,
+            "measured": True,
+        })
+
+    measured_files = {r["filename"] for r in rows}
+    for row in sorted(known, key=lambda r: (r["game"], r["filename"])):
+        if row["filename"] in measured_files:
+            continue
+        rows.append({
+            "game": row["game"],
+            "filename": row["filename"],
+            "os": row["os"],
+            "arch": row["arch"],
+            "details": "not run by this pipeline"
+                       + (" (PE32+ is fail-closed today)"
+                          if row["kind"] == "pe32plus" else ""),
+            "status": "NOT RUN",
+            "measured": False,
+        })
+
+    for row in sorted(invalid, key=lambda r: (r["game"], r["filename"])):
+        rows.append({
+            "game": row["game"],
+            "filename": row["filename"],
+            "os": row["os"],
+            "arch": row["arch"],
+            "details": "data file shipped with the game, not an executable",
+            "status": "NOT APPLICABLE",
+            "measured": False,
+        })
+
+    upstream = sorted(UPSTREAM, key=lambda u: (-u[6], u[1]))
+
+    out = []
+    out.append("# Game matrix")
+    out.append("")
+    out.append("Every game this product knows about, in one table: the locally "
+               "supplied corpus this repository measures, and the upstream "
+               "PCRecomp projects whose status is quoted from their own README. "
+               "No game binary or asset is stored in this repository.")
+    out.append("")
+    out.append("**Working status** is this pipeline's fail-closed verdict "
+               "(`docs/VERIFICATION.md`), not an impression: `PASS` requires a "
+               "recorded scenario; `PARTIAL` means the rebuilt process launched "
+               "but no independent scenario was run; `FAIL` means it did not get "
+               "that far. `NOT RUN` is exactly that. Upstream rows are claims, "
+               "marked `†`, and are never counted as this product's results.")
+    out.append("")
+    out.append("**Port details** are read from each project's own "
+               "`reports/report.json`: functions recovered, generated C, the "
+               "rebuilt binary, imports the runtime bound, and the "
+               "low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are "
+               "register-transfer C, not reconstructed high-level source.")
+    out.append("")
+    out.append(f"Updated {_now()} by `python -m tools.gamesdb --matrix`.")
+    out.append("")
+    out.append("## This repository (measured)")
+    out.append("")
+    out.append(_matrix_table([r for r in rows if r["measured"]])
+               if any(r["measured"] for r in rows)
+               else "Nothing measured yet.")
+    out.append("")
+    out.append("## This repository (not measured)")
+    out.append("")
+    out.append(_matrix_table([r for r in rows if not r["measured"]])
+               if any(not r["measured"] for r in rows)
+               else "Every corpus entry has been measured.")
+    out.append("")
+    out.append("## Upstream PCRecomp projects (claims, not measurements)")
+    out.append("")
+    out.append("Status text is quoted from each project's own README; the "
+               "architecture and OS columns are what that README states. These "
+               "rows are context for the corpus above, never evidence that this "
+               "pipeline reproduces them.")
+    out.append("")
+    up_rows = [{
+        "game": f"[{title}](https://github.com/sp00nznet/{slug})",
+        "filename": filename,
+        "os": os_name,
+        "arch": arch,
+        "details": f"{era}; upstream README claim",
+        "status": f"{claim}†",
+    } for slug, title, era, arch, os_name, claim, _score, filename in upstream]
+    out.append(_matrix_table(up_rows))
+    out.append("")
+    return "\n".join(out)
+
+
+def write_matrix(matrix_path=MATRIX_PATH, **kwargs):
+    matrix_path = Path(matrix_path)
+    text = render_matrix(**kwargs)
+    fd, tmp = tempfile.mkstemp(dir=str(matrix_path.parent), prefix=".matrix-",
+                               suffix=".md")
+    try:
+        with os.fdopen(fd, "w") as fh:
+            fh.write(text)
+        os.replace(tmp, matrix_path)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+    return matrix_path
+
+
 def render_table(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
     inventory = _load_json(inventory_path, {})
     runs = load_results(results_path)
@@ -358,11 +573,15 @@ def render_table(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
                "PCRecomp project table. Filenames and hashes only - no game "
                "binaries or assets are stored here.")
     out.append("")
-    out.append("`PASS /100` is the autorecomp pipeline score for the measured "
-               "input: weighted stage completion (inspect 10, recover 10, "
-               "translate 10, project 10, compile 20, run 15, verify 15, "
-               "report 10; partial verification 8/15). A stage only counts when "
-               "it succeeded for the recorded hash. Untested rows are 0.")
+    out.append("`PASS /100` is the RevEng pipeline score for the measured "
+               "input: weighted work, not a verdict. inspect 10, recover 10, "
+               "translate 10, project 10, compile 20, report 10, run 15 (full "
+               "when the rebuilt process launched on its own, half when it "
+               "launched then faulted, none when it never reached its entry), "
+               "verify 15 (full for a verified scenario, 8 for a launch without "
+               "an oracle). A stage only counts when it succeeded for the "
+               "recorded hash, so a binary that never boots scores 70, not 85. "
+               "Untested rows are 0.")
     out.append("")
     out.append("`†` marks a score derived from the upstream project's own README "
                "status; it was not measured by this repository and is not a "
@@ -427,12 +646,22 @@ def write_table(table_path=TABLE_PATH, **kwargs):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Render table.md games database")
     parser.add_argument("--table", default=str(TABLE_PATH))
+    parser.add_argument("--matrix", nargs="?", const=str(MATRIX_PATH),
+                        default=None,
+                        help="also render the all-games matrix to this path "
+                             "(default: docs/GAME_MATRIX.md when --matrix is "
+                             "given without a value)")
     parser.add_argument("--inventory", default=str(INVENTORY_PATH))
     parser.add_argument("--results", default=str(RESULTS_PATH))
     args = parser.parse_args(argv)
     path = write_table(Path(args.table), inventory_path=Path(args.inventory),
                        results_path=Path(args.results))
     print(f"wrote {path}")
+    if args.matrix is not None:
+        target = args.matrix or str(MATRIX_PATH)
+        matrix = write_matrix(Path(target), inventory_path=Path(args.inventory),
+                              results_path=Path(args.results))
+        print(f"wrote {matrix}")
     return 0
 
 
