@@ -23,6 +23,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -263,37 +264,72 @@ def measure_project(project_dir, timeout=15.0):
     return row
 
 
-def build_project(project_dir, jobs=None, timeout=900):
-    """Reconfigure if needed and build one project in its own build dir."""
+def _run_step(cmd, timeout):
+    started = time.time()
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True,
+                              timeout=timeout)
+        rc = proc.returncode
+        tail = (proc.stdout + proc.stderr)[-2000:]
+    except subprocess.TimeoutExpired:
+        return {"command": " ".join(cmd), "returncode": None,
+                "seconds": round(time.time() - started, 1),
+                "log_tail": f"timed out after {timeout}s"}
+    return {"command": " ".join(cmd), "returncode": rc,
+            "seconds": round(time.time() - started, 1), "log_tail": tail}
+
+
+def build_project(project_dir, jobs=None, timeout=900, clean=False):
+    """Reconfigure and build one project in its own build dir.
+
+    An existing CMakeCache.txt pins absolute paths to library kegs, so a
+    Homebrew upgrade that moves a keg (ffmpeg 9.0.2 -> 9.0.2_1 here) strands
+    the cache and the build dies with either "No rule to make target
+    .../libavformat.dylib" or "Imported target PkgConfig::FFMPEG includes
+    non-existent path". Reconfiguring is cheap, so it always runs; if the
+    configure still fails, the build dir is discarded and regenerated, which
+    re-resolves every path through pkg-config.
+    """
     project_dir = Path(project_dir)
     build_dir = project_dir / "build"
-    steps = []
-    if not (build_dir / "CMakeCache.txt").exists():
-        steps.append(["cmake", "-S", str(project_dir), "-B", str(build_dir)])
-    cmd = ["cmake", "--build", str(build_dir)]
+    configure = ["cmake", "-S", str(project_dir), "-B", str(build_dir)]
+    build = ["cmake", "--build", str(build_dir)]
     if jobs:
-        cmd += ["-j", str(jobs)]
-    steps.append(cmd)
+        build += ["-j", str(jobs)]
+
     log = []
-    for cmd in steps:
-        started = time.time()
-        try:
-            proc = subprocess.run(cmd, capture_output=True, text=True,
-                                  timeout=timeout)
-            rc = proc.returncode
-            tail = (proc.stdout + proc.stderr)[-2000:]
-        except subprocess.TimeoutExpired:
-            return {"ok": False, "command": " ".join(cmd),
-                    "returncode": None, "seconds": round(time.time() - started, 1),
-                    "log_tail": f"build timed out after {timeout}s"}
-        log.append({"command": " ".join(cmd), "returncode": rc,
-                    "seconds": round(time.time() - started, 1),
-                    "log_tail": tail})
-        if rc != 0:
-            return {"ok": False, "steps": log, "command": " ".join(cmd),
-                    "returncode": rc,
-                    "seconds": round(time.time() - started, 1),
-                    "log_tail": tail}
+    if clean and build_dir.exists():
+        shutil.rmtree(build_dir)
+    steps = [configure, build]
+    for index, cmd in enumerate(steps):
+        step = _run_step(cmd, timeout)
+        log.append(step)
+        if step["returncode"] == 0:
+            continue
+        if index == 0 and build_dir.exists():
+            # Stale cache: throw it away and configure from scratch.
+            shutil.rmtree(build_dir)
+            retry = _run_step(configure, timeout)
+            retry["command"] += "   # after discarding a stale CMakeCache"
+            log.append(retry)
+            if retry["returncode"] != 0:
+                return {"ok": False, "steps": log,
+                        "command": retry["command"],
+                        "returncode": retry["returncode"],
+                        "seconds": retry["seconds"],
+                        "log_tail": retry["log_tail"]}
+            rebuilt = _run_step(build, timeout)
+            log.append(rebuilt)
+            if rebuilt["returncode"] != 0:
+                return {"ok": False, "steps": log,
+                        "command": rebuilt["command"],
+                        "returncode": rebuilt["returncode"],
+                        "seconds": rebuilt["seconds"],
+                        "log_tail": rebuilt["log_tail"]}
+            return {"ok": True, "steps": log}
+        return {"ok": False, "steps": log, "command": step["command"],
+                "returncode": step["returncode"], "seconds": step["seconds"],
+                "log_tail": step["log_tail"]}
     return {"ok": True, "steps": log}
 
 
