@@ -160,11 +160,29 @@ halves of that are now measured, and the answer is "never populated":
 
 That makes this an **initialisation-order** problem rather than a missing shim:
 a virtual method that needs the table is called on an object whose table builder
-has not run. One thing does not fit yet and is the next question: the object's
-`+0x0C` is already `0x10500460` at the fault, but `sub_004039D0` — the function
-that sets it — never ran, so something else wrote it and left the table empty.
-Finding that writer (and what the original's order is around it) is where this
-picks up; it is one function call away from the answer, not a cluster.
+has not run.
+
+A watchpoint on the object's `+0x0C` settles who writes it, and corrects the
+guess above. It fires twice before the fault:
+
+| write | `g_cur_func` | what it is |
+|---|---|---|
+| 1 | `0x0041D834` | the 16-byte template copy (`rep movsb`), storing the template's `+0x0C` = 0 |
+| 2 | `0x00427874` | the object's virtual `+0x18`, at `0x00427895`: `[esi+0xC] = eax`, where `eax` is `sub_0042F184`'s return value |
+
+So the pointer is installed by the object's own `+0x18` method, and
+`sub_0042F184` is what hands it over. `sub_004039D0` is **not** this object's
+table builder after all: it is called from `sub_0040370C` (at `0x004037E8`) to
+build a *different* object's fields at `+0x88`..`+0xC4`, and the offset
+coincidence is just two table-shaped structures.
+
+What is still open, and it is the last step: **which code fills this object's
+table at `obj+0x60`** — its `+0x38`/`+0x3C` (bounds), `+0x40` (kind) and `+0x44`
+(pointer). The lead is `sub_0042F184` itself: it has a path that returns 0
+(`0x0042F1A8`) and a path that returns its own first argument (`0x0042F1BD`),
+and this run took the second — the argument being the table address — while the
+table's fields stayed zero. Either the filler is a call this run did not make,
+or `sub_0042F184` was supposed to fill the table on the way through.
 
 ## Two runtime gaps the sweep turned up on the way
 
