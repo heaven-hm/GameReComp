@@ -220,12 +220,33 @@ differential against a Windows host we do not have.
 | `InitializeCriticalSection(&cs)` | no return; the section must be usable by `Enter`/`Leave`/`Delete`, and starts with DebugInfo NULL, LockCount -1, RecursionCount 0, OwningThread 0, LockSemaphore 0, SpinCount 0 | 24 bytes: `+0` 0, `+4` 0xFFFFFFFF (-1), `+8` 0, `+12` 0, `+16` 0, `+20` 0 — the same field positions Windows uses, and this layer's own lock reads the same ones (`CS_REC` = `+8`, `CS_OWNER` = `+12`) | **matches**, and the probe takes the section with `EnterCriticalSection` and releases it |
 | `SetUnhandledExceptionFilter(p)` | the **previous** filter, or NULL if there was none (MSDN) | 0 (NULL) always | **differs after the first call**: a game that chains filters sees NULL instead of the one it installed. Note the filter is never *called* either way — guest exceptions end the run (`RaiseException`), which the file says |
 
-Two of these are worth a fix and are cheap: `GetStdHandle` answering non-NULL
-with no console, and `SetUnhandledExceptionFilter` not returning the previous
-filter. `GetVersion` is the one to think about rather than patch: answering 5.1
-is internally consistent, and changing it to a Win9x value would move every game
-that branches on it — which is exactly the kind of change that needs a
-differential, not a guess.
+### The three differences, decided
+
+1. **`SetUnhandledExceptionFilter` — fixed.** Returning the previous filter is
+   unambiguous in MSDN, so the shim now keeps a real saved slot: the first call
+   answers NULL, each later one answers what the previous call installed, and
+   the probe checks the chain. The filter is still never *called* (a guest
+   exception ends the run), which the file says.
+2. **`GetStdHandle` — deliberately left answering handles, and the reason
+   matters.** MSDN's NULL is for a process with no console, and the deciding
+   factor is the **launch**, not the subsystem: a GUI binary started from
+   Explorer has no console and gets NULL, while the same binary started from a
+   terminal inherits the console and gets valid handles. This runtime's rebuilt
+   process runs attached to a terminal, so valid handles are the correct answer
+   for how it is actually launched — and `0x11`/`0x12`/`0x13` are wired to host
+   descriptors 0/1/2, so writes really work. Answering NULL would break stdout
+   for every game that prints, which several do: it would be "fixing" a
+   documented value by making it wrong for this launch. A deliberate difference,
+   not a gap.
+3. **`GetVersion` — left as 5.1/2600, deliberately, and deferred rather than
+   settled.** It is internally consistent with this layer's `GetVersionExA`, and
+   the reason not to change it is not that 5.1 is right: it is that the value is
+   branched on, so changing it is a behavioural change across every game at
+   once, and there is no differential to say which value makes a given game
+   work. That is precisely the gap Issue #3's P1 exists to close — locate the
+   first divergence between the rebuilt game and the original, then the value
+   can be chosen from evidence instead of taste. Recorded here as the motivating
+   example for that work.
 
 ## Two runtime gaps the sweep turned up on the way
 

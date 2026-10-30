@@ -540,7 +540,18 @@ static void k_GetTempPathA(void) { snprintf(ASTR(1), A32(0), "C:\\WINDOWS\\TEMP\
 static void k_GetComputerNameA(void) { if (A32(1) && MEM32(A32(1)) > 5) { strcpy(ASTR(0), "HLEPC"); MEM32(A32(1)) = 5; RET(1, 2); } RET(0, 2); }
 
 /* --- SEH / error hooks: the startup installs these --- */
-static void k_SetUnhandledExceptionFilter(void) { RET(0, 1); }
+/* SetUnhandledExceptionFilter(filter): returns the PREVIOUS filter, or NULL if
+ * there was none (MSDN).  The CRT installs one at startup and a game may chain
+ * its own, so the previous pointer is kept rather than always answering NULL.
+ * The filter itself is never called - a guest exception ends the run
+ * (RaiseException below) - which is a documented gap, not something this slot
+ * pretends to cover. */
+static uint32_t g_unhandled_filter;
+static void k_SetUnhandledExceptionFilter(void) {
+    uint32_t prev = g_unhandled_filter;
+    g_unhandled_filter = A32(0);
+    RET(prev, 1);
+}
 static void k_UnhandledExceptionFilter(void)    { RET(0, 1); }  /* EXCEPTION_CONTINUE_SEARCH */
 static void k_RtlUnwind(void)      { RETV(4); }                 /* no guest SEH unwinding yet */
 static void k_RaiseException(void) {
