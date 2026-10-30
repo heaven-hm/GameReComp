@@ -315,7 +315,11 @@ def rewrite(body, segment_base, own_va=None):
     # primitive-types.h reads it from a special location. A body containing one
     # cannot be correct: the decompiler is saying it does not know. The x87
     # helpers make such a body COMPILE, which is exactly why the distinction
-    # matters - 0x00481BB0, the frame loop's core, has 14 of these.
+    # matters - 0x00481BB0, the frame loop's core, has 180 of them in an 8,541-byte
+    # body (counted from the provider's own C: `revng.function_source` then
+    # `len(re.findall(r"\bundef\s*\(", src))`). An earlier comment here said 14;
+    # the number in the refusal message is what the code finds, so the comment is
+    # the thing that was wrong.
     n_undef = len(_pre.findall(r"\bundef\s*\(", body))
     if n_undef:
         raise Unsupportable(f"the provider body contains {n_undef} undefined value(s) "
