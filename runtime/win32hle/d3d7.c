@@ -163,11 +163,13 @@ static unsigned g_max_lights;
 
 #define D3D7_DEVICE_DESC_SIZE 236u
 #define D3D7_PRIM_CAPS_SIZE 56u
-/* A private device ID lets clients choose the implementation returned by
- * EnumDevices without claiming to be a Direct3D HAL or reference rasterizer. */
+/* Direct3D 7 clients pass D3DDEVICEDESC7.deviceGUID back to CreateDevice.
+ * Use the standard RGB device identity for this software-compatible fixed-
+ * function backend; the private OpenGL label remains in the description.
+ * This avoids claiming the HAL or hardware transform-and-light capabilities. */
 static const uint8_t g_d3d7_gl_device_guid[16] = {
-    0x35,0x90,0xD3,0x91, 0xBA,0x79, 0xB8,0x4D,
-    0x88,0x34, 0x50,0x43,0x52,0x44,0x37,0x01
+    0x60,0x5C,0x66,0xA4, 0x73,0x26, 0xCF,0x11,
+    0xA3,0x1A,0x00,0xAA,0x00,0xB9,0x33,0x56
 };
 
 static void dev_get_direct3d(void);
@@ -370,7 +372,7 @@ static void d3d_enum(void) {
     static uint32_t description,name;
     if(!cb)RET(E_POINTER,3);
     if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,3);
-    if(!description)description=hle_guest_strdup("SDL OpenGL fixed-function Direct3D 7");
+    if(!description)description=hle_guest_strdup("SDL OpenGL fixed-function Direct3D 7 (RGB-compatible)");
     if(!name)name=hle_guest_strdup("SDL OpenGL");
     desc=hle_va(hle_alloc(D3D7_DEVICE_DESC_SIZE));
     if(!desc)RET(D3DERR_NOTAVAILABLE,3);
