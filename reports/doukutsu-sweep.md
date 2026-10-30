@@ -540,3 +540,25 @@ aliases, which is the width the guest has.
 the blocker because it is named in the failure message may not be the one that
 determines the count. Only the closure measurement says which class is load-bearing,
 and it said no.
+
+## Four negative results, kept as assets
+
+A negative result that cost a class to learn is worth as much as a positive one,
+because it stops the next person repeating the work. This report carries four:
+
+1. **The 92 rev.ng-only functions are not a lifter gap.** Measured three ways (0 call
+   targets, 1 jump target, 0 missing-body fatals in 2.9M dispatched calls), and the
+   provider's own 50 empty bodies were the evidence.
+2. **The 0-of-3 certification failure was a clipped window.** A fixed 256 KB window
+   in `pe_image` meant a 1.4 MB game's `.data` was never mapped, so the reference
+   machine faulted on its own data. It read as a limit of synthetic entry states.
+3. **The largest class fixed 0 to 0.** 124 struct returns were the biggest refusal
+   class; fixing them moved multi-function closures from zero to zero. Size-based
+   prioritisation was refuted by measurement.
+4. **A class named in a failure message may not be the class that determines the
+   count.** `LPCRITICAL_SECTION` appeared *in the error text*, so two rounds went
+   toward the named-typedef casts; two independent fixes of that class left the
+   closure count at 126 and the blocker table identical. **The error text names what
+   broke; only the measurement names what matters.** The load-bearing classes are
+   `StructRef` (28 closures), unimplemented intrinsics (20) and the union-size gap (16),
+   and none of them is the one printed in the failure.
