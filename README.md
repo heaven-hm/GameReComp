@@ -184,14 +184,27 @@ Frames captured headless by `RECOMP_SCREENSHOT=DIR` (see
 
 ### Other measured outcomes, kept distinct
 
-These are four different results and flattening them would be dishonest:
+These are four different results and flattening them would be dishonest. All
+eleven games that bind every import were run twice — headless and with a real
+video driver — and the two modes gave identical exit codes and profiles for
+every one, so none of these is a display requirement:
 
 | Game | Imports | What actually happened |
 | --- | --- | --- |
-| Cave Story (OrgView.exe) | 122 / 122 | Returns 0 on its own after DirectSound init — starts, does its work, exits. Not a frame loop. |
+| Cave Story (OrgView.exe) | 122 / 122 | Returns 0 on its own after DirectSound init and two blits — starts, does its work, exits. Not a frame loop. |
+| Cave Story (DoConfig.exe) | 89 / 89 | Returns 1 after opening `Config.dat` and building its dialog (406 Button, 139 Static, 23 ComboBox, 11 CheckRadioButton) — it gets as far as its own UI. |
 | Warning Forever (wf.exe) | 136 / 136 | Returns 0 after putting up **its own** message box saying DirectDraw7 is unavailable. The game checked a capability, found it lacking and told the user: correct game behaviour meeting an incomplete runtime. |
-| Gunroar (gr.exe) | 136 / 136 | Binds everything, then dies at `SDL_SetVideoMode(SDL_OPENGL)` returning NULL headless. It needs a display — a different failure from a missing import, and recorded as one. |
-| Ikachan (dxIka.exe) | 97 / 97 | Returns 1. The first game to bind everything, and the reason "0 unresolved" is not the bar. |
+| Ikachan (dxIka.exe) | 97 / 97 | Returns 1 after opening `Option.bin` and building its UI. The first game to bind everything, and the reason "0 unresolved" is not the bar. |
+| Gunroar (gr.exe) | 136 / 136 | SIGBUS after 27 startup shims, **before any SDL call**: a guest NULL dereference at VA 0x28 inside lifted CRT code (`sub_004281FC+744` reads `[[ebp-0x1C]+0xC]`, calls `sub_00428714`, and dereferences the NULL it returns). A missing-import failure would have been named by the loader; this one is not, which is why it needed locating rather than guessing. |
+
+The eleven-row classification, with commands, environments and raw counts, is
+[`reports/games/classification.md`](reports/games/classification.md).
+
+**Correction.** An earlier version of this README said Gunroar died at
+`SDL_SetVideoMode(SDL_OPENGL)` returning NULL headless, and called it a display
+requirement. That was wrong: Gunroar never reaches SDL, and it fails identically
+with a real display. It is recorded here as refuted rather than quietly
+replaced.
 
 ## Verified working games
 
