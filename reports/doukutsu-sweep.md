@@ -430,3 +430,39 @@ What would change it: a provider pass that records field types, or a Ghidra-supp
 structure database. Neither is our transform, and both are larger than anything left
 in the current queue.
 
+## A census of all 955 provider bodies, by production refusal
+
+Every earlier number in this report measured a *class* — how many closures a reason
+blocks, how many bodies contain an intrinsic. None of them said where the 955 bodies
+actually go. This does, using the production path (`rename_ast.rewrite`, which is what
+the generator calls) rather than `parse()` alone. Written to
+`reports/body-census.json`.
+
+    410  transform: no declared callee contract was supplied, so the call cannot cross
+    233  transform: not a guest VA, so it cannot be a memory operand
+     78  transform: the provider named an address it could not decompile
+     77  provider:  unimplemented intrinsic
+     35  GENERATES
+     31  parse:     other
+     22  provider:  undef()
+     16  parse:     Invalid expression
+
+**The largest single reason is the call contract, not a parse problem** — 410 bodies
+are refused because the caller's callee has no contract. That is the closure work's
+input, and it is the thing to fix before any further parse refinement.
+
+### A correction to the commit that preceded this
+
+`bit_cast` was rewritten to a cast so bodies containing it would parse, and the
+`parse()`-level count fell 72 -> 39. The commit presented that as the effect. It was
+not the production effect: **`bit_cast` is in the intrinsic refusal list and is
+checked BEFORE the parse**, so those bodies were already being refused correctly as
+"unimplemented intrinsic" and never reached the parser. The 72 -> 39 figure measured a
+path production does not take for them, and the closure-blocker table duly did not
+move.
+
+The rewrite is harmless and still helps `parse_signatures`, which parses donated
+bodies to read their frames. But the number reported should have been this census's,
+and the lesson is the one this project keeps re-learning: **measure the path the
+product takes, not the function under the test.**
+
