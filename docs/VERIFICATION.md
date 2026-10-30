@@ -288,6 +288,39 @@ Together with the 24 bodies carrying 2,331 `undef()` values, this describes how 
 of this binary's decompilation rests on things the provider could not supply or we
 have not implemented. Those counts belong beside the certified count, not behind it.
 
+## The one rule that produced every good decision here
+
+When a verdict and an instrument disagree about how much was checked, there are two
+repairs: **widen what the instrument can see, or weaken what the verdict claims.**
+Every time this project chose the first, the number went down and became trustworthy.
+Every time it chose the second, the number went up and was wrong.
+
+| chose to widen the instrument | chose to weaken the claim |
+| --- | --- |
+| compare the frame (extent, base, bytes) | a 256 KB window that clipped every real address |
+| prove purity by classifying every operand | per-register seeds that made a coherence test impossible |
+| link the transitive callee closure | a fixed seed pattern per register, so two machines entered in different states |
+| report the closure size in the verdict | a `compares` field claiming eight registers when one was compared |
+
+The right-hand column is not laziness — each was a reasonable local decision that
+made a result appear. That is exactly what makes it dangerous: a verdict that is
+narrower than it claims looks identical to one that is honest, and only the count
+reveals it, later, when it is retracted.
+
+So the question to ask of any verification change is not "does this pass" but **"what
+can this instrument see, and does the verdict say exactly that"**. If a claim is
+wider than the instrument, the instrument has to grow. If the instrument cannot grow,
+the claim shrinks and says why in the record.
+
+Two corollaries learned the hard way here:
+
+- **A comparison whose subject count is zero is a failure, not a pass.** The
+  `nothing-compared` verdict exists because a check that compared nothing once
+  reported `agree`.
+- **An unimplemented intrinsic is worse than an `undef()` value.** `undef()` is
+  marked as unknown and gets refused; an intrinsic looks computable and is silently
+  something else. 75 bodies here depend on 353 such calls.
+
 ## Known limits
 
 - No original-Windows oracle harness exists in this repository; `scenario-pass`
