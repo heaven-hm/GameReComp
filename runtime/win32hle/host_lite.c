@@ -293,7 +293,29 @@ recomp_func_t recomp_lookup_import(uint32_t va) {
     if (i < (uint32_t)g_shim_n && g_shim[i].va == va) {
         g_last_import_va = va;
         g_cur_import = g_shim[i].name;
-        if (win32hle_trace) fprintf(stderr, "[hle] %s\n", g_shim[i].name);
+        /* The trace can be tagged with the guest thread id.
+         *
+         * The log is one global sequence across every thread, and a frame-loop
+         * game's threads interleave differently from run to run even with a
+         * virtual clock: measured on Doukutsu, the audio thread's DirectSound
+         * calls land at a different point relative to the main thread's frame
+         * loop, and the bisector correctly refuses to name a call because the
+         * divergence is intermittent. Tagging each line with the thread that
+         * made it lets each thread's own sequence be compared on its own, which
+         * is the only comparison that can be stable when two threads genuinely
+         * run concurrently.
+         *
+         * RECOMP_TRACE_TID=1 turns the tag on. Off by default, so the trace
+         * format every existing tool reads is unchanged. */
+        if (win32hle_trace) {
+            static int tid_tag = -1;
+            if (tid_tag < 0) {
+                const char *v = getenv("RECOMP_TRACE_TID");
+                tid_tag = v && *v && *v != '0';
+            }
+            if (tid_tag) fprintf(stderr, "[hle] %u %s\n", hle_thread_id(), g_shim[i].name);
+            else fprintf(stderr, "[hle] %s\n", g_shim[i].name);
+        }
         g_pending_shim = i;
         return shim_entry;
     }

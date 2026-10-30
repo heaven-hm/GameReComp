@@ -292,6 +292,19 @@ void     hle_clock_reset(void);          /* for probes: re-read the environment 
  * Off unless the environment asks. */
 extern uint32_t hle_call_count;      /* shim dispatches since start */
 extern uint32_t hle_call_cap;        /* 0 = no cap */
+
+/* RECOMP_TRACE_TID=1 tags each dispatch line with the guest thread id:
+ *   [hle] <tid> Name
+ * The log is one global sequence across every thread, and a frame-loop game's
+ * threads interleave differently from run to run even under a virtual clock --
+ * measured on Doukutsu, the audio thread's DirectSound calls land at a
+ * different point relative to the main thread's frame loop, and the bisector
+ * correctly refuses to name a call because the divergence is intermittent.
+ * Tagged lines let each thread's own sequence be compared on its own, which is
+ * the only comparison that can be stable when two threads really do run
+ * concurrently. Off by default, so the format existing tools read is
+ * unchanged. */
+#define RECOMP_TRACE_TID_ENV "RECOMP_TRACE_TID"
 extern const char *g_cur_import;          /* the last import entered (fault reports) */               /* env SC2K/HLE trace: one line per shim call */
 
 /* Each module's shim table (defined in its .c, registered by the host). */
