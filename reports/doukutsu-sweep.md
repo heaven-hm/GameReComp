@@ -274,3 +274,29 @@ Beyond `0x00481BB0`'s 180: **24 of the 955 provider bodies are refused for
 marking a value it could not determine. That is the provider's own measurement of
 what it could not recover on this binary, and it is the number to quote rather than
 the one function that happened to be the frame loop's core.
+
+## The marshal's territory, measured before it is built
+
+A call is a value crossing in both directions, so the marshal is not "add an
+argument" - it is the conversion of a C call at an AST boundary into a guest-ABI
+call. The population it has to cover, measured:
+
+| class | bodies |
+|---|---|
+| calls another lifted function | **497** |
+| no calls (leaf) | 101 |
+| refused for `undef()` before any of this applies | 24 |
+| an indirect call through a pointer (heuristic, see below) | 333 |
+
+**1,524 call sites, of which 796 target a callee that has a stack frame.** So roughly
+half the call sites carry a frame argument today, and a marshal written for the
+other half would be wrong at 796 places - which is why the caller must be checked
+against a signature declared at the AST boundary rather than at link time.
+
+Two honest limits on the numbers above:
+- the **333 indirect** figure is a regex over `*(...) (...)` shapes and therefore
+  matches casts as well as calls. It is an upper bound, not a measurement, and it is
+  recorded as one. The Lead asked for the refusal class to be measured rather than
+  left implicit; measuring it properly needs the AST, not a pattern.
+- the 497/101 split is over *provider bodies*, not compiled modules, so it is the
+  marshal's whole territory and not the part currently reachable.
