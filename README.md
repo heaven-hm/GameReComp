@@ -4,13 +4,51 @@
   <img src="assets/recomp-studio-logo.png" alt="RevEng-Studio logo" width="220">
 </p>
 
-**A Windows PC game executable in, inspectable C source and a native binary out — with the verification to prove it.**
+**Turn old Windows PC games into playable, moddable, portable games with genuinely human-readable source code — automatically.**
 
-RevEng-Studio is a source-first reconstruction workbench for Windows PC games. One
-command takes a game you legally own, recovers its code, turns it into C you can
-read and edit, builds a native executable **from exactly that source**, runs it,
-and writes a fail-closed report on what was and was not proved. The desktop GUI
-over the same backend is designed but not shipped; the CLI is the product today.
+**RevEng-Studio** is a game-focused preservation, reconstruction, modding,
+and native-porting platform. Its long-term mission is **broad compatibility
+across legacy Windows PC games**, not one hand-reconstructed game at a time.
+Given a game executable and assets you legally own, the intended unattended
+workflow reconstructs understandable, editable C/C++ source, builds a native
+executable **from that exact source**, checks gameplay against the original,
+and packages the result for preservation, modding, and platform ports.
+
+### What the product is designed to deliver
+
+- **Playable and independently verified:** Rebuilt games should pass
+  reproducible original-vs-rebuilt gameplay scenarios, not merely compile or
+  display a title screen. Verification reports distinguish tested coverage
+  from unverified behaviour.
+- **Actually human-readable C/C++:** Recover meaningful types, identifiers,
+  structs, functions, and natural control flow, not just `eax`/`esp`
+  register-transfer C or prettier pseudocode. Unrecovered functions remain
+  explicitly labelled low-level fallbacks; original developer naming cannot
+  generally be guaranteed from stripped binaries.
+- **Moddable at the source level:** Developers should be able to change game
+  logic, rebuild the native executable, and demonstrate the modification
+  working in-game.
+- **Portable and maintainable:** Reuse a common compatibility runtime and
+  platform backends so recovered game logic can target modern operating
+  systems without a bespoke rewrite for each game.
+- **Broad automated compatibility:** Support many older Windows PC games,
+  engines, executable formats, and middleware through reusable infrastructure
+  and honest compatibility reporting—not a promise that every game works today.
+- **Unattended, non-AI-first processing:** PCRecomp supplies recompilation
+  and Windows-game runtime foundations; rev.ng is the intended primary
+  high-level structural-source provider. Deterministic analysis comes first;
+  AI is **optional** for extra semantic readability. No manual per-function
+  reconstruction should be required by the intended workflow. The desktop
+  GUI is planned over this same backend.
+
+**Differentiator:** Not another decompiler or game-specific recompilation
+script. RevEng-Studio aims to make **verified native game ports with genuinely
+modifiable, human-readable source** reproducible across a large catalogue of
+legacy Windows games.
+
+The current implementation is an early CLI vertical slice; human-readable
+source, verified gameplay, broad native ports, and the GUI described above are
+**product goals, not completed features**.
 
 > **Status: v0.1.0 — first vertical slice.** The whole pipeline runs end to end and
 > is measured: 19 corpus rows, one game (Ikachan) that binds every import and
@@ -40,9 +78,12 @@ and the change is recorded in [`CHANGELOG.md`](CHANGELOG.md).
 ## What RevEng-Studio adds
 
 pcrecomp is a toolbox: many tools, each doing one job well, driven per project by
-that project's own `run_lift.py`. RevEng-Studio is the **product around that
-toolbox** — one command, one self-contained project, one report — with a
-deliberate source-first bias and a fail-closed verification story.
+that project's own `run_lift.py`. RevEng-Studio is the **automated,
+game-focused product built around that toolbox**: one reproducible workflow
+for recovering readable source, compiling it into a native game, verifying
+actual gameplay, and enabling source-level modifications and ports across
+many legacy Windows titles. Source readability and verified moddability—not
+merely producing a binary—are the intended distinguishing deliverables.
 
 | | pcrecomp (toolbox) | RevEng-Studio (product) |
 | --- | --- | --- |
