@@ -1,0 +1,400 @@
+{
+ "schema": 1,
+ "measured": "2026-10-30",
+ "method": {
+  "command": "<projects/PROJECT>/build/<BINARY> <original exe>, cwd = the game's own directory",
+  "env": "RECOMP_TRACE=1, SDL_AUDIODRIVER=dummy; headless adds SDL_VIDEODRIVER=dummy, display leaves it unset",
+  "timeout_seconds": 15,
+  "trace_caveat": "RECOMP_TRACE=1 makes every shim call write a line, so the run is slower than an untraced one; the counts are comparable between rows measured the same way, not absolute frame rates",
+  "outcomes": {
+   "RUNS": "reached a frame loop and kept rendering and pumping until the deadline",
+   "EXITS": "returned on its own, with the code, and what it did before returning",
+   "NEEDS-DISPLAY": "binds everything and then dies at the honest NULL because it needs a GL context or a real window",
+   "CRASHES": "died for a reason that is neither of those, with the fault located"
+  }
+ },
+ "rows": [
+  {
+   "game": "DoConfig",
+   "project": "DoConfig",
+   "binary": "DoConfig",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe",
+   "outcome": "EXITS",
+   "why": "opens Config.dat, builds its dialog (406 Button + 139 Static + 23 ComboBox control calls), then ExitProcess(1) itself; no runtime failure reported",
+   "bound_imports": 90,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": 1,
+    "alive_at_deadline": false,
+    "seconds": 0.4,
+    "counts": {
+     "BitBlt": 1,
+     "_total_shim_calls": 867
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": 1,
+    "alive_at_deadline": false,
+    "seconds": 0.2,
+    "counts": {
+     "BitBlt": 1,
+     "_total_shim_calls": 867
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "Doukutsu",
+   "project": "Doukutsu",
+   "binary": "Doukutsu",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
+   "outcome": "RUNS",
+   "why": "a frame loop: ~196k IDirectDrawSurface::Blt with ~11k PeekMessageA and ~11k IDirectInputDevice::GetDeviceState in proportion, alive at the 15 s deadline in both modes",
+   "bound_imports": 143,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": null,
+    "alive_at_deadline": true,
+    "seconds": 15.0,
+    "counts": {
+     "PeekMessageA": 10886,
+     "GetMessageA": 1,
+     "Blt": 196018,
+     "StretchBlt": 20,
+     "Lock": 475,
+     "Unlock": 475,
+     "GetDeviceState": 10885,
+     "_total_shim_calls": 393797
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": null,
+    "alive_at_deadline": true,
+    "seconds": 15.0,
+    "counts": {
+     "PeekMessageA": 11909,
+     "GetMessageA": 1,
+     "Blt": 195829,
+     "StretchBlt": 20,
+     "Lock": 475,
+     "Unlock": 475,
+     "GetDeviceState": 11908,
+     "_total_shim_calls": 398416
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "OrgView",
+   "project": "OrgView",
+   "binary": "OrgView",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/OrgView.exe",
+   "outcome": "EXITS",
+   "why": "initialises DirectSound (dummy, 44100 Hz), draws twice, then ExitProcess(0) itself",
+   "bound_imports": 122,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": 0,
+    "alive_at_deadline": false,
+    "seconds": 0.1,
+    "counts": {
+     "GetMessageA": 1,
+     "BitBlt": 2,
+     "Lock": 137,
+     "Unlock": 137,
+     "_total_shim_calls": 1047
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": 0,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "GetMessageA": 1,
+     "BitBlt": 2,
+     "Lock": 137,
+     "Unlock": 137,
+     "_total_shim_calls": 1047
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "gr",
+   "project": "gr",
+   "binary": "gr",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/gunroar/gr.exe",
+   "outcome": "CRASHES",
+   "why": "SIGBUS after 27 shim calls, during CRT startup and BEFORE any SDL call: guest NULL dereference at VA 0x28 in lifted sub_004281FC (original 0x00428256, cmp dword ptr [eax+0x28], 0), eax from lifted sub_00428714 called at 0x0042824F with eax=[[ebp-0x1C]+0xC]",
+   "bound_imports": 136,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": -10,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "_total_shim_calls": 27
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": -10,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "_total_shim_calls": 27
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "ikachan",
+   "project": "ikachan",
+   "binary": "dxIka",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/ikachan/dxIka.exe",
+   "outcome": "EXITS",
+   "why": "opens Option.bin (ok), builds its dialog UI, then ExitProcess(1) itself; no runtime failure reported",
+   "bound_imports": 97,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": 1,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "_total_shim_calls": 113
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": 1,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "_total_shim_calls": 113
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "wf",
+   "project": "wf",
+   "binary": "wf",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/warning_forever/wf.exe",
+   "outcome": "EXITS",
+   "why": "same binary and profile as warning-forever",
+   "bound_imports": 147,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": 0,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "MessageBoxA": 1,
+     "_total_shim_calls": 204
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": 0,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "MessageBoxA": 1,
+     "_total_shim_calls": 204
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": "measured through projects/warning-forever (same pe.path, warning_forever/wf.exe): projects/wf has no src/recomp/gen, so it has no current binary"
+  },
+  {
+   "game": "cavestory-doconfig",
+   "project": "cavestory-doconfig",
+   "binary": "DoConfig",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe",
+   "outcome": "EXITS",
+   "why": "same binary and profile as DoConfig",
+   "bound_imports": 90,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": 1,
+    "alive_at_deadline": false,
+    "seconds": 0.3,
+    "counts": {
+     "BitBlt": 1,
+     "_total_shim_calls": 867
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": 1,
+    "alive_at_deadline": false,
+    "seconds": 0.2,
+    "counts": {
+     "BitBlt": 1,
+     "_total_shim_calls": 867
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "cavestory-orgview",
+   "project": "cavestory-orgview",
+   "binary": "OrgView",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/OrgView.exe",
+   "outcome": "EXITS",
+   "why": "same binary and profile as OrgView",
+   "bound_imports": 122,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": 0,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "GetMessageA": 1,
+     "BitBlt": 2,
+     "Lock": 137,
+     "Unlock": 137,
+     "_total_shim_calls": 1047
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": 0,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "GetMessageA": 1,
+     "BitBlt": 2,
+     "Lock": 137,
+     "Unlock": 137,
+     "_total_shim_calls": 1047
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "cavestory-doukutsu",
+   "project": "cavestory-doukutsu",
+   "binary": "Doukutsu",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
+   "outcome": "RUNS",
+   "why": "same binary and same profile as Doukutsu (the two projects are the same pe.path)",
+   "bound_imports": 143,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": null,
+    "alive_at_deadline": true,
+    "seconds": 15.0,
+    "counts": {
+     "PeekMessageA": 11124,
+     "GetMessageA": 1,
+     "Blt": 196060,
+     "StretchBlt": 20,
+     "Lock": 475,
+     "Unlock": 475,
+     "GetDeviceState": 11123,
+     "_total_shim_calls": 395093
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": null,
+    "alive_at_deadline": true,
+    "seconds": 15.0,
+    "counts": {
+     "PeekMessageA": 12397,
+     "GetMessageA": 1,
+     "Blt": 195892,
+     "StretchBlt": 20,
+     "Lock": 475,
+     "Unlock": 475,
+     "GetDeviceState": 12396,
+     "_total_shim_calls": 401015
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "warning-forever",
+   "project": "warning-forever",
+   "binary": "wf",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/warning_forever/wf.exe",
+   "outcome": "EXITS",
+   "why": "puts up its OWN message box (text: 'ERROR: DirectDraw7' + Shift-JIS bytes, i.e. DirectDraw7 is unavailable) and exits 0 - correct game behaviour meeting an incomplete runtime",
+   "bound_imports": 147,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": 0,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "MessageBoxA": 1,
+     "_total_shim_calls": 204
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": 0,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "MessageBoxA": 1,
+     "_total_shim_calls": 204
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  },
+  {
+   "game": "gunroar",
+   "project": "gunroar",
+   "binary": "gr",
+   "original_executable": "/Users/haseeb-mir/Downloads/recomp-apps/games/gunroar/gr.exe",
+   "outcome": "CRASHES",
+   "why": "same binary and profile as gr",
+   "bound_imports": 136,
+   "unresolved_imports": 0,
+   "headless": {
+    "exit_code": -10,
+    "alive_at_deadline": false,
+    "seconds": 0.1,
+    "counts": {
+     "_total_shim_calls": 27
+    },
+    "first_failure": null
+   },
+   "display": {
+    "exit_code": -10,
+    "alive_at_deadline": false,
+    "seconds": 0.0,
+    "counts": {
+     "_total_shim_calls": 27
+    },
+    "first_failure": null
+   },
+   "headless_vs_display": "identical",
+   "note": null
+  }
+ ]
+}
