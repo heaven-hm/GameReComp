@@ -101,6 +101,35 @@ Not here: guest SEH and C++ exceptions (`RaiseException` ends the run),
 DirectX past DirectDraw 2 and DirectSound 1, and drawing anything through
 GDI but text.
 
+## A blocking shim must give the machine up
+
+The machine lock (`mach_enter`/`mach_leave`) serialises the global register
+file: a thread holds it while it runs lifted code. A shim is entered *inside*
+that, so a shim that blocks while still holding the machine stops every other
+guest thread — including the very thread it may be waiting for. `SDL_WaitThread`
+did exactly that: the waiter parked the thread it was waiting on, which then sat
+in `mach_enter` forever.
+
+Any shim that waits must bracket the wait:
+
+```c
+hle_block_begin();          /* saves the registers and gives the machine up */
+...block here: sleep, wait on a handle, take a lock...
+hle_block_end();            /* takes the machine back and reloads the registers */
+```
+
+Between the two, touch no guest state (`A32`/`MEM32`/`hle_alloc`): the registers
+are not this thread's while it is out. Read the arguments first, block, then
+write results. `hle_block_begin` is a no-op when the machine is not held, so it
+is safe to call unconditionally.
+
+Shims that do this today: kernel32's `Sleep`/`SleepEx`/`WaitForSingleObject`/
+`WaitForMultipleObjects`, `SDL_Delay`, `SDL_WaitEvent`, `SDL_WaitThread`,
+`SDL_SemWait`/`SDL_SemWaitTimeout`, `SDL_CondWait`/`SDL_CondWaitTimeout`, and
+ddraw's wait for a vertical blank. Any new shim that can block needs the same
+treatment — the deadlock it prevents is silent until a game waits on its own
+thread.
+
 ## Building the selftests
 
 ```
