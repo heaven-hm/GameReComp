@@ -20,11 +20,36 @@ MAIN_C = """\
  * recomp_host_main() boots the original PE named by argv[1] - a fresh copy of
  * the game executable, not the rebuilt one - then calls the recompiled entry
  * point and runs the guest until it returns.
+ *
+ * Strict binding is the default: an unresolved import fails the boot. Setting
+ * RECOMP_PERMISSIVE=1 binds unresolved imports to the runtime's self-naming
+ * stub instead, so the guest runs until it actually calls one and then aborts
+ * naming that import. That is the bring-up loop for a new title, and what
+ * tools/autorecomp/diagnose.py drives. It is a diagnostic, not a way to run a
+ * game: the stub cannot return, so the run always stops at the first
+ * unimplemented import.
  */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "host.h"
 
+static int permissive_requested(void) {
+    const char *v = getenv("RECOMP_PERMISSIVE");
+    return v != NULL && v[0] != '\\0' && strcmp(v, "0") != 0;
+}
+
 int main(int argc, char **argv) {
-    return recomp_host_main(argc, argv);
+    if (!permissive_requested()) return recomp_host_main(argc, argv);
+    if (argc < 2) {
+        fprintf(stderr, "usage: %s <image.exe> [args...]\\n", argv[0]);
+        return 64;
+    }
+    recomp_host_init();
+    int rc = recomp_host_boot_permissive(argv[1]);
+    if (rc) return rc;
+    return (int)recomp_host_run();
 }
 """
 
