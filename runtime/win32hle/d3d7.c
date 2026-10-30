@@ -437,7 +437,7 @@ static void d3d_create_device(void) {
     if(!out)RET(E_POINTER,4); MEM32(out)=0;
     if(!guid)RET(E_POINTER,4);
     if(memcmp(hle_ptr(guid),g_d3d7_gl_device_guid,16))RET(D3DERR_NOTAVAILABLE,4);
-    if(!hle_dd_surface_is_primary(target))RET(D3DERR_INVALIDCALL,4);
+    if(!hle_dd_surface_is_primary_3d_target(target))RET(D3DERR_INVALIDCALL,4);
     if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,4);
     if(!g_dev_vt) {
         static const win32hle_shim m[]={
