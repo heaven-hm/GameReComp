@@ -81,6 +81,34 @@ detached from the binary it describes.
 input hash, including failures and `MISSING_INPUT` entries for corpus files
 that are not present on the current host.
 
+## The first certified CALL, and how to reproduce it
+
+A call-bearing module is certified only when its closure is **linked** and its named
+memory **unioned** — otherwise the oracle drives the caller and the callee's effect
+happens inside the call, invisible. The first module to pass that bar is
+`0x0041F9E0`, over the closure `{0x0041F9E0, 0x00419890}`:
+
+    verdict:  agree
+    closure:  {functions: 2, named_words: 2, frames_summed: 0}
+    entry states: 8, differing: 0
+
+The generated module, the verdict and the exact command are committed together, so
+the claim can be re-run rather than believed:
+
+    reports/certified/0x0041F9E0/0x0041F9E0.c     the caller
+    reports/certified/0x0041F9E0/0x00419890.c     the callee (its call is real)
+    reports/certified/0x0041F9E0/verdict.json     the agree verdict with the closure record
+
+    python3 -m tools.lift.difftest --project projects/cavestory-doukutsu \
+        --pe <Doukutsu.exe> --address 0x0041F9E0 \
+        --source reports/certified/0x0041F9E0/0x0041F9E0.c,reports/certified/0x0041F9E0/0x00419890.c \
+        --symbol sub_0041F9E0 --closure 0x0041F9E0,0x00419890 --cases 8 \
+        --json reports/certified/0x0041F9E0/verdict.json
+
+**The standing count, in the form that does not overstate it:** 446 call-bearing
+bodies -> 28 multi-function closures generating -> **1 certified**. One, not 28. The
+number that moved is the one the closure work existed to move, and it moved once.
+
 ## A pass at the oracle is evidence, not proof — with a measured example
 
 The per-function oracle compares **values**: the registers a body leaves and the
