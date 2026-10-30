@@ -200,6 +200,33 @@ for the latter are the values the constructor path gets from the runtime — the
 the critical-section calls) — so a differential of those return values against
 what Windows gives is the next measurement, not more code reading.
 
+## The startup contract, audited
+
+The 27 shim calls the crashing constructor path makes before the fault are all
+CRT startup, so the question "is this call made at all?" turns on what those
+calls answer. This is that audit: what Windows returns, what this runtime
+returns, and the source for the expected value. It is documentation-based, not a
+differential against a Windows host we do not have.
+
+| call | what Windows returns | what this runtime returns | verdict |
+|---|---|---|---|
+| `GetACP()` | the ANSI code page of the install: 1252 on a Western Windows (MSDN "GetACP") | 1252 (`kernel32_crt.c`, `k_GetACP`) | **matches** |
+| `GetCPInfo(1252, &ci)` | TRUE, and `CPINFO` = { MaxCharSize 1, DefaultChar `'?'`, LeadByte all zero } for 1252 (MSDN "CPINFO": MaxCharSize is the longest character in bytes; DefaultChar is used for unrepresentable ones) | TRUE, 20 bytes zeroed, `+0` = 1, `+4` = `'?'` | **matches**; difference: it answers TRUE for *any* code page, where Windows fails for one it does not know |
+| `GetVersion()` | low byte = major, second byte = minor, high word = build (MSDN "GetVersion"). A Win9x-era process sees 4.10/4.00; a Windows XP machine sees 5.1 build 2600 | 5.1 build 2600 (`kernel32.c`), i.e. XP — internally consistent with this layer's `GetVersionExA` (5.1.2600, "Service Pack 3") | **differs from the era the games were built for.** This layer implements a Win9x-era subset, so a game that branches on "modern Windows" can expect APIs that are not here. It is a deliberate value (the comment says XP), not an oversight, and it is the strongest candidate for a behavioural divergence in this list |
+| `GetStdHandle(n)` | a real handle for the standard device; **NULL when the process has no console** (MSDN "GetStdHandle"). The `STD_*` pseudo-values are for passing *in*, not for comparing against | 0x11 / 0x12 / 0x13 for in/out/err, which map to host descriptors 0/1/2 (`kernel32_ext.c`), so `WriteFile`/`ReadFile` on them work | **differs for a GUI process**: these games are GUI-subsystem binaries, so Windows would answer NULL and a game testing "am I attached to a console?" branches the other way here |
+| `GetCommandLineA()` | a pointer to the command line string, valid for the process's lifetime (MSDN "GetCommandLineA") | a guest copy of *this host process's* command line (`kernel32.c`), writable, with the program name and arguments | **matches in shape, differs in content**: it is the wrapper binary's arguments, not the original game's. A game parsing its own command line sees the wrong ones. Host-dependent by construction |
+| `GetModuleHandleA(NULL)` | the base address of the main image (MSDN "GetModuleHandle") | `g_mod[g_main].base`, the PE's ImageBase (0x400000 for these games) | **matches** |
+| `SetHandleCount(n)` | the number of file handles available; a no-op provided for 16-bit compatibility on Win32 (MSDN "SetHandleCount") | `n` | **matches** |
+| `InitializeCriticalSection(&cs)` | no return; the section must be usable by `Enter`/`Leave`/`Delete`, and starts with DebugInfo NULL, LockCount -1, RecursionCount 0, OwningThread 0, LockSemaphore 0, SpinCount 0 | 24 bytes: `+0` 0, `+4` 0xFFFFFFFF (-1), `+8` 0, `+12` 0, `+16` 0, `+20` 0 — the same field positions Windows uses, and this layer's own lock reads the same ones (`CS_REC` = `+8`, `CS_OWNER` = `+12`) | **matches**, and the probe takes the section with `EnterCriticalSection` and releases it |
+| `SetUnhandledExceptionFilter(p)` | the **previous** filter, or NULL if there was none (MSDN) | 0 (NULL) always | **differs after the first call**: a game that chains filters sees NULL instead of the one it installed. Note the filter is never *called* either way — guest exceptions end the run (`RaiseException`), which the file says |
+
+Two of these are worth a fix and are cheap: `GetStdHandle` answering non-NULL
+with no console, and `SetUnhandledExceptionFilter` not returning the previous
+filter. `GetVersion` is the one to think about rather than patch: answering 5.1
+is internally consistent, and changing it to a Win9x value would move every game
+that branches on it — which is exactly the kind of change that needs a
+differential, not a guess.
+
 ## Two runtime gaps the sweep turned up on the way
 
 Both are visible in the non-trace output of several rows and are **not** why any
