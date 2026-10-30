@@ -310,6 +310,17 @@ class Model:
 
 def rewrite(body, segment_base, own_va=None):
     """(C source for the function with guest-VA pointers, notes) or Unsupportable."""
+    import re as _pre
+    # `undef(T)` is the provider's own marker for a value it could not define -
+    # primitive-types.h reads it from a special location. A body containing one
+    # cannot be correct: the decompiler is saying it does not know. The x87
+    # helpers make such a body COMPILE, which is exactly why the distinction
+    # matters - 0x00481BB0, the frame loop's core, has 14 of these.
+    n_undef = len(_pre.findall(r"\bundef\s*\(", body))
+    if n_undef:
+        raise Unsupportable(f"the provider body contains {n_undef} undefined value(s) "
+                            f"(`undef()`, the decompiler's own marker that it could not define "
+                            f"them): with helpers.h it would compile, and it would be wrong")
     fn = parse(body)
     # scope refusals, with reasons
     import re as _re
@@ -330,6 +341,16 @@ def rewrite(body, segment_base, own_va=None):
                             f"(e.g. 0x{int(callers[0],16):08X}): a call into another lifted body "
                             f"needs that function's guest-ABI entry, which this module model "
                             f"does not marshal")
+    # `undef(T)` is the provider's own marker for a value it could not define -
+    # primitive-types.h reads it from a special location. A body containing one
+    # cannot be correct: the decompiler is saying it does not know. The x87
+    # helpers (helpers.h) make such a body COMPILE, which is precisely why the
+    # distinction matters - 0x00481BB0, the frame loop's core, has 14 of these.
+    n_undef = len(_re.findall(r"\bundef\s*\(", body))
+    if n_undef:
+        raise Unsupportable(f"the provider body contains {n_undef} undefined value(s) "
+                            f"(`undef()`, the decompiler's own marker that it could not define "
+                            f"them): the body would compile and be wrong")
     # an EMPTY provider body means rev.ng named an address it could not
     # decompile. Generating it produces a function that does nothing where the
     # original does something - worse than refusing, because it looks certifiable.

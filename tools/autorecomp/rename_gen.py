@@ -161,6 +161,33 @@ def generate(pe_path, address, revng_dir, names, evidence):
         return None, "the PE has no .data section"
     body = rev.read_text(errors="replace")
     why = ungeneratable_reason(body)
+    if why is None:
+        # A provider prototype with fewer parameters than the function READS
+        # registers before writing them has lost inputs its body cannot use: the
+        # body is wrong even when it compiles. This is the rule the Lead set -
+        # a provider signature and our own bytes disagreeing is a refusal, never a
+        # reconciliation. It catches the register-convention cases the oracle found
+        # (0x00489227 reads ebx) and not every constant-folded one; the oracle's
+        # eax-variation is the other half of the measurement.
+        try:
+            from tools.autorecomp.rename_evidence import entry_registers
+            regs = entry_registers(pe_path, address) or []
+        except Exception:
+            regs = []
+        if regs:
+            # the provider's parameter count is in the AST output, if we have it
+            argc = None
+            try:
+                import re as _r
+                m = _r.search(r"\b\w+\s*\(([^)]*)\)\s*\{", body)
+                params = (m.group(1).strip() if m else "")
+                argc = 0 if params in ("", "void") else len(params.split(","))
+            except Exception:
+                argc = None
+            if argc is not None and argc < len(regs):
+                return None, (f"the provider's prototype takes {argc} argument(s) but the "
+                              f"original reads {', '.join(regs)} before writing them: the body "
+                              f"has lost its inputs")
     if why:
         return None, why
     # The AST model rewrites every recovered pointer to a guest VA and every

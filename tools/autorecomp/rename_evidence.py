@@ -403,6 +403,46 @@ def format_roles(fmt):
     return roles
 
 
+def entry_registers(pe_path, va, limit=2000):
+    """Registers the function READS before it first writes them.
+
+    By the calling conventions this binary uses, those are its arguments. A
+    provider prototype with fewer parameters has lost inputs the body cannot use,
+    and the body is wrong even when it compiles - which is how 0x004882D9,
+    0x00489227 and 0x00489195 came to return constants where the original
+    computes."""
+    from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+    from capstone.x86 import (X86_REG_EAX, X86_REG_EBX, X86_REG_ECX, X86_REG_EDX,
+                              X86_REG_ESI, X86_REG_EDI, X86_REG_EBP, X86_REG_ESP)
+    names = {X86_REG_EAX: 'eax', X86_REG_EBX: 'ebx', X86_REG_ECX: 'ecx',
+             X86_REG_EDX: 'edx', X86_REG_ESI: 'esi', X86_REG_EDI: 'edi',
+             X86_REG_EBP: 'ebp', X86_REG_ESP: 'esp'}
+    try:
+        from tools.lift.difftest import pe_bytes_at
+        blob, _ = pe_bytes_at(pe_path, va, 4096)
+    except Exception:
+        return None
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+    md.detail = True
+    read, written = set(), set()
+    for insn in md.disasm(blob, va):
+        if insn.mnemonic in ('ret', 'retn', 'retf'):
+            break
+        for op in insn.operands:
+            if op.type == 1:   # register
+                if op.access & 2:      # write (CS_AC_WRITE)
+                    written.add(op.reg)
+                if op.access & 1:      # read
+                    read.add(op.reg)
+        if len(written) > 40:
+            break
+        read, written = read, written
+    # a register read before it was ever written is an input
+    args = sorted(names.get(r, '?') for r in read - written if r in names)
+    args = [a for a in args if a not in ('esp', 'ebp')]
+    return args
+
+
 def collect(pe_path, addresses, revng_dir=None):
     """The evidence for a set of functions, identities shared across them."""
     imports = parse_imports(pe_path)
