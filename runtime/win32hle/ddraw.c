@@ -48,6 +48,7 @@
 #define DDSCAPS_OFFSCREENPLAIN 0x00000040u
 #define DDSCAPS_PRIMARYSURFACE 0x00000200u
 #define DDSCAPS_SYSTEMMEMORY   0x00000800u
+#define DDSCAPS_3DDEVICE       0x00002000u
 #define DDSCAPS_VIDEOMEMORY    0x00004000u
 #define DDSCAPS_VISIBLE        0x00008000u
 #define DDSCAPS_LOCALVIDMEM    0x10000000u
@@ -110,6 +111,11 @@ int hle_dd_surface_pixels(uint32_t obj, uint8_t **px, int *w, int *h, int *pitch
 }
 int hle_dd_surface_is_primary(uint32_t obj) {
     return obj && g_vt_surf && MEM32(obj) == g_vt_surf && S(obj) == g_primary;
+}
+int hle_dd_surface_is_primary_3d_target(uint32_t obj) {
+    if (!hle_dd_surface_is_primary(obj)) return 0;
+    surf_t *s = S(obj);
+    return (s->caps & DDSCAPS_3DDEVICE) != 0;
 }
 void hle_dd_mode(int *w, int *h, int *bpp) { *w = g_mode_w, *h = g_mode_h, *bpp = g_mode_bpp; }
 
