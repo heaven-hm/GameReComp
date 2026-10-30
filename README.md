@@ -206,23 +206,40 @@ strict subset of the one before it:
 
 | Stage | Doukutsu's 955 provider functions |
 | --- | --- |
-| provider bodies that parse and satisfy the module model | 157 |
-| generate typed C | 157 |
-| compile | 36 |
-| **certify against the original bytes** | **7** |
+| provider bodies that parse and satisfy the module model | 50 |
+| **certify against the original bytes** | **17** |
 
-The 7 are real bodies of 2–5 statements, with guest memory named by the original's
-own instructions, agreeing on 8 entry states. Eight more **diverged**, and all eight
-are one class: rev.ng recovered the function as returning `void`, the original
-leaves its last computed value in `eax`, and the adapter invented `0` — a provider
-signature gap the oracle caught rather than a transform bug. Fifteen compared no
-memory at all and are reported as `nothing-compared`, not as passes; five could not
-be driven from a synthetic entry state.
+Seventeen, not seven, and the reason is a rule rather than a fix. The seven
+certified on **registers and named memory**; ten more certify on the **return
+value alone** because the original's bytes prove they write no guest memory and
+call nothing, so `eax` is their whole contract. Those are different claims and the
+table keeps them apart.
+
+**The count was 19 for one commit, and it went down because a rule got stricter.**
+A scan for host addresses found one bad module; the invariant — *no `MEMn` may be
+emitted whose operand does not provably denote a guest VA* — found two more that
+had already certified. Both read guest memory at a host local's value
+(`MEM8((var_0 & 0xFFFFFFFFULL))`, `var_0` a host `uint8_t`), and both had been
+certified because one seed per case means `MEM8(1)` happens to agree with the
+original's table read at index 1 **on the driven inputs**: a true verdict about a
+wrong module. Neither was ever dispatched, so exposure was zero while the table was
+not. **A count that went down because the rule got stricter is a better number than
+a count that went up because the pattern got looser.**
 
 The honest summary: **the pipeline can prove that a generated function equals the
-original's code, on the inputs it drove, for 7 of 955 functions.** Naming is the
-bottleneck, not certification, and the read-this-instead-of-the-assembly goal is
-still ahead of it.
+original's code, on the inputs it drove, for 17 of 955 functions** — seven of them
+on the strong claim and ten on the weaker one. Naming is the bottleneck, not
+certification, and the read-this-instead-of-the-assembly goal is still ahead of it.
+
+Three provider defects were found and named on the way, all one class: rev.ng
+recovered a body that returns a constant where the original computes from its
+inputs, with a `void f(void)` signature that could not have used them. And the
+frame loop's core — `0x00481BB0`, 6.6 million dispatched calls in a 12-second run —
+is **refused**, with 180 `undef()` values in its 8,541-byte provider body, which is
+the decompiler saying 180 times that it could not determine a value. The low-level
+fallback carries it and the game still runs: **the provider failed on the function
+that matters most, and a pipeline that could only report the provider's successes
+would have called that progress.**
 
 ### Other measured outcomes, kept distinct
 
