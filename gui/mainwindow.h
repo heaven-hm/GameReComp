@@ -35,6 +35,7 @@ private:
     void refresh();
     void showFunction(int row);
     void validatePe();
+    void refreshToolStatus();
 
     ProjectModel m_model;
     QProcess *m_proc = nullptr;
@@ -54,4 +55,5 @@ private:
     QTabWidget *m_tabs = nullptr;
     QPushButton *m_runButton = nullptr;
     QLabel *m_peCheck = nullptr;
+    QLabel *m_tools = nullptr;
 };

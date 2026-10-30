@@ -246,6 +246,14 @@ def tier_fast(record=False, baseline=None):
                             if ln.startswith(("functions:", "certified:", "SELFTEST"))),
                            (g.stdout or g.stderr).strip()[:200]),
         })
+        # The wizard promises a build environment; it must look before it says
+        # so, and the tools it reports are the ones the runtime actually needs.
+        tools = next((ln for ln in g.stdout.splitlines() if ln.startswith("toolchain:")), "")
+        results.append({
+            "check": "gui reports the toolchain it needs",
+            "ok": "python3" in tools and "cmake" in tools and "sdl2" in tools,
+            "detail": tools.strip() or "no toolchain line in the selftest output",
+        })
         # The wizard's architecture gate: a supported target must be accepted and
         # a non-PE must be refused. A GUI that offered to recompile a 64-bit
         # binary would be making a claim this pipeline cannot back.

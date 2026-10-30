@@ -16,6 +16,7 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QSplitter>
+#include <QStandardPaths>
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QTableWidget>
@@ -101,6 +102,25 @@ void MainWindow::buildUi()
     runRow->addWidget(m_summary, 1);
     form->addRow(QString(), runRow);
 
+    // The wizard's two remaining obligations: say what tools are present, and say
+    // whose assets these are. Neither is decoration -- a run that fails because
+    // SDL2 is missing, or a user who thinks assets are bundled, are both failures
+    // the GUI can prevent by stating the facts before the run.
+    m_tools = new QLabel(paths);
+    m_tools->setWordWrap(true);
+    m_tools->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    form->addRow(QStringLiteral("Toolchain"), m_tools);
+
+    auto *legal = new QLabel(
+        QStringLiteral("<b>Your game, your assets.</b> This tool recompiles an executable "
+                       "you already own and never downloads, bundles or redistributes game "
+                       "data. The delivered project contains source generated from your "
+                       "binary; the original files stay where they are."),
+        paths);
+    legal->setWordWrap(true);
+    legal->setStyleSheet(QStringLiteral("color:#5a5a5a;"));
+    form->addRow(QStringLiteral("Legal"), legal);
+
     outer->addWidget(paths);
 
     // --- the evidence tabs
@@ -180,6 +200,38 @@ void MainWindow::buildUi()
             [this](int row, int) { showFunction(row); });
     connect(m_search, &QLineEdit::textChanged, this, [this](const QString &) { refresh(); });
     connect(m_pePath, &QLineEdit::editingFinished, this, &MainWindow::validatePe);
+    refreshToolStatus();
+}
+
+void MainWindow::refreshToolStatus()
+{
+    struct Tool { const char *name; bool required; };
+    const Tool tools[] = {
+        {"python3", true}, {"cmake", true}, {"cc", true}, {"pkg-config", false},
+    };
+    QStringList have, missing;
+    for (const auto &t : tools) {
+        const QString name = QString::fromLatin1(t.name);
+        const bool found = !QStandardPaths::findExecutable(name).isEmpty();
+        if (found)
+            have << name;
+        else
+            missing << (t.required ? QStringLiteral("**%1**").arg(name) : name);
+    }
+    // SDL2 is what the runtime actually links; pkg-config is how it is found.
+    const bool sdl = !QStandardPaths::findExecutable(QStringLiteral("pkg-config")).isEmpty()
+                     && QProcess::execute(QStringLiteral("pkg-config"),
+                                          {QStringLiteral("--exists"), QStringLiteral("sdl2")}) == 0;
+    QString text = QStringLiteral("present: %1").arg(have.isEmpty() ? QStringLiteral("none") : have.join(QStringLiteral(", ")));
+    if (!sdl)
+        text += QStringLiteral("   ·   **SDL2 not found via pkg-config** -- the runtime links it");
+    if (!missing.isEmpty())
+        text += QStringLiteral("   ·   missing: %1").arg(missing.join(QStringLiteral(", ")));
+    if (missing.isEmpty() && sdl)
+        text += QStringLiteral("   ·   ready to build");
+    m_tools->setText(text);
+    m_tools->setStyleSheet(missing.isEmpty() && sdl ? QStringLiteral("color:#2e7d32;")
+                                                    : QStringLiteral("color:#a15c00;"));
 }
 
 void MainWindow::validatePe()

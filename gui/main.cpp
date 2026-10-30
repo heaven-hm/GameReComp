@@ -7,6 +7,8 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QStandardPaths>
+#include <QProcess>
 #include <QTextStream>
 #include "projectmodel.h"
 #include "peinfo.h"
@@ -39,6 +41,22 @@ static int selftest(const QString &dir, const QString &repoRoot)
         if (f.category == QLatin1String("HIGH_LEVEL_VERIFIED") && !f.verifiedBy.isEmpty())
             ++verified;
     out << "verified-by:  " << verified << "\n";
+
+    // The wizard's toolchain check, in the same headless form: which of the tools
+    // a build needs are actually present. A GUI that says "ready" without looking
+    // is the same class of claim as a verdict that describes a wider check than
+    // the instrument performed.
+    QStringList present, missing;
+    for (const char *name : {"python3", "cmake", "cc", "pkg-config"}) {
+        const QString n = QString::fromLatin1(name);
+        (QStandardPaths::findExecutable(n).isEmpty() ? missing : present) << n;
+    }
+    const bool sdl = !QStandardPaths::findExecutable(QStringLiteral("pkg-config")).isEmpty()
+                     && QProcess::execute(QStringLiteral("pkg-config"),
+                                          {QStringLiteral("--exists"), QStringLiteral("sdl2")}) == 0;
+    out << "toolchain:    " << (present.isEmpty() ? QStringLiteral("none") : present.join(QStringLiteral(", ")))
+        << (missing.isEmpty() ? QString() : QStringLiteral(" | missing: ") + missing.join(QStringLiteral(", ")))
+        << " | sdl2: " << (sdl ? "present" : "MISSING") << "\n";
     out.flush();
     return 0;
 }
