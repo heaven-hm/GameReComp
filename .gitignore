@@ -61,3 +61,20 @@ tools/ne/win16_imports.json
 # rev.ng container staging (a binary from outside the repo, for the
 # duration of one decompilation; never committed)
 .revng-in/
+
+# rev.ng's marked-up C for a whole game is 146 MB and is a derived
+# artifact; the stripped .c beside it is what the pipeline reads.
+*.ptml
+
+# rev.ng decompilation of a whole game: 5.1 MB of C and 146 MB of marked-up C.
+# Both are derived; regenerate with
+#   python3 -m tools.autorecomp.revng <exe> --out highlevel/<game>/<game>-revng.c
+highlevel/*/[a-z]*-revng.c
+# wip/
+#
+# Work in progress that is deliberately NOT in the tree: a half-written
+# transform that fails its own tests is worse than the refusal it replaced,
+# so it is parked here rather than committed and imported. Anything here is
+# scratch; the durable form of a decision is a commit, not a file in this
+# directory.
+wip/
