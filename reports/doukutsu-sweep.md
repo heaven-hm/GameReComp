@@ -236,3 +236,33 @@ insufficient.
 
 The host-VA rule exists because the oracle cannot see the difference, and it is the
 only reason those two are not in the count.
+
+## The audit trail: what is preserved and what is not
+
+The retracted pair is preserved (`reports/retracted/`: both reconstructed modules
+and both `agree-return` verdicts). The **sweep's per-address verdicts are not** - they
+lived in a temp directory and are gone. That is exactly the gap the auditor found:
+a number whose per-address instrument output was never committed is a number someone
+has to reconstruct rather than check.
+
+The rule for every future sweep, recorded here so it is not rediscovered: **commit
+the raw verdict JSON beside the table**, with the instrument's own record of what
+each address compared. The table is a summary of the JSON, not a replacement for it.
+
+## Where the frame work stands (state at the end of this session)
+
+- **Done and verified:** the oracle's frame comparison (`--frame-size`, verdict
+  `agree-frame`, extent and base in the record, "frame traffic was NOT compared" when
+  absent); the guest-stack frame model in the AST (`&stack + off` -> `MEMn(frame +
+  off)`, struct `_SIZE(N)` captured for all 1,877 types, AST acceptance 50 -> 176);
+  the purity rule demanding proof; the selftest flake fixed and concurrency-safe.
+- **Not done:** the frame path does not compile its samples. Three failures were
+  diagnosed and one fixed: a leaked `ptr:` descriptor (fixed), `segment_2` leaking
+  inside a cast (partially fixed), and a struct-field access surviving when the
+  base's struct name cannot be recovered (open) - plus a call with the wrong argument
+  count, which is the frame interface: a callee whose signature gained a `frame`
+  parameter makes every caller in the module owe it one.
+- **The next piece, as one unit:** the local/guest distinction and the frame-interface
+  argument are the same problem - a value crossing a boundary written in the source's
+  vocabulary instead of the destination's. The rule to build is structural: every
+  value crossing the boundary must be a guest VA, a plain scalar, or a refusal.
