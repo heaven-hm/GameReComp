@@ -53,6 +53,12 @@ enum { GL_LIGHTING=0x0B50, GL_COLOR_MATERIAL=0x0B57, GL_LIGHT0=0x4000,
        GL_AMBIENT_AND_DIFFUSE=0x1602, GL_COLOR_SUM=0x8458 };
 enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_MODULATE=0x2100, GL_REPLACE=0x1E01, GL_RGB=0x1907, GL_RGBA=0x1908,
+       GL_COMBINE=0x8570, GL_COMBINE_RGB=0x8571, GL_COMBINE_ALPHA=0x8572,
+       GL_SOURCE0_RGB=0x8580, GL_SOURCE1_RGB=0x8581,
+       GL_SOURCE0_ALPHA=0x8588, GL_SOURCE1_ALPHA=0x8589,
+       GL_OPERAND0_RGB=0x8590, GL_OPERAND1_RGB=0x8591,
+       GL_OPERAND0_ALPHA=0x8598, GL_OPERAND1_ALPHA=0x8599,
+       GL_PRIMARY_COLOR=0x8577, GL_PREVIOUS=0x8578,
        GL_BGR=0x80E0, GL_BGRA=0x80E1, GL_UNSIGNED_BYTE=0x1401,
        GL_UNSIGNED_SHORT_5_6_5=0x8363, GL_TEXTURE_MIN_FILTER=0x2801,
        GL_TEXTURE_MAG_FILTER=0x2800, GL_TEXTURE_WRAP_S=0x2802,
@@ -383,6 +389,7 @@ static void dev_set_render_state(void);
 static void dev_get_render_state(void);
 static void dev_draw_primitive(void);
 static void dev_draw_indexed_primitive(void);
+static int stage0_texture_active(void);
 static void dev_draw_vb(void);
 static void dev_draw_indexed_vb(void);
 static void d3d_create_vb(void);
@@ -390,6 +397,7 @@ static void dev_get_texture(void);
 static void dev_set_texture(void);
 static void dev_get_tss(void);
 static void dev_set_tss(void);
+static void dev_validate(void);
 static void refresh_lights(void);
 static void refresh_clip_planes(void);
 static void apply_material(void);
@@ -417,7 +425,7 @@ static void release_surface_ref(uint32_t surface);
 UNIMPL(dev_begin_state,1)
 UNIMPL(dev_end_state,2) UNIMPL(dev_preload,2) UNIMPL(dev_set_clip,2)
 UNIMPL(dev_get_clip,2)
-UNIMPL(dev_sphere,6) UNIMPL(dev_validate,2)
+UNIMPL(dev_sphere,6)
 UNIMPL(dev_apply_state,2) UNIMPL(dev_capture_state,2) UNIMPL(dev_delete_state,2)
 UNIMPL(dev_create_state,3) UNIMPL(dev_load,6)
 UNIMPL(dev_get_info,4) UNIMPL(vb_process_vertices,8) UNIMPL(vb_optimize,3)
@@ -516,7 +524,7 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
     }
     int has_secondary=(fvf&0x080)!=0, color_sum_was_enabled=0;
     if(has_secondary && !p_secondary_color3ub) return 0;
-    if(g_texture_surface && g_stage_state[1]!=1 && ((fvf >> 8) & 15)) {
+    if(g_texture_surface && stage0_texture_active() && ((fvf >> 8) & 15)) {
         uint8_t *pixels; int w,h,pitch,bpp;
         if(!hle_dd_surface_pixels(g_texture_surface,&pixels,&w,&h,&pitch,&bpp) || w<=0 || h<=0) return 0;
         unsigned format, type;
@@ -778,7 +786,8 @@ static void d3d_create_device(void) {
         memset(g_clip_planes,0,sizeof g_clip_planes); memset(g_clip_plane_valid,0,sizeof g_clip_plane_valid);
         for(unsigned i=0;i<6;i++)p_disable(GL_CLIP_PLANE0+i);
         memset(g_stage_state,0,sizeof g_stage_state); g_stage_state[1]=4; g_stage_state[2]=2; g_stage_state[3]=1;
-        g_stage_state[5]=2; g_stage_state[6]=2; g_stage_state[13]=1; g_stage_state[14]=1;
+        g_stage_state[4]=4; g_stage_state[5]=2; g_stage_state[6]=1;
+        g_stage_state[13]=1; g_stage_state[14]=1; g_stage_state[16]=2; g_stage_state[17]=2;
         g_viewport[0]=g_viewport[1]=0;g_viewport[2]=(uint32_t)target_w;g_viewport[3]=(uint32_t)target_h;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
         set_target_viewport(target,0,0,target_w,target_h);
         p_depth_range(0.0,1.0);
@@ -838,22 +847,45 @@ static void dev_get_target(void) {
     if(g_render_target) MEM32(g_render_target+4)++;
     RET(D3D_OK,2);
 }
-static int stage0_color_mode(void) {
-    uint32_t op=g_stage_state[1];
-    if (op==2 && g_stage_state[2]==2) return GL_REPLACE; /* select texture arg */
-    if (op==3 && g_stage_state[3]==2) return GL_REPLACE;
-    return GL_MODULATE;
+static int stage0_uses_texture(uint32_t op,uint32_t arg1,uint32_t arg2) {
+    if(op==2) return arg1==2;
+    if(op==3) return arg2==2;
+    if(op==4) return arg1==2 || arg2==2;
+    return 0;
+}
+static int stage0_texture_active(void) {
+    return stage0_uses_texture(g_stage_state[1],g_stage_state[2],g_stage_state[3]) ||
+           stage0_uses_texture(g_stage_state[4],g_stage_state[5],g_stage_state[6]);
+}
+static unsigned stage0_source(uint32_t arg) {
+    return arg==2?GL_TEXTURE:arg==0?GL_PRIMARY_COLOR:GL_PREVIOUS;
+}
+static void apply_stage_channel(uint32_t op,uint32_t arg1,uint32_t arg2,
+                                unsigned combine,unsigned source0,unsigned source1,
+                                unsigned operand0,unsigned operand1,unsigned operand) {
+    unsigned mode=op==4?GL_MODULATE:GL_REPLACE;
+    unsigned src0=op==1?GL_PREVIOUS:stage0_source(op==2?arg1:arg2);
+    unsigned src1=stage0_source(op==4?arg2:arg1);
+    p_tex_envi(GL_TEXTURE_ENV,combine,(int)mode);
+    p_tex_envi(GL_TEXTURE_ENV,source0,(int)src0);
+    p_tex_envi(GL_TEXTURE_ENV,source1,(int)src1);
+    p_tex_envi(GL_TEXTURE_ENV,operand0,(int)operand);
+    p_tex_envi(GL_TEXTURE_ENV,operand1,(int)operand);
 }
 static int gl_filter(uint32_t value) { return value==1?GL_NEAREST:GL_LINEAR; }
 static int gl_address(uint32_t value) { return value==3?GL_CLAMP_TO_EDGE:GL_REPEAT; }
 static void apply_stage0_state(void) {
     if (!load_gl() || !g_gl_texture) return;
     p_bind_texture(GL_TEXTURE_2D,g_gl_texture);
-    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,gl_filter(g_stage_state[6]));
-    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,gl_filter(g_stage_state[5]));
+    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,gl_filter(g_stage_state[17]));
+    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,gl_filter(g_stage_state[16]));
     p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,gl_address(g_stage_state[13]));
     p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,gl_address(g_stage_state[14]));
-    p_tex_envi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,stage0_color_mode());
+    p_tex_envi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE);
+    apply_stage_channel(g_stage_state[1],g_stage_state[2],g_stage_state[3],GL_COMBINE_RGB,
+                        GL_SOURCE0_RGB,GL_SOURCE1_RGB,GL_OPERAND0_RGB,GL_OPERAND1_RGB,GL_SRC_COLOR);
+    apply_stage_channel(g_stage_state[4],g_stage_state[5],g_stage_state[6],GL_COMBINE_ALPHA,
+                        GL_SOURCE0_ALPHA,GL_SOURCE1_ALPHA,GL_OPERAND0_ALPHA,GL_OPERAND1_ALPHA,GL_SRC_ALPHA);
 }
 static void dev_get_texture(void) {
     uint32_t stage=A32(1),out=A32(2);
@@ -885,18 +917,38 @@ static void dev_set_texture(void) {
 static void dev_get_tss(void) {
     uint32_t stage=A32(1),state=A32(2),out=A32(3);
     if (!out) RET(E_POINTER,4);
-    if (stage || state>=32) RET(D3DERR_NOTAVAILABLE,4);
+    if (stage || (state!=1 && state!=2 && state!=3 && state!=4 && state!=5 && state!=6 &&
+                  state!=13 && state!=14 && state!=16 && state!=17)) RET(D3DERR_NOTAVAILABLE,4);
     MEM32(out)=g_stage_state[state]; RET(D3D_OK,4);
 }
 static void dev_set_tss(void) {
     uint32_t stage=A32(1),state=A32(2),value=A32(3);
-    if (stage || state>=32 || (state!=1 && state!=2 && state!=3 && state!=5 && state!=6 && state!=7 && state!=13 && state!=14))
+    if (stage || (state!=1 && state!=2 && state!=3 && state!=4 && state!=5 && state!=6 &&
+                  state!=13 && state!=14 && state!=16 && state!=17))
         RET(D3DERR_NOTAVAILABLE,4);
-    if ((state==1 && value>4) || ((state==5 || state==6 || state==7) && value>2) ||
-        ((state==13 || state==14) && (value<1 || value>5))) RET(D3DERR_INVALIDCALL,4);
+    if ((state==1 || state==4) && (value<1 || value>4)) RET(D3DERR_NOTAVAILABLE,4);
+    if ((state==2 || state==3 || state==5 || state==6) && value>2) RET(D3DERR_NOTAVAILABLE,4);
+    if ((state==13 || state==14) && (value<1 || value>5)) RET(D3DERR_INVALIDCALL,4);
+    if ((state==13 || state==14) && value!=1 && value!=3) RET(D3DERR_NOTAVAILABLE,4);
+    if ((state==16 || state==17) && (value<1 || value>6)) RET(D3DERR_INVALIDCALL,4);
+    if ((state==16 || state==17) && value>2) RET(D3DERR_NOTAVAILABLE,4);
     g_stage_state[state]=value;
-    if (state==1 || state==2 || state==3 || state==5 || state==6 || state==13 || state==14) apply_stage0_state();
+    if (state==1 || state==2 || state==3 || state==4 || state==5 || state==6 || state==13 || state==14 || state==16 || state==17)
+        apply_stage0_state();
     RET(D3D_OK,4);
+}
+static void dev_validate(void) {
+    uint32_t passes=A32(1);
+    if(!passes) RET(E_POINTER,2);
+    MEM32(passes)=0;
+    if(!load_gl()) RET(D3DERR_NOTAVAILABLE,2);
+    for(unsigned op_index=0;op_index<2;op_index++) {
+        unsigned base=op_index?4u:1u;
+        uint32_t op=g_stage_state[base],arg1=g_stage_state[base+1],arg2=g_stage_state[base+2];
+        if(op<1 || op>4 || arg1>2 || arg2>2) RET(D3DERR_NOTAVAILABLE,2);
+    }
+    MEM32(passes)=1;
+    RET(D3D_OK,2);
 }
 static void dev_get_direct3d(void) { uint32_t out=A32(1);if(!out)RET(E_POINTER,2);MEM32(out)=g_d3d;MEM32(g_d3d+4)++;RET(D3D_OK,2); }
 static void dev_begin_scene(void) {
