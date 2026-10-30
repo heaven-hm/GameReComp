@@ -1,6 +1,6 @@
 # Permissive-boot diagnostic sweep
 
-Generated 2026-10-30T04:33:19Z by `python3 tools/autorecomp/diagnose.py --timeout 15` (timeout 15s per game).
+Generated 2026-10-30T04:38:51Z by `python3 tools/autorecomp/diagnose.py --timeout 15` (timeout 15s per game).
 
 Each rebuilt binary is started with `RECOMP_PERMISSIVE=1`, which binds unresolved imports to the runtime's self-naming stub. The guest runs until it calls an unimplemented import; the runtime then prints and aborts:
 
@@ -27,23 +27,23 @@ Measured: 15 projects, 8 reached an unimplemented import. Outcomes: crashed 4, e
 
 `strict` is a second launch of the same binary without `RECOMP_PERMISSIVE`; it is the only launch that reports a meaningful unresolved-import count.
 
-| project | outcome | exit | first import | stub VA | caller | strict exit | strict unresolved |
-|---------|---------|------|--------------|---------|--------|-------------|-------------------|
-| cavestory-doconfig | reached-unimplemented-import | -6 | `EnumFontFamiliesA` | 0x7F002BD0 | 0x00402220 | 2 | 2 |
-| cavestory-doukutsu | reached-unimplemented-import | -6 | `PathRemoveFileSpecA` | 0x7F002C10 | 0x00412420 | 2 | 6 |
-| cavestory-orgview | exited-clean | 0 | - | - | - | 2 | 2 |
-| generally | reached-unimplemented-import | -6 | `_initterm_e` | 0x7F003430 | 0x00497D76 | 2 | 162 |
-| generally-trackeditor | reached-unimplemented-import | -6 | `_initterm_e` | 0x7F002E70 | 0x004113CA | 2 | 59 |
-| gunroar | crashed | -10 | - | - | - | 2 | 5 |
-| herocore-gm5 | reached-unimplemented-import | -6 | `LoadLibraryExA` | 0x7F002BC0 | 0x004012E8 | 2 | 160 |
-| herocore-gm7 | reached-unimplemented-import | -6 | `LoadLibraryExA` | 0x7F002BC0 | 0x00401324 | 2 | 176 |
-| ikachan | exited-error | 1 | - | - | - | 1 | 0 |
-| noiz2sa | exited-error | 1 | - | - | - | 2 | 8 |
-| parsec47 | crashed | -10 | - | - | - | 2 | 90 |
-| rrootage | reached-unimplemented-import | -6 | `__set_app_type` | 0x7F002CC0 | 0x00401000 | 2 | 146 |
-| torus-trooper | crashed | -10 | - | - | - | 2 | 94 |
-| tumiki-fighters | crashed | -10 | - | - | - | 2 | 86 |
-| warning-forever | reached-unimplemented-import | -6 | `DirectDrawEnumerateExA` | 0x7F002BC0 | 0x004219D2 | 2 | 6 |
+| project | outcome | exit | first import | stub VA | caller | strict exit | strict unresolved | pinned runtime |
+|---------|---------|------|--------------|---------|--------|-------------|-------------------|----------------|
+| cavestory-doconfig | reached-unimplemented-import | -6 | `EnumFontFamiliesA` | 0x7F002BD0 | 0x00402220 | 2 | 2 | 997abf22 |
+| cavestory-doukutsu | reached-unimplemented-import | -6 | `PathRemoveFileSpecA` | 0x7F002C10 | 0x00412420 | 2 | 6 | 997abf22 |
+| cavestory-orgview | exited-clean | 0 | - | - | - | 2 | 2 | 997abf22 |
+| generally | reached-unimplemented-import | -6 | `_initterm_e` | 0x7F003430 | 0x00497D76 | 2 | 162 | 6ecb197e |
+| generally-trackeditor | reached-unimplemented-import | -6 | `_initterm_e` | 0x7F002E70 | 0x004113CA | 2 | 59 | 997abf22 |
+| gunroar | crashed | -10 | - | - | - | 2 | 5 | 1c6475f8 |
+| herocore-gm5 | reached-unimplemented-import | -6 | `LoadLibraryExA` | 0x7F002BC0 | 0x004012E8 | 2 | 160 | 997abf22 |
+| herocore-gm7 | reached-unimplemented-import | -6 | `LoadLibraryExA` | 0x7F002BC0 | 0x00401324 | 2 | 176 | 997abf22 |
+| ikachan | exited-error | 1 | - | - | - | 1 | 0 | 997abf22 |
+| noiz2sa | exited-error | 1 | - | - | - | 2 | 8 | 1c6475f8 |
+| parsec47 | crashed | -10 | - | - | - | 2 | 90 | 997abf22 |
+| rrootage | reached-unimplemented-import | -6 | `__set_app_type` | 0x7F002CC0 | 0x00401000 | 2 | 146 | 997abf22 |
+| torus-trooper | crashed | -10 | - | - | - | 2 | 94 | 997abf22 |
+| tumiki-fighters | crashed | -10 | - | - | - | 2 | 86 | 997abf22 |
+| warning-forever | reached-unimplemented-import | -6 | `DirectDrawEnumerateExA` | 0x7F002BC0 | 0x004219D2 | 2 | 6 | 997abf22 |
 
 ## Ran without reaching an unimplemented import
 
@@ -72,14 +72,9 @@ Several project directories exist for one executable (the generator's default na
 
 - measured `cavestory-doconfig`; also present: `DoConfig`
 - measured `cavestory-doukutsu`; also present: `Doukutsu`
-- measured `cavestory-orgview`; also present: `OrgView`
-- measured `generally-trackeditor`; also present: `TrackEditor`
 - measured `ikachan`; also present: `dxIka`
-- measured `gunroar`; also present: `gr`
-- measured `herocore-gm5`; also present: `herocore_gm5`
 - measured `herocore-gm7`; also present: `herocore_gm7`
 - measured `parsec47`; also present: `p47`
 - measured `rrootage`; also present: `rr`
 - measured `tumiki-fighters`; also present: `tf`
 - measured `torus-trooper`; also present: `tt`
-- measured `warning-forever`; also present: `wf`
