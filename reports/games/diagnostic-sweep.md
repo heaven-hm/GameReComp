@@ -1,0 +1,85 @@
+# Permissive-boot diagnostic sweep
+
+Generated 2026-10-30T04:33:19Z by `python3 tools/autorecomp/diagnose.py --timeout 15` (timeout 15s per game).
+
+Each rebuilt binary is started with `RECOMP_PERMISSIVE=1`, which binds unresolved imports to the runtime's self-naming stub. The guest runs until it calls an unimplemented import; the runtime then prints and aborts:
+
+```
+[win32hle] FATAL: unimplemented import <NAME> (0x<STUB>) called from guest 0x<CALLER>
+```
+
+The name in that line is the first import the running program reached - measured from a real launch, not inferred. Strict binding remains the default when the variable is unset.
+
+Measured: 15 projects, 8 reached an unimplemented import. Outcomes: crashed 4, exited-clean 1, exited-error 2, reached-unimplemented-import 8.
+
+## Ranked first-reached imports
+
+| # | import | games blocked | games |
+|---|--------|---------------|-------|
+| 1 | `LoadLibraryExA` | 2 | herocore-gm5, herocore-gm7 |
+| 2 | `_initterm_e` | 2 | generally, generally-trackeditor |
+| 3 | `DirectDrawEnumerateExA` | 1 | warning-forever |
+| 4 | `EnumFontFamiliesA` | 1 | cavestory-doconfig |
+| 5 | `PathRemoveFileSpecA` | 1 | cavestory-doukutsu |
+| 6 | `__set_app_type` | 1 | rrootage |
+
+## Per-game rows
+
+`strict` is a second launch of the same binary without `RECOMP_PERMISSIVE`; it is the only launch that reports a meaningful unresolved-import count.
+
+| project | outcome | exit | first import | stub VA | caller | strict exit | strict unresolved |
+|---------|---------|------|--------------|---------|--------|-------------|-------------------|
+| cavestory-doconfig | reached-unimplemented-import | -6 | `EnumFontFamiliesA` | 0x7F002BD0 | 0x00402220 | 2 | 2 |
+| cavestory-doukutsu | reached-unimplemented-import | -6 | `PathRemoveFileSpecA` | 0x7F002C10 | 0x00412420 | 2 | 6 |
+| cavestory-orgview | exited-clean | 0 | - | - | - | 2 | 2 |
+| generally | reached-unimplemented-import | -6 | `_initterm_e` | 0x7F003430 | 0x00497D76 | 2 | 162 |
+| generally-trackeditor | reached-unimplemented-import | -6 | `_initterm_e` | 0x7F002E70 | 0x004113CA | 2 | 59 |
+| gunroar | crashed | -10 | - | - | - | 2 | 5 |
+| herocore-gm5 | reached-unimplemented-import | -6 | `LoadLibraryExA` | 0x7F002BC0 | 0x004012E8 | 2 | 160 |
+| herocore-gm7 | reached-unimplemented-import | -6 | `LoadLibraryExA` | 0x7F002BC0 | 0x00401324 | 2 | 176 |
+| ikachan | exited-error | 1 | - | - | - | 1 | 0 |
+| noiz2sa | exited-error | 1 | - | - | - | 2 | 8 |
+| parsec47 | crashed | -10 | - | - | - | 2 | 90 |
+| rrootage | reached-unimplemented-import | -6 | `__set_app_type` | 0x7F002CC0 | 0x00401000 | 2 | 146 |
+| torus-trooper | crashed | -10 | - | - | - | 2 | 94 |
+| tumiki-fighters | crashed | -10 | - | - | - | 2 | 86 |
+| warning-forever | reached-unimplemented-import | -6 | `DirectDrawEnumerateExA` | 0x7F002BC0 | 0x004219D2 | 2 | 6 |
+
+## Ran without reaching an unimplemented import
+
+- **cavestory-orgview**: exited-clean
+- **gunroar**: crashed - killed by SIGBUS after boot; no unimplemented import reached
+- **ikachan**: exited-error - [win32hle] ExitProcess(1)
+- **noiz2sa**: exited-error - ICALL: unresolved VA 0x00403B90 from 0x00409660
+- **parsec47**: crashed - killed by SIGBUS after boot; no unimplemented import reached
+- **torus-trooper**: crashed - killed by SIGBUS after boot; no unimplemented import reached
+- **tumiki-fighters**: crashed - killed by SIGBUS after boot; no unimplemented import reached
+
+## Crashed games: last imports the guest reached
+
+A crash in lifted code names no import, so each crashed game was relaunched with `RECOMP_TRACE=1`. The last dispatch before the fault is the prime suspect.
+
+- **gunroar** (SIGBUS, 27 imports dispatched): `GetStdHandle` -> `InitializeCriticalSection` -> `SetHandleCount` -> `InitializeCriticalSection` -> `EnterCriticalSection` -> `InitializeCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection`
+- **parsec47** (SIGBUS, 28 imports dispatched): `GetStdHandle` -> `GetStdHandle` -> `InitializeCriticalSection` -> `EnterCriticalSection` -> `InitializeCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection` -> `VirtualAlloc` -> `VirtualAlloc` -> `LeaveCriticalSection`
+- **torus-trooper** (SIGBUS, 26 imports dispatched): `GetStdHandle` -> `GetStdHandle` -> `InitializeCriticalSection` -> `SetHandleCount` -> `InitializeCriticalSection` -> `EnterCriticalSection` -> `InitializeCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection` -> `LeaveCriticalSection`
+- **tumiki-fighters** (SIGBUS, 28 imports dispatched): `InitializeCriticalSection` -> `SetHandleCount` -> `InitializeCriticalSection` -> `EnterCriticalSection` -> `InitializeCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection` -> `LeaveCriticalSection` -> `EnterCriticalSection` -> `VirtualAlloc` -> `VirtualAlloc` -> `LeaveCriticalSection`
+
+Raw stderr for every row is in `reports/games/diagnostic-sweep.json` (`stderr_tail`).
+
+## Duplicate project directories collapsed
+
+Several project directories exist for one executable (the generator's default names a project after the executable stem). One row per game is reported, from the directory the committed corpus record names:
+
+- measured `cavestory-doconfig`; also present: `DoConfig`
+- measured `cavestory-doukutsu`; also present: `Doukutsu`
+- measured `cavestory-orgview`; also present: `OrgView`
+- measured `generally-trackeditor`; also present: `TrackEditor`
+- measured `ikachan`; also present: `dxIka`
+- measured `gunroar`; also present: `gr`
+- measured `herocore-gm5`; also present: `herocore_gm5`
+- measured `herocore-gm7`; also present: `herocore_gm7`
+- measured `parsec47`; also present: `p47`
+- measured `rrootage`; also present: `rr`
+- measured `tumiki-fighters`; also present: `tf`
+- measured `torus-trooper`; also present: `tt`
+- measured `warning-forever`; also present: `wf`
