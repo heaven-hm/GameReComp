@@ -3,7 +3,7 @@
  "name": "doukutsu-sweep",
  "game": "doukutsu",
  "provider": "tools/autorecomp/rename_gen.py (evidence only)",
- "note": "Seven generated functions, each certified against the original bytes by the per-function oracle, dispatched together to test the frame loop.",
+ "note": "Seven generated functions, each certified against the original bytes by the per-function oracle, dispatched together to test the frame loop. RETRACTED 0x004258B0 and 0x004258C0: their generated modules contain a MEMn whose operand is a host local, so their certifications were coincidental and are withdrawn.",
  "target": {
   "sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
   "entry_point": "0x00481D27"

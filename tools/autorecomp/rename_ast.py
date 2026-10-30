@@ -293,6 +293,14 @@ class Model:
             return c_ast.FuncCall(name=c_ast.ID(MEM_OF_WIDTH[width]),
                                   args=c_ast.ExprList([addr]))
         if isinstance(node, c_ast.UnaryOp) and node.op == "&":
+            inner = node.expr
+            if isinstance(inner, c_ast.ID) and inner.name not in self.va_locals \
+                    and inner.name != "segment_2":
+                # `&stack`, `&var_7`: the address of a HOST object. Emitting it as
+                # a MEMn operand would read guest memory at a host address - the
+                # exact inversion of what the pointer model exists to prevent.
+                raise Unsupportable(f"the address of host local {inner.name}: not a guest VA, "
+                                    f"so it cannot be a memory operand")
             return self.address_of(node.expr)
         if isinstance(node, c_ast.BinaryOp):
             return c_ast.BinaryOp(op=node.op, left=self.expr(node.left, want_width),

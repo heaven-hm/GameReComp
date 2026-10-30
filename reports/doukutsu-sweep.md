@@ -183,3 +183,28 @@ by a handful: the new refusals are acting on the functions they were built for.
 One row moved from `original-faulted` to `agree` between runs (`0x0048708A`). That
 is a seeded-state difference rather than a fix, and it is the reason the table is
 labelled by run rather than treated as stable.
+
+## RETRACTION (2026-10-30, after the hash check): two of the nineteen certifications were coincidental
+
+**The 19 was 17.** A generated module may not contain a `MEMn` whose operand is a
+host local. Scanning all 177 generated modules found **one** such module
+(`0x004075E0`, not in the swept set), but the rule that came out of it - **no `MEMn`
+whose operand does not provably denote a guest VA** - was then applied to the
+*accepted* set, and it refused two functions that had **certified**:
+
+    0x004258B0   MEM8((var_0 & 0xFFFFFFFFULL))       var_0 is a host uint8_t
+    0x004258C0   MEM8((var_0 & 0xFFFFFFFFULL)) = ... var_0 is a host uint8_t
+
+Both read guest memory at the *host local's value*. Their `agree-return` verdict was
+**coincidental**: the harness seeds registers and named memory from one value per
+case, so `MEM8(1)` and the original's table read at index 1 happened to agree on the
+inputs driven. The verdict was true for those inputs and the *module* is wrong.
+
+**Retracted: the certified count is 17, not 19** (7 `agree` + 10 `agree-return`).
+**Neither affected module was dispatched** - the shipped `highlevel/doukutsu-sweep/`
+carries only the seven `agree` functions, which the scan found clean - so the game
+never ran them. Exposure: zero. The certification table was not.
+
+This is what the measure-before-fixing rule bought: the defect was reachable from a
+count in twenty minutes, and the alternative was publishing 19 with two of them
+wrong.
