@@ -1226,6 +1226,13 @@ static void c_cexit(void) {                          /* the exit handlers, witho
     fflush(NULL);
     RETCV();
 }
+/* _exit leaves at once: no atexit handlers (unlike exit), the host streams
+ * flushed so what the guest wrote is not lost on the way out. */
+static void c_uexit(void) {                          /* (code) */
+    ms_init();
+    fflush(NULL);
+    hle_exit((int)A32(0));
+}
 static void ms_abort_now(void) {
     fprintf(stderr, "abnormal program termination\n");
     fflush(NULL);
@@ -1379,7 +1386,7 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "setlocale",                    c_setlocale },
     /* exit */
     { "exit",                         c_exit },
-    { "_exit",                        c_exit },
+    { "_exit",                        c_uexit },
     { "_cexit",                       c_cexit },
     { "atexit",                       c_atexit },
     { "_onexit",                      c_onexit },
