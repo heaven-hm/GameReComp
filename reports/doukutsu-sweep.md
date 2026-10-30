@@ -300,3 +300,31 @@ Two honest limits on the numbers above:
   left implicit; measuring it properly needs the AST, not a pattern.
 - the 497/101 split is over *provider bodies*, not compiled modules, so it is the
   marshal's whole territory and not the part currently reachable.
+
+## The 333 was mostly casts, and the oracle cannot see a call
+
+**The measured call forms** (the real answer to the regex's upper bound): in the 955
+provider bodies there are **1,524 `function_0x(...)` lifted calls**, plus provider
+intrinsics - 184 `bit_cast`, 59 `bit_parity`, 50 `lshift`, 31 `llvm_umin_i32`,
+18 `llvm_fshl_i32` - 165 `revng_abort`/`raise`, and 152 x87 `helper_f*` helpers. The
+"indirect through a pointer" figure was almost entirely casts, as suspected: it is
+1,524 lifted calls and about 340 intrinsic-helper calls, and the intrinsics are
+declared in `runtime-library.h` but their *semantics* (LLVM intrinsics) have no
+implementation here - a separate gap from the marshal.
+
+**And the coverage risk the Lead named is real and structural:** a certification of a
+**calling** function drives the caller and compares the caller's outputs, its name-set
+memory and (with `--frame-size`) its frame. The callee's effect is *inside* the call:
+the callee's own named addresses are not in the caller's comparison, and with a
+generated module the callee is not even linked. So:
+
+> a marshal-using module cannot certify the call it makes. The verdict would describe
+> a check the instrument cannot perform, which is the rule we have applied to every
+> verdict today.
+
+The honest consequence for the plan: the marshal can un-refuse 497 bodies and make
+them generate and compile, and **their calls remain unverified** until either the
+callee's effect is brought into the comparison (e.g. compare the callee's own
+named-memory set after driving the caller) or the module embedding the callee is
+exercised as a whole. That is the next design question after the marshal, and it
+should be answered before any marshal-using module is certified.
