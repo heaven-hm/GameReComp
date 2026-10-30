@@ -1609,6 +1609,19 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
                         "symbol_compared": target})
             continue
 
+        if not named:
+            # A comparison that compares nothing is not a pass. This exact shape
+            # has now produced three confident, vacuous results today: a fixed
+            # EFLAGS of 0 on the real side, a 256 KB window that clipped every
+            # address in a 1.4 MB image, and the same constant in the named-memory
+            # filter. The guard is one rule at the reporting boundary.
+            out.append({
+                "address": f"0x{address:08X}", "verdict": "nothing-compared",
+                "detail": "no named guest-memory address was found in the original's instructions, "
+                          "so a register-only comparison would not be a state comparison. Refusing "
+                          "to report a pass.",
+                "pe": str(pe_path), "pe_sha256": pe_sha, "symbol_compared": target})
+            continue
         case = Case(name=f"project 0x{address:08X}", code=blob,
                     undef=ONLY_DF if compare_flags else NO_FLAGS)
         # A plain-C body models its return value (into eax) and the memory it
