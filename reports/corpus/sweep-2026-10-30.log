@@ -873,3 +873,30 @@ report:       /Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/warning-fo
 {"game": "torus_trooper/tt.exe", "project": "projects/torus-trooper", "rc": 3, "seconds": 30.6, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
 {"game": "tumiki_fighters/tf.exe", "project": "projects/tumiki-fighters", "rc": 3, "seconds": 24.8, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
 {"game": "warning_forever/wf.exe", "project": "projects/warning-forever", "rc": 3, "seconds": 54.4, "retried_build": true, "score": 85, "verification": "launch-failed", "compile": "ok"}
+generally/TrackEditor.exe                      rc=3     33s score=70   launch-failed  unresolved=28   failed=-
+gunroar/gr.exe                                 rc=3     95s score=77   launch-failed  unresolved=0    failed=-
+herocore/herocore gm5.exe                      rc=3    776s score=70   launch-failed  unresolved=152  failed=-
+herocore/herocore gm7.exe                      rc=2    312s score=30   not-run        unresolved=-    failed=translate
+ikachan/dxIka.exe                              rc=2      4s score=30   not-run        unresolved=-    failed=translate
+noiz2sa/noiz2sa.exe                            rc=2     13s score=30   not-run        unresolved=-    failed=translate
+opentyrian/data/file0001.exe                   rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/file0002.exe                   rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/helpme.exe                     rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/netarena.exe                   rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/netipx.exe                     rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/netmodem.exe                   rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/netterm.exe                    rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/order.exe                      rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/rtm.exe                        rc=2      1s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/setup.exe                      rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/shipedit.exe                   rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/data/tyrian.exe                     rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+opentyrian/opentyrian.exe                      rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+parsec47/p47.exe                               rc=2      6s score=30   not-run        unresolved=-    failed=translate
+pixeltetris/Pixeltetris.exe                    rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+rrootage/rr.exe                                rc=2     18s score=30   not-run        unresolved=-    failed=translate
+snake/snake-windows-x86_64.exe                 rc=2      0s score=10   not-run        unresolved=-    failed=inspect
+torus_trooper/tt.exe                           rc=2     15s score=30   not-run        unresolved=-    failed=translate
+tumiki_fighters/tf.exe                         rc=2     14s score=30   not-run        unresolved=-    failed=translate
+warning_forever/wf.exe                         rc=2     18s score=30   not-run        unresolved=-    failed=translate
+===== done 2026-10-30T06:15:11Z

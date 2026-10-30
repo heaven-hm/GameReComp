@@ -10,7 +10,6 @@
  *   mov eax, dword ptr [0x499c68]
  *   mov ecx, dword ptr [0x499c68]
  * names:
- *   state_00499c68: global:0x00499C68
  */
 
 uint32_t store_block_00499c68(uint32_t argument_0) {

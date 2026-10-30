@@ -1,0 +1,133 @@
+{
+ "schema": 1,
+ "name": "doukutsu-sweep",
+ "game": "doukutsu",
+ "provider": "tools/autorecomp/rename_gen.py (evidence only)",
+ "note": "Seven generated functions, each certified against the original bytes by the per-function oracle, dispatched together to test the frame loop.",
+ "target": {
+  "sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+  "entry_point": "0x00481D27"
+ },
+ "functions": [
+  {
+   "address": "0x00402020",
+   "symbol": "store_block_00499c68",
+   "category": "HIGH_LEVEL_VERIFIED",
+   "convention": "cdecl",
+   "args": [
+    {
+     "name": "argument_0",
+     "type": "uint32_t"
+    }
+   ],
+   "returns": "uint32_t",
+   "file": "0x00402020.c",
+   "provenance": {
+    "verified_by": "per-function oracle: agree on 8 entry states, 1 named address(es), bytes sha256 41114fd5dccaf1b0",
+    "not_proven": "other inputs, the flags, and the game run is a regression check rather than a proof"
+   }
+  },
+  {
+   "address": "0x0040B320",
+   "symbol": "store_block_0049cda8",
+   "category": "HIGH_LEVEL_VERIFIED",
+   "convention": "cdecl",
+   "args": [
+    {
+     "name": "argument_0",
+     "type": "uint32_t"
+    },
+    {
+     "name": "argument_1",
+     "type": "uint32_t"
+    }
+   ],
+   "returns": "void",
+   "file": "0x0040B320.c",
+   "provenance": {
+    "verified_by": "per-function oracle: agree on 8 entry states, 2 named address(es), bytes sha256 6a137f9512034d5d",
+    "not_proven": "other inputs, the flags, and the game run is a regression check rather than a proof"
+   }
+  },
+  {
+   "address": "0x0040F310",
+   "symbol": "store_block_0049e1dc",
+   "category": "HIGH_LEVEL_VERIFIED",
+   "convention": "cdecl",
+   "args": [
+    {
+     "name": "argument_0",
+     "type": "uint32_t"
+    }
+   ],
+   "returns": "void",
+   "file": "0x0040F310.c",
+   "provenance": {
+    "verified_by": "per-function oracle: agree on 8 entry states, 1 named address(es), bytes sha256 d693638e91c18991",
+    "not_proven": "other inputs, the flags, and the game run is a regression check rather than a proof"
+   }
+  },
+  {
+   "address": "0x0040F320",
+   "symbol": "store_block_0049e1e0",
+   "category": "HIGH_LEVEL_VERIFIED",
+   "convention": "cdecl",
+   "args": [
+    {
+     "name": "argument_0",
+     "type": "uint32_t"
+    }
+   ],
+   "returns": "void",
+   "file": "0x0040F320.c",
+   "provenance": {
+    "verified_by": "per-function oracle: agree on 8 entry states, 1 named address(es), bytes sha256 f1e6f574765aea16",
+    "not_proven": "other inputs, the flags, and the game run is a regression check rather than a proof"
+   }
+  },
+  {
+   "address": "0x0041C770",
+   "symbol": "function_0041C770",
+   "category": "HIGH_LEVEL_VERIFIED",
+   "convention": "cdecl",
+   "args": [],
+   "returns": "uint32_t",
+   "file": "0x0041C770.c",
+   "provenance": {
+    "verified_by": "per-function oracle: agree on 8 entry states, 2 named address(es), bytes sha256 8b8b7bb75890edc9",
+    "not_proven": "other inputs, the flags, and the game run is a regression check rather than a proof"
+   }
+  },
+  {
+   "address": "0x00472940",
+   "symbol": "store_block_004bbacc",
+   "category": "HIGH_LEVEL_VERIFIED",
+   "convention": "cdecl",
+   "args": [
+    {
+     "name": "argument_0",
+     "type": "uint32_t"
+    }
+   ],
+   "returns": "void",
+   "file": "0x00472940.c",
+   "provenance": {
+    "verified_by": "per-function oracle: agree on 8 entry states, 1 named address(es), bytes sha256 76c8abd0241750ed",
+    "not_proven": "other inputs, the flags, and the game run is a regression check rather than a proof"
+   }
+  },
+  {
+   "address": "0x0047B500",
+   "symbol": "store_block_004bba44",
+   "category": "HIGH_LEVEL_VERIFIED",
+   "convention": "cdecl",
+   "args": [],
+   "returns": "uint32_t",
+   "file": "0x0047B500.c",
+   "provenance": {
+    "verified_by": "per-function oracle: agree on 8 entry states, 5 named address(es), bytes sha256 ce11fbf2977cff4b",
+    "not_proven": "other inputs, the flags, and the game run is a regression check rather than a proof"
+   }
+  }
+ ]
+}
