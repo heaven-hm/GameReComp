@@ -3,16 +3,15 @@
  "binary": "Doukutsu.exe",
  "bodies": 955,
  "by_class": {
-  "generates": 371,
-  "other transform": 200,
+  "generates": 229,
+  "other transform": 205,
+  "transform: unsupported construct": 144,
   "transform: not a guest VA": 101,
-  "transform: StructRef": 90,
+  "transform: StructRef": 94,
   "provider: nothing to decompile": 78,
-  "parse: other": 32,
+  "parse": 51,
   "transform: no recoverable width": 29,
-  "provider: undef()": 23,
-  "parse: Invalid expression": 18,
-  "provider: unimplemented intrinsic": 13
+  "provider: undef()": 24
  },
  "rows": [
   {
@@ -47,8 +46,8 @@
   },
   {
    "address": "0x00401330",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00401D10",
@@ -77,8 +76,8 @@
   },
   {
    "address": "0x00402090",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004020E0",
@@ -112,7 +111,7 @@
   },
   {
    "address": "0x00403400",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :88:29: before: label_0"
   },
   {
@@ -127,8 +126,8 @@
   },
   {
    "address": "0x00403C00",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00403CB0",
@@ -137,8 +136,8 @@
   },
   {
    "address": "0x00403D80",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00403DC0",
@@ -167,8 +166,8 @@
   },
   {
    "address": "0x004047B0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: StructRef",
+   "reason": "0x004047B0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00404B0A",
@@ -187,8 +186,8 @@
   },
   {
    "address": "0x00405F30",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_4716 has no field offset_12 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x00406190",
@@ -217,8 +216,8 @@
   },
   {
    "address": "0x00407110",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004075E0",
@@ -237,8 +236,8 @@
   },
   {
    "address": "0x00408710",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "parse",
+   "reason": "the provider body does not parse as C: :43:23: before: var_3"
   },
   {
    "address": "0x00408AB7",
@@ -247,8 +246,8 @@
   },
   {
    "address": "0x00408AE0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00408F40",
@@ -302,8 +301,8 @@
   },
   {
    "address": "0x00409F60",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040A120",
@@ -317,8 +316,8 @@
   },
   {
    "address": "0x0040A280",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Label statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040A3F0",
@@ -372,23 +371,23 @@
   },
   {
    "address": "0x0040AEC0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040AFC0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040B1D0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040B290",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040B320",
@@ -397,27 +396,27 @@
   },
   {
    "address": "0x0040B450",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x0040B6C0",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x0040B800",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x0040BE10",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :41:27: before: var_3"
   },
   {
    "address": "0x0040C8B0",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :40:14: before: var_0"
   },
   {
@@ -427,23 +426,23 @@
   },
   {
    "address": "0x0040CB60",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x0040CD50",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :33:12: before: var_0"
   },
   {
    "address": "0x0040CEB0",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :41:14: before: var_3"
   },
   {
    "address": "0x0040CF70",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Cast statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040CF90",
@@ -462,8 +461,8 @@
   },
   {
    "address": "0x0040D2D0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040D3A0",
@@ -487,13 +486,13 @@
   },
   {
    "address": "0x0040D5C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040D620",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040DA76",
@@ -547,8 +546,8 @@
   },
   {
    "address": "0x0040DFE0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040E770",
@@ -612,8 +611,8 @@
   },
   {
    "address": "0x0040EAC0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040ED20",
@@ -622,8 +621,8 @@
   },
   {
    "address": "0x0040EDE0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0040EE20",
@@ -697,17 +696,17 @@
   },
   {
    "address": "0x00410990",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :45:12: before: var_6"
   },
   {
    "address": "0x00410AB0",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :36:10: before: var_0"
   },
   {
    "address": "0x00410D80",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :34:12: before: var_0"
   },
   {
@@ -727,17 +726,17 @@
   },
   {
    "address": "0x00411FC0",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x004120F0",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x00412250",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -782,7 +781,7 @@
   },
   {
    "address": "0x00412CA0",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :41:10: before: var_1"
   },
   {
@@ -792,8 +791,8 @@
   },
   {
    "address": "0x004135E0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00413750",
@@ -822,18 +821,18 @@
   },
   {
    "address": "0x00413AF0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00413C60",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00413E40",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004140C7",
@@ -912,7 +911,7 @@
   },
   {
    "address": "0x00416990",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :59:35: before: var_7"
   },
   {
@@ -1002,8 +1001,8 @@
   },
   {
    "address": "0x00417E40",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00417FE8",
@@ -1022,8 +1021,8 @@
   },
   {
    "address": "0x00418B10",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Goto statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00418C20",
@@ -1072,13 +1071,13 @@
   },
   {
    "address": "0x00419C60",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_smin_i16 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: StructRef",
+   "reason": "0x00419C60 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00419CB0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_smin_i16 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: StructRef",
+   "reason": "0x00419CB0 memory operand: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00419D10",
@@ -1112,8 +1111,8 @@
   },
   {
    "address": "0x0041ABA0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0041B2A0",
@@ -1122,7 +1121,7 @@
   },
   {
    "address": "0x0041B380",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :40:27: before: var_1"
   },
   {
@@ -1132,13 +1131,13 @@
   },
   {
    "address": "0x0041B510",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x0041B600",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0041B650",
@@ -1157,22 +1156,22 @@
   },
   {
    "address": "0x0041BA70",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0041BAD0",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :54:17: before: var_5"
   },
   {
    "address": "0x0041C180",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :35:14: before: var_2"
   },
   {
    "address": "0x0041C1E0",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :37:15: before: var_2"
   },
   {
@@ -1182,7 +1181,7 @@
   },
   {
    "address": "0x0041C250",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :42:22: before: var_3"
   },
   {
@@ -1192,8 +1191,8 @@
   },
   {
    "address": "0x0041C630",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0041C6C0",
@@ -1262,7 +1261,7 @@
   },
   {
    "address": "0x0041E110",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :65:27: before: var_9"
   },
   {
@@ -1282,12 +1281,12 @@
   },
   {
    "address": "0x0041FE70",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :101:39: before: var_10"
   },
   {
    "address": "0x004200C0",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :38:15: before: var_1"
   },
   {
@@ -1307,7 +1306,7 @@
   },
   {
    "address": "0x004207E0",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -1327,8 +1326,8 @@
   },
   {
    "address": "0x004213B0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004214E0",
@@ -1337,8 +1336,8 @@
   },
   {
    "address": "0x004215C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00421660",
@@ -1417,13 +1416,13 @@
   },
   {
    "address": "0x00426360",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00426430",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00426530",
@@ -1432,8 +1431,8 @@
   },
   {
    "address": "0x00426AF0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Goto statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00426FD0",
@@ -1442,23 +1441,23 @@
   },
   {
    "address": "0x00427480",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00427820",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00427C60",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00427F00",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00428260",
@@ -1492,18 +1491,18 @@
   },
   {
    "address": "0x00429E00",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042A0B0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042A360",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042A490",
@@ -1522,8 +1521,8 @@
   },
   {
    "address": "0x0042A9C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042AA70",
@@ -1537,8 +1536,8 @@
   },
   {
    "address": "0x0042B280",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042B5CC",
@@ -1562,8 +1561,8 @@
   },
   {
    "address": "0x0042C1A0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042C320",
@@ -1572,8 +1571,8 @@
   },
   {
    "address": "0x0042C4C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042CA10",
@@ -1607,8 +1606,8 @@
   },
   {
    "address": "0x0042D810",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042D960",
@@ -1617,8 +1616,8 @@
   },
   {
    "address": "0x0042D9F0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0042DE00",
@@ -1692,18 +1691,18 @@
   },
   {
    "address": "0x00430B00",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00430EB0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004311D0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004315E0",
@@ -1712,8 +1711,8 @@
   },
   {
    "address": "0x00431C20",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004321F0",
@@ -1722,8 +1721,8 @@
   },
   {
    "address": "0x00432460",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00432B50",
@@ -1732,18 +1731,18 @@
   },
   {
    "address": "0x004334C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004336C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00433C00",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00433FC0",
@@ -1752,8 +1751,8 @@
   },
   {
    "address": "0x004342B0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004345E0",
@@ -1787,13 +1786,13 @@
   },
   {
    "address": "0x00436180",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00436540",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00436650",
@@ -1812,13 +1811,13 @@
   },
   {
    "address": "0x00436870",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00436AE0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004370F0",
@@ -1832,8 +1831,8 @@
   },
   {
    "address": "0x00437D90",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00438250",
@@ -1842,8 +1841,8 @@
   },
   {
    "address": "0x004383D0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00438590",
@@ -1867,13 +1866,13 @@
   },
   {
    "address": "0x00439BC0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00439DC0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0043A220",
@@ -1887,23 +1886,23 @@
   },
   {
    "address": "0x0043AAF0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0043AD10",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0043AF20",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0043B140",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0043B350",
@@ -1962,8 +1961,8 @@
   },
   {
    "address": "0x0043CDE0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0043D0A0",
@@ -1977,8 +1976,8 @@
   },
   {
    "address": "0x0043D860",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0043DAE0",
@@ -2027,8 +2026,8 @@
   },
   {
    "address": "0x0043FC70",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0043FED9",
@@ -2062,8 +2061,8 @@
   },
   {
    "address": "0x004408B0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00440CF0",
@@ -2092,8 +2091,8 @@
   },
   {
    "address": "0x004419B0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00441B20",
@@ -2112,8 +2111,8 @@
   },
   {
    "address": "0x00442340",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00442540",
@@ -2122,13 +2121,13 @@
   },
   {
    "address": "0x00442590",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00442790",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00443AC0",
@@ -2167,8 +2166,8 @@
   },
   {
    "address": "0x00444780",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00445050",
@@ -2187,8 +2186,8 @@
   },
   {
    "address": "0x00445E30",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00445FA0",
@@ -2217,8 +2216,8 @@
   },
   {
    "address": "0x00447180",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "0x00447180 memory operand: a ArrayRef is neither a VA nor a scalar"
   },
   {
    "address": "0x004474A6",
@@ -2247,13 +2246,13 @@
   },
   {
    "address": "0x004482A0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00448410",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00448580",
@@ -2262,8 +2261,8 @@
   },
   {
    "address": "0x004486E0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004487F0",
@@ -2282,8 +2281,8 @@
   },
   {
    "address": "0x004498C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00449C10",
@@ -2347,8 +2346,8 @@
   },
   {
    "address": "0x0044CBE0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0044CDB0",
@@ -2402,8 +2401,8 @@
   },
   {
    "address": "0x0044E020",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0044E260",
@@ -2432,8 +2431,8 @@
   },
   {
    "address": "0x0044EE40",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0044F6D0",
@@ -2442,13 +2441,13 @@
   },
   {
    "address": "0x0044FB40",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0044FCB0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00450280",
@@ -2457,8 +2456,8 @@
   },
   {
    "address": "0x00450400",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00450760",
@@ -2477,8 +2476,8 @@
   },
   {
    "address": "0x004512A0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00451430",
@@ -2502,8 +2501,8 @@
   },
   {
    "address": "0x00451E90",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00452000",
@@ -2517,18 +2516,18 @@
   },
   {
    "address": "0x004524E0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00452700",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004528D0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00452A50",
@@ -2592,8 +2591,8 @@
   },
   {
    "address": "0x00454A00",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00454DF0",
@@ -2607,8 +2606,8 @@
   },
   {
    "address": "0x00455370",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00455710",
@@ -2657,8 +2656,8 @@
   },
   {
    "address": "0x00457470",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00457570",
@@ -2687,8 +2686,8 @@
   },
   {
    "address": "0x00458360",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004585A0",
@@ -2707,18 +2706,18 @@
   },
   {
    "address": "0x00458A70",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00458C30",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00458DF0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00459950",
@@ -2752,8 +2751,8 @@
   },
   {
    "address": "0x0045BCB0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0045C230",
@@ -2772,8 +2771,8 @@
   },
   {
    "address": "0x0045CC80",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0045CEA0",
@@ -2802,8 +2801,8 @@
   },
   {
    "address": "0x0045E110",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0045E360",
@@ -2812,8 +2811,8 @@
   },
   {
    "address": "0x0045E4C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0045E950",
@@ -2867,8 +2866,8 @@
   },
   {
    "address": "0x00460D70",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004610D0",
@@ -2892,8 +2891,8 @@
   },
   {
    "address": "0x004618C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004619E0",
@@ -2902,8 +2901,8 @@
   },
   {
    "address": "0x00461B90",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00461E15",
@@ -2957,18 +2956,18 @@
   },
   {
    "address": "0x00462E00",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00462F60",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004630F0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004632B0",
@@ -3007,8 +3006,8 @@
   },
   {
    "address": "0x00465CC0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00465F60",
@@ -3047,13 +3046,13 @@
   },
   {
    "address": "0x00467C60",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00467FE0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00468230",
@@ -3062,8 +3061,8 @@
   },
   {
    "address": "0x00468830",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00468990",
@@ -3082,33 +3081,33 @@
   },
   {
    "address": "0x00468D70",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00469140",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00469290",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00469430",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00469610",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004696B0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00469800",
@@ -3142,8 +3141,8 @@
   },
   {
    "address": "0x0046BF00",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0046C1D0",
@@ -3162,8 +3161,8 @@
   },
   {
    "address": "0x0046C9B0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0046CAC0",
@@ -3207,8 +3206,8 @@
   },
   {
    "address": "0x0046E870",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0046E9E0",
@@ -3292,8 +3291,8 @@
   },
   {
    "address": "0x00470060",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00470150",
@@ -3307,7 +3306,7 @@
   },
   {
    "address": "0x004702D0",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :61:43: before: var_10"
   },
   {
@@ -3367,13 +3366,13 @@
   },
   {
    "address": "0x00473000",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x00473080",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004739B0",
@@ -3397,8 +3396,8 @@
   },
   {
    "address": "0x00474340",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00474400",
@@ -3437,8 +3436,8 @@
   },
   {
    "address": "0x00477230",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004772F0",
@@ -3477,8 +3476,8 @@
   },
   {
    "address": "0x0047A6A0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0047A800",
@@ -3517,18 +3516,18 @@
   },
   {
    "address": "0x0047C380",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0047C4E0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0047C7A0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0047C820",
@@ -3542,8 +3541,8 @@
   },
   {
    "address": "0x0047DAA0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0047DF10",
@@ -3567,8 +3566,8 @@
   },
   {
    "address": "0x00480090",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004802A0",
@@ -3577,8 +3576,8 @@
   },
   {
    "address": "0x00480550",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004808AD",
@@ -3587,8 +3586,8 @@
   },
   {
    "address": "0x004808C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Switch statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00480A50",
@@ -3692,8 +3691,8 @@
   },
   {
    "address": "0x004813C0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Label statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x004814C0",
@@ -3832,7 +3831,7 @@
   },
   {
    "address": "0x00481CDE",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -3842,7 +3841,7 @@
   },
   {
    "address": "0x00481EFC",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -3917,7 +3916,7 @@
   },
   {
    "address": "0x004826F5",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :63:26: before: var_8"
   },
   {
@@ -3942,7 +3941,7 @@
   },
   {
    "address": "0x00482AF5",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :43:27: before: var_6"
   },
   {
@@ -3967,8 +3966,8 @@
   },
   {
    "address": "0x0048362B",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Goto statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00483645",
@@ -3977,8 +3976,8 @@
   },
   {
    "address": "0x00483696",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00483734",
@@ -4007,7 +4006,7 @@
   },
   {
    "address": "0x0048388D",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -4032,12 +4031,12 @@
   },
   {
    "address": "0x00484358",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Cast statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0048437E",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -4082,7 +4081,7 @@
   },
   {
    "address": "0x00485469",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :52:26: before: var_9"
   },
   {
@@ -4097,7 +4096,7 @@
   },
   {
    "address": "0x004856E2",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :36:10: before: var_1"
   },
   {
@@ -4112,8 +4111,8 @@
   },
   {
    "address": "0x00485963",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0048599F",
@@ -4157,8 +4156,8 @@
   },
   {
    "address": "0x00485FF5",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "provider: undef()",
+   "reason": "the provider body contains 15 undefined value(s) (`undef()`, the decompiler's own marker that it could not define them): with helpers.h it would compile, and it would be wrong"
   },
   {
    "address": "0x004861C3",
@@ -4177,7 +4176,7 @@
   },
   {
    "address": "0x004861ED",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -4187,17 +4186,17 @@
   },
   {
    "address": "0x0048635A",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :75:30: before: var_21"
   },
   {
    "address": "0x004864D1",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
    "address": "0x0048650A",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -4212,12 +4211,12 @@
   },
   {
    "address": "0x00486792",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :210:41: before: label_0"
   },
   {
    "address": "0x004868FE",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :40:11: before: var_0"
   },
   {
@@ -4232,7 +4231,7 @@
   },
   {
    "address": "0x00486D8D",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :50:17: before: var_6"
   },
   {
@@ -4247,7 +4246,7 @@
   },
   {
    "address": "0x00486FF6",
-   "class": "parse: Invalid expression",
+   "class": "parse",
    "reason": "the provider body does not parse as C: : Invalid expression"
   },
   {
@@ -4257,7 +4256,7 @@
   },
   {
    "address": "0x004870A2",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :48:25: before: var_5"
   },
   {
@@ -4327,7 +4326,7 @@
   },
   {
    "address": "0x0048789B",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :125:35: before: var_6"
   },
   {
@@ -4337,7 +4336,7 @@
   },
   {
    "address": "0x00487BD7",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :34:52: before: argument_0"
   },
   {
@@ -4352,8 +4351,8 @@
   },
   {
    "address": "0x00487DD0",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Label statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00487ED0",
@@ -4452,8 +4451,8 @@
   },
   {
    "address": "0x00488308",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00488331",
@@ -4497,7 +4496,7 @@
   },
   {
    "address": "0x004888DA",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :55:24: before: var_6"
   },
   {
@@ -4537,8 +4536,8 @@
   },
   {
    "address": "0x00488D42",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a DoWhile statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x00488D5D",
@@ -4577,8 +4576,8 @@
   },
   {
    "address": "0x00489066",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "transform: StructRef",
+   "reason": "0x00489066 field base: a StructRef is neither a VA nor a scalar"
   },
   {
    "address": "0x00489120",
@@ -4612,8 +4611,8 @@
   },
   {
    "address": "0x004894E7",
-   "class": "generates",
-   "reason": null
+   "class": "transform: unsupported construct",
+   "reason": "the AST model cannot render a Label statement: emitting a placeholder would drop the code inside it"
   },
   {
    "address": "0x0048951A",
@@ -4672,22 +4671,22 @@
   },
   {
    "address": "0x0048A072",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_4374 has no field offset_4 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x0048A0A0",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_4374 has no field offset_4 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x0048A0CD",
-   "class": "provider: unimplemented intrinsic",
-   "reason": "the provider body uses LLVM intrinsic helper(s) llvm_fshl_i32 that are declared in runtime-library.h but have no implementation here: the body would compile and compute something else"
+   "class": "other transform",
+   "reason": "struct_4374 has no field offset_4 in the provider header: the C and the header disagree"
   },
   {
    "address": "0x0048A1AB",
-   "class": "parse: other",
+   "class": "parse",
    "reason": "the provider body does not parse as C: :70:22: before: label_0"
   },
   {

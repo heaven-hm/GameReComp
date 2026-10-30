@@ -1183,7 +1183,13 @@ def _expr_text(e):
         return f"{_expr_text(e.name)}[{_expr_text(e.subscript)}]"
     if isinstance(e, c_ast.StructRef):
         return f"{_expr_text(e.name)}{e.type}{e.field.name}"
-    return f"/* unsupported {type(e).__name__} */"
+    # A fallback that COMMENTS OUT a construct loses everything inside it -- a
+    # switch rendered as a comment takes its calls with it, and the result compiles
+    # and computes something else. That is the definition of the failure this
+    # project refuses everywhere else, so it refuses here too rather than emitting a
+    # placeholder that looks safe.
+    raise Unsupportable(f"the AST model cannot render a {type(e).__name__} expression: "
+                        f"emitting a placeholder would drop code that runs")
 
 
 def _stmt_text(s):
@@ -1211,7 +1217,8 @@ def _stmt_text(s):
         return new_body_to_text(s)
     if isinstance(s, c_ast.FuncCall):
         return _expr_text(s)
-    return f"/* unsupported {type(s).__name__} */"
+    raise Unsupportable(f"the AST model cannot render a {type(s).__name__} statement: "
+                        f"emitting a placeholder would drop the code inside it")
 
 
 def _stmt_or_block(s):

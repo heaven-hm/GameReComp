@@ -734,3 +734,45 @@ ABI and evidence checks that `rewrite()` does not, so the number is an upper bou
 transform; only the pipeline measures the product. That distinction has now produced a
 wrong number four times in this report, and it is the same mistake each time.
 
+## 144 bodies were generating code that had quietly dropped a switch
+
+While wiring import dispatch I generated `0x0040AEC0` and it came out like this:
+
+    MEM32(((frame + 12U) & 0xFFFFFFFFULL)) = var_1;
+    /* unsupported Switch */;
+    /* unsupported Switch */;
+    function_00480DC1();
+    return 0U;
+
+The body has two switches. The AST renderer's fallback **commented them out**, which
+takes every statement inside them -- including the import calls that were the reason the
+module existed. That module **compiled**. It would have certified as nothing wrong if the
+entry states happened not to exercise the switch, and it had already been counted in
+"371 bodies generate".
+
+`_expr_text` and `_stmt_text` now raise instead of rendering a comment:
+
+    the AST model cannot render a Switch statement: emitting a placeholder would drop
+    the code inside it
+
+and the census changes shape accordingly:
+
+    bodies generating            371  ->  229
+    transform: unsupported construct   0  ->  144
+
+**The 371 was not a coverage number, it was an upper bound that included 144 bodies whose
+generated C does not implement the original function.** Every one of those is now refused
+with a reason instead of compiling into something else. That is the same rule as the
+`undef()` refusal, the intrinsic refusal and the purity rule: a body that compiles and
+computes something else is worse than a body that refuses.
+
+Two checks were run before believing this was safe: **no committed certified module
+contains a dropped construct** (`grep -l unsupported reports/certified/*/*.c` is empty),
+and neither does any shipped or generated module -- the fifty files that matched it are the
+runtime's own error strings ("unsupported SDL surface format"). So the 18 certifications
+stand, and the damage was confined to the census population that had never been dispatched.
+
+**The next piece is now obvious and bounded: implement `Switch` in the renderer.** 144
+bodies want it, it is a well-understood construct, and until it exists those bodies have no
+honest path to generation. Until then the count is 229, not 371, and the report says why.
+

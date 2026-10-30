@@ -240,6 +240,53 @@ def generate_closure(pe_path, address, revng_dir, names, evidence, signatures,
     return out, {"size": len(order), "capped": False}
 
 
+def _dispatch_import_call(text, name):
+    """Rewrite `Name(a, b)` into a dispatch through the shim table.
+
+    The runtime's documented route for an import with no `hle_` entry point is
+    `hle_call_guest(hle_resolve(name), nargs, args)`, which runs the registered shim
+    with the guest ABI set up and returns its eax. That is a real call through the
+    same table a bind would write into the IAT -- not a name invented beside it.
+
+        LeaveCriticalSection(h)  ->  hle_call_guest(hle_resolve("LeaveCriticalSection"),
+                                                    1, (uint32_t[]){ (uint32_t)(h) })
+    """
+    import re as _re
+    out, i = [], 0
+    pat = _re.compile(r"(?<![A-Za-z_0-9.h>])" + _re.escape(name) + r"\s*\(")
+    while True:
+        m = pat.search(text, i)
+        if not m:
+            out.append(text[i:])
+            break
+        out.append(text[i:m.start()])
+        open_at = m.end() - 1
+        # balanced scan for the matching close paren, splitting top-level commas
+        depth, args, cur = 1, [], open_at + 1
+        k = open_at + 1
+        while k < len(text) and depth:
+            c = text[k]
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            elif c == "," and depth == 1:
+                args.append(text[cur:k].strip())
+                cur = k + 1
+            k += 1
+        tail = text[cur:k].strip()
+        if tail or args:
+            args.append(tail)
+        call = (f'hle_call_guest(hle_resolve("{name}"), {len(args)}, '
+                f'(uint32_t[]){{ {", ".join("(uint32_t)(" + a + ")" for a in args)} }})'
+                if args else f'hle_call_guest(hle_resolve("{name}"), 0, NULL)')
+        out.append(call)
+        i = k + 1
+    return "".join(out)
+
+
 _REGISTERED_CACHE = {}
 
 
@@ -370,23 +417,24 @@ def generate(pe_path, address, revng_dir, names, evidence, frames=False, extra=N
         # a call to something that does not exist, one level worse than the
         # eighteen undeclared shims found the same way. Fail here instead, where
         # the reason can be said.
-        if name not in _hle_entry_points():
-            # Two different refusals, because they need two different fixes. A name
-            # the runtime DOES register is reachable through hle_resolve() and
-            # recomp_lookup_import() -- the module has to dispatch through the table
-            # rather than by name, which is a defined piece of work. A name it does
-            # not register at all cannot be called even that way, and is a runtime
-            # gap. Reporting one message for both would send the next person to the
-            # wrong place.
-            if name in _registered_shim_names():
-                return None, (f"0x{address:08X} calls the import {name}, which the runtime "
-                              f"registers in its shim table but exposes as no hle_{name} "
-                              f"entry point -- the module must dispatch through "
-                              f"hle_resolve()/recomp_lookup_import(), not by name")
-            return None, (f"0x{address:08X} calls the import {name}, which the runtime does "
-                          f"not register at all -- no name to dispatch, and no hle_{name}")
-        typed = re.sub(rf"(?<![A-Za-z_0-9.h>]){re.escape(name)}\s*\(",
-                       f"hle_{name}(", typed)
+        if name in _hle_entry_points():
+            # The runtime exposes a real entry point: call it directly, which keeps
+            # the generated C readable and the call typed.
+            typed = re.sub(rf"(?<![A-Za-z_0-9.h>]){re.escape(name)}\s*\(",
+                           f"hle_{name}(", typed)
+            continue
+        if name not in _registered_shim_names():
+            # Not reachable by ANY route. That is a runtime gap, not a dispatch
+            # problem, and saying so precisely is the difference between a day spent
+            # looking for a missing shim and a day spent writing the wrong fix.
+            return None, (f"0x{address:08X} calls the import {name}, which the runtime "
+                          f"does not register at all -- no name to dispatch")
+        # Registered but only through the shim table. The runtime's documented route
+        # is hle_call_guest(va, nargs, args) with the VA from hle_resolve(), so the
+        # module dispatches through the same table a real bind would. This replaces
+        # the old text substitution that INVENTED `hle_<Name>` and produced a module
+        # that could not link.
+        typed = _dispatch_import_call(typed, name)
     local_names = {ident: g["name"] for ident, g in names["globals"].items() if g["name"]}
     typed, decls, refusals = fuse_memory(typed, local_names)
     for note in ast_notes:
