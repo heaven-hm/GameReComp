@@ -1826,8 +1826,19 @@ def oracle(project_dir, pe_path, addresses, cases=8, cc=None, progress=print,
             "pe": str(pe_path), "pe_sha256": pe_sha, "section": section,
             "bytes_sha256": hashlib.sha256(blob).hexdigest(), "bytes_read": len(blob),
             "generated_unit": unit, "symbol_compared": target,
-            "compares": "the eight general-purpose registers and the bytes of every absolute "
-                        "guest address the generated body names",
+            # The claim has to match what diff() was actually given. A generated
+            # module is plain C: it models its return value and the memory it
+            # writes, not the guest's other registers, so --source runs compare
+            # eax alone (diff() takes compared = ('eax',) for those cases). An
+            # unconditional "eight general-purpose registers" here contradicted
+            # the verdict_meaning below it and would have travelled into any
+            # audit trail built from this record.
+            "compares": ("eax and the bytes of every absolute guest address the generated body "
+                         "names (a plain-C body models its return value and the memory it "
+                         "writes, not the guest's other registers)"
+                         if eax_only else
+                         "the eight general-purpose registers and the bytes of every absolute "
+                         "guest address the body names"),
             "does_not_compare": ("the arithmetic flags: a plain-C body does not model the "
                                  "guest's flag state, which the original leaves as its last "
                                  "arithmetic instruction set it. Only a lifted body publishes one "

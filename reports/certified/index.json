@@ -1,0 +1,112 @@
+{
+ "what": "the seven `agree` certifications, regenerated and re-run so the README's published count is reconstructable from committed files alone",
+ "how": "python3 -m tools.autorecomp.rename_gen ... then python3 -m tools.lift.difftest --source <module> --symbol sub_XXXX --cases 8",
+ "claim": "eax and the bytes of every absolute guest address the body names agree with the original's machine code on 8 entry states",
+ "is_not": "a whole-game claim, a flag comparison, or anything about inputs not driven",
+ "rows": [
+  {
+   "address": "0x00402020",
+   "verdict": "agree",
+   "named_memory": [
+    "0x00499C68"
+   ],
+   "compares": "eax and the bytes of every absolute guest address the generated body names (a plain-C body models its return value and the memory it writes, not the guest's other registers)",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "41114fd5dccaf1b097d8e2558023cef943ace09716e54f3ad3b304b32e055830",
+   "symbol": "sub_00402020",
+   "verdict_json": "0x00402020.json",
+   "module": "0x00402020.c"
+  },
+  {
+   "address": "0x0040B320",
+   "verdict": "agree",
+   "named_memory": [
+    "0x0049CDA8",
+    "0x0049CDAC"
+   ],
+   "compares": "eax and the bytes of every absolute guest address the generated body names (a plain-C body models its return value and the memory it writes, not the guest's other registers)",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "6a137f9512034d5de2a619c0b9cf5fc2b93ddb677d0d35961e4d2117a2b84ac1",
+   "symbol": "sub_0040B320",
+   "verdict_json": "0x0040B320.json",
+   "module": "0x0040B320.c"
+  },
+  {
+   "address": "0x0040F310",
+   "verdict": "agree",
+   "named_memory": [
+    "0x0049E1DC"
+   ],
+   "compares": "eax and the bytes of every absolute guest address the generated body names (a plain-C body models its return value and the memory it writes, not the guest's other registers)",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "d693638e91c18991656eb82cce55093bc1f3f4e6654eb4a2bcf487d621e58d3d",
+   "symbol": "sub_0040F310",
+   "verdict_json": "0x0040F310.json",
+   "module": "0x0040F310.c"
+  },
+  {
+   "address": "0x0040F320",
+   "verdict": "agree",
+   "named_memory": [
+    "0x0049E1E0"
+   ],
+   "compares": "eax and the bytes of every absolute guest address the generated body names (a plain-C body models its return value and the memory it writes, not the guest's other registers)",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "f1e6f574765aea166f7a4776642a3bdfb817157e55b2d0336dd3cfcdf7da0a50",
+   "symbol": "sub_0040F320",
+   "verdict_json": "0x0040F320.json",
+   "module": "0x0040F320.c"
+  },
+  {
+   "address": "0x0041C770",
+   "verdict": "agree",
+   "named_memory": [
+    "0x004A4B00",
+    "0x004A57E8"
+   ],
+   "compares": "eax and the bytes of every absolute guest address the generated body names (a plain-C body models its return value and the memory it writes, not the guest's other registers)",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "8b8b7bb75890edc99c19ee15ff6e2d8bc6bab0b907d7b18e02f80975c731a05f",
+   "symbol": "sub_0041C770",
+   "verdict_json": "0x0041C770.json",
+   "module": "0x0041C770.c"
+  },
+  {
+   "address": "0x00472940",
+   "verdict": "agree",
+   "named_memory": [
+    "0x004BBACC"
+   ],
+   "compares": "eax and the bytes of every absolute guest address the generated body names (a plain-C body models its return value and the memory it writes, not the guest's other registers)",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "76c8abd0241750ed19b202aaa3fb84dce7671852dca3c8bdd8079dae94572dc8",
+   "symbol": "sub_00472940",
+   "verdict_json": "0x00472940.json",
+   "module": "0x00472940.c"
+  },
+  {
+   "address": "0x0047B500",
+   "verdict": "agree",
+   "named_memory": [
+    "0x004BBA44",
+    "0x004BBA48",
+    "0x004BBA4C",
+    "0x004BBA50",
+    "0x004BBA98"
+   ],
+   "compares": "eax and the bytes of every absolute guest address the generated body names (a plain-C body models its return value and the memory it writes, not the guest's other registers)",
+   "cases": 8,
+   "pe_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+   "bytes_sha256": "ce11fbf2977cff4bacede8879d76028b3b3f442365c7f53c2712926c285e148a",
+   "symbol": "sub_0047B500",
+   "verdict_json": "0x0047B500.json",
+   "module": "0x0047B500.c"
+  }
+ ]
+}
