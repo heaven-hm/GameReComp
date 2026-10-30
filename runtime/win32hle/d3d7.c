@@ -48,6 +48,7 @@ enum { GL_LIGHTING=0x0B50, GL_COLOR_MATERIAL=0x0B57, GL_LIGHT0=0x4000,
        GL_SHININESS=0x1601, GL_FRONT=0x0404, GL_LIGHT_MODEL_AMBIENT=0x0B53,
        GL_LIGHT_MODEL_LOCAL_VIEWER=0x0B51, GL_NORMALIZE=0x0BA1,
        GL_DEPTH_BITS=0x0D56, GL_STENCIL_BITS=0x0D57,
+       GL_MAX_CLIP_PLANES=0x0D32, GL_CLIP_PLANE0=0x3000,
        GL_MAX_TEXTURE_SIZE=0x0D33,
        GL_AMBIENT_AND_DIFFUSE=0x1602, GL_COLOR_SUM=0x8458 };
 enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
@@ -96,6 +97,7 @@ typedef void (*gl_light_modelfv_fn)(unsigned,const float *);
 typedef void (*gl_light_modeli_fn)(unsigned,int);
 typedef unsigned char (*gl_is_enabled_fn)(unsigned);
 typedef void (*gl_scissor_fn)(int,int,int,int);
+typedef void (*gl_clip_plane_fn)(unsigned,const double *);
 typedef void (*gl_gen_objects_fn)(int,unsigned *);
 typedef void (*gl_bind_object_fn)(unsigned,unsigned);
 typedef void (*gl_delete_objects_fn)(int,const unsigned *);
@@ -139,6 +141,7 @@ static gl_light_modelfv_fn p_light_modelfv;
 static gl_light_modeli_fn p_light_modeli;
 static gl_is_enabled_fn p_is_enabled;
 static gl_scissor_fn p_scissor;
+static gl_clip_plane_fn p_clip_plane;
 static gl_gen_objects_fn p_gen_framebuffers,p_gen_renderbuffers;
 static gl_bind_object_fn p_bind_framebuffer,p_bind_renderbuffer;
 static gl_delete_objects_fn p_delete_framebuffers,p_delete_renderbuffers;
@@ -192,6 +195,7 @@ static int load_gl(void) {
     LOAD_GL(p_light_modeli, gl_light_modeli_fn, "glLightModeli");
     LOAD_GL(p_is_enabled, gl_is_enabled_fn, "glIsEnabled");
     LOAD_GL(p_scissor, gl_scissor_fn, "glScissor");
+    LOAD_GL(p_clip_plane, gl_clip_plane_fn, "glClipPlane");
     LOAD_GL(p_gl_viewport, gl_viewport_fn, "glViewport");
     *(void **)(&p_secondary_color3ub)=SDL_GL_GetProcAddress("glSecondaryColor3ub");
     g_gl_loaded = 1;
@@ -349,6 +353,9 @@ static uint8_t g_material[68];
 static uint8_t g_lights[8][104];
 static uint8_t g_light_valid[8], g_light_enabled[8];
 static unsigned g_max_lights;
+static unsigned g_max_clip_planes;
+static float g_clip_planes[6][4];
+static uint8_t g_clip_plane_valid[6];
 
 #define D3D7_DEVICE_DESC_SIZE 236u
 #define D3D7_PRIM_CAPS_SIZE 56u
@@ -384,6 +391,7 @@ static void dev_set_texture(void);
 static void dev_get_tss(void);
 static void dev_set_tss(void);
 static void refresh_lights(void);
+static void refresh_clip_planes(void);
 static void apply_material(void);
 static void apply_color_material_state(void);
 static void dev_set_material(void);
@@ -392,6 +400,8 @@ static void dev_set_light(void);
 static void dev_get_light(void);
 static void dev_light_enable(void);
 static void dev_get_light_enable(void);
+static void dev_set_clip_plane(void);
+static void dev_get_clip_plane(void);
 static void dev_get_caps(void);
 static void dev_enum_textures(void);
 static void d3d_enum_z(void);
@@ -409,7 +419,7 @@ UNIMPL(dev_end_state,2) UNIMPL(dev_preload,2) UNIMPL(dev_set_clip,2)
 UNIMPL(dev_get_clip,2)
 UNIMPL(dev_sphere,6) UNIMPL(dev_validate,2)
 UNIMPL(dev_apply_state,2) UNIMPL(dev_capture_state,2) UNIMPL(dev_delete_state,2)
-UNIMPL(dev_create_state,3) UNIMPL(dev_load,6) UNIMPL(dev_set_clip_plane,3) UNIMPL(dev_get_clip_plane,3)
+UNIMPL(dev_create_state,3) UNIMPL(dev_load,6)
 UNIMPL(dev_get_info,4) UNIMPL(vb_process_vertices,8) UNIMPL(vb_optimize,3)
 UNIMPL(vb_process_strided,8)
 #undef UNIMPL
@@ -655,7 +665,9 @@ static void d3d_write_device_desc7(uint32_t p) {
     MEM32(p+188)=(uint32_t)max_lights;
     float max_w=1.0e10f; memcpy(hle_ptr(p+192),&max_w,sizeof max_w);
     memcpy(hle_ptr(p+196),g_d3d7_gl_device_guid,sizeof g_d3d7_gl_device_guid);
-    MEM16(p+212)=0; MEM16(p+214)=0;            /* user clip planes and blend matrices */
+    int max_clip_planes=0; p_getint(GL_MAX_CLIP_PLANES,&max_clip_planes);
+    if(max_clip_planes<0)max_clip_planes=0; else if(max_clip_planes>6)max_clip_planes=6;
+    MEM16(p+212)=(uint16_t)max_clip_planes; MEM16(p+214)=0; /* clip planes and blend matrices */
     MEM32(p+216)=0x38u;                        /* directional/positional lights, local viewer */
 }
 
@@ -761,6 +773,10 @@ static void d3d_create_device(void) {
         memset(g_light_valid,0,sizeof g_light_valid); memset(g_light_enabled,0,sizeof g_light_enabled);
         int max_lights=0; p_getint(GL_MAX_LIGHTS,&max_lights);
         g_max_lights=max_lights<0?0u:max_lights>8?8u:(unsigned)max_lights;
+        int max_clip_planes=0; p_getint(GL_MAX_CLIP_PLANES,&max_clip_planes);
+        g_max_clip_planes=max_clip_planes<0?0u:max_clip_planes>6?6u:(unsigned)max_clip_planes;
+        memset(g_clip_planes,0,sizeof g_clip_planes); memset(g_clip_plane_valid,0,sizeof g_clip_plane_valid);
+        for(unsigned i=0;i<6;i++)p_disable(GL_CLIP_PLANE0+i);
         memset(g_stage_state,0,sizeof g_stage_state); g_stage_state[1]=4; g_stage_state[2]=2; g_stage_state[3]=1;
         g_stage_state[5]=2; g_stage_state[6]=2; g_stage_state[13]=1; g_stage_state[14]=1;
         g_viewport[0]=g_viewport[1]=0;g_viewport[2]=(uint32_t)target_w;g_viewport[3]=(uint32_t)target_h;g_viewport[4]=0;g_viewport[5]=0x3f800000u;
@@ -952,9 +968,9 @@ static void dev_clear(void) {
 }
 
 static float *transform_for(uint32_t state) { if(state==1)return g_world;if(state==2)return g_view;if(state==3)return g_projection;return NULL; }
-static void dev_set_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);memcpy(to,hle_ptr(m),64);if(st==1||st==2){refresh_modelview();if(st==2)refresh_lights();}if(st==3)load_projection();RET(D3D_OK,3); }
+static void dev_set_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);memcpy(to,hle_ptr(m),64);if(st==1||st==2){refresh_modelview();if(st==2){refresh_lights();refresh_clip_planes();}}if(st==3)load_projection();RET(D3D_OK,3); }
 static void dev_get_transform(void) { uint32_t st=A32(1),m=A32(2);float *from=transform_for(st);if(!from||!m)RET(D3DERR_INVALIDCALL,3);memcpy(hle_ptr(m),from,64);RET(D3D_OK,3); }
-static void dev_multiply_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);float a[16],b[16],r[16];memcpy(a,to,64);memcpy(b,hle_ptr(m),64);for(int i=0;i<4;i++)for(int j=0;j<4;j++){r[i*4+j]=0;for(int k=0;k<4;k++)r[i*4+j]+=a[i*4+k]*b[k*4+j];}memcpy(to,r,64);if(st==1||st==2){refresh_modelview();if(st==2)refresh_lights();}if(st==3)load_projection();RET(D3D_OK,3); }
+static void dev_multiply_transform(void) { uint32_t st=A32(1),m=A32(2);float *to=transform_for(st);if(!to||!m)RET(D3DERR_INVALIDCALL,3);float a[16],b[16],r[16];memcpy(a,to,64);memcpy(b,hle_ptr(m),64);for(int i=0;i<4;i++)for(int j=0;j<4;j++){r[i*4+j]=0;for(int k=0;k<4;k++)r[i*4+j]+=a[i*4+k]*b[k*4+j];}memcpy(to,r,64);if(st==1||st==2){refresh_modelview();if(st==2){refresh_lights();refresh_clip_planes();}}if(st==3)load_projection();RET(D3D_OK,3); }
 static void dev_set_viewport(void) {
     uint32_t p=A32(1),x,y,w,h; uint8_t *pixels; int target_w,target_h,pitch,bpp; float min_z,max_z;
     if(!p) RET(E_POINTER,2);
@@ -1017,6 +1033,37 @@ static void apply_light(unsigned index) {
 static void refresh_lights(void) {
     for(unsigned i=0;i<g_max_lights&&i<8;i++)if(g_light_valid[i])apply_light(i);
 }
+static void refresh_clip_planes(void) {
+    if(!load_gl() || !g_max_clip_planes) return;
+    p_matrix_mode(GL_MODELVIEW); p_load_matrix(g_view);
+    for(unsigned i=0;i<g_max_clip_planes;i++) if(g_clip_plane_valid[i]) {
+        double equation[4];
+        for(unsigned j=0;j<4;j++) equation[j]=(double)g_clip_planes[i][j];
+        p_clip_plane(GL_CLIP_PLANE0+i,equation);
+    }
+    refresh_modelview();
+}
+static void dev_set_clip_plane(void) {
+    uint32_t index=A32(1),p=A32(2);
+    float equation[4];
+    if(!p) RET(E_POINTER,3);
+    if(index>=g_max_clip_planes || index>=6) RET(D3DERR_INVALIDCALL,3);
+    memcpy(equation,hle_ptr(p),sizeof equation);
+    for(unsigned i=0;i<4;i++) if(!isfinite(equation[i])) RET(D3DERR_INVALIDCALL,3);
+    if(!load_gl()) RET(D3DERR_NOTAVAILABLE,3);
+    memcpy(g_clip_planes[index],equation,sizeof equation);
+    g_clip_plane_valid[index]=1;
+    refresh_clip_planes();
+    RET(D3D_OK,3);
+}
+static void dev_get_clip_plane(void) {
+    uint32_t index=A32(1),p=A32(2);
+    if(!p) RET(E_POINTER,3);
+    if(index>=g_max_clip_planes || index>=6) RET(D3DERR_INVALIDCALL,3);
+    if(g_clip_plane_valid[index]) memcpy(hle_ptr(p),g_clip_planes[index],sizeof g_clip_planes[index]);
+    else memset(hle_ptr(p),0,sizeof g_clip_planes[index]);
+    RET(D3D_OK,3);
+}
 static void dev_set_material(void) {
     uint32_t p=A32(1); if(!p)RET(E_POINTER,2);
     if(!load_gl())RET(D3DERR_NOTAVAILABLE,2);
@@ -1077,7 +1124,7 @@ static int render_state_supported(uint32_t state) {
     switch(state) {
     case 7: case 8: case 9: case 19: case 20: case 22: case 23: case 24: case 25:
     case 27: case 28: case 29: case 34: case 36: case 37: case 38:
-    case 137: case 139: case 141: case 142: case 143: case 145: case 146: case 147: case 148:
+    case 137: case 139: case 141: case 142: case 143: case 145: case 146: case 147: case 148: case 152:
         return 1;
     default:
         return 0;
@@ -1099,6 +1146,10 @@ static int render_state_value_valid(uint32_t state,uint32_t value) {
         return value<=255;
     case 146: case 148:
         return value==0;
+    case 152: {
+        uint32_t mask=g_max_clip_planes?((1u<<g_max_clip_planes)-1u):0u;
+        return (value&~mask)==0;
+    }
     default:
         return 1;
     }
@@ -1130,6 +1181,11 @@ static void dev_set_render_state(void) {
     case 29: apply_material();break;
     case 142: p_light_modeli(GL_LIGHT_MODEL_LOCAL_VIEWER,v?1:0);break;
     case 146: case 148: break;
+    case 152:
+        for(unsigned i=0;i<g_max_clip_planes;i++) {
+            if(v&(1u<<i)) p_enable(GL_CLIP_PLANE0+i); else p_disable(GL_CLIP_PLANE0+i);
+        }
+        break;
     }
     RET(D3D_OK,3);
 }
