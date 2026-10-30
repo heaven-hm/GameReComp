@@ -102,6 +102,19 @@ def _type_of(node):
     return None
 
 
+def synthesize_types(body):
+    """Opaque declarations for the provider's recovered struct/union types.
+
+    `emit-c-as-single-file` did not save `types-and-globals.h`, so a body with
+    `struct_4998 *argument_0` cannot parse. A pointer to an incomplete type is
+    enough to PARSE it - and a field access through an unknown layout is then
+    refused by the transform, which is the honest split: the parse succeeds, the
+    generation still refuses what it cannot lay out."""
+    import re as _re
+    names = sorted(set(_re.findall(r"\b(?:struct|union)_\d+", body)))
+    return "\n".join(f"typedef struct {n} {{ int _opaque; }} {n};" for n in names)
+
+
 def prepare(body):
     """The provider's function body as C pycparser can parse."""
     text = re.sub(r'^_ABI\([^)]*\)\s*$', '', body, flags=re.M)
@@ -112,7 +125,7 @@ def prepare(body):
 def parse(body):
     """A pycparser FunctionDef for the provider body, or Unsupportable."""
     try:
-        ast = c_parser.CParser().parse(PRELUDE + prepare(body))
+        ast = c_parser.CParser().parse(PRELUDE + synthesize_types(body) + prepare(body))
     except Exception as e:
         raise Unsupportable(f"the provider body does not parse as C: {e}")
     fns = [e for e in ast.ext if isinstance(e, c_ast.FuncDef)]
@@ -142,7 +155,8 @@ class Model:
             if name is None:
                 raise Unsupportable("a pointer declaration without a name")
             if width is None:
-                raise Unsupportable(f"{name}: pointer to a type with no known width")
+                # a pointer to an incomplete provider type is still a GUEST VA
+                width = 32
             self.va_locals[name] = width
             self.notes.append(f"{name}: pointer -> uint32_t guest VA (width {width})")
             new = c_ast.Decl(name=name, quals=[], align=None, storage=[],
@@ -162,8 +176,12 @@ class Model:
             return None
         if isinstance(node, c_ast.Cast):
             w = width_of_type(_type_of(node))
-            if _type_of(node.to_type) == "ptr" or str(_type_of(node.to_type)).startswith("ptr:"):
-                raise Unsupportable("a cast to a pointer type: the address model is not established")
+            if str(_type_of(node.to_type)).startswith("ptr:"):
+                # a cast to a pointer is a reinterpretation of a guest VA: the VA
+                # is unchanged, so the cast drops out. If the result is used as a
+                # struct the field access is refused where the layout would be
+                # needed, not here.
+                return self.expr(node.expr, 32)
             if str(_type_of(node.to_type)).startswith("uint32_t") and isinstance(node.expr, c_ast.UnaryOp) and node.expr.op == "&":
                 return self.address_of(node.expr.expr)
             return self.expr(node.expr, w if w else want_width)
@@ -206,6 +224,9 @@ class Model:
             addr = c_ast.BinaryOp(op="+", left=base, right=off)
             return c_ast.FuncCall(name=c_ast.ID(MEM_OF_WIDTH[width]),
                                   args=c_ast.ExprList([addr]))
+        if isinstance(node, c_ast.StructRef):
+            raise Unsupportable("a struct/union field access: the provider header with the "
+                                "layout was not saved, so the offset cannot be established")
         if isinstance(node, c_ast.UnaryOp) and node.op == "&":
             return self.address_of(node.expr)
         if isinstance(node, c_ast.BinaryOp):
