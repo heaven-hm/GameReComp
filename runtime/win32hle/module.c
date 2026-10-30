@@ -23,6 +23,7 @@
 
 #define ERROR_MOD_NOT_FOUND       126u
 #define ERROR_PROC_NOT_FOUND      127u
+#define ERROR_CALL_NOT_IMPLEMENTED 120u
 #define ERROR_RESOURCE_NOT_FOUND 1814u
 
 #define MAX_MODULES 32
@@ -124,13 +125,23 @@ static void k_GetModuleFileNameA(void) {                 /* (hModule, buf, size)
     RET(n, 3);
 }
 
-static void k_LoadLibraryA(void) {
-    const char *name = ASTR(0);
-    if (!name) { hle_set_last_error(ERROR_MOD_NOT_FOUND); RET(0, 1); }
+/* Map `name` (or find the already-mapped module) and return its guest base, or
+ * 0 with the last error set. Shared by LoadLibraryA (1 argument) and
+ * LoadLibraryExA (3, of which the flags only choose a search order this host
+ * does not have), so both pop the right number of words.
+ *
+ * The module's own code is NOT run: what a static recompilation can offer a
+ * DLL loaded at runtime is its data -- resources, a module handle for
+ * GetProcAddress, and a base for anything that reads the image. An export the
+ * guest then calls is either answered by a registered shim or it is not in the
+ * recompiled dispatch table, and hle_call_guest says so by name instead of
+ * returning a fabricated address. */
+static uint32_t load_library(const char *name) {
+    if (!name) { hle_set_last_error(ERROR_MOD_NOT_FOUND); return 0; }
     int i = find_by_name(name);
-    if (i >= 0) { g_mod[i].refs++; RET(g_mod[i].base, 1); }
+    if (i >= 0) { g_mod[i].refs++; return g_mod[i].base; }
     uint32_t s = system_module(name);
-    if (s) RET(s, 1);
+    if (s) return s;
     char host[1024];
     int found = hle_host_path(name, host, sizeof host);
     if (!found && g_main >= 0) {                         /* the exe's own directory */
@@ -141,15 +152,29 @@ static void k_LoadLibraryA(void) {
     }
     pe_image img;
     if (!found || recomp_pe_map_any(host, &img) != 0) {
-        fprintf(stderr, "[module] LoadLibraryA(\"%s\"): not found\n", name);
+        fprintf(stderr, "[module] LoadLibrary(\"%s\"): not found\n", name);
         hle_set_last_error(ERROR_MOD_NOT_FOUND);
-        RET(0, 1);
+        return 0;
     }
     char g[600];
     hle_guest_path(host, g, sizeof g);
     hle_module_add(g, img.base, img.resource_rva, img.resource_size, 0);
-    fprintf(stderr, "[module] LoadLibraryA(\"%s\") -> 0x%08X (its code is not run)\n", name, img.base);
-    RET(img.base, 1);
+    fprintf(stderr, "[module] LoadLibrary(\"%s\") -> 0x%08X (its code is not run)\n", name, img.base);
+    return img.base;
+}
+
+static void k_LoadLibraryA(void) { RET(load_library(ASTR(0)), 1); }
+/* (name, hFile, flags): hFile is for LOAD_LIBRARY_AS_DATAFILE-style loads from
+ * an open file, which this host does not support; passing one is refused
+ * rather than ignored, because ignoring it would load the wrong image. */
+static void k_LoadLibraryExA(void) {
+    if (A32(1)) {
+        fprintf(stderr, "[module] LoadLibraryExA(\"%s\"): loading from an open "
+                        "file handle is not supported\n", ASTR(0) ? ASTR(0) : "?");
+        hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+        RET(0, 3);
+    }
+    RET(load_library(ASTR(0)), 3);
 }
 static void k_FreeLibrary(void) { int i = find_mod(A32(0)); if (i >= 0 && g_mod[i].refs > 1) g_mod[i].refs--; RET(1, 1); }
 
@@ -303,6 +328,7 @@ const win32hle_shim win32hle_module[] = {
     { "GetModuleHandleA",     k_GetModuleHandleA },
     { "GetModuleFileNameA",   k_GetModuleFileNameA },
     { "LoadLibraryA",         k_LoadLibraryA },
+    { "LoadLibraryExA",       k_LoadLibraryExA },
     { "FreeLibrary",          k_FreeLibrary },
     { "GetProcAddress",       k_GetProcAddress },
     { "FindResourceA",        k_FindResourceA },
