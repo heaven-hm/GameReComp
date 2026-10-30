@@ -108,6 +108,26 @@ Three routes to a real oracle, in ascending cost, and what was decided:
    the inputs driven". It is per-function and per-input-set: it does not, and
    must not, be summarised as a whole-game claim.
 
+**Static evidence is not redundant with the bytes, and it is not a substitute.**
+Measured on 2026-10-30 over Doukutsu's generated functions, which is the cleanest
+statement of the division available:
+
+| method | what it found |
+| --- | --- |
+| a static cross-check (a provider prototype with fewer parameters than the registers the function reads before writing) | 3 refusals, catching **one** of the three known defects |
+| the per-function oracle (drive the function, compare the state) | 3 divergences, **all three** |
+
+The two the static check missed depend on memory read through computed addresses,
+which neither the register analysis nor the named-memory extractor can see. So:
+
+> **static evidence can refuse what it can prove wrong; only a run can see what it
+> cannot rule out.**
+
+That is why the oracle is a gate and not a decoration, and why the two are both
+kept: a static refusal is cheap and catches a whole family at once (an empty body,
+an `undef()`-valued body, a lost-input signature), while a divergence can only be
+seen by running the thing and watching what comes out.
+
 2. **A Windows host or VM, once.** Record the original's side — exit code,
    stdout/stderr, and, with an IAT-patching DLL or debugger import trace, the
    same call transcript this runtime already emits, plus the same input

@@ -126,3 +126,60 @@ number.
 One false positive found fixing this: `has_memory_observable` counted `mov [ebp+8],
 al` as a guest-data write, but that is an argument slot in the stack frame. The
 stack is not a guest-data observable, and 0x004258C0 was refused because of it.
+
+## The frame loop's core: the x87 helpers make it compile, not correct
+
+`0x00481BB0` is the hottest function in the game — 6.6 million lifted entries in a
+300,000-dispatch run — and it is **refused**, because its provider body contains
+**180 `undef()` values**. `primitive-types.h` defines `undef(T)` as a read from a
+special location: it is rev.ng saying, 180 times, that it could not determine a
+value. With `helpers.h` the x87 `helper_f*` wrappers finally have somewhere to go
+and the body would **compile**; it would still be built on 180 values the
+decompiler does not know.
+
+**This is the architecture working, and it is worth stating plainly.** The provider
+failed on the one function that matters most; the low-level lifted body carries it;
+the product still runs because the fallback is there. A pipeline that could only
+report the provider's successes would have called this progress. This one reports
+the provider's failure, refuses the module, and keeps running — and the number that
+says so is a refusal message with the count in it, not an absence of warnings.
+
+## Static evidence and the oracle are not redundant
+
+The signature cross-check (a provider prototype with fewer parameters than the
+registers the function reads before writing) refuses **3** of the 157 accepted
+functions, and catches **one** of the three divergences the oracle found — the one
+that reads `ebx`. The other two depend on memory read through computed addresses,
+which neither the register analysis nor the named-memory extractor can see.
+
+So: **static evidence can refuse what it can prove wrong; only a run can see what
+it cannot rule out.** The static refusals are cheap and catch whole families at
+once (empty body, `undef()`-valued body, lost-input signature); the divergences
+need the run. `docs/VERIFICATION.md` records the decision and this measurement
+beside it.
+
+## The pre-struct-field baseline (measured before the struct-field pass, so its effect can be attributed)
+
+34 modules: 157 parser-accepted -> 154 generated -> 34 compiling (the two new
+refusals took two modules out of the population).
+
+| verdict | count |
+| --- | --- |
+| `agree` | 7 |
+| `agree-return` | 12 |
+| `agree-memory` | 8 |
+| `diverge` | 2 |
+| `original-faulted` | 4 |
+
+**19 certified** (7 on registers and named memory, 12 on the return value alone).
+
+**The two divergences are exactly the two the static check cannot see**:
+`0x004882D9` and `0x00489195`, both depending on memory read through computed
+addresses. `0x00489227` — the one that reads `ebx` — is now a **refusal**, so it
+moved from the divergence bucket to the refusal count as predicted. The
+`agree-return` twelve are unchanged, and the population dropped by two modules, not
+by a handful: the new refusals are acting on the functions they were built for.
+
+One row moved from `original-faulted` to `agree` between runs (`0x0048708A`). That
+is a seeded-state difference rather than a fix, and it is the reason the table is
+labelled by run rather than treated as stable.
