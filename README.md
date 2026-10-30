@@ -421,6 +421,7 @@ projects/<name>/
 | Document | Contents |
 | --- | --- |
 | [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) | Install, first run, reading the report, troubleshooting |
+| [`verify.sh`](verify.sh) | **The gate.** Unit tests, runtime selftests, GUI headless checks, regression suite, and that every certified verdict reconstructs — one command, run by a developer and by CI |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Component map and data flow |
 | [`docs/TARGETS.md`](docs/TARGETS.md) | What is built (PE32 x86 to macOS ARM64, 32-bit guest state) and what is not, with the reason for every row |
 | [`docs/PIPELINE.md`](docs/PIPELINE.md) | Stages, weights, timeouts, recovery loop |
