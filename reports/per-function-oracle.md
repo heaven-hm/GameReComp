@@ -93,6 +93,45 @@ here: the answer was known in advance, and the tool reproduced it.
 | the same address but the **wrong PE** (`gunroar/gr.exe` at `0x0040BA58`) | `original-faulted` — different code, unmapped write; no agreement fabricated |
 | a VA **inside** a function (`0x0040BA5C`, no generated body) | `no-generated-body` — refused, not silently skipped |
 
+## Certifying a GENERATED module
+
+`--source FILE --symbol NAME` compares a generated module's adapter (not the
+project's own body) against the original bytes. The adapter matters: the typed
+function is plain C, its result is a host value, and the guest reads `eax` — the
+adapter is what marshals one into the other, and it is the symbol a dispatch
+table would call, so it is the right thing to certify.
+
+| generated module | address | symbol | cases | verdict |
+|---|---|---|---|---|
+| msvc_rand_step | `0x0040BA58` | `sub_0040BA58` | 8 | **agree** |
+| store_block_00413be0 | `0x00401000` | `sub_00401000` | 8 | **agree** |
+
+The exact claim each supports: *this generated function, compiled and run from
+these entry states, agrees with the original bytes on the eight general-purpose
+registers and on every byte of the guest memory the original names.* Nothing
+about other inputs, and nothing about the game: the module is generated beside
+the project and is **not part of the shipped game**. The two facts go together —
+"verified against the original bytes; not part of the shipped game" — because
+either alone reads as something neither is.
+
+## The flags are NOT comparable for a plain-C replacement, and that is a finding
+
+The flag comparison reads what the body publishes (`g_flag_k/a/b/cf` via
+`RECOMP_FLAGS_OUT`) and derives EFLAGS with `recomp_eflags()`. A **lifted** body
+publishes that state at every `ret`; a **plain-C** body does not, because the
+original's arithmetic flags are a side effect of the instruction stream that typed
+C does not reproduce. Measured: with `--flags`, the shipped high-level module and
+the generated module both diverge on PF (and ZF for `0x00401000`), and they are
+right to — the flags are not modelled, so anything the harness reads there is
+stale. The oracle compares registers and memory by default and says why; `--flags`
+exists for lifted bodies, which are the only ones that can honour it.
+
+This also corrects an earlier claim of mine: the first version of the oracle
+hard-coded the real side's EFLAGS to 0, so the flag comparison was vacuous — it
+only ever passed because the named bits happened to be clear on both sides. With
+the real `EFLAGS` register read, the difference is visible and the honest scope is
+"registers and memory", not "flags included".
+
 ## Two bugs found in the tool before it agreed
 
 The first runs disagreed, and per the task the tool was the suspect — correctly:

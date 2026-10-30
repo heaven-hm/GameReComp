@@ -19,3 +19,8 @@ uint32_t msvc_rand_step(void) {
     MEM32(0x00413350u) = state_00413350;
     return state_00413350 >> 16U & 0x7FFFU;
 }
+/* the guest ABI entry point the dispatch table calls (convention: cdecl, 0 argument(s)) */
+void sub_0040BA58(void) {
+    uint32_t result = msvc_rand_step();
+    RETC(result);
+}

@@ -1,23 +1,33 @@
 {
  "schema": 1,
  "provider": "tools/autorecomp/rename_gen.py (evidence only)",
- "note": "Generated BESIDE the project and never dispatched to: it exists so the pipeline can be checked, not so a game can run with it.",
+ "note": "Generated BESIDE the project and never dispatched to. Every function here is certified against the original bytes by the per-function oracle; none of them is part of the shipped game until a separate decision dispatches it.",
  "functions": [
   {
    "address": "0x0040BA58",
    "symbol": "msvc_rand_step",
-   "category": "HIGH_LEVEL_UNVERIFIED",
+   "category": "HIGH_LEVEL_VERIFIED",
    "evidence": [
     "imul eax, eax, 0x343fd",
     "add eax, 0x269ec3"
    ],
    "file": "0x0040BA58.c",
-   "not_yet": "the per-function oracle has not been run on this generated function; until it agrees it stays HIGH_LEVEL_UNVERIFIED"
+   "not_yet": "the per-function oracle has not been run on this generated function; until it agrees it stays HIGH_LEVEL_UNVERIFIED",
+   "certified_by": {
+    "tool": "tools/lift/difftest.py --project --source --symbol",
+    "verdict": "agree",
+    "cases": 8,
+    "pe_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+    "bytes_sha256": "9c2797f0f3372f8e1850e02cf018bc5d39b69c877f98feef4446ababde0e3b24",
+    "claim": "this generated function, compiled and run from the listed entry states, agrees with the original bytes on the eight registers and on every byte of the guest memory the original names",
+    "not_compared": "the arithmetic flags: a plain-C body does not model the guest flag state",
+    "not_part_of_the_shipped_game": "this module is generated beside the project and is not dispatched to; the shipped game still runs the hand-written module and the mechanical bodies"
+   }
   },
   {
    "address": "0x00401000",
    "symbol": "store_block_00413be0",
-   "category": "HIGH_LEVEL_UNVERIFIED",
+   "category": "HIGH_LEVEL_VERIFIED",
    "evidence": [
     "mov byte ptr [0x413be0], 1",
     "mov word ptr [0x413be2], 0xf",
@@ -43,7 +53,17 @@
     "mov dword ptr [0x413c1c], 0x5800"
    ],
    "file": "0x00401000.c",
-   "not_yet": "the per-function oracle has not been run on this generated function; until it agrees it stays HIGH_LEVEL_UNVERIFIED"
+   "not_yet": "the per-function oracle has not been run on this generated function; until it agrees it stays HIGH_LEVEL_UNVERIFIED",
+   "certified_by": {
+    "tool": "tools/lift/difftest.py --project --source --symbol",
+    "verdict": "agree",
+    "cases": 8,
+    "pe_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+    "bytes_sha256": "5e4e155d51fb968d48e42888692cca603ea748ad0b3ac2c54a9cc3ce92dba6b2",
+    "claim": "this generated function, compiled and run from the listed entry states, agrees with the original bytes on the eight registers and on every byte of the guest memory the original names",
+    "not_compared": "the arithmetic flags: a plain-C body does not model the guest flag state",
+    "not_part_of_the_shipped_game": "this module is generated beside the project and is not dispatched to; the shipped game still runs the hand-written module and the mechanical bodies"
+   }
   }
  ]
 }

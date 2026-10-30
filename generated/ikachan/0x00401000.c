@@ -105,3 +105,8 @@ void store_block_00413be0(void) {
     state_00413c1c = 0x5800u;
     MEM32(0x00413C1Cu) = state_00413c1c;
 }
+/* the guest ABI entry point the dispatch table calls (convention: cdecl, 0 argument(s)) */
+void sub_00401000(void) {
+    store_block_00413be0();
+    RETC(0);
+}
