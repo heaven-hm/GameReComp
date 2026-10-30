@@ -393,6 +393,15 @@ def _port_details(run):
     if cats:
         bits.append(f"low-level {cats.get('LOW_LEVEL_FALLBACK', 0)}"
                     f"/ high-level verified {cats.get('HIGH_LEVEL_VERIFIED', 0)}")
+    # Where the port stopped, so a failed row says why rather than listing only
+    # the stages that happened to run before it.
+    stopped = [s for s in stages.values() if s.get("status") == "failed"]
+    if stopped:
+        names = [s.get("name") for s in
+                 sorted(stopped, key=lambda s: s.get("name"))]
+        first = stopped[0]
+        bits.append(f"{'/'.join(names)} failed: "
+                    f"{_esc(str(first.get('message') or ''))[:100]}")
     return "; ".join(bits) if bits else "-"
 
 
