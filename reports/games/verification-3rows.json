@@ -1,0 +1,303 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-30T06:29:28Z",
+  "verified_commit": "85ef6a36c2e5bcfa2e2527a2b885ee37cfb3e307",
+  "verified_runtime_host_c_sha256": "b9790ecc9c281cab5514b690bc896c709c0c3bde40052008cc09e11d61371f67",
+  "method": "independent re-measurement of three rows published by the corpus sweep: the runtime was frozen from the named commit, copied into each project, the project rebuilt, then launched permissively (RECOMP_PERMISSIVE=1) and strictly, with RECOMP_TRACE=1 for the dispatch profile",
+  "published": {
+    "Doukutsu": {
+      "report": "projects/Doukutsu/reports/report.json",
+      "score": 93,
+      "verification": "partial",
+      "run_status": "timeout",
+      "exit_code": null,
+      "seconds": 12.0,
+      "bound_imports": null,
+      "unresolved_import_count": null,
+      "import_trace_enabled": false,
+      "import_calls_total": 0,
+      "import_profile_entries": 0,
+      "log": "/Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/Doukutsu/logs/run.stderr.log",
+      "log_lines": 7017,
+      "log_icall_lines": 7005,
+      "log_hle_lines": 0,
+      "log_last_non_icall": [
+        "[module] GetProcAddress(kernel32.dll, InitializeCriticalSectionAndSpinCount): not answered",
+        "[module] GetProcAddress(kernel32.dll, FlsAlloc): not answered",
+        "[module] GetProcAddress(kernel32.dll, FlsGetValue): not answered",
+        "[module] GetProcAddress(kernel32.dll, FlsSetValue): not answered",
+        "[module] GetProcAddress(kernel32.dll, FlsFree): not answered",
+        "[ddraw] SetDisplayMode(640x480x16)",
+        "[ddraw] CreateSurface 640x480 16 bpp caps 0xA00 primary -> 0x100058A0",
+        "[dsound] dummy, 44100 Hz",
+        "[guest] DeviceGUID = 6f1d2b61"
+      ]
+    },
+    "OrgView": {
+      "report": "projects/OrgView/reports/report.json",
+      "score": 93,
+      "verification": "partial",
+      "run_status": "exited",
+      "exit_code": 0,
+      "seconds": 0.4,
+      "bound_imports": 122,
+      "unresolved_import_count": 0,
+      "import_trace_enabled": false,
+      "import_calls_total": 0,
+      "import_profile_entries": 0,
+      "log": "/Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/OrgView/logs/run.stderr.log"
+    },
+    "gr": {
+      "report": "projects/gr/reports/report.json",
+      "score": 77,
+      "verification": "launch-failed",
+      "run_status": "crashed",
+      "exit_code": -10,
+      "seconds": 1.0,
+      "bound_imports": 136,
+      "unresolved_import_count": 0,
+      "import_trace_enabled": false,
+      "import_calls_total": 0,
+      "import_profile_entries": 0,
+      "log": "/Users/haseeb-mir/Documents/Code/RevEng-Studio/projects/gr/logs/run.stderr.log"
+    }
+  },
+  "measured": {
+    "Doukutsu": {
+      "run_status": "timeout",
+      "permissive_outcome": "timeout",
+      "exit_code": null,
+      "seconds": 15.01,
+      "strict_exit_code": null,
+      "strict_bound_imports": 143,
+      "strict_unresolved": 0,
+      "import_profile": {
+        "exit_code": null,
+        "timed_out": true,
+        "dispatched_import_count": 378155,
+        "distinct_imports": 125,
+        "top_imports": [
+          {
+            "import": "IDirectDrawSurface::Blt",
+            "calls": 195915
+          },
+          {
+            "import": "GetLastError",
+            "calls": 35871
+          },
+          {
+            "import": "TlsGetValue",
+            "calls": 35863
+          },
+          {
+            "import": "SetLastError",
+            "calls": 35863
+          },
+          {
+            "import": "IDirectDrawSurface::IsLost",
+            "calls": 22915
+          },
+          {
+            "import": "GetTickCount",
+            "calls": 9785
+          },
+          {
+            "import": "PeekMessageA",
+            "calls": 9757
+          },
+          {
+            "import": "IDirectInputDevice::GetDeviceState",
+            "calls": 9756
+          },
+          {
+            "import": "Sleep",
+            "calls": 9041
+          },
+          {
+            "import": "EnterCriticalSection",
+            "calls": 3891
+          },
+          {
+            "import": "LeaveCriticalSection",
+            "calls": 3891
+          },
+          {
+            "import": "GetWindowRect",
+            "calls": 717
+          }
+        ],
+        "last_dispatched": [
+          "PeekMessageA",
+          "IDirectInputDevice::GetDeviceState",
+          "GetTickCount",
+          "Sleep",
+          "PeekMessageA",
+          "IDirectInputDevice::GetDeviceState",
+          "GetTickCount",
+          "Sleep",
+          "PeekMessageA",
+          "IDirectInputDevice::GetDeviceState",
+          "GetTickCount",
+          "Sleep"
+        ],
+        "stderr_tail": "sageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] timeGetTime\n[hle] IDirectSoundBuffer::SetVolume\n[hle] IDirectSoundBuffer::SetVolume\n[hle] IDirectSoundBuffer::SetVolume\n[hle] IDirectSoundBuffer::SetVolume\n[hle] IDirectSoundBuffer::SetVolume\n[hle] IDirectSoundBuffer::SetVolume\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] GetWindowRect\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::IsLost\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] IDirectDrawSurface::Blt\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n[hle] PeekMessageA\nICALL: unresolved VA 0x00000080 from 0x004120F0\n[hle] IDirectInputDevice::GetDeviceState\n[hle] GetTickCount\n[hle] Sleep\n"
+      },
+      "crash_trace": null
+    },
+    "OrgView": {
+      "run_status": "exited",
+      "permissive_outcome": "exited-clean",
+      "exit_code": 0,
+      "seconds": 0.03,
+      "strict_exit_code": 0,
+      "strict_bound_imports": 122,
+      "strict_unresolved": 0,
+      "import_profile": null,
+      "crash_trace": null
+    },
+    "gr": {
+      "run_status": "crashed",
+      "permissive_outcome": "crashed",
+      "exit_code": -10,
+      "seconds": 0.03,
+      "strict_exit_code": -10,
+      "strict_bound_imports": 136,
+      "strict_unresolved": 0,
+      "import_profile": null,
+      "crash_trace": {
+        "exit_code": -10,
+        "timed_out": false,
+        "dispatched_import_count": 27,
+        "distinct_imports": 16,
+        "top_imports": [
+          {
+            "import": "EnterCriticalSection",
+            "calls": 4
+          },
+          {
+            "import": "GetStdHandle",
+            "calls": 3
+          },
+          {
+            "import": "InitializeCriticalSection",
+            "calls": 3
+          },
+          {
+            "import": "LeaveCriticalSection",
+            "calls": 3
+          },
+          {
+            "import": "VirtualAlloc",
+            "calls": 2
+          },
+          {
+            "import": "GetVersion",
+            "calls": 2
+          },
+          {
+            "import": "GetTickCount",
+            "calls": 1
+          },
+          {
+            "import": "GetModuleHandleA",
+            "calls": 1
+          },
+          {
+            "import": "GetCommandLineA",
+            "calls": 1
+          },
+          {
+            "import": "GetACP",
+            "calls": 1
+          },
+          {
+            "import": "GetCPInfo",
+            "calls": 1
+          },
+          {
+            "import": "GetModuleFileNameA",
+            "calls": 1
+          }
+        ],
+        "last_dispatched": [
+          "GetStdHandle",
+          "InitializeCriticalSection",
+          "SetHandleCount",
+          "InitializeCriticalSection",
+          "EnterCriticalSection",
+          "InitializeCriticalSection",
+          "LeaveCriticalSection",
+          "EnterCriticalSection",
+          "LeaveCriticalSection",
+          "EnterCriticalSection",
+          "LeaveCriticalSection",
+          "EnterCriticalSection"
+        ],
+        "stderr_tail": "[pe] /Users/haseeb-mir/Downloads/recomp-apps/games/gunroar/gr.exe mapped at 0x00400000, span 0xC8000\n[pe] bound 136 imports, 0 unresolved\n[host] /Users/haseeb-mir/Downloads/recomp-apps/games/gunroar/gr.exe booted: entry 0x0042D49C, 0 unresolved imports\n[hle] GetTickCount\n[hle] GetModuleHandleA\n[hle] VirtualAlloc\n[hle] VirtualAlloc\n[hle] GetVersion\n[hle] GetCommandLineA\n[hle] GetACP\n[hle] GetCPInfo\n[hle] GetModuleFileNameA\n[hle] GetCurrentThreadId\n[hle] GetEnvironmentStrings\n[hle] GetVersion\n[hle] SetUnhandledExceptionFilter\n[hle] GetStdHandle\n[hle] GetStdHandle\n[hle] GetStdHandle\n[hle] InitializeCriticalSection\n[hle] SetHandleCount\n[hle] InitializeCriticalSection\n[hle] EnterCriticalSection\n[hle] InitializeCriticalSection\n[hle] LeaveCriticalSection\n[hle] EnterCriticalSection\n[hle] LeaveCriticalSection\n[hle] EnterCriticalSection\n[hle] LeaveCriticalSection\n[hle] EnterCriticalSection\n"
+      }
+    }
+  },
+  "verdict": {
+    "OrgView": "agrees: run.status exited, exit 0, 122 bound, 0 unresolved",
+    "gr": "agrees: run.status crashed, exit -10 (SIGBUS)",
+    "Doukutsu": "run.status timeout agrees, but the published row carries no import profile (import_trace_enabled false, calls total 0) and its own log is 7005 ICALL lines out of 7017: the process loops while calling guest VA 0x80 once per frame"
+  },
+  "doukutsu_loop_profile": {
+    "source": "one 15 s RECOMP_TRACE=1 run of the frozen-commit rebuild",
+    "import_dispatches": 372183,
+    "icall_failures": 8528,
+    "icall_target": "0x00000080",
+    "icall_call_site": "0x004120F0",
+    "frames_estimate": 8528,
+    "top_imports": [
+      {
+        "import": "IDirectDrawSurface::Blt",
+        "calls": 195535
+      },
+      {
+        "import": "GetLastError",
+        "calls": 35871
+      },
+      {
+        "import": "TlsGetValue",
+        "calls": 35863
+      },
+      {
+        "import": "SetLastError",
+        "calls": 35863
+      },
+      {
+        "import": "IDirectDrawSurface::IsLost",
+        "calls": 22307
+      },
+      {
+        "import": "GetTickCount",
+        "calls": 8556
+      },
+      {
+        "import": "PeekMessageA",
+        "calls": 8529
+      },
+      {
+        "import": "IDirectInputDevice::GetDeviceState",
+        "calls": 8528
+      }
+    ],
+    "reading": "GetTickCount, PeekMessageA, GetDeviceState and the ICALL all occur ~8528 times, so once per frame the guest calls through a NULL interface pointer at offset 0x80; the frame loop itself is real (about 569 frames/s, 23 blits per frame)"
+  },
+  "sweep_invalid_rows": {
+    "cause": "NameError: name '_ROOT' is not defined at tools/autorecomp/pipeline.py:250",
+    "fixed_by": "5a6d14b (the sweep ran during the breakage)",
+    "rows": [
+      "herocore/herocore gm7.exe",
+      "ikachan/dxIka.exe",
+      "noiz2sa/noiz2sa.exe",
+      "parsec47/p47.exe",
+      "rrootage/rr.exe",
+      "torus_trooper/tt.exe",
+      "tumiki_fighters/tf.exe",
+      "warning_forever/wf.exe"
+    ],
+    "note": "these eight rows are score 30 / not-run because the translate stage raised, not because of runtime coverage; they need re-measuring"
+  }
+}
