@@ -240,6 +240,30 @@ def generate_closure(pe_path, address, revng_dir, names, evidence, signatures,
     return out, {"size": len(order), "capped": False}
 
 
+_REGISTERED_CACHE = {}
+
+
+def _registered_shim_names():
+    """Every import name the runtime's shim tables answer for.
+
+    Read from the tables themselves (`{ "LeaveCriticalSection", k_... }`), because
+    the question this answers is precisely "does the runtime know this name at all",
+    and the table is the only place that is true.
+    """
+    if "names" in _REGISTERED_CACHE:
+        return _REGISTERED_CACHE["names"]
+    import re as _re
+    root = Path(__file__).resolve().parents[2] / "runtime" / "win32hle"
+    found = set()
+    for f in root.glob("*.c"):
+        try:
+            found |= set(_re.findall(r'\{\s*"([A-Za-z_0-9]+)"\s*,', f.read_text(errors="replace")))
+        except OSError:
+            continue
+    _REGISTERED_CACHE["names"] = found
+    return found
+
+
 _HLE_ENTRY_CACHE = {}
 
 
@@ -347,10 +371,20 @@ def generate(pe_path, address, revng_dir, names, evidence, frames=False, extra=N
         # eighteen undeclared shims found the same way. Fail here instead, where
         # the reason can be said.
         if name not in _hle_entry_points():
-            return None, (f"0x{address:08X} calls the import {name}, which the runtime "
-                          f"serves from its shim table with no hle_{name} entry point -- "
-                          f"substituting the name would invent a symbol and the module "
-                          f"could not link")
+            # Two different refusals, because they need two different fixes. A name
+            # the runtime DOES register is reachable through hle_resolve() and
+            # recomp_lookup_import() -- the module has to dispatch through the table
+            # rather than by name, which is a defined piece of work. A name it does
+            # not register at all cannot be called even that way, and is a runtime
+            # gap. Reporting one message for both would send the next person to the
+            # wrong place.
+            if name in _registered_shim_names():
+                return None, (f"0x{address:08X} calls the import {name}, which the runtime "
+                              f"registers in its shim table but exposes as no hle_{name} "
+                              f"entry point -- the module must dispatch through "
+                              f"hle_resolve()/recomp_lookup_import(), not by name")
+            return None, (f"0x{address:08X} calls the import {name}, which the runtime does "
+                          f"not register at all -- no name to dispatch, and no hle_{name}")
         typed = re.sub(rf"(?<![A-Za-z_0-9.h>]){re.escape(name)}\s*\(",
                        f"hle_{name}(", typed)
     local_names = {ident: g["name"] for ident, g in names["globals"].items() if g["name"]}

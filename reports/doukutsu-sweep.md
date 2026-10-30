@@ -695,8 +695,28 @@ from its headers rather than assumed) and refuses with the reason:
     would invent a symbol and the module could not link
 
 Eleven generating bodies call imports, so eleven modules that could never have linked are
-now refused at generation time with a message that says why. What would unblock them is
-**shim-table dispatch in a generated module**, which is real work and is not done.
+now refused at generation time with a message that says why.
+
+**And the refusal now distinguishes two cases, because they need two different fixes.**
+The runtime's shim tables answer for **1,018 import names**; its `hle_` entry points number
+**181**. So most imports are reachable only through the table:
+
+    registered in the shim tables          1,018
+    exposed as hle_<Name> entry points       181
+    imports the generating bodies call          8   -- ALL registered
+
+Every one of the eight is therefore reachable through
+`hle_resolve(name)` -> synthetic VA -> `recomp_lookup_import(va)`, which is the path the
+runtime already documents. **Nothing has to be implemented for these eleven bodies; the
+generated module has to dispatch through the table instead of by name.** That is a
+defined piece of work with a known interface, not a gap in the runtime -- and a single
+refusal message for both cases would have sent the next person looking for missing shims
+that are all present.
+
+    a name the runtime registers      -> "registers in its shim table but exposes as no
+                                          hle_<Name> entry point -- must dispatch through
+                                          hle_resolve()/recomp_lookup_import()"
+    a name it does not register       -> "does not register at all -- no name to dispatch" 
 
 ### And a correction to the closure count
 
