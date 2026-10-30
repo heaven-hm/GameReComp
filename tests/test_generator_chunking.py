@@ -25,8 +25,12 @@ class _Func:
 
 
 class _Lifter:
-    def __init__(self, iat_map=None, func_names=None):
-        pass
+    # The translator passes `lifted` (the set of addresses that will actually be
+    # emitted) so a direct call to a target outside the image degrades to an
+    # ICALL instead of an undeclared symbol. The stub has to accept it, or the
+    # generator's contract is pinned to a signature that no longer exists.
+    def __init__(self, iat_map=None, func_names=None, lifted=None):
+        self.lifted = lifted
 
     def lift_function(self, func):
         return (f"void {func.name}(void) {{\n"
