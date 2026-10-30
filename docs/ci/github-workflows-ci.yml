@@ -1,0 +1,82 @@
+# Canonical CI definition. Install it with:
+#
+#   mkdir -p .github/workflows
+#   cp docs/ci/github-workflows-ci.yml .github/workflows/ci.yml
+#
+# It lives here rather than in .github/workflows/ because pushing a workflow
+# file needs a token with the `workflow` scope, and the one configured for this
+# checkout has only gist/read:org/repo. Grant it with:
+#
+#   gh auth refresh -h github.com -s workflow
+#
+# The jobs are identical either way; nothing here is GitHub-specific beyond the
+# YAML shape.
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  python:
+    name: pipeline + tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: python -m pip install --upgrade pytest pefile
+      - name: Unit tests
+        run: python -m pytest tests/ -q
+      - name: Synthetic PE32 fixture is reproducible
+        run: python tests/fixtures/make_pe32_fixture.py --check
+
+  runtime:
+    name: win32hle selftests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: SDL2 (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev
+      - name: SDL2 (macOS)
+        if: runner.os == 'macOS'
+        run: brew install sdl2 sdl2_ttf
+      - name: Build and run every win32hle selftest
+        run: bash runtime/win32hle/build_selftests.sh
+
+  end-to-end:
+    name: PE32 -> C -> native binary -> report
+    runs-on: macos-latest
+    needs: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: SDL2
+        run: brew install sdl2 sdl2_ttf
+      - name: Pipeline on the synthetic fixture
+        run: |
+          ./RevEng tests/fixtures/pe32-minimal.exe \
+            --project-dir "$RUNNER_TEMP/pe32-minimal" --timeout 10 --no-table
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pe32-minimal-report
+          path: ${{ runner.temp }}/pe32-minimal/reports/
