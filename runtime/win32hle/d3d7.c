@@ -808,7 +808,7 @@ static void d3d_create_device(void) {
         uint32_t state=hle_va(hle_alloc(4)); MEM32(g_device+8)=state;
         identity(g_world); identity(g_view); identity(g_projection); identity(g_texture_transform);
         memset(g_render,0,sizeof g_render); g_render[7]=1; g_render[8]=3; g_render[9]=2; g_render[14]=1;
-        p_enable(GL_DEPTH_TEST); p_depth_mask(1); p_disable(GL_ALPHA_TEST);
+        p_enable(GL_DEPTH_TEST); p_depth_mask(1); p_disable(GL_ALPHA_TEST); p_disable(GL_FOG);
         g_render[137]=1; g_render[141]=1; g_render[145]=1; g_render[147]=0; g_render[148]=0;
         memset(g_material,0,sizeof g_material); memset(g_lights,0,sizeof g_lights);
         memset(g_light_valid,0,sizeof g_light_valid); memset(g_light_enabled,0,sizeof g_light_enabled);
@@ -1213,11 +1213,19 @@ static void apply_color_material_state(void) {
     } else p_disable(GL_COLOR_MATERIAL);
 }
 
+static void apply_fog_state(void) {
+    uint32_t mode=g_render[35]?g_render[35]:g_render[140];
+    if(mode==1)p_fogi(GL_FOG_MODE,GL_EXP);
+    else if(mode==2)p_fogi(GL_FOG_MODE,GL_EXP2);
+    else if(mode==3)p_fogi(GL_FOG_MODE,GL_LINEAR);
+    if(g_render[28] && mode)p_enable(GL_FOG);else p_disable(GL_FOG);
+}
+
 static int render_state_supported(uint32_t state) {
     switch(state) {
     case 7: case 8: case 9: case 14: case 15: case 19: case 20: case 22: case 23: case 24: case 25:
     case 27: case 28: case 29: case 34: case 35: case 36: case 37: case 38:
-    case 137: case 139: case 141: case 142: case 143: case 145: case 146: case 147: case 148: case 152:
+    case 137: case 139: case 140: case 141: case 142: case 143: case 145: case 146: case 147: case 148: case 152:
         return 1;
     default:
         return 0;
@@ -1242,6 +1250,8 @@ static int render_state_value_valid(uint32_t state,uint32_t value) {
     case 146: case 148:
         return value==0;
     case 35:
+        return value<=3;
+    case 140:
         return value<=3;
     case 152: {
         uint32_t mask=g_max_clip_planes?((1u<<g_max_clip_planes)-1u):0u;
@@ -1270,14 +1280,9 @@ static void dev_set_render_state(void) {
     case 23: p_depth_func(gl_cmp(v));break;
     case 24: case 25: p_alpha(gl_cmp(g_render[25]?g_render[25]:8),(float)(g_render[24]&255)/255.f);break;
     case 27: if(v)p_enable(GL_BLEND);else p_disable(GL_BLEND);break;
-    case 28: if(v && g_render[35])p_enable(GL_FOG);else p_disable(GL_FOG);break;
+    case 28: apply_fog_state();break;
     case 34: {float f[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_fogfv(0x0B66,f);break;}
-    case 35:
-        if(v==1)p_fogi(GL_FOG_MODE,GL_EXP);
-        else if(v==2)p_fogi(GL_FOG_MODE,GL_EXP2);
-        else if(v==3)p_fogi(GL_FOG_MODE,GL_LINEAR);
-        if(v && g_render[28])p_enable(GL_FOG);else p_disable(GL_FOG);
-        break;
+    case 35: case 140: apply_fog_state();break;
     case 36: case 37: case 38: {float f;memcpy(&f,&v,4);p_fogf(s==36?0x0B63:s==37?0x0B64:0x0B62,f);break;}
     case 137: if(v)p_enable(GL_LIGHTING);else p_disable(GL_LIGHTING);break;
     case 139: {float a[4]={(float)((v>>16)&255)/255.f,(float)((v>>8)&255)/255.f,(float)(v&255)/255.f,(float)(v>>24)/255.f};p_light_modelfv(GL_LIGHT_MODEL_AMBIENT,a);break;}
