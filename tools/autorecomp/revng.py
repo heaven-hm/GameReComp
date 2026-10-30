@@ -49,6 +49,7 @@ import html
 import os
 import sys
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -163,11 +164,24 @@ def decompile(pe_path, timeout=TIMEOUT_SECONDS):
     # REVNG_DECOMPILE_CMD: any command that prints C for a PE on stdout. The
     # escape hatch for a host that reaches rev.ng some other way (a remote
     # runner, a wrapper script, a future native macOS build).
+    #
+    # The placeholder form is the one docs/SOURCE_PROVENANCE.md documents
+    # (`revng decompile {pe} --output-dir {outdir}`), so it is supported here
+    # rather than documented and not implemented: a {pe} or {outdir} anywhere in
+    # the command is substituted, and a command with no placeholder gets the PE
+    # path appended. Both forms are real; the second is the shorthand.
     custom = os.environ.get("REVNG_DECOMPILE_CMD")
     if custom:
-        out = _run([*custom.split(), str(pe_path)], timeout=timeout)
+        out_dir = Path(tempfile.mkdtemp(prefix="revng-cmd-"))
+        argv_in = shlex.split(custom)
+        if any("{pe}" in a or "{outdir}" in a for a in argv_in):
+            argv = [a.replace("{pe}", str(pe_path)).replace("{outdir}", str(out_dir))
+                    for a in argv_in]
+        else:
+            argv = [*argv_in, str(pe_path)]
+        out = _run(argv, timeout=timeout)
         return {"c": ptml_to_c(out) if "<" in out[:200] else out,
-                "command": [*custom.split(), str(pe_path)],
+                "command": argv,
                 "markup": out if "<" in out[:200] else None,
                 "kind": "custom"}
 
@@ -237,15 +251,58 @@ def functions_in(c_text):
     return found
 
 
+def selftest():
+    """Exercise the command forms the environment variable documents.
+
+    A documented interface with no test is a claim, not a feature: the sed-like
+    habit of writing `{pe}` in a manual page and appending it in the code is how
+    an escape hatch becomes a trap.
+    """
+    import subprocess
+    import tempfile
+    real = os.environ.pop("REVNG_DECOMPILE_CMD", None)
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            pe = Path(tmp) / "x.exe"
+            pe.write_bytes(b"MZ")
+            # A command that prints the argv it received, so the substitution is
+            # observable rather than assumed.
+            os.environ["REVNG_DECOMPILE_CMD"] = (
+                f"{sys.executable} -c \'import sys; print(len(sys.argv))\' {{pe}} tail")
+            result = decompile(pe)
+            # decompile() resolves the path, and /var is a symlink to /private/var
+            # on macOS -- compare against what it actually substituted.
+            resolved = str(Path(pe).resolve())
+            assert resolved in " ".join(result["command"]), result["command"]
+            assert result["command"][-1] == "tail", result["command"]
+            assert result["command"].count(resolved) == 1, result["command"]
+            os.environ["REVNG_DECOMPILE_CMD"] = (
+                f"{sys.executable} -c \'import sys; print(len(sys.argv))\'")
+            result = decompile(pe)
+            assert result["command"][-1] == str(Path(pe).resolve()), result["command"]
+    finally:
+        os.environ.pop("REVNG_DECOMPILE_CMD", None)
+        if real is not None:
+            os.environ["REVNG_DECOMPILE_CMD"] = real
+    return 0
+
+
 def main(argv=None):
     import argparse
     import json
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("pe")
+    parser.add_argument("pe", nargs="?", help="the PE to decompile")
     parser.add_argument("--out", help="write the plain C here")
     parser.add_argument("--markup", help="write the raw PTML here")
     parser.add_argument("--timeout", type=float, default=TIMEOUT_SECONDS)
+    parser.add_argument("--selftest", action="store_true",
+                        help="check the REVNG_DECOMPILE_CMD forms, no binary needed")
     args = parser.parse_args(argv)
+
+    if args.selftest:
+        selftest()
+        print("selftest: both REVNG_DECOMPILE_CMD forms work")
+        return 0
 
     found = discover()
     print(f"rev.ng: {'available via ' + found['kind'] if found['available'] else 'UNAVAILABLE'}")
