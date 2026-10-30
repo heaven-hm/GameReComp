@@ -30,6 +30,7 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_dsound);
     win32hle_register(win32hle_ddraw);
     win32hle_register(win32hle_sdl12);
+    win32hle_register(win32hle_msvcrt);
     win32hle_register(win32hle_bink);
     win32hle_register(win32hle_mss);
     hle_dsound_register_com();
