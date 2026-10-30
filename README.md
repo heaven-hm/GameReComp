@@ -14,7 +14,7 @@ Recompile legacy Windows PC games using [PCRecomp](https://github.com/sp00nznet/
 [![Verified games](https://img.shields.io/badge/verified%20playable%20games-0-yellow)](#proof--gameplay)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)](https://github.com/heaven-hm/GameReComp/issues)
 
-[**Quick start**](#quick-start) · [**Screenshots & proof**](#proof--gameplay) · [**Game matrix**](docs/GAME_MATRIX.md) · [**Contribute**](#contributing)
+[**Quick start**](#quick-start) · [**Screenshots & proof**](#proof--gameplay) · [**Roadmap**](#game-roadmap) · [**Toolchain**](#toolchain) · [**Contribute**](#contributing)
 
 </div>
 
@@ -47,6 +47,45 @@ Windows game.exe → recover & lift → generate C → compile → run → verif
 | Source recovery | **18/955** rev.ng provider functions with scoped differential certifications in the documented experiment |
 
 **Evidence:** [Game matrix](docs/GAME_MATRIX.md) · [Verification methodology](docs/VERIFICATION.md) · [Reports](reports/). Captured frames demonstrate rendering, **not** gameplay equivalence. Upstream PCRecomp game successes are documented separately in the [matrix](docs/GAME_MATRIX.md) and are not counted as GameReComp-verified ports.
+
+## Game roadmap
+
+Planned targets, **not verified playable ports**. Priorities and supported games will evolve based on progress, contributions, and **community requests**. Suggest a title in [GitHub Issues](https://github.com/heaven-hm/GameReComp/issues).
+
+| Series | Planned games | Priority |
+| --- | --- | --- |
+| **Project I.G.I.** | [Project I.G.I. (2000)](https://github.com/heaven-hm/GameReComp/issues/15) | **P0** |
+| **Hitman** | [Codename 47](https://github.com/heaven-hm/GameReComp/issues/16), [Hitman 2: Silent Assassin](https://github.com/heaven-hm/GameReComp/issues/19), [Contracts](https://github.com/heaven-hm/GameReComp/issues/20), [Blood Money](https://github.com/heaven-hm/GameReComp/issues/21) | P1–P2 |
+| **Max Payne** | [Max Payne](https://github.com/heaven-hm/GameReComp/issues/17), [Max Payne 2](https://github.com/heaven-hm/GameReComp/issues/18) | P1 |
+| **TrackMania** | [Nations ESWC](https://github.com/heaven-hm/GameReComp/issues/22), [Nations Forever](https://github.com/heaven-hm/GameReComp/issues/23), [United Forever](https://github.com/heaven-hm/GameReComp/issues/24) | P2–P3 |
+
+[Full game test matrix](docs/GAME_MATRIX.md) · [Request another game](https://github.com/heaven-hm/GameReComp/issues/new)
+
+## Toolchain
+
+```text
+Windows PE32 game
+   ↓
+PE analysis + Capstone / PCRecomp lifting ── rev.ng (higher-level C recovery)
+   ↓
+Generated C (rev.ng also works with LLVM IR)
+   ↓
+ABI bridge + recomp32 / win32hle runtime shims (SDL2, DirectDraw, DirectSound)
+   ↓
+CMake + C compiler (Clang or GCC)
+   ↓
+Native executable → runtime checks + Unicorn differential tests → reports
+```
+
+| Component | Role |
+| --- | --- |
+| [PCRecomp](https://github.com/sp00nznet/pcrecomp) / [Capstone](https://github.com/capstone-engine/capstone) | Function discovery and executable-oriented x86-to-C lifting |
+| [rev.ng](https://github.com/revng/revng) / [LLVM](https://llvm.org/) | Higher-level C recovery and LLVM-based lifting infrastructure |
+| `recomp32` + `win32hle` / [SDL2](https://github.com/libsdl-org/SDL) | Guest execution model, Win32 and game runtime shims |
+| [CMake](https://cmake.org/) + [Clang](https://clang.llvm.org/) / GCC | Native project generation and compilation |
+| [Unicorn](https://github.com/unicorn-engine/unicorn) | Differential testing of machine-code behavior |
+
+**Note:** The current executable path is **PCRecomp-generated C → C compiler**. rev.ng-based readable-source replacement and multi-lifter fallback are being developed; LLVM IR is not currently the required build artifact. [Architecture](docs/ARCHITECTURE.md) · [Lifter fallback roadmap](https://github.com/heaven-hm/GameReComp/issues/25)
 
 ## Quick start
 
