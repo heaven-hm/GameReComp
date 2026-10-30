@@ -81,3 +81,6 @@ wip/
 # rev.ng per-function output for a whole game: 957 files, 5.8 MB, derived and
 # regenerable. The stripped single-file C is what the pipeline reads.
 highlevel/*/revng
+# rev.ng project mode: one analysis, then cheap artifacts.
+.revng-project/
+highlevel/*/.revng-project/
