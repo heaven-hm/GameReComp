@@ -71,6 +71,11 @@ static inline uint32_t hle_a32(int i) {
 #define RET(eax, argc)   do { g_eax = (uint32_t)(eax); g_esp += 4u + 4u * (uint32_t)(argc); return; } while (0)
 #define RETV(argc)       RET(0, argc)                       /* void-returning (eax undefined) */
 #define RETP(ptr, argc)  RET(hle_va(ptr), argc)
+/* DLLs such as SDL 1.2 use the x86 cdecl ABI: the caller, not the callee,
+ * removes arguments.  Import shims still consume their synthetic return
+ * address, but must leave the argument words for the lifted caller. */
+#define RETC(eax)        do { g_eax = (uint32_t)(eax); g_esp += 4u; return; } while (0)
+#define RETCV()          RETC(0)
 
 /* ---- guest memory (guest_mem.c) ----
  * Pages: a reservation at va (0: anywhere), zero-filled, 0 on failure. */
@@ -281,6 +286,7 @@ extern const win32hle_shim win32hle_ole32[];          /* OLE32 + OLEAUT32 */
 extern const win32hle_shim win32hle_storage[];        /* structured storage: compound files */
 extern const win32hle_shim win32hle_dsound[];         /* DirectSound on SDL audio (dsound.c) */
 extern const win32hle_shim win32hle_ddraw[];          /* DirectDraw in software (ddraw.c) */
+extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
 /* The primary surface, for a presenter: 0 until there is one. seq changes
  * when its pixels or palette may have. */
 int  hle_dd_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bpp, const uint32_t **palette, unsigned *seq);
