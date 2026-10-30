@@ -88,6 +88,83 @@ inputs are preserved as `not-run` rows (0/100).
 ## [Unreleased]
 
 ### Added
+- **The RevEng product**: `./RevEng <game.exe>` runs inspect → recover →
+  translate → project → compile → run → verify → report in one command, and
+  writes a self-contained project (generated C, the pinned runtime copy, CMake,
+  logs, `report.json`/`report.html`). `./autorecomp` remains as a shim that
+  names the new command.
+- **A published game matrix**, `docs/GAME_MATRIX.md`, generated from measured
+  runs: name, OS, architecture, what the port produced (functions recovered,
+  generated C, rebuilt binary, imports bound) and the pipeline's fail-closed
+  working status. The README carries the same table between markers, so the two
+  cannot drift.
+- `--import-trace`: records every import the rebuilt process dispatches and puts
+  the call profile in the report. A frame loop of `PeekMessageA` +
+  `GetDeviceState` + `GetTickCount` + `Sleep` is evidence that a game runs; a
+  spin is not, and the two look identical from outside.
+- `--fresh-build`, for when a moved system dependency (a Homebrew keg) leaves a
+  `CMakeCache.txt` pinning paths that no longer exist. The failure reads like
+  broken generated source and is not.
+- `--runtime-source` in the diagnostic sweep, so every measured row is
+  attributable to one named runtime commit.
+- win32hle runtime coverage, in the order the corpus needed it:
+  - **SDL 1.2** on SDL2: video, surfaces, blits, pixel formats, events,
+    keyboard state, joysticks, `SDL_RWops`, BMP/WAV loading, timers, threads,
+    mutexes, semaphores, conditions, the audio device and `SDL_AudioCVT`, and
+    `SDL_OPENGL` video modes with a real `SDL_GLContext`.
+  - **SDL_mixer 1.2** (`sdlmix.c`): a software mixer on SDL2 audio, RIFF/WAVE
+    decoding into guest chunks, channels, panning, volume, fades. Music is
+    deliberately absent — `Mix_LoadMUS` returns NULL and says why.
+  - **OpenGL32 and GLU32** (`gl32.c`): every `gl*`/`glu*` name the corpus
+    imports, forwarded to the host's OpenGL. `__stdcall`, as the original
+    binaries require.
+  - **MSVCRT** (`msvcrt.c`): stdio with guest `_iobuf` streams, the guest heap,
+    the ctype table, `errno`, the startup set, `_initterm`, `atexit`. Five data
+    exports resolve to the objects themselves rather than to code, through a
+    data-first path in the IAT resolver.
+  - **DirectInput 3/5/7** (`dinput.c`): the keyboard's 256-byte DIK array and
+    the mouse's axes and buttons, read from SDL's live input state. A joystick
+    GUID returns `DIERR_DEVICENOTREG` rather than reporting a connected centred
+    stick.
+  - **The Win32 atom table** (`kernel32_atom.c`), and `Global*` atoms given the
+    same case-insensitive, reference-counted semantics — with the two
+    namespaces kept separate, as Windows keeps them.
+  - `EnumFontFamiliesA` enumerating the faces text is really drawn with;
+    `LoadLibraryExA`; the shell32 drag calls; `PathRemoveFileSpecA`;
+    `CreateFileW`/`FindFirstFileW`/`FindNextFileW`; real accelerator tables
+    parsed from `RT_ACCELERATOR`; and the common user32/gdi32/ddraw/dsound
+    calls the corpus reaches.
+- `docs/UPSTREAM_TOOLBOX.md`: the upstream pcrecomp toolbox manual, moved out
+  of the README so the README is this product's own.
+
+### Changed
+- The README is RevEng-Studio's: what it is, what it adds over the toolbox it is
+  built on, the measured corpus, the honest limits and the roadmap. It credits
+  pcrecomp and its contributors and links the pinned licences.
+- A run's score is weighted work, not a verdict, and the outcome-dependent half
+  is now graded: `run` earns in full when the process launched and either exited
+  on its own or was still running when the deadline stopped it, half when it
+  launched then faulted, nothing when it never reached its entry point. A binary
+  that never boots scores 70, not 85.
+- `runtime/win32hle/README.md` documents that a blocking shim runs with the
+  machine lock held and must give the machine up with
+  `hle_block_begin`/`hle_block_end` — the trap that deadlocked `SDL_WaitThread`.
+
+### Fixed
+- DirectInput's `QueryInterface` now AddRefs. Without it a caller's `Release`
+  freed an object it still held, and Cave Story's Doukutsu crashed at startup
+  right after reading its device GUID.
+- A stack-balance check under `RECOMP_TRACE` that asserted the wrong invariant:
+  it compared `esp` against entry+4, which is the cdecl expectation, and so
+  reported every stdcall shim as drifting by exactly its argument count. It now
+  asserts only what is provable without the shim's arity.
+- `RECOMP_TRACE=1` is readable from the environment, so a run can be traced
+  without recompiling the layer.
+- LoadLibraryExA with a file handle is refused with
+  `ERROR_CALL_NOT_IMPLEMENTED` rather than ignored, which would have loaded a
+  different image from the one the guest asked for.
+
+### Added (upstream win32hle)
 - win32hle, for eJay 2's engine and its MFC graphics DLL (sp00nznet/ejay):
   winmm answers as a PC with no mixer and no recording device, and has
   `waveOutSetVolume`, `waveOutGetVolume`, `waveOutGetID` (#135); MFC's
