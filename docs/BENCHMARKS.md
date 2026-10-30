@@ -55,17 +55,29 @@ and reports `partial`; only a verified scenario reaches 100.
 
 ## Aggregate
 
+Rebuilt from every row's own `reports/report.json` with
+`python3 -m tools.resultsdb`, which is why each row carries the time it was read.
+
 | Metric | Value |
 | --- | ---: |
-| Inputs measured | 19 |
+| Inputs measured | 31 |
 | Reached a built binary | 15 |
-| Verification `scenario-pass` | 0 |
-| Verification `partial` | 1 |
-| Verification `launch-failed` | 14 |
-| Generated C source | 760.9 MiB |
-| Recovered instructions | 7,801,820 |
-| Compile time, median | 17 s |
-| Compile time, max | 32 s |
+| **Verification `partial`** — launched and ran | **5** |
+| Verification `launch-failed` | 10 |
+| Verification `not-run` (no project) | 16 |
+| Verification `scenario-pass` | **0** |
+| Best score reached | 93 / 100 |
+
+The five that launch and run: `Doukutsu.exe`, `OrgView.exe`, `DoConfig.exe`,
+`dxIka.exe` and `wf.exe`. Five is the number that matters most in this table,
+because it is the first time it has been above one — and **`scenario-pass` is still
+zero**, which is the number that would matter more.
+
+An earlier version of this aggregate read 19 inputs, 1 `partial` and 14
+`launch-failed`. It was recorded at 06:14 on 2026-10-30, before that day's runtime
+work, and it understated the pipeline while the README described the current state
+correctly. Two published numbers disagreeing is worse than either being old, which is
+why the rebuild is a command rather than a correction.
 
 ## Current ceiling on this host
 
