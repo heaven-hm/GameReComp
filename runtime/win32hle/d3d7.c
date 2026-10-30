@@ -545,14 +545,30 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
         else if(bpp==24) format=GL_BGR,type=GL_UNSIGNED_BYTE;
         else if(bpp==32) format=GL_BGRA,type=GL_UNSIGNED_BYTE;
         else return 0;
+        int bytes_per_pixel=bpp/8;
+        if(pitch<=0 || (size_t)w>SIZE_MAX/(size_t)bytes_per_pixel) return 0;
+        size_t row_bytes=(size_t)w*(size_t)bytes_per_pixel;
+        if((size_t)pitch<row_bytes) return 0;
+        uint8_t *packed=NULL;
+        const void *upload_pixels=pixels;
+        if(pitch%bytes_per_pixel) {
+            if((size_t)h>SIZE_MAX/row_bytes) return 0;
+            packed=(uint8_t *)malloc(row_bytes*(size_t)h);
+            if(!packed) return 0;
+            for(int y=0;y<h;y++)
+                memcpy(packed+(size_t)y*row_bytes,pixels+(size_t)y*(size_t)pitch,row_bytes);
+            upload_pixels=packed;
+        }
         if(!g_gl_texture) p_gen_textures(1,&g_gl_texture);
         p_enable(GL_TEXTURE_2D); p_bind_texture(GL_TEXTURE_2D,g_gl_texture);
         p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
         p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
         p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
         p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-        p_pixel_store_i(GL_UNPACK_ALIGNMENT,1); p_pixel_store_i(GL_UNPACK_ROW_LENGTH,pitch/(bpp/8));
-        p_tex_image_2d(GL_TEXTURE_2D,0,bpp==32?GL_RGBA:GL_RGB,w,h,0,format,type,pixels);
+        p_pixel_store_i(GL_UNPACK_ALIGNMENT,1);
+        p_pixel_store_i(GL_UNPACK_ROW_LENGTH,packed?0:pitch/bytes_per_pixel);
+        p_tex_image_2d(GL_TEXTURE_2D,0,bpp==32?GL_RGBA:GL_RGB,w,h,0,format,type,upload_pixels);
+        free(packed);
         p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0); p_pixel_store_i(GL_UNPACK_ALIGNMENT,4);
         apply_stage0_state();
     } else p_disable(GL_TEXTURE_2D);
