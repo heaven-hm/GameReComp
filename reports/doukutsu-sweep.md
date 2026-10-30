@@ -1,36 +1,21 @@
-# The 36-module sweep: what the oracle says about generated Doukutsu modules
+# The 36-module sweep, re-run after the oracle's seed fix
 
-The honest population is **157 accepted -> 157 generated -> 36 compile** of Doukutsu's
-955 provider functions; 35 modules completed the sweep (one duplicate address in the
-list). Each was generated from evidence, compiled, and compared against the original
-bytes on 8 entry states. Statement count is the provider body's, so a divergence on a
-1-2 statement body is visibly suspicious in the table itself.
+Population: Doukutsu's 955 provider functions -> **157 accepted -> 157 generated ->
+36 compile**. 35 modules completed (one duplicate address in the list). The first run
+was made before the Lead's fix that gave both reference machines the same coherent
+seed; these are the regenerated numbers.
 
 | verdict | count | meaning |
 |---|---|---|
-| `agree` | 7 | the first certifications of non-empty bodies beyond the two Ikachan ones |
-| `diverge` | 8 | real differences - all one class, see below |
-| `nothing-compared` | 15 | the vacuous-comparison guard: no named memory, so not a pass |
-| `original-faulted` | 5 | the reference machine could not drive it from the synthetic state |
+| `agree` | 7 | eax and the named guest memory both match on 8 entry states |
+| `agree-memory` | 8 | the named memory matches; eax is not comparable because the provider recovered the body as returning nothing |
+| `nothing-compared` | 15 | no named memory, so the comparison has no subject - never a pass |
+| `original-faulted` | 5 | the reference machine could not drive the function from a seeded state (one is a 15-statement body, so this is real state dependence) |
+| `diverge` | 0 | **none** - the split converted the eight eax-only differences into the honest partial verdict above |
 
-## The divergence class: provider `void` bodies lose the return value
+## The 7 full certifications
 
-**All eight divergences are eax-only, and all eight provider bodies were recovered as
-`void`.** The memory effects agree byte for byte; what differs is the value the
-original leaves in eax, which our adapter invents as 0:
-
-    0x0040DE90  provider: *(u32*)(&segment_2+60212) = 1U;      original eax = 1
-    0x0040F2D0  provider: stores 3 values, last one computed    original eax = the last value
-
-That is a **provider signature gap**, not a transform bug: rev.ng recovered the function
-as returning nothing, the original returns the last computed value, and the adapter has
-no way to know. The oracle caught it - which is what it is for - and the correct
-response is to treat a `void` body as uncertifiable on eax rather than to make the
-adapter guess.
-
-## The certifications
-
-| address | named memory | statements |
+| address | named memory | provider statements |
 |---|---|---|
 | 0x00402020 | 1 | 4 |
 | 0x0040B320 | 2 | 3 |
@@ -40,16 +25,26 @@ adapter guess.
 | 0x00472940 | 1 | 2 |
 | 0x0047B500 | 5 | 2 |
 
-These are real bodies (2-5 provider statements) with guest memory named by the
-original's own instructions, and they agree on 8 entry states. They are the first
-certifications on the frame loop's side of the program, and the naming pass should
-run on them rather than on the two Ikachan functions.
+## The 8 memory-only agreements
 
-## The other buckets
+Every one is an eax-only difference on a provider-`void` body. The provider's type
+inference is an **input, not a verdict**: a function rev.ng recovered as returning
+nothing is not evidence that it returns nothing, and the original leaves its last
+computed value in eax. The correct response is to report memory agreement separately,
+not to make the adapter guess - which is what it did before this split (0x0040DE90
+returned 0 where the original returned 1).
 
-- **nothing-compared (15)**: the guard from the previous commit working as designed. A
-  comparison with no named memory compares nothing, and it is not reported as a pass.
-- **original-faulted (5)**: the synthetic entry state could not drive the original
-  (one is a 15-statement body, so this is a genuine state dependence, not an empty one).
-  This is the class entry-state capture would address - and it is now 5 of 35, not the
-  whole failing set. The case for capture is measured, not assumed.
+## Two lessons recorded with the numbers
+
+**Two implementations of one idea is the defect; the divergence is only the symptom.**
+Three instances today: the 256 KB memory window fixed in `oracle_window` but not
+`pe_image` (which produced a fault that read as a method limit); the coherent seed
+fixed on the Unicorn side but not the lifted side (which produced register
+divergences that read as lift bugs); the function extent fixed from the dispatch
+table but not from the first `ret` (which produced wrong bodies that read as
+transform limits). Each was found by checking a sample by hand.
+
+**Verify a sample of any generated table before it goes in a report.** The Lead
+checked one row of the previous table, disassembled it, and found a bug in the
+oracle's comparison rather than in the modules. The row was cheap and the table
+would otherwise have been wrong in a way that looked like a result.
