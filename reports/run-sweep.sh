@@ -31,8 +31,15 @@ find "$ROOT" -type f -name '*.exe' | sort | while IFS= read -r exe; do
 import json, sys
 from pathlib import Path
 rel, rc, secs = sys.argv[1], sys.argv[2], sys.argv[3]
-name = Path(rel).parent.name
-project = Path("projects") / name.replace("_", "-")
+# The pipeline names a project after the EXECUTABLE's stem (projectgen.executable_name),
+# not after the directory the executable happens to live in. This used to read the
+# parent directory, so every line said "no report.json" while the run had in fact left
+# a perfectly good one next door -- a sweep that could not read its own results.
+stem = Path(rel).stem
+safe = "".join(c if c.isalnum() or c == "_" else "_" for c in stem)
+if not safe or safe[0].isdigit():
+    safe = "game_" + safe
+project = Path("projects") / safe
 report = project / "reports" / "report.json"
 try:
     data = json.loads(report.read_text())
