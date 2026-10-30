@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _TOOLS = Path(__file__).resolve().parents[1]
+_ROOT = _TOOLS.parent      # the repository root: highlevel/ lives beside tools/
 for _sub in ("pe", "disasm", "lift"):
     _p = str(_TOOLS / _sub)
     if _p not in sys.path:
@@ -32,6 +33,7 @@ from pe_analyze import analyze_pe, build_iat_map  # noqa: E402
 from translator import (MAX_UNIT_BYTES, discover_functions,  # noqa: E402
                         generate_recomp_files)
 
+from . import highlevel  # noqa: E402
 from . import projectgen  # noqa: E402
 
 STAGES = ["inspect", "recover", "translate", "project", "compile",
@@ -115,7 +117,8 @@ class Pipeline:
                  timeout=30.0, headless=True, oracle=None, jobs=None,
                  split=1000, build=True, run_binary=True, on_event=None,
                  split_bytes=MAX_UNIT_BYTES, build_timeout=None,
-                 reuse_build=False, fresh_build=False, import_trace=False):
+                 reuse_build=False, fresh_build=False, import_trace=False,
+                 highlevel_dir=None):
         self.pe_path = Path(pe_path).expanduser().resolve()
         self.project_dir = Path(project_dir or projectgen.default_project_dir(self.pe_path)).resolve()
         self.assets_dir = Path(assets_dir).expanduser().resolve() if assets_dir else self.pe_path.parent
@@ -131,6 +134,11 @@ class Pipeline:
         self.reuse_build = reuse_build
         self.fresh_build = fresh_build
         self.import_trace = import_trace
+        # Where the typed replacements live. None means the default
+        # highlevel/ directory, which is empty in a fresh checkout.
+        self.highlevel_dir = highlevel_dir
+        self.highlevel_modules = []
+        self.highlevel_by_address = {}
         self.on_event = on_event
 
         self.info = None
@@ -237,10 +245,17 @@ class Pipeline:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         buf = io.StringIO()
         t0 = time.time()
+        # Typed replacements for individual addresses. Loaded before the
+        # mechanical bodies so a replaced function's body is emitted under its
+        # __lowlevel name and the dispatch table points at the adapter.
+        root = Path(self.highlevel_dir) if self.highlevel_dir else (_ROOT / "highlevel")
+        self.highlevel_modules, self.highlevel_by_address = highlevel.load_modules(root)
+        replaced = [a for a in self.highlevel_by_address if a in self.functions]
         with contextlib.redirect_stdout(buf):
             lifted = generate_recomp_files(
                 self.functions, self.iat_map, str(gen_dir),
-                split_size=self.split, max_unit_bytes=self.split_bytes)
+                split_size=self.split, max_unit_bytes=self.split_bytes,
+                highlevel={a: self.highlevel_by_address[a] for a in replaced})
         log_path.write_text(buf.getvalue())
         self.lifted = lifted
 
@@ -307,20 +322,39 @@ class Pipeline:
         }
         unresolved = self.unresolved_functions
         total = len(self.functions)
+        # Counted from the replacements that were actually applied to this
+        # build, never from what a module claims in the abstract: a module
+        # naming an address this binary does not have changes nothing.
+        applied = {a: f for a, f in self.highlevel_by_address.items()
+                   if a in self.functions}
         categories = {
-            "HIGH_LEVEL_VERIFIED": 0,
-            "HIGH_LEVEL_UNVERIFIED": 0,
-            "LOW_LEVEL_FALLBACK": max(0, total - unresolved),
+            "HIGH_LEVEL_VERIFIED": sum(1 for f in applied.values()
+                                       if f["category"] == "HIGH_LEVEL_VERIFIED"),
+            "HIGH_LEVEL_UNVERIFIED": sum(1 for f in applied.values()
+                                         if f["category"] == "HIGH_LEVEL_UNVERIFIED"),
+            "LOW_LEVEL_FALLBACK": max(0, total - unresolved - len(applied)),
             "UNRESOLVED": unresolved,
         }
+        high_level_report = [{
+            "address": f"0x{f['address']:08X}",
+            "symbol": f["symbol"],
+            "module": f.get("module"),
+            "category": f["category"],
+            "convention": f["convention"],
+            "provenance": f["provenance"],
+        } for f in sorted(applied.values(), key=lambda f: f["address"])]
         record = projectgen.write_project(
             self.project_dir, self.name, self.pe_path.name, pe_info,
-            extra={"functions": total, "source_categories": categories})
+            highlevel_modules=self.highlevel_modules,
+            extra={"functions": total, "source_categories": categories,
+                   "high_level_functions": high_level_report})
         data = {
             "project": str(self.project_dir),
             "name": self.name,
             "source_categories": categories,
+            "high_level_functions": high_level_report,
             "runtime_files": len(record["runtime_files"]),
+            "highlevel_files": len(record.get("highlevel_files") or []),
         }
         return f"project at {self.project_dir}", data
 
