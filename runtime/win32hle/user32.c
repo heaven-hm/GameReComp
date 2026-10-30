@@ -140,6 +140,8 @@ typedef struct {
     int z;                               /* the z-order among siblings, lowest on top: creation order until moved */
     /* the built-in controls' state */
     int state, check, pos, rmin, rmax, cursel, top, item_h, sel0, sel1, limit, dropped, tracking;
+    /* scrollbars: SB_HORZ 0, SB_VERT 1; min/max/page/pos/track as SetScrollInfo left them */
+    struct { int min, max, page, pos, track; } sb[2];
     int sel_h, drop_h;                   /* a combo box: its selection field, and its height dropped */
     struct item { char *text; uint32_t data; } *items;
     int nitems, citems;
@@ -2194,7 +2196,12 @@ static void u_LoadAcceleratorsA(void) {                  /* (hinst, name) */
     if (!r && hinst) r = hle_find_resource(0, name, RT_ACCELERATOR_ID);
     uint32_t data = r ? hle_resource_data(hinst, r, &size) : 0;
     if (!data || size < 8) { hle_set_last_error(ERROR_RESOURCE_NOT_FOUND); RET(0, 2); }
-    if (g_naccel >= (int)(sizeof g_accel / sizeof g_accel[0])) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+    int slot = -1;                                       /* a freed slot is reused */
+    for (int i = 0; i < g_naccel; i++) if (!g_accel[i].handle) { slot = i; break; }
+    if (slot < 0) {
+        if (g_naccel >= (int)(sizeof g_accel / sizeof g_accel[0])) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+        slot = g_naccel++;
+    }
     int n = (int)(size / 8);
     if (n > MAX_ACCEL_ENTRIES) n = MAX_ACCEL_ENTRIES;
     accel_entry *items = (accel_entry *)calloc((size_t)n, sizeof *items);
@@ -2209,10 +2216,23 @@ static void u_LoadAcceleratorsA(void) {                  /* (hinst, name) */
         items[used].fVirt = fVirt; items[used].key = key; items[used].cmd = cmd; used++;
     }
     if (!used) { free(items); hle_set_last_error(ERROR_RESOURCE_NOT_FOUND); RET(0, 2); }
-    g_accel[g_naccel].handle = g_accel_next++;
-    g_accel[g_naccel].n = used;
-    g_accel[g_naccel].items = items;
-    RET(g_accel[g_naccel++].handle, 2);
+    g_accel[slot].handle = g_accel_next++;
+    g_accel[slot].n = used;
+    g_accel[slot].items = items;
+    RET(g_accel[slot].handle, 2);
+}
+/* DestroyAcceleratorTable(haccel): release the table LoadAcceleratorsA made.
+ * TRUE when it was one of ours, FALSE otherwise, as Windows answers. */
+static void u_DestroyAcceleratorTable(void) {
+    uint32_t h = A32(0);
+    for (int i = 0; i < g_naccel; i++)
+        if (g_accel[i].handle && g_accel[i].handle == h) {   /* a freed slot is not a handle */
+
+            free(g_accel[i].items);
+            g_accel[i].handle = 0; g_accel[i].n = 0; g_accel[i].items = NULL;
+            RET(1, 1);
+        }
+    RET(0, 1);
 }
 static void u_TranslateAcceleratorA(void) {              /* (hwnd, haccel, &msg) */
     uint32_t hwnd = A32(0), msg = A32(2);
@@ -2244,6 +2264,43 @@ static void u_TranslateAcceleratorA(void) {              /* (hwnd, haccel, &msg)
     }
     RET(0, 3);
 }
+/* ---- scrollbars ----
+ * SCROLLINFO (28 bytes): cbSize 0, fMask 4, nMin 8, nMax 12, nPage 16, nPos 20,
+ * nTrackPos 24; SIF_RANGE 1, SIF_PAGE 2, SIF_POS 4, SIF_DISABLENOSCROLL 8,
+ * SIF_TRACKPOS 0x10, SIF_ALL 0x17.  The values live on the window, so a
+ * GetScrollInfo reads back what a SetScrollInfo stored - which is what an
+ * editor's scrollbars need.  Nothing is drawn: this layer has no scrollbar
+ * widget, and the comment on the menu model applies here too. */
+#define SIF_RANGE 0x1
+#define SIF_PAGE  0x2
+#define SIF_POS   0x4
+#define SIF_TRACKPOS 0x10
+static int sb_index(uint32_t bar) { return bar == 1 ? 1 : bar == 0 ? 0 : -1; }   /* SB_HORZ/SB_VERT */
+static void u_SetScrollInfo(void) {                      /* (hwnd, bar, &si, redraw) -> nPos */
+    win_t *x = W(A32(0));
+    int i = sb_index(A32(1));
+    uint32_t si = A32(2);
+    if (!x || i < 0 || !si || MEM32(si) < 28) RET(0, 4);
+    uint32_t mask = MEM32(si + 4);
+    if (mask & SIF_RANGE) x->sb[i].min = (int)MEM32(si + 8), x->sb[i].max = (int)MEM32(si + 12);
+    if (mask & SIF_PAGE)  x->sb[i].page = (int)MEM32(si + 16);
+    if (mask & SIF_POS)   x->sb[i].pos = (int)MEM32(si + 20);
+    if (mask & SIF_TRACKPOS) x->sb[i].track = (int)MEM32(si + 24);
+    RET((uint32_t)x->sb[i].pos, 4);
+}
+static void u_GetScrollInfo(void) {                      /* (hwnd, bar, &si) -> TRUE */
+    win_t *x = W(A32(0));
+    int i = sb_index(A32(1));
+    uint32_t si = A32(2);
+    if (!x || i < 0 || !si || MEM32(si) < 28) RET(0, 3);
+    uint32_t mask = MEM32(si + 4);
+    if (mask & SIF_RANGE) { MEM32(si + 8) = (uint32_t)x->sb[i].min; MEM32(si + 12) = (uint32_t)x->sb[i].max; }
+    if (mask & SIF_PAGE)  MEM32(si + 16) = (uint32_t)x->sb[i].page;
+    if (mask & SIF_POS)   MEM32(si + 20) = (uint32_t)x->sb[i].pos;
+    if (mask & SIF_TRACKPOS) MEM32(si + 24) = (uint32_t)x->sb[i].track;
+    RET(1, 3);
+}
+
 /* ---- the common dialogs (COMDLG32) ----
  * There is no native file, colour, font or print dialog here, so these answer
  * what a real one answers when the user cancels: FALSE from the call and 0 from
@@ -2526,6 +2583,8 @@ const win32hle_shim win32hle_user32[] = {
     { "ChooseFontA", u_ChooseFontA }, { "ChooseFontW", u_ChooseFontW },
     { "PrintDlgA", u_PrintDlgA }, { "PrintDlgW", u_PrintDlgW },
     { "CommDlgExtendedError", u_CommDlgExtendedError },
+    { "DestroyAcceleratorTable", u_DestroyAcceleratorTable },
+    { "SetScrollInfo", u_SetScrollInfo }, { "GetScrollInfo", u_GetScrollInfo },
     { "LoadMenuA", u_LoadMenuA }, { "TranslateAcceleratorA", u_TranslateAcceleratorA },
     { "CreateMenu", u_CreateMenu }, { "CreatePopupMenu", u_CreatePopupMenu }, { "DestroyMenu", u_DestroyMenu },
     { "AppendMenuA", u_AppendMenuA }, { "InsertMenuA", u_InsertMenuA }, { "ModifyMenuA", u_ModifyMenuA },

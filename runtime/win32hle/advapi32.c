@@ -17,6 +17,8 @@
 #include "win32hle.h"
 
 #define ERROR_SUCCESS        0u
+#define ERROR_INVALID_PARAMETER 87u
+#define ERROR_NOT_ENOUGH_MEMORY 8u
 #define ERROR_FILE_NOT_FOUND 2u
 #define ERROR_MORE_DATA    234u
 #define ERROR_NO_MORE_ITEMS 259u
@@ -248,6 +250,74 @@ static void v_VerQueryValueA(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(0, 4); }
 static void s_FindExecutableA(void) { if (A32(2)) MEM8(A32(2)) = 0; RET(31u, 3); }   /* SE_ERR_NOASSOC */
 static void s_ShellExecuteA(void) { fprintf(stderr, "[shell32] ShellExecuteA(%s): not on this host\n", ASTR(2) ? ASTR(2) : ""); RET(31u, 6); }
 
+/* CommandLineToArgvW(lpCmdLine, &argc): split a command line the way Windows
+ * does - whitespace separates, a quote toggles the quoted state, and a run of n
+ * backslashes before a quote means n/2 backslashes plus either a literal quote
+ * (n odd) or a quote that toggles (n even) - and hand back a LocalAlloc'd block
+ * holding the pointer array followed by the strings, which is one allocation
+ * the caller frees with LocalFree, exactly as the API promises.  A NULL command
+ * line fails with ERROR_INVALID_PARAMETER and no block. */
+#define CMDLINE_MAX_ARGS 256
+static int cmdline_parse(const uint16_t *s, uint16_t *out, int cap, int *start, int *len, int max_args) {
+    int nargs = 0, o = 0;
+    const uint16_t *p = s;
+    while (*p == ' ' || *p == '\t') p++;
+    while (*p && nargs < max_args) {
+        int quoted = 0;
+        start[nargs] = o;
+        while (*p) {
+            if (!quoted && (*p == ' ' || *p == '\t')) break;
+            if (*p == '\\') {
+                int nbs = 0;
+                while (*p == '\\') { nbs++; p++; }
+                if (*p == '"') {
+                    for (int i = 0; i < nbs / 2 && o < cap; i++) out[o++] = '\\';
+                    if (nbs % 2) { if (o < cap) out[o++] = '"'; p++; }
+                    else { quoted = !quoted; p++; }
+                } else {
+                    for (int i = 0; i < nbs && o < cap; i++) out[o++] = '\\';
+                }
+            } else if (*p == '"') {
+                quoted = !quoted;
+                p++;
+            } else {
+                if (o < cap) out[o++] = *p;
+                p++;
+            }
+        }
+        len[nargs] = o - start[nargs];
+        nargs++;
+        while (*p == ' ' || *p == '\t') p++;
+    }
+    return nargs;
+}
+static void s_CommandLineToArgvW(void) {                 /* (lpCmdLine, &argc) */
+    const uint16_t *cmd = (const uint16_t *)APTR(0);
+    uint32_t pn = A32(1);
+    if (!cmd || !pn) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2); }
+    int n = 0;
+    while (cmd[n]) n++;
+    if (n > 32768) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2); }
+    uint16_t *chars = (uint16_t *)malloc(((size_t)n + 1) * sizeof(uint16_t));
+    int *start = (int *)malloc(sizeof(int) * CMDLINE_MAX_ARGS), *len = (int *)malloc(sizeof(int) * CMDLINE_MAX_ARGS);
+    if (!chars || !start || !len) { free(chars); free(start); free(len); hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+    int nargs = cmdline_parse(cmd, chars, n, start, len, CMDLINE_MAX_ARGS);
+    size_t bytes = (size_t)nargs * 4;
+    for (int i = 0; i < nargs; i++) bytes += ((size_t)len[i] + 1) * 2;
+    uint32_t block = hle_va(hle_alloc((uint32_t)bytes));
+    if (!block) { free(chars); free(start); free(len); hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+    uint32_t str = block + (uint32_t)nargs * 4;
+    for (int i = 0; i < nargs; i++) {
+        MEM32(block + (uint32_t)i * 4) = str;
+        for (int c = 0; c < len[i]; c++) MEM16(str + (uint32_t)c * 2) = chars[start[i] + c];
+        MEM16(str + (uint32_t)len[i] * 2) = 0;
+        str += ((uint32_t)len[i] + 1) * 2;
+    }
+    free(chars); free(start); free(len);
+    MEM32(pn) = (uint32_t)nargs;
+    RET(block, 2);
+}
+
 /* DragAcceptFiles registers a window as a drop target. There is no shell to
  * drag from on this host, so the call is accepted and no drop will ever
  * arrive: a program that only enables the feature loses nothing. */
@@ -296,6 +366,7 @@ const win32hle_shim win32hle_advapi32[] = {
     { "GetFileVersionInfoSizeA", v_GetFileVersionInfoSizeA }, { "GetFileVersionInfoA", v_GetFileVersionInfoA },
     { "VerQueryValueA", v_VerQueryValueA },
     { "FindExecutableA", s_FindExecutableA }, { "ShellExecuteA", s_ShellExecuteA },
+    { "CommandLineToArgvW", s_CommandLineToArgvW },
     { "DragAcceptFiles", s_DragAcceptFiles }, { "DragQueryFileA", s_DragQueryFileA },
     { "DragFinish", s_DragFinish },
     { "PathRemoveFileSpecA", s_PathRemoveFileSpecA },
