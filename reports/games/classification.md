@@ -1,10 +1,16 @@
 # Classification of the games that bind every import
 
-Eleven project rows bind every import they ask for (`0 unresolved`). Binding is
+Eleven project rows bind every import they ask for (`0 unresolved`), but they
+are only **six distinct games**: `DoConfig`/`cavestory-doconfig`,
+`Doukutsu`/`cavestory-doukutsu`, `OrgView`/`cavestory-orgview`, `gr`/`gunroar`
+and `wf`/`warning-forever` are the same `pe.path` generated twice. Binding is
 necessary and nowhere near sufficient, so each row was **measured** twice — once
 headless, once with a real video driver — and classified into one of four
 outcomes. The raw counts are in `classification.json`; this file is the reading
 of them.
+
+Counted by game rather than by row: **1 RUNS** (Doukutsu), **4 EXITS** (DoConfig,
+OrgView, ikachan, warning-forever), **0 NEEDS-DISPLAY**, **1 CRASHES** (gunroar).
 
 Measured 2026-10-30 on the runtime at commit `9720e3a` (all eleven projects
 re-synced from `runtime/win32hle` and rebuilt before measuring).
