@@ -809,8 +809,13 @@ static void d3d_create_device(void) {
         uint32_t state=hle_va(hle_alloc(4)); MEM32(g_device+8)=state;
         identity(g_world); identity(g_view); identity(g_projection); identity(g_texture_transform);
         int depth_bits=0; p_getint(GL_DEPTH_BITS,&depth_bits);
-        memset(g_render,0,sizeof g_render); g_render[7]=depth_bits>0; g_render[8]=3; g_render[9]=2; g_render[14]=1;
+        memset(g_render,0,sizeof g_render);
+        g_render[7]=depth_bits>0; g_render[8]=3; g_render[9]=2; g_render[14]=1;
+        g_render[19]=2; g_render[20]=1; g_render[22]=3; g_render[23]=4; g_render[25]=8;
+        g_render[37]=0x3f800000u; g_render[38]=0x3f800000u;
         if(g_render[7])p_enable(GL_DEPTH_TEST);else p_disable(GL_DEPTH_TEST);
+        p_depth_func(GL_LEQUAL); p_blend(GL_ONE,GL_ZERO);
+        p_enable(GL_CULL_FACE); p_cull(0x0404); p_front(0x0901);
         p_depth_mask(1); p_disable(GL_ALPHA_TEST); p_disable(GL_FOG); p_disable(GL_DITHER);
         g_render[137]=1; g_render[141]=1; g_render[145]=1; g_render[147]=0; g_render[148]=0;
         memset(g_material,0,sizeof g_material); memset(g_lights,0,sizeof g_lights);
