@@ -164,6 +164,31 @@ are not free, and both were measured rather than assumed:
 The stable claim is therefore the per-thread one. "Two runs are identical" is
 false as a blanket statement about a threaded game and must not be written as one.
 
+## What the oracle cannot see yet: the guest stack frame
+
+`named_addrs_from_code` collects the absolute addresses the original's own
+instructions name — operands with no base and no index register. That is exactly
+right for globals and exactly wrong for the stack: `[ebp-4]` and `[esp+8]` have a
+base register, so a function whose only memory traffic is its own frame has **zero**
+named addresses.
+
+Measured on two frame-only functions:
+
+    Doukutsu 0x004258B0:  0 absolute addresses named;  2 frame accesses not compared
+    Doukutsu 0x004258C0:  0 absolute addresses named;  4 frame accesses not compared
+
+The consequence is specific and dangerous: such a function certifies as `agree`
+having compared only its return value, while every frame read and write — the work
+it exists to do — goes unchecked. It reports what a fully-checked function reports.
+This is the same shape as the constants-EFLAGS comparison, the 256 KB window and
+the empty named-memory set: **a comparison that looks stronger than it is.**
+
+Until it is fixed, a `HIGH_LEVEL_VERIFIED` verdict on a function with frame traffic
+means "the return value agrees", not "the function agrees". The fix is to compare
+the frame region itself — the reference machine already has the stack, and the frame
+is that stack — and to report the frame's extent and the bytes compared, so a reader
+can tell a `agree` that checked the frame from one that did not.
+
 ## Known limits
 
 - No original-Windows oracle harness exists in this repository; `scenario-pass`
