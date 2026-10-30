@@ -38,6 +38,7 @@ static SDL_Window *g_win;
 static SDL_Renderer *g_ren;
 static SDL_GLContext g_glctx;
 static int g_gl_requested;
+static int g_d3d7_active;
 static int g_screen_opened;
 static SDL_Texture *g_tex;
 static int g_tex_w, g_tex_h, g_tex_fmt;
@@ -272,6 +273,7 @@ static void present_gl(const uint8_t *px,int w,int h,int pitch,int bpp,const uin
 }
 
 static void present(void) {
+    if (g_d3d7_active) return;
     const uint8_t *px;
     const uint32_t *pal;
     int w, h, pitch, bpp;
@@ -768,6 +770,7 @@ int hle_screen_request_opengl(void) {
 }
 
 int hle_screen_gl_active(void) { return g_glctx != NULL; }
+void hle_screen_d3d7_active(int active) { g_d3d7_active = active != 0; }
 void hle_screen_gl_swap(void) {
     if (g_win && g_glctx && pthread_equal(pthread_self(), g_video_thread)) {
         hle_screen_pump();

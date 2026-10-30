@@ -391,6 +391,7 @@ extern const win32hle_shim win32hle_bink[];           /* binkw32 on ffmpeg (bink
 int  hle_screen_open(const char *title, int fullscreen, int headless);
 int  hle_screen_request_opengl(void);  /* before open: make the screen window own a GL context */
 int  hle_screen_gl_active(void);
+void hle_screen_d3d7_active(int active); /* D3D7 swaps GL frames; suppress software-primary redraws */
 void hle_screen_gl_swap(void);         /* pump and swap a GL frame on the video thread */
 void hle_screen_gl_viewport(int x, int y, int width, int height); /* D3D top-left viewport to GL bottom-left */
 void hle_screen_pump(void);
