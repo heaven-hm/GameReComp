@@ -32,7 +32,7 @@ const uint32_t recomp_dispatch_count = 0;
 /* DirectDraw 7 / Direct3D 7 interface identities. */
 static const uint8_t IID_IDirectDraw7[16] = { 0xC0, 0x5E, 0xE6, 0x15, 0x1E, 0xA2, 0xD0, 0x11,
                                               0xB7, 0x44, 0x00, 0x60, 0x97, 0x97, 0xDB, 0xEA };
-static const uint8_t IID_IDirect3D7[16]   = { 0x78, 0x9E, 0x04, 0xF5, 0x61, 0x48, 0xD2, 0x11,
+static const uint8_t IID_IDirect3D7[16]   = { 0x77, 0x9E, 0x04, 0xF5, 0x61, 0x48, 0xD2, 0x11,
                                               0xA4, 0x07, 0x00, 0xA0, 0xC9, 0x06, 0x29, 0xA8 };
 static const uint8_t IID_IUnknown[16]     = { 0, 0, 0, 0, 0, 0, 0, 0,
                                               0xC0, 0, 0, 0, 0, 0, 0, 0x46 };
@@ -297,8 +297,12 @@ int main(void) {
 
     /* GetCaps describes this backend: one software device, no hardware claims. */
     ok("GetCaps", vcall(g->device, "IDirect3DDevice7::GetCaps", 1, A2(P(g->desc), 0)) == D3D_OK);
-    /* dwFlags: the Direct3D-7 "this is a software device" family. */
+    /* dwDevCaps: the Direct3D-7 "this is a software device" family. */
     ok("caps: describes a software device", (MEM32(P(g->desc)) & 0x400u) != 0 || (MEM32(P(g->desc)) & 0x800u) != 0);
+    /* Honesty guard: HWRASTERIZATION (0x80000) must NOT be claimed, since
+     * this backend is a software rasteriser over OpenGL. A title that gates on
+     * hardware acceleration must not be fooled. */
+    ok("caps: does not claim HWRASTERIZATION", (MEM32(P(g->desc)) & 0x80000u) == 0);
     ok("caps: deviceGUID is the advertised RGB device",
        !memcmp(hle_ptr(P(&g->desc[196])), RGB_DEVICE_GUID, 16));
     /* ---- A controlled scene, rendered and read back ----
