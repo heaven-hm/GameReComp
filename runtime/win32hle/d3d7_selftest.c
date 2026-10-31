@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <SDL2/SDL.h>
 #include "win32hle.h"
 
 const recomp_dispatch_entry_t recomp_dispatch_table[] = { { 0, 0 } };
@@ -295,14 +296,24 @@ int main(void) {
     ok("CreateStateBlock is refused, not silently successful",
        vcall(g->device, "IDirect3DDevice7::CreateStateBlock", 2, A2(1u, P(&g->tmp))) == D3DERR_NOTAVAILABLE);
 
-    /* GetCaps describes this backend: one software device, no hardware claims. */
+    /* GetCaps describes the backend as it is: DrawPrimitive TL with
+     * system-memory textures, and HWRASTERIZATION only when the GL renderer
+     * itself is hardware. The test asks GL for the renderer name directly, so
+     * the claim is checked against the renderer, not against the runtime's
+     * own heuristic. */
     ok("GetCaps", vcall(g->device, "IDirect3DDevice7::GetCaps", 1, A2(P(g->desc), 0)) == D3D_OK);
-    /* dwDevCaps: the Direct3D-7 "this is a software device" family. */
-    ok("caps: describes a software device", (MEM32(P(g->desc)) & 0x400u) != 0 || (MEM32(P(g->desc)) & 0x800u) != 0);
-    /* Honesty guard: HWRASTERIZATION (0x80000) must NOT be claimed, since
-     * this backend is a software rasteriser over OpenGL. A title that gates on
-     * hardware acceleration must not be fooled. */
-    ok("caps: does not claim HWRASTERIZATION", (MEM32(P(g->desc)) & 0x80000u) == 0);
+    ok("caps: draws TL vertices from system memory", (MEM32(P(g->desc)) & 0x400u) != 0);
+    {
+        typedef const unsigned char *(*get_string_fn)(unsigned);
+        get_string_fn get_string = (get_string_fn)SDL_GL_GetProcAddress("glGetString");
+        const char *renderer = get_string ? (const char *)get_string(0x1F01) : NULL;
+        int software = !renderer
+            || strcasestr(renderer, "llvmpipe") || strcasestr(renderer, "softpipe")
+            || strcasestr(renderer, "swrast") || strcasestr(renderer, "software")
+            || strcasestr(renderer, "swiftshader") || strcasestr(renderer, "gdi generic");
+        int claimed = (MEM32(P(g->desc)) & 0x80000u) != 0;
+        ok("caps: HWRASTERIZATION follows the GL renderer", renderer != NULL && claimed == !software);
+    }
     ok("caps: deviceGUID is the advertised RGB device",
        !memcmp(hle_ptr(P(&g->desc[196])), RGB_DEVICE_GUID, 16));
     /* ---- A controlled scene, rendered and read back ----

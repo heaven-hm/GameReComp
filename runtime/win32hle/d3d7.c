@@ -52,7 +52,7 @@ enum { GL_LIGHTING=0x0B50, GL_COLOR_MATERIAL=0x0B57, GL_LIGHT0=0x4000,
        GL_LIGHT_MODEL_LOCAL_VIEWER=0x0B51, GL_NORMALIZE=0x0BA1,
        GL_DEPTH_BITS=0x0D56, GL_STENCIL_BITS=0x0D57,
        GL_MAX_CLIP_PLANES=0x0D32, GL_CLIP_PLANE0=0x3000,
-       GL_MAX_TEXTURE_SIZE=0x0D33,
+       GL_MAX_TEXTURE_SIZE=0x0D33, GL_RENDERER=0x1F01,
        GL_AMBIENT_AND_DIFFUSE=0x1602, GL_COLOR_SUM=0x8458 };
 enum { GL_TEXTURE_2D=0x0DE1, GL_TEXTURE_ENV=0x2300, GL_TEXTURE_ENV_MODE=0x2200,
        GL_MODULATE=0x2100, GL_REPLACE=0x1E01, GL_RGB=0x1907, GL_RGBA=0x1908,
@@ -96,6 +96,7 @@ typedef void (*gl_shade_fn)(unsigned); typedef void (*gl_fogfv_fn)(unsigned,cons
 typedef void (*gl_fogi_fn)(unsigned,int); typedef void (*gl_fogf_fn)(unsigned,float);
 typedef void (*gl_getint_fn)(unsigned,int *);
 typedef void (*gl_getfloat_fn)(unsigned,float *);
+typedef const unsigned char *(*gl_getstring_fn)(unsigned);
 typedef void (*gl_bind_texture_fn)(unsigned,unsigned);
 typedef void (*gl_gen_textures_fn)(int,unsigned *);
 typedef void (*gl_tex_image_2d_fn)(unsigned,int,int,int,int,int,unsigned,unsigned,const void *);
@@ -144,6 +145,7 @@ static gl_polygon_fn p_polygon; static gl_shade_fn p_shade;
 static gl_fogfv_fn p_fogfv; static gl_fogi_fn p_fogi; static gl_fogf_fn p_fogf;
 static gl_getint_fn p_getint;
 static gl_getfloat_fn p_getfloat;
+static gl_getstring_fn p_getstring;
 static gl_bind_texture_fn p_bind_texture;
 static gl_gen_textures_fn p_gen_textures;
 static gl_tex_image_2d_fn p_tex_image_2d;
@@ -198,6 +200,7 @@ static int load_gl(void) {
     LOAD_GL(p_fogfv, gl_fogfv_fn, "glFogfv"); LOAD_GL(p_fogi, gl_fogi_fn, "glFogi");
     LOAD_GL(p_fogf, gl_fogf_fn, "glFogf"); LOAD_GL(p_getint, gl_getint_fn, "glGetIntegerv");
     LOAD_GL(p_getfloat, gl_getfloat_fn, "glGetFloatv");
+    LOAD_GL(p_getstring, gl_getstring_fn, "glGetString");
     LOAD_GL(p_bind_texture, gl_bind_texture_fn, "glBindTexture");
     LOAD_GL(p_gen_textures, gl_gen_textures_fn, "glGenTextures");
     LOAD_GL(p_tex_image_2d, gl_tex_image_2d_fn, "glTexImage2D");
@@ -704,6 +707,21 @@ static void d3d_write_prim_caps(uint32_t p, int depth_bits) {
     MEM32(p+48)=MEM32(p+52)=0;
 }
 
+/* D3DDEVCAPS_HWRASTERIZATION says where triangles are rasterised. This backend
+ * hands them to OpenGL, so the claim is true exactly when the GL renderer is
+ * not itself software. The renderer string is a naming heuristic, not a probe:
+ * the common software rasterisers name themselves, and everything else is the
+ * GPU that drew the window in the first place. */
+static int gl_rasterises_on_hardware(void) {
+    if (!load_gl()) return 0;
+    const char *r = (const char *)p_getstring(GL_RENDERER);
+    if (!r) return 0;
+    static const char *const software[] = {"llvmpipe","softpipe","swrast","software","swiftshader","gdi generic"};
+    for (size_t k = 0; k < sizeof software / sizeof *software; k++)
+        if (strcasestr(r, software[k])) return 0;
+    return 1;
+}
+
 static void d3d_write_device_desc7(uint32_t p) {
     int depth_bits=0, max_texture=0, max_lights=0;
     int mode_w,mode_h,mode_bpp;
@@ -717,9 +735,7 @@ static void d3d_write_device_desc7(uint32_t p) {
     (void)mode_w;(void)mode_h;
 
     MEM32(p+0)=0x540u;                         /* system-memory TL/texture, DrawPrimitive TL */
-    /* D3DDEVCAPS_* that describe what ddraw.c's blitter really does.
-     * (0x200 is EXECUTE, which is not claimed: there is no hardware device.) */
-    MEM32(p+8)=0x100u|0x400u|0x800u;           /* BLT, BLTCOLORFILL, BLTSTRETCH */
+    if (gl_rasterises_on_hardware()) MEM32(p+0)|=0x80000u;  /* D3DDEVCAPS_HWRASTERIZATION */
     d3d_write_prim_caps(p+4,depth_bits);
     d3d_write_prim_caps(p+60,depth_bits);
     MEM32(p+116)=mode_bpp==16?0x400u:mode_bpp==24?0x200u:mode_bpp>=32?0x100u:0u;
