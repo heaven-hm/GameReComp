@@ -76,6 +76,9 @@ typedef struct {
     uint32_t data_size;       /* the DIDATAFORMAT's dwDataSize the game passed */
     int have_format;
     uint32_t hwnd;
+    uint32_t coop;            /* the DISCL_* flags the game set */
+    int32_t last_x, last_y;   /* previous absolute sample, for exclusive relative axes */
+    int have_last;
 } din_device;
 
 static din_device g_dev[DIN_MAX_DEVICES];
@@ -185,6 +188,9 @@ static void dev_SetCooperativeLevel(void) {
     int i = dev_index(A32(0));
     if (i < 0) RET(DIERR_INVALIDPARAM, 3);
     g_dev[i].hwnd = A32(1);
+    g_dev[i].coop = A32(2);
+    g_dev[i].have_last = 0;
+    if (getenv("RECOMP_DI_DIAG")) fprintf(stderr, "[di] SetCooperativeLevel kind=%d flags=%08x\n", g_dev[i].kind, A32(2));
     RET(DI_OK, 3);                                        /* the level is a windowing wish; input is direct */
 }
 static void dev_Acquire(void) {
@@ -194,6 +200,7 @@ static void dev_Acquire(void) {
         RET(DIERR_NOTINITIALIZED, 1);
     SDL_PumpEvents();
     g_dev[i].acquired = 1;
+    g_dev[i].have_last = 0;
     RET(DI_OK, 1);
 }
 static void dev_Unacquire(void) {
@@ -220,18 +227,35 @@ static void dev_GetDeviceState(void) {
         }
         (void)n;
     } else {
-        /* The mouse: 3 axes then 4 buttons. Absolute position, which is what
-         * DIMOFS_X reports for a non-exclusive device. */
+        /* The mouse: 3 axes then 4 buttons. A nonexclusive device reports the
+         * pointer's absolute position in the game's pixels (the presenter
+         * scales the virtual screen into the window); an exclusive one -- what
+         * a fullscreen game sets, and what DirectInput documents as relative --
+         * reports the movement since the previous poll. Reporting absolute
+         * values to an exclusive reader moves its cursor by those values on
+         * every poll. Buttons are the async Win32 state either way, so clicks
+         * injected through hle_input_mouse count the same as real ones. */
         int mx = 0, my = 0;
-        Uint32 buttons = SDL_GetMouseState(&mx, &my);
+        hle_screen_mouse(&mx, &my);
+        unsigned buttons = hle_input_mouse_buttons();
+        int x = mx, y = my;
+        if (g_dev[i].coop & 0x1u) {                       /* DISCL_EXCLUSIVE */
+            if (!g_dev[i].have_last) {
+                g_dev[i].last_x = mx, g_dev[i].last_y = my, g_dev[i].have_last = 1;
+            }
+            x = mx - g_dev[i].last_x;
+            y = my - g_dev[i].last_y;
+            g_dev[i].last_x = mx, g_dev[i].last_y = my;
+        }
         uint8_t *p = hle_ptr(buf);
         memset(p, 0, (size_t)(want < 16 ? want : 16));
-        if (want >= 4) MEM32(buf + DIMOFS_X) = (uint32_t)mx;
-        if (want >= 8) MEM32(buf + DIMOFS_Y) = (uint32_t)my;
+        if (want >= 4) MEM32(buf + DIMOFS_X) = (uint32_t)x;
+        if (want >= 8) MEM32(buf + DIMOFS_Y) = (uint32_t)y;
         if (want >= 12) MEM32(buf + DIMOFS_Z) = 0;
         for (int b = 0; b < 4; b++)
             if (want >= DIMOFS_BUTTON0 + b + 1)
                 MEM8(buf + DIMOFS_BUTTON0 + b) = (uint8_t)((buttons >> b) & 1u ? 0x80 : 0);
+        if (getenv("RECOMP_DI_DIAG")) { static int n; if ((n++ % 30) == 0 || buttons) fprintf(stderr,"[di] state kind=%d want=%d coop=%u x=%d y=%d buttons=%u t=%u\n",g_dev[i].kind,g_dev[i].coop,want,x,y,buttons,SDL_GetTicks()); }
     }
     RET(DI_OK, 3);
 }
@@ -240,6 +264,8 @@ static void dev_GetDeviceData(void) {
      * buffered -- polled state is GetDeviceState, which is real -- so the
      * honest answer is zero events. */
     uint32_t count = A32(3);
+    if (getenv("RECOMP_DI_DIAG")) fprintf(stderr, "[di] GetDeviceData kind=%d size=%u count_in=%u flags=%08x\n",
+        dev_index(A32(0)) >= 0 ? g_dev[dev_index(A32(0))].kind : -1, A32(1), count ? MEM32(count) : 0, A32(4));
     if (count) MEM32(count) = 0;
     RET(DI_OK, 5);
 }

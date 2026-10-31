@@ -4,8 +4,22 @@
  * OS exception handler (win32hle.h explains why neither is needed).
  */
 #define _GNU_SOURCE
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700                     /* macOS: ucontext_t for the fault PC */
+#endif
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <signal.h>
+#include <unistd.h>
+#ifdef __APPLE__
+#include <ucontext.h>
+#include <mach-o/dyld.h>
+#elif defined(__linux__)
+#include <ucontext.h>
+#endif
 #include "win32hle.h"
 #include "pe_loader.h"
 #include "host.h"
@@ -13,7 +27,48 @@
 static pe_image g_img;
 static int      g_booted;
 
+/* A fault in lifted code is a bad guest address, and without a debugger the
+ * only useful fact is which function and which address. Report both, then let
+ * the default action proceed so the exit status still says what happened. */
+static void fault_report(int sig, siginfo_t *info, void *ctx) {
+    char buf[260];
+    uintptr_t a = (uintptr_t)info->si_addr;
+    uintptr_t base = (uintptr_t)g_mem_base;
+    uintptr_t pc = 0;
+#if defined(__APPLE__)
+    if (ctx) {
+        ucontext_t *uc = (ucontext_t *)ctx;
+#if defined(__aarch64__)
+        pc = (uintptr_t)uc->uc_mcontext->__ss.__pc;
+#else
+        pc = (uintptr_t)uc->uc_mcontext->__ss.__rip;
+#endif
+        pc -= (uintptr_t)_dyld_get_image_vmaddr_slide(0);   /* link-time address, as nm prints it */
+    }
+#elif defined(__linux__)
+    if (ctx) pc = (uintptr_t)((ucontext_t *)ctx)->uc_mcontext.gregs[REG_RIP];
+#endif
+    int n;
+    if (a >= base && a - base <= 0xFFFFFFFFu)
+        n = snprintf(buf, sizeof buf,
+                     "\n[win32hle] fatal signal %d at %p (guest VA 0x%08X) in lifted function 0x%08X, esp 0x%08X, pc %p\n",
+                     sig, info->si_addr, (unsigned)(a - base), g_cur_func, g_esp, (void *)pc);
+    else
+        n = snprintf(buf, sizeof buf,
+                     "\n[win32hle] fatal signal %d at %p (outside guest memory) in lifted function 0x%08X, esp 0x%08X, pc %p\n",
+                     sig, info->si_addr, g_cur_func, g_esp, (void *)pc);
+    if (n > 0) write(2, buf, (size_t)n);
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+
 void recomp_host_init(void) {
+    struct sigaction sa;
+    sa.sa_sigaction = fault_report;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
+    sigaction(SIGBUS, &sa, NULL);
+    sigaction(SIGSEGV, &sa, NULL);
     win32hle_register(win32hle_kernel32);
     win32hle_register(win32hle_kernel32_ext);
     win32hle_register(win32hle_kernel32_crt);
@@ -74,15 +129,33 @@ static uint32_t hle_resolve_import_or_stub(const char *name) {
     return hle_resolve_or_stub(name);
 }
 
+/* A Windows shortcut starts a game in its own folder with the install drive as
+ * C:; titles resolve data relative to the current directory (`.\YMBE.AFP`).
+ * Mirror that instead of inheriting whatever directory the launcher happened
+ * to use. */
+static void enter_image_directory(const char *image) {
+    char dir[1024];
+    snprintf(dir, sizeof dir, "%s", image);
+    char *slash = strrchr(dir, '/');
+    if (!slash) return;
+    if (slash == dir) slash[1] = 0; else *slash = 0;
+    hle_set_drive('C', dir);
+    if (chdir(dir) != 0)
+        fprintf(stderr, "[host] cannot enter %s: %s\n", dir, strerror(errno));
+}
+
 static int boot(const char *path, uint32_t (*resolve)(const char *)) {
-    if (recomp_pe_map(path, &g_img) != 0) return 1;
+    char image[1024];
+    if (!realpath(path, image)) { fprintf(stderr, "[host] cannot find %s: %s\n", path, strerror(errno)); return 1; }
+    enter_image_directory(image);
+    if (recomp_pe_map(image, &g_img) != 0) return 1;
     char guest[1024];
-    hle_guest_path(path, guest, sizeof guest);
+    hle_guest_path(image, guest, sizeof guest);
     hle_module_add(guest, g_img.base, g_img.resource_rva, g_img.resource_size, 1);
     int unresolved = recomp_pe_bind(&g_img, resolve);
     g_booted = 1;
     fprintf(stderr, "[host] %s booted: entry 0x%08X, %d unresolved imports\n",
-            path, g_img.entry, unresolved);
+            image, g_img.entry, unresolved);
     return unresolved;
 }
 
@@ -104,6 +177,36 @@ uint32_t recomp_host_run(void) {
     return hle_call_guest(g_img.entry, 0, args);
 }
 
+/* The guest was started by a Windows shortcut: its own exe, then the
+ * arguments the user gave this launcher. GetCommandLineA and the CRT's argv
+ * must answer that, not the recompiler's path. The image is always on C: at
+ * its own directory (enter_image_directory), so the guest exe is C:\<name>. */
+static void set_guest_arguments(int argc, char **argv) {
+    static char image[512], line[2048], pool[2048];
+    static char *vec[256];
+    const char *base = strrchr(argv[1], '/');
+    base = base ? base + 1 : argv[1];
+    snprintf(image, sizeof image, "C:\\%s", base);
+    int n = snprintf(line, sizeof line, "\"%s\"", image), vn = 0, pn = 0;
+    vec[vn++] = image;
+    for (int i = 2; i < argc && vn < 255; i++) {
+        const char *a = argv[i];
+        int quote = (*a == 0 || strpbrk(a, " \t\"") != NULL);
+        char *copy = pool + pn;
+        if (quote && pn + 1 < (int)sizeof pool) pool[pn++] = '"';
+        for (; *a && pn < (int)sizeof pool - 2; a++) {
+            if (*a == '"' && quote && pn < (int)sizeof pool - 3) pool[pn++] = '\\';
+            pool[pn++] = *a;
+        }
+        if (quote && pn < (int)sizeof pool - 1) pool[pn++] = '"';
+        pool[pn++] = 0;
+        vec[vn++] = copy;
+        if (n < (int)sizeof line - 1) n += snprintf(line + n, sizeof line - n, " %s", copy);
+    }
+    hle_set_command_line(line);
+    hle_set_argv(vn, vec);
+}
+
 int recomp_host_main(int argc, char **argv) {
     if (argc < 2) { fprintf(stderr, "usage: %s <image.exe> [args...]\n", argv[0]); return 64; }
     /* RECOMP_TRACE=1 logs every import dispatch. Without a hook the only way
@@ -115,6 +218,7 @@ int recomp_host_main(int argc, char **argv) {
         win32hle_trace = trace && *trace && *trace != '0';
     }
     recomp_host_init();
+    set_guest_arguments(argc, argv);
     int rc = recomp_host_boot(argv[1]);
     if (rc) return rc;
     return (int)recomp_host_run();

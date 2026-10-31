@@ -94,6 +94,10 @@ typedef void (*gl_pixel_store_fn)(unsigned,int);
 typedef void (*gl_draw_pixels_fn)(int,int,unsigned,unsigned,const void *);
 typedef void (*gl_clear_color_fn)(float,float,float,float);
 typedef void (*gl_clear_fn)(unsigned);
+typedef unsigned (*gl_get_error_fn)(void);
+typedef const unsigned char *(*gl_get_string_fn)(unsigned);
+typedef void (*gl_read_pixels_fn)(int,int,int,int,unsigned,unsigned,void *);
+typedef void (*gl_read_buffer_fn)(unsigned);
 static struct {
     gl_attrib_fn push_attrib;
     gl_void_fn pop_attrib,push_matrix,pop_matrix,load_identity;
@@ -107,6 +111,10 @@ static struct {
     gl_draw_pixels_fn draw_pixels;
     gl_clear_color_fn clear_color;
     gl_clear_fn clear;
+    gl_get_error_fn get_error;
+    gl_get_string_fn get_string;
+    gl_read_pixels_fn read_pixels;
+    gl_read_buffer_fn read_buffer;
     int loaded;
 } g_gl_present;
 void (*hle_screen_frame_hook)(const uint8_t *px, int w, int h, int pitch, int bpp);   /* a recorder, a checksum */
@@ -224,6 +232,8 @@ static int load_present_gl(void) {
     GL_LOAD(pixel_zoom,gl_pixel_zoom_fn,"glPixelZoom"); GL_LOAD(pixel_store,gl_pixel_store_fn,"glPixelStorei");
     GL_LOAD(draw_pixels,gl_draw_pixels_fn,"glDrawPixels"); GL_LOAD(clear_color,gl_clear_color_fn,"glClearColor");
     GL_LOAD(clear,gl_clear_fn,"glClear");
+    GL_LOAD(get_error,gl_get_error_fn,"glGetError"); GL_LOAD(get_string,gl_get_string_fn,"glGetString");
+    GL_LOAD(read_pixels,gl_read_pixels_fn,"glReadPixels"); GL_LOAD(read_buffer,gl_read_buffer_fn,"glReadBuffer");
 #undef GL_LOAD
     g_gl_present.loaded=1;
     return 1;
@@ -250,7 +260,14 @@ static void present_gl(const uint8_t *px,int w,int h,int pitch,int bpp,const uin
     else if(bpp==24) format=0x80E0u;
     else if(bpp==32) format=0x80E1u;
     else return;
+    static int diag;
+    int trace=getenv("RECOMP_D3D7_DIAG") && ++diag>5 && diag<=9;
+    if(trace) { uint32_t via=bpp==16?((const uint16_t*)px)[0]:bpp==32?((const uint32_t*)px)[0]:0;
+        fprintf(stderr,"[present] GL %s | %s\n",g_gl_present.get_string(0x1F02),g_gl_present.get_string(0x1F01));
+        fprintf(stderr,"[present] %dx%d bpp=%d pitch=%d drawable=%dx%d dst=%d,%d %dx%d px0=%08x err=%u\n",
+            w,h,bpp,pitch,ww,wh,g_dst.x,g_dst.y,g_dst.w,g_dst.h,via,g_gl_present.get_error()); }
     g_gl_present.push_attrib(0x000FFFFFu);
+    hle_d3d7_present_begin();
     g_gl_present.viewport(0,0,ww,wh);
     g_gl_present.disable(0x0DE1u); /* texture */
     g_gl_present.disable(0x0B71u); /* depth */
@@ -266,10 +283,19 @@ static void present_gl(const uint8_t *px,int w,int h,int pitch,int bpp,const uin
     g_gl_present.pixel_zoom((float)g_dst.w/(float)w,-(float)g_dst.h/(float)h);
     g_gl_present.pixel_store(0x0CF5u,1);g_gl_present.pixel_store(0x0CF2u,pitch/(bpp/8));
     g_gl_present.draw_pixels(w,h,format,type,pixels);
+    if(trace) fprintf(stderr,"[present] after draw err=%u\n",g_gl_present.get_error());
+    uint8_t probe[4]={0,0,0,0};
+    if(trace) { g_gl_present.read_pixels(ww/2,wh/2,1,1,0x1908u,0x1401u,probe);
+        fprintf(stderr,"[present] back center=%02x%02x%02x%02x\n",probe[0],probe[1],probe[2],probe[3]); }
     g_gl_present.pixel_zoom(1.f,1.f);g_gl_present.pixel_store(0x0CF2u,0);g_gl_present.pixel_store(0x0CF5u,4);
     g_gl_present.matrix_mode(0x1700u);g_gl_present.pop_matrix();
     g_gl_present.matrix_mode(0x1701u);g_gl_present.pop_matrix();g_gl_present.pop_attrib();
+    hle_d3d7_present_end();
     SDL_GL_SwapWindow(g_win);
+    if(trace) { g_gl_present.read_buffer(0x0404u);       /* GL_FRONT */
+        g_gl_present.read_pixels(ww/2,wh/2,1,1,0x1908u,0x1401u,probe);
+        g_gl_present.read_buffer(0x0405u);               /* GL_BACK */
+        fprintf(stderr,"[present] front center=%02x%02x%02x%02x\n",probe[0],probe[1],probe[2],probe[3]); }
 }
 
 static void present(void) {
@@ -645,8 +671,135 @@ void hle_screen_menu(const hle_menu_item_t *items, int n, void (*chosen)(int id)
     menu_dirty();
 }
 
+/* RECOMP_KEYS="300:Space,1500:Return" presses keys at those milliseconds after
+ * the first pump. An automated run uses it to get past a splash and through a
+ * menu with nobody at the keyboard; key names are SDL's. */
+static void run_key_script(void) {
+    static struct { uint32_t at; SDL_Scancode sc; } script[64];
+    static int n = -1, next;
+    static uint32_t start, release_at;
+    static SDL_Scancode held;
+    if (n < 0) {
+        n = 0;
+        const char *spec = getenv("RECOMP_KEYS");
+        while (spec && *spec && n < 64) {
+            char *end = NULL;
+            unsigned long at = strtoul(spec, &end, 10);
+            if (end == spec || *end != ':') break;
+            const char *name = end + 1, *comma = strchr(name, ',');
+            size_t len = comma ? (size_t)(comma - name) : strlen(name);
+            char buf[32];
+            if (len >= sizeof buf) len = sizeof buf - 1;
+            memcpy(buf, name, len), buf[len] = 0;
+            SDL_Scancode sc = SDL_GetScancodeFromName(buf);
+            if (sc != SDL_SCANCODE_UNKNOWN) script[n].at = (uint32_t)at, script[n].sc = sc, n++;
+            spec = comma ? comma + 1 : NULL;
+        }
+        start = hle_ticks_ms();
+    }
+    uint32_t now = hle_ticks_ms();
+    SDL_Event e;
+    if (held && (int32_t)(now - release_at) >= 0) {
+        memset(&e, 0, sizeof e);
+        e.type = SDL_KEYUP; e.key.type = SDL_KEYUP; e.key.state = SDL_RELEASED;
+        e.key.keysym.scancode = held; e.key.keysym.sym = SDL_GetKeyFromScancode(held);
+        SDL_PushEvent(&e);
+        held = SDL_SCANCODE_UNKNOWN;
+    }
+    if (!held && next < n && now - start >= script[next].at) {
+        memset(&e, 0, sizeof e);
+        e.type = SDL_KEYDOWN; e.key.type = SDL_KEYDOWN; e.key.state = SDL_PRESSED;
+        e.key.keysym.scancode = script[next].sc; e.key.keysym.sym = SDL_GetKeyFromScancode(script[next].sc);
+        SDL_PushEvent(&e);
+        held = script[next].sc, release_at = now + 60, next++;
+    }
+}
+
+/* RECOMP_CLICKS="3000:305,200,..." clicks game pixels at those milliseconds,
+ * for titles whose menus only answer the mouse. Coordinates run from the first
+ * pump like RECOMP_KEYS.
+ *
+ * A click takes four pumps, not one: the pointer is first parked in the
+ * window's top-left corner, then moved to the target, then pressed, then
+ * released. An exclusive DirectInput mouse reports movement between polls, so
+ * parking first re-synchronises it with the host pointer -- the move to the
+ * target is then the delta a real mouse would have made. For an absolute
+ * (nonexclusive) reader the extra moves are harmless; it only sees the target. */
+static void run_click_script(void) {
+    static struct { uint32_t at; int x, y; } clicks[32];
+    static int n = -1, next, phase;
+    static uint32_t start, step_at;
+    static int wx, wy;
+    if (n < 0) {
+        n = 0;
+        const char *spec = getenv("RECOMP_CLICKS");
+        while (spec && *spec && n < 32) {
+            char *end = NULL;
+            unsigned long at = strtoul(spec, &end, 10);
+            if (end == spec || *end != ':') break;
+            char *xe = NULL;
+            long x = strtol(end + 1, &xe, 10);
+            if (!xe || *xe != ',') break;
+            char *ye = NULL;
+            long y = strtol(xe + 1, &ye, 10);
+            if (ye == xe + 1) break;
+            clicks[n].at = (uint32_t)at, clicks[n].x = (int)x, clicks[n].y = (int)y, n++;
+            spec = *ye == ',' ? ye + 1 : NULL;
+        }
+        start = hle_ticks_ms();
+    }
+    if (!g_win || n <= 0) return;
+    int ww = 0, wh = 0, pw = 0, ph = 0, mode_w = 0, mode_h = 0, mode_bpp = 0;
+    SDL_GetWindowSize(g_win, &ww, &wh);
+    SDL_GL_GetDrawableSize(g_win, &pw, &ph);
+    hle_dd_mode(&mode_w, &mode_h, &mode_bpp);
+    int src_w = g_src_w > 0 ? g_src_w : mode_w, src_h = g_src_h > 0 ? g_src_h : mode_h;
+    if (ww <= 0 || wh <= 0 || pw <= 0 || ph <= 0 || src_w <= 0 || src_h <= 0) return;
+    uint32_t now = hle_ticks_ms();
+    if ((int32_t)(now - step_at) < 0) return;
+    SDL_Event e;
+    memset(&e, 0, sizeof e);
+    switch (phase) {
+    case 0:                                                /* wait for the entry's time, then park */
+        if (next >= n || now - start < clicks[next].at) return;
+        SDL_WarpMouseInWindow(g_win, 0, 0);
+        phase = 1, step_at = now + 120;
+        break;
+    case 1: {                                              /* move to the target */
+        int px = g_dst.x + clicks[next].x * g_dst.w / src_w;
+        int py = g_dst.y + clicks[next].y * g_dst.h / src_h;
+        wx = px * ww / pw, wy = py * wh / ph;
+        e.type = SDL_MOUSEMOTION; e.motion.type = SDL_MOUSEMOTION;
+        e.motion.x = wx, e.motion.y = wy;
+        SDL_PushEvent(&e);
+        SDL_WarpMouseInWindow(g_win, wx, wy);
+        phase = 2, step_at = now + 120;
+        break;
+    }
+    case 2:                                                /* press */
+        e.type = SDL_MOUSEBUTTONDOWN; e.button.type = SDL_MOUSEBUTTONDOWN;
+        e.button.state = SDL_PRESSED; e.button.button = SDL_BUTTON_LEFT;
+        e.button.x = wx, e.button.y = wy;
+        SDL_PushEvent(&e);
+        if (getenv("RECOMP_D3D7_DIAG"))
+            fprintf(stderr, "[click] at %u game %d,%d window %d,%d\n", now, clicks[next].x, clicks[next].y, wx, wy);
+        phase = 3, step_at = now + 80;
+        break;
+    default:                                               /* release */
+        e.type = SDL_MOUSEBUTTONUP; e.button.type = SDL_MOUSEBUTTONUP;
+        e.button.state = SDL_RELEASED; e.button.button = SDL_BUTTON_LEFT;
+        e.button.x = wx, e.button.y = wy;
+        SDL_PushEvent(&e);
+        next++, phase = 0;
+        break;
+    }
+}
+
 void hle_screen_pump(void) {
     SDL_Event e;
+    if(getenv("RECOMP_D3D7_DIAG")) { static int once; if(!once) { once=1; fprintf(stderr,"[pump] screen pump runs\n"); } }
+    run_key_script();
+    run_click_script();
     if (g_win) update_cursor();
     while (g_win && SDL_PollEvent(&e)) {
         if (g_menu_depth && menu_event(&e)) continue;
@@ -681,6 +834,7 @@ void hle_screen_pump(void) {
         case SDL_MOUSEMOTION: {
             int gx, gy;
             to_game(e.motion.x, e.motion.y, &gx, &gy);
+            if(getenv("RECOMP_D3D7_DIAG")) fprintf(stderr,"[pump] motion %d,%d -> game %d,%d\n",e.motion.x,e.motion.y,gx,gy);
             hle_input_mouse(WM_MOUSEMOVE, gx, gy);
             break;
         }
@@ -734,7 +888,11 @@ int hle_screen_open(const char *title, int fullscreen, int headless) {
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) { fprintf(stderr, "[screen] SDL: %s\n", SDL_GetError()); return -1; }
     Uint32 flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI |
                    (fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-    if (g_gl_requested) flags |= SDL_WINDOW_OPENGL;
+    if (g_gl_requested) {
+        flags |= SDL_WINDOW_OPENGL;
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+        SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);   /* D3D titles clear and test stencil */
+    }
     g_win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960, flags);
     if (!g_win) { fprintf(stderr, "[screen] window: %s\n", SDL_GetError()); return -1; }
     if (g_gl_requested) {
@@ -770,6 +928,17 @@ int hle_screen_request_opengl(void) {
 }
 
 int hle_screen_gl_active(void) { return g_glctx != NULL; }
+/* DirectInput reports the pointer in the game's own pixels. The window shows
+ * the virtual screen scaled (and letterboxed) into itself, so the raw SDL
+ * position must pass through the same mapping window messages use -- a game
+ * picking missions by cursor position would otherwise get 1280-wide
+ * coordinates for a 640-wide screen. */
+void hle_screen_mouse(int *x, int *y) {
+    int mx = 0, my = 0;
+    SDL_GetMouseState(&mx, &my);
+    if (g_win && g_src_w > 0 && g_src_h > 0) to_game(mx, my, &mx, &my);
+    *x = mx, *y = my;
+}
 void hle_screen_d3d7_active(int active) { g_d3d7_active = active != 0; }
 void hle_screen_gl_swap(void) {
     if (g_win && g_glctx && pthread_equal(pthread_self(), g_video_thread)) {

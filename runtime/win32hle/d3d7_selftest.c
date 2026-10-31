@@ -228,36 +228,49 @@ int main(void) {
     ok("a refused render state leaves the previous value",
        vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_CULLMODE, P(&g->tmp))) == D3D_OK &&
        g->tmp == D3DCULL_CW);
-    ok("SetRenderState(unknown state) is refused, not silently ignored",
-       vcall(g->device, "IDirect3DDevice7::SetRenderState", 2, A2(210u, 1u)) == D3DERR_NOTAVAILABLE);
-    ok("GetRenderState(unknown state) is refused",
-       vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(210u, P(&g->tmp))) == D3DERR_NOTAVAILABLE);
+    ok("SetRenderState(unknown state) is an invalid call",
+       vcall(g->device, "IDirect3DDevice7::SetRenderState", 2, A2(210u, 1u)) == D3DERR_INVALIDCALL);
+    ok("GetRenderState(unknown state) is an invalid call",
+       vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(210u, P(&g->tmp))) == D3DERR_INVALIDCALL);
     ok("SetRenderState(FOGTABLEMODE, undefined mode) is refused",
        vcall(g->device, "IDirect3DDevice7::SetRenderState", 2, A2(RS_FOGTABLEMODE, 9u)) == D3DERR_INVALIDCALL);
     ok("SetRenderState(SRCBLEND, undefined factor) is refused",
        vcall(g->device, "IDirect3DDevice7::SetRenderState", 2, A2(RS_SRCBLEND, 0x5Du)) == D3DERR_INVALIDCALL);
 
-    /* A material source the fixed-function GL path cannot represent is
-     * refused, and the state it would have changed is untouched. */
-    g->tmp = 0xFFFFFFFFu;
-    vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, P(&g->tmp)));
-    uint32_t before_spec = g->tmp;
-    uint32_t x = vcall(g->device, "IDirect3DDevice7::SetRenderState", 2,
-                       A2(RS_SPECULARMATERIALSOURCE, 0u /* D3DMCS_MATERIAL */));
+    /* Material sources name where a component comes from; MATERIAL and COLOR1
+     * are the same source here, and an undefined source is an invalid value
+     * that leaves the accepted one in place. */
+    ok("SetRenderState(SPECULARMATERIALSOURCE, material)",
+       vcall(g->device, "IDirect3DDevice7::SetRenderState", 2,
+             A2(RS_SPECULARMATERIALSOURCE, 0u /* D3DMCS_MATERIAL */)) == D3D_OK);
     g->tmp = 0xFFFFFFFEu;
-    vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, P(&g->tmp)));
-    ok("SetRenderState(SPECULARMATERIALSOURCE, material) is refused, not faked",
-       x == D3DERR_NOTAVAILABLE && g->tmp == before_spec);
+    ok("an accepted material source reads back",
+       vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, P(&g->tmp))) == D3D_OK &&
+       g->tmp == 0u);
+    ok("SetRenderState(SPECULARMATERIALSOURCE, undefined source) is an invalid call",
+       vcall(g->device, "IDirect3DDevice7::SetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, 3u)) == D3DERR_INVALIDCALL);
+    g->tmp = 0xFFFFFFFEu;
+    ok("the refused material source leaves the previous value",
+       vcall(g->device, "IDirect3DDevice7::GetRenderState", 2, A2(RS_SPECULARMATERIALSOURCE, P(&g->tmp))) == D3D_OK &&
+       g->tmp == 0u);
     /* Diffuse from the material is the same task as from colour 1 here. */
     ok("SetRenderState(DIFFUSEMATERIALSOURCE, material)",
        vcall(g->device, "IDirect3DDevice7::SetRenderState", 2, A2(RS_DIFFUSEMATERIALSOURCE, 0u)) == D3D_OK);
 
-    /* One texture stage is advertised: stage 1 is refused, not ignored. */
+    /* Stages 0..7 are addressable; only stage 0 has renderer backing, so a
+     * higher stage accepts its state and reports it as unset. Stage 8 is
+     * outside the set and is an invalid call. */
     ok("GetTextureStageState(0, COLOROP) default is D3DTOP_MODULATE",
        vcall(g->device, "IDirect3DDevice7::GetTextureStageState", 3, A3(0, 0, TSS_COLOROP, P(&g->tmp))) == D3D_OK &&
        g->tmp == 4);
-    ok("SetTextureStageState(stage 1) is refused",
-       vcall(g->device, "IDirect3DDevice7::SetTextureStageState", 3, A3(1, 1, TSS_COLOROP, 1u)) == D3DERR_NOTAVAILABLE);
+    ok("SetTextureStageState(stage 1) is accepted",
+       vcall(g->device, "IDirect3DDevice7::SetTextureStageState", 3, A3(1, 1, TSS_COLOROP, 1u)) == D3D_OK);
+    g->tmp = 0xFFFFFFFEu;
+    ok("stage 1 reports no renderer-backed state",
+       vcall(g->device, "IDirect3DDevice7::GetTextureStageState", 3, A3(1, 1, TSS_COLOROP, P(&g->tmp))) == D3D_OK &&
+       g->tmp == 0u);
+    ok("SetTextureStageState(stage 8) is an invalid call",
+       vcall(g->device, "IDirect3DDevice7::SetTextureStageState", 3, A3(6, 8, TSS_COLOROP, 1u)) == D3DERR_INVALIDCALL);
     ok("SetTextureStageState(0, COLOROP, SELECTARG1)",
        vcall(g->device, "IDirect3DDevice7::SetTextureStageState", 3, A3(2, 0, TSS_COLOROP, 2u)) == D3D_OK);
     ok("SetTextureStageState(0, COLOROP, ADDSIGNED) is refused",
@@ -329,8 +342,9 @@ int main(void) {
         static const uint32_t pf2[8] = { 32, 0x40u, 0, 24, 0xFF0000u, 0xFF00u, 0xFFu, 0 };
         memcpy(&od[18], pf2, sizeof pf2);
         uint32_t rc_off = vcall(g->dd, "IDirectDraw7::CreateSurface", 3, A3(4, P(od), P(&g->target), 0));
-        fprintf(stderr, "DBG offscreen: rc=%08x target=%08x w=%u h=%u caps=%08x fl=%08x\n",
-                rc_off, g->target, od[3], od[2], od[26], od[1]);
+        if (rc_off || !g->target)
+            fprintf(stderr, "d3d7_selftest: offscreen CreateSurface rc=%08x target=%08x fl=%08x caps=%08x\n",
+                    rc_off, g->target, od[1], od[26]);
         ok("CreateSurface(offscreen 16x16 3D target)", rc_off == 0 && g->target);
         ok("SetRenderTarget(offscreen)",
            vcall(g->device, "IDirect3DDevice7::SetRenderTarget", 2, A2(g->target, 0)) == D3D_OK);
@@ -341,8 +355,6 @@ int main(void) {
         ok("BeginScene", vcall(g->device, "IDirect3DDevice7::BeginScene", 0, NULL) == D3D_OK);
         uint32_t rc_clear = vcall(g->device, "IDirect3DDevice7::Clear", 6,
                  A6(1, 0, 0, 1u /* TARGET only */, 0x00FF00FFu, 0x3F800000u, 0));
-        fprintf(stderr, "DBG clear rc=%08x viewport=%u,%u %ux%u\n", rc_clear,
-                g->viewport[0], g->viewport[1], g->viewport[2], g->viewport[3]);
         ok("Clear(magenta, 0x00FF00FF)", rc_clear == D3D_OK);
         ok("EndScene", vcall(g->device, "IDirect3DDevice7::EndScene", 0, NULL) == D3D_OK);
 
@@ -352,7 +364,9 @@ int main(void) {
             const uint8_t *p = px;                    /* top-left */
             uint32_t got = pbpp == 32 ? *(const uint32_t *)p
                          : ((uint32_t)p[0] << 16) | ((uint32_t)p[1] << 8) | p[2];   /* 24bpp BGR bytes */
-            fprintf(stderr, "DBG pixels: %dx%d bpp=%d pitch=%d got=%08x\n", pw, ph, pbpp, pitch, got);
+            if ((got & 0x00FFFFFFu) != 0x00FF00FFu)
+                fprintf(stderr, "d3d7_selftest: clear pixel is %08x (%dx%d bpp=%d pitch=%d)\n",
+                        got, pw, ph, pbpp, pitch);
             ok("the clear reached the surface (magenta in a corner)", (got & 0x00FFFFFFu) == 0x00FF00FFu);
         } else ok("the cleared surface exposes its pixels", 0);
         /* SCENE_PIXELS_FOLLOW */

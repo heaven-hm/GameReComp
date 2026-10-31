@@ -371,7 +371,6 @@ static uint32_t create_window(uint32_t exstyle, const char *cls, const char *tit
                               uint32_t parent, uint32_t menu, uint32_t hinst, uint32_t param) {
     int c = find_class(cls);
     if (c < 0) {
-        fprintf(stderr, "[user32] CreateWindowEx: no class %s\n", (uintptr_t)cls < 0x10000u ? "(atom)" : cls);
         hle_set_last_error(1407u);                       /* ERROR_CANNOT_FIND_WND_CLASS */
         return 0;
     }
@@ -743,6 +742,11 @@ void hle_input_key(int down, uint32_t vk, uint32_t scan) {
     if (t) q_push(t, alt || vk == VK_MENU || vk == 0x79 ? (down ? WM_SYSKEYDOWN : WM_SYSKEYUP) : (down ? WM_KEYDOWN : WM_KEYUP), vk, l);
 }
 void hle_input_cursor(int sx, int sy) { g_cursor_x = sx, g_cursor_y = sy; }
+/* DirectInput's mouse buttons are the async state the window messages carry,
+ * so a click injected (or real) through hle_input_mouse shows up here. */
+unsigned hle_input_mouse_buttons(void) {
+    return (g_keys[1] & 0x80 ? 1u : 0u) | (g_keys[2] & 0x80 ? 2u : 0u) | (g_keys[4] & 0x80 ? 4u : 0u);
+}
 void hle_input_key_state(uint32_t vk, int down) { if (down) g_keys[vk & 0xFF] |= 0x80; else g_keys[vk & 0xFF] &= 1; }
 
 /* ---- DefWindowProc ---- */

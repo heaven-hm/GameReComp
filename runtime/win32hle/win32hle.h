@@ -179,6 +179,7 @@ void     hle_input_mouse(uint32_t message, int screen_x, int screen_y);   /* WM_
 void     hle_input_key(int down, uint32_t vk, uint32_t scan);
 void     hle_input_cursor(int screen_x, int screen_y);                    /* GetCursorPos, without a message */
 void     hle_input_key_state(uint32_t vk, int down);                      /* GetKeyState, without a message */
+unsigned hle_input_mouse_buttons(void);                                   /* bit 0 left, 1 right, 2 middle */
 uint32_t hle_window_at(int screen_x, int screen_y, int *client_x, int *client_y);
 uint32_t hle_focus_window(void);
 uint32_t hle_send(uint32_t hwnd, uint32_t msg, uint32_t wParam, uint32_t lParam);   /* SendMessageA */
@@ -243,6 +244,7 @@ void hle_guest_path(const char *host, char *out, size_t n);
 void  hle_set_last_error(uint32_t code);           /* what GetLastError answers next */
 uint32_t hle_get_last_error(void);
 void  hle_set_command_line(const char *cmdline);   /* what GetCommandLineA answers */
+void  hle_set_argv(int argc, char *const *argv);   /* the guest's argv: exe first, then its arguments */
 extern void (*hle_on_exit)(int code);              /* run by ExitProcess before the process goes */
 void  hle_exit(int code);                          /* flush and leave, once */
 uint32_t hle_thread_id(void);                      /* GetCurrentThreadId's answer for this thread */
@@ -354,6 +356,8 @@ extern const win32hle_shim win32hle_dsound[];         /* DirectSound on SDL audi
 extern const win32hle_shim win32hle_ddraw[];          /* DirectDraw in software (ddraw.c) */
 uint32_t hle_d3d7_create(void);                       /* IDirect3D7 COM object; zero if GL screen is unavailable */
 uint32_t hle_d3d7_get(void);                          /* the same object, without taking a reference */
+void hle_d3d7_present_begin(void);                    /* bind the window framebuffer while presenting a frame */
+void hle_d3d7_present_end(void);                      /* hand the device's render target back */
 extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
 extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 audio (sdlmix.c) */
 extern const win32hle_shim win32hle_gl32[];           /* OPENGL32/GLU32 on the host's GL (gl32.c) */
@@ -373,10 +377,13 @@ int  hle_dd_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bpp, cons
 void hle_dd_mode(int *w, int *h, int *bpp);
 extern void (*hle_dd_primary_hook)(void);            /* the primary's pixels or palette changed (a blit, an Unlock, a Flip) */
 int  hle_dd_surface_pixels(uint32_t obj, uint8_t **px, int *w, int *h, int *pitch, int *bpp);   /* 0: not a surface */
+int  hle_dd_surface_format(uint32_t obj, int *bpp, uint32_t *rmask, uint32_t *gmask,
+                           uint32_t *bmask, uint32_t *amask);                                 /* 0: not a surface */
 int  hle_dd_surface_is_primary(uint32_t obj);          /* 1 only for the active DirectDraw primary */
 int  hle_dd_surface_is_3d_target(uint32_t obj);        /* 1 when DDSCAPS_3DDEVICE is set */
 int  hle_dd_surface_is_texture(uint32_t obj);         /* 1 when DDSCAPS_TEXTURE is set */
 int  hle_dd_surface_is_primary_3d_target(uint32_t obj); /* primary with DDSCAPS_3DDEVICE */
+void hle_dd_surface_stats(uint32_t obj, unsigned *locks, unsigned *nonzero); /* diagnostics: Lock count, content written */
 void hle_dsound_set_master(float gain);              /* 0 mutes */
 void hle_dsound_register_com(void);                  /* CoCreateInstance(CLSID_DirectSound) (recomp_host_init) */
 /* A host's own sound (a movie's), mixed with the game's buffers: interleaved
@@ -394,6 +401,7 @@ extern const win32hle_shim win32hle_bink[];           /* binkw32 on ffmpeg (bink
 int  hle_screen_open(const char *title, int fullscreen, int headless);
 int  hle_screen_request_opengl(void);  /* before open: make the screen window own a GL context */
 int  hle_screen_gl_active(void);
+void hle_screen_mouse(int *x, int *y);                                 /* the pointer in the game's pixels, clamped */
 void hle_screen_d3d7_active(int active); /* D3D7 swaps GL frames; suppress software-primary redraws */
 void hle_screen_gl_swap(void);         /* pump and swap a GL frame on the video thread */
 void hle_screen_gl_viewport(int x, int y, int width, int height); /* D3D top-left viewport to GL bottom-left */
