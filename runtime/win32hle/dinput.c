@@ -82,6 +82,9 @@ typedef struct {
     uint32_t data_size;       /* the DIDATAFORMAT's dwDataSize the game passed */
     int have_format;
     uint32_t hwnd;
+    uint32_t coop;            /* the DISCL_* flags the game set */
+    int32_t last_x, last_y;   /* previous absolute sample, for exclusive relative axes */
+    int have_last;
 } din_device;
 
 static din_device g_dev[DIN_MAX_DEVICES];
@@ -191,6 +194,9 @@ static void dev_SetCooperativeLevel(void) {
     int i = dev_index(A32(0));
     if (i < 0) RET(DIERR_INVALIDPARAM, 3);
     g_dev[i].hwnd = A32(1);
+    g_dev[i].coop = A32(2);
+    g_dev[i].have_last = 0;
+    if (getenv("RECOMP_DI_DIAG")) fprintf(stderr, "[di] SetCooperativeLevel kind=%d flags=%08x\n", g_dev[i].kind, A32(2));
     RET(DI_OK, 3);                                        /* the level is a windowing wish; input is direct */
 }
 static void dev_Acquire(void) {
@@ -200,6 +206,7 @@ static void dev_Acquire(void) {
         RET(DIERR_NOTINITIALIZED, 1);
     SDL_PumpEvents();
     g_dev[i].acquired = 1;
+    g_dev[i].have_last = 0;
     RET(DI_OK, 1);
 }
 static void dev_Unacquire(void) {
@@ -239,18 +246,35 @@ static void dev_GetDeviceState(void) {
         }
         (void)n;
     } else {
-        /* The mouse: 3 axes then 4 buttons. Absolute position, which is what
-         * DIMOFS_X reports for a non-exclusive device. */
+        /* The mouse: 3 axes then 4 buttons. A nonexclusive device reports the
+         * pointer's absolute position in the game's pixels (the presenter
+         * scales the virtual screen into the window); an exclusive one -- what
+         * a fullscreen game sets, and what DirectInput documents as relative --
+         * reports the movement since the previous poll. Reporting absolute
+         * values to an exclusive reader moves its cursor by those values on
+         * every poll. Buttons are the async Win32 state either way, so clicks
+         * injected through hle_input_mouse count the same as real ones. */
         int mx = 0, my = 0;
-        Uint32 buttons = SDL_GetMouseState(&mx, &my);
+        hle_screen_mouse(&mx, &my);
+        unsigned buttons = hle_input_mouse_buttons();
+        int x = mx, y = my;
+        if (g_dev[i].coop & 0x1u) {                       /* DISCL_EXCLUSIVE */
+            if (!g_dev[i].have_last) {
+                g_dev[i].last_x = mx, g_dev[i].last_y = my, g_dev[i].have_last = 1;
+            }
+            x = mx - g_dev[i].last_x;
+            y = my - g_dev[i].last_y;
+            g_dev[i].last_x = mx, g_dev[i].last_y = my;
+        }
         uint8_t *p = hle_ptr(buf);
         memset(p, 0, (size_t)(want < 16 ? want : 16));
-        if (want >= 4) MEM32(buf + DIMOFS_X) = (uint32_t)mx;
-        if (want >= 8) MEM32(buf + DIMOFS_Y) = (uint32_t)my;
+        if (want >= 4) MEM32(buf + DIMOFS_X) = (uint32_t)x;
+        if (want >= 8) MEM32(buf + DIMOFS_Y) = (uint32_t)y;
         if (want >= 12) MEM32(buf + DIMOFS_Z) = 0;
         for (int b = 0; b < 4; b++)
             if (want >= DIMOFS_BUTTON0 + b + 1)
                 MEM8(buf + DIMOFS_BUTTON0 + b) = (uint8_t)((buttons >> b) & 1u ? 0x80 : 0);
+        if (getenv("RECOMP_DI_DIAG")) { static int n; if ((n++ % 30) == 0 || buttons) fprintf(stderr,"[di] state kind=%d want=%d coop=%u x=%d y=%d buttons=%u t=%u\n",g_dev[i].kind,g_dev[i].coop,want,x,y,buttons,SDL_GetTicks()); }
     }
     if (want > 0 && hle_input_recording()) hle_input_record(what, hle_ptr(buf), (size_t)want);
     RET(DI_OK, 3);
@@ -260,6 +284,8 @@ static void dev_GetDeviceData(void) {
      * buffered -- polled state is GetDeviceState, which is real -- so the
      * honest answer is zero events. */
     uint32_t count = A32(3);
+    if (getenv("RECOMP_DI_DIAG")) fprintf(stderr, "[di] GetDeviceData kind=%d size=%u count_in=%u flags=%08x\n",
+        dev_index(A32(0)) >= 0 ? g_dev[dev_index(A32(0))].kind : -1, A32(1), count ? MEM32(count) : 0, A32(4));
     if (count) MEM32(count) = 0;
     RET(DI_OK, 5);
 }
@@ -422,6 +448,29 @@ static void di_GetDeviceStatus(void) {
 static void di_Initialize(void) { RET(DI_OK, 4); }
 static void di_RunControlPanel(void) { RET(DIERR_UNSUPPORTED, 3); }
 
+/* IDirectInput7 adds these after IDirectInput's Initialize (slot 8 onward).
+ * A title holding IDirectInput7 calls +0x24, i.e. CreateDeviceEx: with no
+ * entry there the slot is a null function pointer and the call is a wild
+ * jump, so the method is present even where it only mirrors CreateDevice. */
+static void di_CreateDeviceEx(void) {                     /* (this, rguid, riid, &out, punkOuter) */
+    /* DirectInput 7's variant: the interface id names the device layout. This
+     * layer serves one layout, so it is the same device CreateDevice makes. */
+    uint32_t guid = A32(1), out = A32(3);
+    if (!guid || !out) RET(DIERR_INVALIDPARAM, 5);
+    MEM32(out) = 0;
+    if (g_ndev >= DIN_MAX_DEVICES) RET(DIERR_DEVICENOTREG, 5);
+    const uint8_t *g = hle_ptr(guid);
+    int kind = memcmp(g, GUID_SYS_KEYBOARD, 16) == 0 ? 1
+             : memcmp(g, GUID_SYS_MOUSE, 16) == 0 ? 2 : 0;
+    if (!kind) RET(DIERR_DEVICENOTREG, 5);
+    uint32_t obj = hle_com_new(g_vt_dev, 16);
+    if (!obj) RET(DIERR_DEVICENOTREG, 5);
+    din_device *d = &g_dev[g_ndev++];
+    d->obj = obj, d->kind = kind, d->acquired = 0, d->have_format = 0, d->data_size = 0;
+    MEM32(out) = obj;
+    RET(DI_OK, 5);
+}
+
 /* ---- vtables and the entry points ---- */
 static void build_vtables(void) {
     if (g_vt_di) return;
@@ -434,6 +483,8 @@ static void build_vtables(void) {
         { "IDirectInput::GetDeviceStatus", di_GetDeviceStatus },
         { "IDirectInput::RunControlPanel", di_RunControlPanel },
         { "IDirectInput::Initialize", di_Initialize },
+        { "IDirectInput7::CreateDeviceEx", di_CreateDeviceEx },
+        { "IDirectInput7::EnumDevicesBySemantics", di_CreateDeviceEx },   /* placeholder probe */
         { 0, 0 }
     };
     static const win32hle_shim dev[] = {
@@ -488,12 +539,14 @@ static void d_CreateA(void) {
     RET(DI_OK, 4);
 }
 
-/* DirectInputCreateEx(hinst, version, &di, riid, punkOuter): DirectInput 7's
- * entry point. Same object; the interface GUID only selects a vtable layout
- * this layer answers identically. */
+/* DirectInputCreateEx(hinst, version, riid, &di, punkOuter): DirectInput 7's
+ * entry point, and the one place its argument order differs from
+ * DirectInputCreateA - the interface id comes BEFORE the out pointer, not
+ * after it. Same object; the GUID only selects a vtable layout this layer
+ * answers identically. */
 static void d_CreateEx(void) {
-    uint32_t out = A32(2), iid = A32(3);
-    if (!out || !iid) RET(DIERR_INVALIDPARAM, 5);
+    uint32_t out = A32(3);   /* A32(2) is the interface id: one object serves them all */
+    if (!out) RET(DIERR_INVALIDPARAM, 5);
     build_vtables();
     if (!g_di) {
         g_di = hle_com_new(g_vt_di, 16);

@@ -80,12 +80,23 @@ static int pe_map_at(const char *path, pe_image *img, int anywhere) {
     }
 
     /* headers, then each section's raw data (the rest of VirtualSize is the
-     * zero MAP_ANONYMOUS already gave us, i.e. .bss). */
+     * zero MAP_ANONYMOUS already gave us, i.e. .bss). Raw data past
+     * VirtualSize is copied too: the Windows loader maps the file's raw
+     * extent, and titles keep strings there (Cave Story's window class name
+     * sits in .rdata slack). */
     memcpy(hle_ptr(base), file, opt->SizeOfHeaders);
     pe_section_header *sec = (pe_section_header *)((uint8_t *)&nt->OptionalHeader + nt->FileHeader.SizeOfOptionalHeader);
     for (int i = 0; i < nt->FileHeader.NumberOfSections; i++) {
-        uint32_t copy = sec[i].SizeOfRawData < sec[i].VirtualSize ? sec[i].SizeOfRawData : sec[i].VirtualSize;
-        if (copy && (size_t)sec[i].PointerToRawData + copy <= flen)
+        uint32_t copy = sec[i].SizeOfRawData;
+        uint32_t room = span - sec[i].VirtualAddress;
+        if (i + 1 < nt->FileHeader.NumberOfSections) {
+            uint32_t next = sec[i + 1].VirtualAddress - sec[i].VirtualAddress;
+            if (next < room) room = next;
+        }
+        if (copy > room) copy = room;
+        if ((size_t)sec[i].PointerToRawData + copy > flen)
+            copy = (uint32_t)(flen - sec[i].PointerToRawData);
+        if (copy && (size_t)sec[i].PointerToRawData <= flen)
             memcpy(hle_ptr(base + sec[i].VirtualAddress), file + sec[i].PointerToRawData, copy);
     }
 

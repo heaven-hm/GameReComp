@@ -312,12 +312,15 @@ static int find_class(const char *name) {
         if (b) return find_class(b);
         return a >= 0xC000u && a - 0xC000u < (uint32_t)g_ncls ? (int)(a - 0xC000u) : -1;
     }
-    for (int i = 0; i < g_ncls; i++) if (!strcasecmp(g_cls[i].name, name)) return i;
+    for (int i = 0; i < g_ncls; i++) if (g_cls[i].name[0] && !strcasecmp(g_cls[i].name, name)) return i;
     return -1;
 }
 static int add_class(const char *name, uint32_t proc, uint32_t style, uint32_t extra, uint32_t hinst, int kind) {
     int i = find_class(name);
-    if (i < 0) { if (g_ncls >= MAX_CLASSES) return -1; i = g_ncls++; }
+    if (i < 0) {
+        for (i = 0; i < g_ncls && g_cls[i].name[0]; i++) {}
+        if (i == g_ncls) { if (g_ncls >= MAX_CLASSES) return -1; g_ncls++; }
+    }
     snprintf(g_cls[i].name, sizeof g_cls[i].name, "%s", name);
     g_cls[i].proc = proc, g_cls[i].style = style, g_cls[i].extra = extra, g_cls[i].hinst = hinst, g_cls[i].kind = kind;
     return i;
@@ -368,7 +371,6 @@ static uint32_t create_window(uint32_t exstyle, const char *cls, const char *tit
                               uint32_t parent, uint32_t menu, uint32_t hinst, uint32_t param) {
     int c = find_class(cls);
     if (c < 0) {
-        fprintf(stderr, "[user32] CreateWindowEx: no class %s\n", (uintptr_t)cls < 0x10000u ? "(atom)" : cls);
         hle_set_last_error(1407u);                       /* ERROR_CANNOT_FIND_WND_CLASS */
         return 0;
     }
@@ -740,6 +742,11 @@ void hle_input_key(int down, uint32_t vk, uint32_t scan) {
     if (t) q_push(t, alt || vk == VK_MENU || vk == 0x79 ? (down ? WM_SYSKEYDOWN : WM_SYSKEYUP) : (down ? WM_KEYDOWN : WM_KEYUP), vk, l);
 }
 void hle_input_cursor(int sx, int sy) { g_cursor_x = sx, g_cursor_y = sy; }
+/* DirectInput's mouse buttons are the async state the window messages carry,
+ * so a click injected (or real) through hle_input_mouse shows up here. */
+unsigned hle_input_mouse_buttons(void) {
+    return (g_keys[1] & 0x80 ? 1u : 0u) | (g_keys[2] & 0x80 ? 2u : 0u) | (g_keys[4] & 0x80 ? 4u : 0u);
+}
 void hle_input_key_state(uint32_t vk, int down) { if (down) g_keys[vk & 0xFF] |= 0x80; else g_keys[vk & 0xFF] &= 1; }
 
 /* ---- DefWindowProc ---- */
@@ -1496,6 +1503,20 @@ static void u_RegisterClassExA(void) {                   /* WNDCLASSEXA: size, s
     const char *name = str_or_atom(MEM32(wc + 40));
     int i = add_class((uintptr_t)name < 0x10000u ? "?" : name, MEM32(wc + 8), MEM32(wc + 4), MEM32(wc + 16), MEM32(wc + 20), K_GUEST);
     RET(i < 0 ? 0u : 0xC000u + (uint32_t)i, 1);
+}
+static void u_UnregisterClassA(void) {                    /* (class name or atom, instance) */
+    const char *name = STR_OR_ATOM(0);
+    int i = find_class(name);
+    if (i < 0 || g_cls[i].hinst != A32(1)) {
+        hle_set_last_error(1411);                         /* ERROR_CLASS_DOES_NOT_EXIST */
+        RET(0, 2);
+    }
+    for (int w = 0; w < MAX_WIN; w++) if (g_win[w].used && g_win[w].cls == i) {
+        hle_set_last_error(1412);                         /* ERROR_CLASS_HAS_WINDOWS */
+        RET(0, 2);
+    }
+    g_cls[i].name[0] = 0;
+    RET(1, 2);
 }
 static void u_GetClassInfoA(void) {                      /* (hinst, name, &WNDCLASSA) */
     builtin_classes();
@@ -2622,7 +2643,7 @@ const win32hle_shim win32hle_user32[] = {
     { "RedrawWindow", u_RedrawWindow }, { "UpdateWindow", u_UpdateWindow },
     { "BeginPaint", u_BeginPaint }, { "EndPaint", u_EndPaint },
     { "MessageBoxA", u_MessageBoxA }, { "MessageBoxIndirectA", u_MessageBoxIndirectA },
-    { "RegisterClassA", u_RegisterClassA }, { "RegisterClassExA", u_RegisterClassExA },
+    { "RegisterClassA", u_RegisterClassA }, { "RegisterClassExA", u_RegisterClassExA }, { "UnregisterClassA", u_UnregisterClassA },
     { "GetClassInfoA", u_GetClassInfoA }, { "GetClassNameA", u_GetClassNameA },
     { "CreateWindowExA", u_CreateWindowExA }, { "DefWindowProcA", u_DefWindowProcA },
     { "DefFrameProcA", u_DefFrameProcA }, { "DefMDIChildProcA", u_DefMDIChildProcA },

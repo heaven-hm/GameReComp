@@ -110,7 +110,7 @@ static void k_GetCommandLineW(void) {
 static void k_GetCurrentProcess(void)   { RET(0xFFFFFFFFu, 0); }        /* pseudo-handle */
 static void k_GetCurrentProcessId(void) { RET((uint32_t)getpid(), 0); }
 static void k_ExitProcess(void)         {
-    fprintf(stderr, "[win32hle] ExitProcess(%u)\n", A32(0));
+    fprintf(stderr, "[win32hle] ExitProcess(%u) from guest 0x%08X\n", A32(0), g_cur_func);
     hle_fls_thread_exit();                           /* the exiting thread's FLS destructors */
     hle_exit((int)A32(0));
 }
@@ -727,6 +727,9 @@ static void k_DuplicateHandle(void) {        /* (srcProc, src, dstProc, &dst, ac
     RET(1, 7);
 }
 static void k_LockFile(void)          { RET(1, 5); }
+/* With no host debugger attached, Windows DebugBreak is not a useful signal
+ * to the translated process. Keep the API call ABI-safe and continue. */
+static void k_DebugBreak(void)         { RETV(0); }
 
 const win32hle_shim win32hle_kernel32[] = {
     { "GetProcessVersion",  k_GetProcessVersion },
@@ -734,6 +737,7 @@ const win32hle_shim win32hle_kernel32[] = {
     { "DuplicateHandle",    k_DuplicateHandle },
     { "LockFile",           k_LockFile },
     { "UnlockFile",         k_LockFile },
+    { "DebugBreak",         k_DebugBreak },
     { "GlobalAddAtomA",     k_GlobalAddAtomA },
     { "GlobalFindAtomA",    k_GlobalFindAtomA },
     { "GlobalDeleteAtom",   k_GlobalDeleteAtom },

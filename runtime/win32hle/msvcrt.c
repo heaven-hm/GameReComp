@@ -160,6 +160,8 @@ static uint32_t g_commode_va;                 /* int __p__commode */
 static uint32_t g_new_mode, g_thread_locale;  /* _set_new_mode, _configthreadlocale */
 static char **g_host_argv;                    /* this process's own arguments */
 static int g_host_argc;
+static char *const *g_argv_override;          /* the guest's own argv, when the host supplied one */
+static int g_argv_override_n;
 static int  ms_atexit_add(uint32_t fn);       /* defined with the exit path below */
 static int      g_app_type;       /* __set_app_type */
 
@@ -268,6 +270,7 @@ static void ms_init_once(void) {
 
     int argc = 0;
     char **argv = ms_host_argv(&argc);
+    if (g_argv_override) { argc = g_argv_override_n; argv = (char **)g_argv_override; }
     g_argc = (uint32_t)argc;
     g_host_argv = argv;
     g_host_argc = argc;
@@ -280,6 +283,15 @@ static void ms_init_once(void) {
 
 static pthread_once_t g_once = PTHREAD_ONCE_INIT;
 static void ms_init(void) { pthread_once(&g_once, ms_init_once); }
+
+/* The host launcher knows what a Windows process of this title would have been
+ * started with: the guest exe first, then the user's arguments. Without this
+ * the CRT would report the recompiler's own path as argv[0]. Call before the
+ * guest entry runs (the vectors are built on first CRT use). */
+void hle_set_argv(int argc, char *const *argv) {
+    g_argv_override = argv;
+    g_argv_override_n = argc;
+}
 
 /* ================================================================= errno
  * MSVC's errno values are the POSIX numbers for every code this module can

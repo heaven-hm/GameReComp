@@ -86,7 +86,12 @@ void *hle_heap_realloc(void *u, uint32_t n, int zero) {
 #define ANY_HI    0x7F000000u          /* under GetSystemInfo's highest application address */
 #define SHIM_LO   0x7F000000u          /* host_lite.c's synthetic import VAs: never mapped */
 #define SHIM_HI   0x80000000u
-#define MAX_RANGES 8192
+/* The table must be able to describe the whole usable 32-bit space at the
+ * 64 KB reservation unit: 0x10000000..0x7F000000 / 64 KB is about 29k ranges,
+ * and the heap's large blocks are the bulk of them. 8192 overflowed on titles
+ * that hold a few thousand mipmapped textures, and the allocator then failed a
+ * small surface with "no guest memory" while most of the space was free. */
+#define MAX_RANGES 65536
 
 static pthread_mutex_t g_mem_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct { uint64_t lo, hi; } g_rng[MAX_RANGES];   /* reserved, sorted by lo */

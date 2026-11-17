@@ -43,6 +43,7 @@ static const char *const g_system[] = {
     "kernel32", "user32", "gdi32", "advapi32", "shell32", "ole32", "oleaut32", "winmm",
     "wsock32", "ws2_32", "ddraw", "dsound", "dinput", "version", "comctl32", "comdlg32",
     "ntdll", "msvcrt", "imm32", "mpr", "rpcrt4", "uuid", "dplayx", "d3dim",
+    "avifil32", "msvfw32",
 };
 
 static void base_of(const char *path, char *out, size_t n) {
