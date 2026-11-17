@@ -5,6 +5,28 @@ All notable changes to this repository: the RevEng-Studio PCRecomp-first product
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- CLI stage planning (`tools/autorecomp/cli.py`): `--out-mode source|binary|both`,
+  `--stages`, `--skip-stages`, `--list-stages` and `--dry-run`. `run_pipeline`
+  accepts a validated stage subset (unknown names raise; report always runs last
+  so a partial run stays inspectable).
+- CLI target selection: `--target-os`/`--target-arch` resolve against the build
+  host and refuse anything else with exit code 4 -- cross-compilation is not
+  implemented, and a host binary mislabeled for another OS/arch would be a lie
+  in the report.
+- Weighted terminal progress bar (`_StageProgress`): one bar over the whole
+  plan, driven by the pipeline's stage events, with the active stage's elapsed
+  time; plain `==> stage` lines on pipes/CI, `--no-progress`/`--verbose`/`--quiet`
+  controls. New tests in `tests/test_cli.py`.
+
+### Fixed
+- Stage-end progress events were emitted with the key `name` while the CLI read
+  `stage`, so `_StageProgress`'s predecessor silently dropped every stage-end
+  line (`_emit` swallows handler exceptions). The renderer now accepts both
+  spellings and a test pins it.
+
 ## [0.1.0] - 2026-10-29
 
 First vertical slice of the RevEng-Studio product: one command from a Windows

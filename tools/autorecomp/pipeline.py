@@ -858,15 +858,29 @@ def _run_stage(pipeline, name):
         stage.message, stage.data = message, data
 
 
-def run_pipeline(pipeline):
-    """Run all stages in order, stopping at the first non-report failure.
+def run_pipeline(pipeline, stages=None):
+    """Run stages in order, stopping at the first non-report failure.
+
+    `stages` selects a subset of STAGES (None means all). Unknown names
+    raise; the caller validates too, but this is the fail-closed backstop.
+    The report stage always runs last even when unrequested, so a partial
+    run still leaves an inspectable reports/report.json -- the same
+    invariant a full run keeps.
 
     Verification still runs when the run stage failed but left evidence:
     a launch-failed verdict is a verification result, and skipping it
     would leave the project without any reports/verification.json.
     """
+    selected = list(STAGES)
+    if stages is not None:
+        unknown = [s for s in stages if s not in STAGES]
+        if unknown:
+            raise ValueError(f"unknown stage(s): {', '.join(sorted(unknown))}")
+        selected = [s for s in STAGES if s in stages]
+        if "report" not in selected:
+            selected.append("report")
     stop = False
-    for name in STAGES:
+    for name in selected:
         if stop and name != "report" and not (
                 name == "verify" and pipeline.run_result is not None):
             pipeline.stages.append({

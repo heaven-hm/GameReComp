@@ -100,17 +100,37 @@ python3 -m tools.autorecomp.cli /path/to/game.exe
 python3 -m tools.autorecomp.cli /path/to/game.exe --interactive
 ```
 
+The CLI shows a weighted progress bar over the eight pipeline stages on a
+terminal (plain stage lines in pipes/CI), and is explicit about what it will
+do before it does it: `--dry-run` prints the resolved plan and builds nothing.
+
 Generated files: `projects/<game>/src/` (C), `build/` (binary), `reports/` (evidence). Supply your own legally obtained game executable and assets. [Installation & troubleshooting →](docs/GETTING_STARTED.md)
 
 <details>
 <summary><b>More commands</b></summary>
 
 ```bash
+# Output shape
+python3 -m tools.autorecomp.cli /path/to/game.exe --out-mode source   # C project only
+python3 -m tools.autorecomp.cli /path/to/game.exe --out-mode binary   # add native binary, no run/verify
+python3 -m tools.autorecomp.cli /path/to/game.exe --stages inspect,recover,translate
+python3 -m tools.autorecomp.cli --list-stages
+
+# Target (host builds only; anything else is refused, not mislabeled)
+python3 -m tools.autorecomp.cli /path/to/game.exe --target-os host --target-arch host
+
+# Working directory and evidence
 python3 -m tools.autorecomp.cli /path/to/game.exe --assets-dir /path/to/game/assets
-python3 -m tools.autorecomp.cli /path/to/game.exe --no-build --no-run
 python3 -m tools.autorecomp.cli /path/to/game.exe --timeout 60 --json
+
+# Plan without running, and without the bar
+python3 -m tools.autorecomp.cli /path/to/game.exe --dry-run
+python3 -m tools.autorecomp.cli /path/to/game.exe --no-progress --verbose
 sh verify.sh --fast
 ```
+
+Exit codes: `0` verified/success, `2` a stage failed, `3` ran but unverified,
+`4` unsupported target requested.
 
 </details>
 

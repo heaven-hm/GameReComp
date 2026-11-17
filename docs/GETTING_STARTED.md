@@ -108,34 +108,40 @@ Useful variants:
 ./RevEng game.exe --interactive                # real SDL window/audio
 ./RevEng game.exe --split 2000 --split-bytes 16777216   # larger source units
 ./RevEng game.exe --jobs 8                     # parallel build
+./RevEng game.exe --out-mode source            # stop after the generated C project
+./RevEng game.exe --stages inspect,recover,translate    # an explicit stage plan
+./RevEng game.exe --dry-run                    # print the plan, build nothing
+./RevEng --list-stages                         # stage names and weights
 ```
 
 Exit codes:
 
 | Code | Meaning |
 | --- | --- |
-| 0 | `scenario-pass` — every stage passed and the declared scenario was observed |
+| 0 | `scenario-pass` — every stage passed and the declared scenario was observed (also: a source/binary-only plan completed) |
 | 2 | a stage failed (inspect, recover, translate, project, compile or run setup) |
 | 3 | the rebuilt binary ran, but verification did not reach `scenario-pass` |
+| 4 | the requested `--target-os`/`--target-arch` is not the build host; cross-compilation is not implemented and is refused rather than mislabeled |
 
 Exit code 3 is the normal outcome while no game has a gameplay oracle yet. Do not
 read it as success, and do not lower it to 0 by hand.
 
 ### What a run looks like
 
-The pipeline prints one line per stage and how long it took. A typical PE32 game
-on this host:
+On a terminal the CLI draws one weighted progress bar over the whole plan,
+redrawn in place, with the active stage's elapsed time; percentages count
+finished stages only. The same run in a pipe or CI log prints one line per
+stage and how long it took. A typical PE32 game on this host:
 
 ```text
 ==> inspect
+    ok         0.4s  inspect: i386 PE32, 143 imports, entry 0x00481d27
 ==> recover
-==> translate
-==> project
-==> compile
-==> run
-==> verify
-==> report
+    ...
 ```
+
+`--verbose` also shows each stage's message under the bar; `--quiet` prints
+only the final summary; `--no-progress` forces the plain lines in a terminal.
 
 The first run of a game also writes a project directory:
 
