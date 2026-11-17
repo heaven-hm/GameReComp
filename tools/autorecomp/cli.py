@@ -489,22 +489,31 @@ def main(argv=None):
     score = report.get("score", pipeline.score())
     failed = [s["name"] for s in pipeline.stages if s["status"] == "failed"]
 
-    print()
-    print(f"project:      {pipeline.project_dir}")
-    print(f"target:       {target[0]}/{target[1]}")
-    print(f"stages run:   {', '.join(selected)}")
-    print(f"score:        {score}/100")
-    print(f"verification: {verification}")
+    # --json promises machine-readable stdout: the human summary goes to
+    # stderr so `./GameReComp game.exe --json > report.json` is valid JSON,
+    # not a summary with JSON appended.
+    summary = sys.stderr if args.json else sys.stdout
+
+    print(file=summary)
+    print(f"project:      {pipeline.project_dir}", file=summary)
+    print(f"target:       {target[0]}/{target[1]}", file=summary)
+    stage_summary = ", ".join(
+        f"{s['name']}({s['status']})" for s in pipeline.stages
+        if s["name"] in selected or s["name"] == "report")
+    print(f"stages:       {stage_summary}", file=summary)
+    print(f"score:        {score}/100", file=summary)
+    print(f"verification: {verification}", file=summary)
     if failed:
-        print(f"failed stages: {', '.join(failed)}")
-    print(f"report:       {pipeline.project_dir / 'reports' / 'report.html'}")
+        print(f"failed stages: {', '.join(failed)}", file=summary)
+    print(f"report:       {pipeline.project_dir / 'reports' / 'report.html'}",
+          file=summary)
 
     if not args.no_table and (pipeline.project_dir / "reports" / "report.json").exists():
         try:
             gamesdb.record_result(pipeline.project_dir,
                                   relative_path=_database_path(pe_path))
             table = gamesdb.write_table()
-            print(f"database:     {table}")
+            print(f"database:     {table}", file=summary)
         except (OSError, ValueError) as exc:
             print(f"warning: could not update table.md: {exc}", file=sys.stderr)
 

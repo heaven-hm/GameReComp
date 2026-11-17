@@ -208,7 +208,17 @@ class Pipeline:
         return f"{info.machine} {info.pe_type}, {len(info.imports)} imports, entry {data['entry_point']}", data
 
     def stage_recover(self):
-        functions = discover_functions(self.pe_data, self.info, self.iat_map)
+        # The disassembler narrates its recovery on stdout. Capture that
+        # narration into logs/recover.log like the translate stage does, so
+        # a `--json` run's stdout stays machine-readable and the chatter
+        # stays inspectable.
+        log_path = self.project_dir / "logs" / "recover.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            functions = discover_functions(self.pe_data, self.info,
+                                           self.iat_map)
+        log_path.write_text(buf.getvalue())
         self.functions = functions
         ordered = sorted(functions.values(), key=lambda f: f.address)
         entries = []
