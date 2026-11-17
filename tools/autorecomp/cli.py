@@ -30,13 +30,32 @@ EXIT_UNVERIFIED = 3
 EXIT_UNSUPPORTED = 4
 
 # Output mode -> the stages that produce that output. "source" stops after
-# the generated C project exists; "binary" adds compile; "both" is the full
-# pipeline including run + verify. The report stage is always appended by
-# run_pipeline, so the plan below omits it.
+# the generated C project exists; "binary" adds compile; "both"/"full" is
+# the complete pipeline including run + verify. Aliases exist because
+# people ask for "source only" and "full recomp" and mean exactly these.
+# The report stage is always appended by run_pipeline, so the plan below
+# omits it.
+_SOURCE_STAGES = ["inspect", "recover", "translate", "project"]
+_BINARY_STAGES = ["inspect", "recover", "translate", "project", "compile"]
 OUT_MODE_STAGES = {
-    "source": ["inspect", "recover", "translate", "project"],
-    "binary": ["inspect", "recover", "translate", "project", "compile"],
+    "source": _SOURCE_STAGES,
+    "source-only": _SOURCE_STAGES,
+    "binary": _BINARY_STAGES,
+    "binary-only": _BINARY_STAGES,
     "both": list(STAGES),
+    "full": list(STAGES),
+}
+
+# What the pipeline reconstructs: a Windows PE32 game for the 32-bit x86
+# guest ISA, rebuilt as a native host executable. Anything else is refused
+# with the reason, not silently misread.
+SUPPORTED_INPUT_OS = ("windows",)
+SUPPORTED_INPUT_ARCH = ("x86",)
+
+_MACHINE_ARCH_NAMES = {
+    0x014C: "x86", 0x8664: "x86_64",
+    0x01C0: "arm", 0x01C4: "arm",
+    0xAA64: "arm64", 0x0200: "ia64",
 }
 
 # Hosts this pipeline is implemented against. Cross-compiling is NOT
@@ -70,6 +89,57 @@ def _host_pair():
     os_name = _HOST_OS_NAMES.get(platform.system())
     machine = platform.machine().lower()
     return os_name, _HOST_ARCH_NAMES.get(machine, machine)
+
+
+def _pe_identity(pe_path):
+    """(os, arch) from the binary's own headers, or (None, reason).
+
+    Reads only the header bytes: MZ magic, e_lfanew, the PE signature and
+    the COFF machine type. The guest OS comes from the format itself --
+    PE means Windows -- so there is nothing to guess and nothing to trust
+    from the file name.
+    """
+    try:
+        with open(pe_path, "rb") as fh:
+            head = fh.read(4096)
+    except OSError as exc:
+        return None, f"cannot read the input: {exc}"
+    if len(head) < 0x40 or head[:2] != b"MZ":
+        return None, "not an MZ/PE executable"
+    e_lfanew = int.from_bytes(head[0x3C:0x40], "little")
+    if e_lfanew + 6 > len(head) or head[e_lfanew:e_lfanew + 4] != b"PE\x00\x00":
+        return None, ("MZ header but no PE signature: DOS MZ, NE or LE "
+                      "executables are not supported; this pipeline "
+                      "reconstructs Windows PE32 games")
+    machine = int.from_bytes(head[e_lfanew + 4:e_lfanew + 6], "little")
+    return ("windows", _MACHINE_ARCH_NAMES.get(machine, hex(machine))), None
+
+
+def _resolve_input(pe_path, os_choice, arch_choice):
+    """Validate the declared input identity against the binary itself.
+
+    Returns ((os, arch), None) on success and (None, reason) on refusal.
+    'auto' means: read it from the header. An explicit declaration that
+    disagrees with the bytes is refused -- a tool that guesses instead of
+    checking is how the wrong binary gets reconstructed with confidence.
+    """
+    identity, reason = _pe_identity(pe_path)
+    if reason:
+        return None, reason
+    in_os, in_arch = identity
+    if os_choice != "auto" and os_choice != in_os:
+        return None, (f"--input-os {os_choice} but the binary's header says "
+                      f"{in_os}; refusing to reconstruct on a guess")
+    if arch_choice != "auto" and arch_choice != in_arch:
+        return None, (f"--input-arch {arch_choice} but the binary's header "
+                      f"says {in_arch}; refusing to reconstruct on a guess")
+    if in_os not in SUPPORTED_INPUT_OS:
+        return None, f"unsupported input OS: {in_os}"
+    if in_arch not in SUPPORTED_INPUT_ARCH:
+        return None, (f"unsupported input architecture: {in_arch} "
+                      f"(this pipeline reconstructs PE32 "
+                      f"{'/'.join(SUPPORTED_INPUT_ARCH)} guests)")
+    return (in_os, in_arch), None
 
 
 def _resolve_target(os_choice, arch_choice):
@@ -299,10 +369,11 @@ def build_parser():
                         "rebuilt binary (default: the executable's directory)")
     parser.add_argument("--out-mode", choices=sorted(OUT_MODE_STAGES),
                         default=None,
-                        help="what to produce: source (generated C project "
-                             "only), binary (add the compiled native "
-                             "executable), both (full pipeline with run and "
-                             "verification; default)")
+                        help="what to produce: source-only (generated C "
+                             "project), binary-only (add the compiled native "
+                             "executable), full (everything: run + "
+                             "verification). The short names source, binary "
+                             "and both are the same thing; default full")
     parser.add_argument("--stages", metavar="A,B,...", type=_stage_list,
                         help="run exactly these stages, in canonical order "
                              "(overrides --out-mode; report always runs last "
@@ -312,16 +383,29 @@ def build_parser():
                              "be skipped)")
     parser.add_argument("--list-stages", action="store_true",
                         help="print the stage plan with weights and exit")
-    parser.add_argument("--target-os", choices=["host", "linux", "macos",
-                                                "windows"], default="host",
-                        help="output platform (default: host). Anything other "
-                             "than the build host is refused: "
-                             "cross-compilation is not implemented, and a "
-                             "mislabeled host binary is worse than no binary")
-    parser.add_argument("--target-arch", choices=["host", "x86_64", "arm64"],
+    parser.add_argument("--input-os", choices=["auto", "windows"],
+                        default="auto",
+                        help="what the input binary is (default: auto -- read "
+                             "it from the PE header). An explicit declaration "
+                             "that disagrees with the bytes is refused")
+    parser.add_argument("--input-arch", choices=["auto", "x86"],
+                        default="auto",
+                        help="guest CPU architecture of the input (default: "
+                             "auto from the PE header; the pipeline "
+                             "reconstructs 32-bit x86 guests)")
+    parser.add_argument("--target-os", "--output-os", dest="target_os",
+                        choices=["host", "linux", "macos", "windows"],
                         default="host",
-                        help="output CPU architecture (default: host; see "
-                             "--target-os for the refusal rule)")
+                        help="output platform (default: host; --output-os is "
+                             "an alias). Anything other than the build host "
+                             "is refused: cross-compilation is not "
+                             "implemented, and a mislabeled host binary is "
+                             "worse than no binary")
+    parser.add_argument("--target-arch", "--output-arch", dest="target_arch",
+                        choices=["host", "x86_64", "arm64"], default="host",
+                        help="output CPU architecture (default: host; "
+                             "--output-arch is an alias; see --target-os for "
+                             "the refusal rule)")
     parser.add_argument("--timeout", type=float, default=30.0,
                         help="seconds to let the rebuilt binary run (default 30)")
     parser.add_argument("--interactive", action="store_true",
@@ -395,10 +479,14 @@ def _print_plan(args, pe_path, selected, target):
     project_dir = (Path(args.project_dir).expanduser() if args.project_dir
                    else Path(projectgen_default(pe_path)))
     os_name, arch = target
+    identity, _ = _pe_identity(pe_path)
+    in_os, in_arch = identity if identity else ("unknown", "unknown")
     print("plan (dry run; nothing was built):")
     print(f"  input:       {pe_path}")
+    print(f"  input os:    {in_os} ({args.input_os if args.input_os != 'auto' else 'auto from header'})")
+    print(f"  input arch:  {in_arch} ({args.input_arch if args.input_arch != 'auto' else 'auto from header'})")
     print(f"  name:        {pe_path.stem}")
-    print(f"  target:      {os_name}/{arch}")
+    print(f"  output:      {os_name}/{arch} native")
     print(f"  out-mode:    {args.out_mode or ('stages' if args.stages else 'both')}")
     print(f"  project dir: {project_dir}")
     print(f"  assets dir:  "
@@ -456,6 +544,12 @@ def main(argv=None):
         print(f"error: {target_error}", file=sys.stderr)
         return EXIT_UNSUPPORTED
 
+    input_identity, input_error = _resolve_input(
+        pe_path, args.input_os, args.input_arch)
+    if input_error:
+        print(f"error: {input_error}", file=sys.stderr)
+        return EXIT_UNSUPPORTED
+
     selected = _resolve_stages(args, parser.error)
     if selected is None:
         return EXIT_STAGE_FAILED
@@ -509,7 +603,13 @@ def main(argv=None):
 
     print(file=summary)
     print(f"project:      {pipeline.project_dir}", file=summary)
-    print(f"target:       {target[0]}/{target[1]}", file=summary)
+    print(f"input:        {input_identity[0]}/{input_identity[1]} "
+          f"({pe_path.name})", file=summary)
+    print(f"output:       {target[0]}/{target[1]} native", file=summary)
+    print(f"source code:  {pipeline.project_dir / 'src' / 'recomp' / 'gen'}",
+          file=summary)
+    if pipeline.binary and Path(pipeline.binary).exists():
+        print(f"binary:       {pipeline.binary}", file=summary)
     stage_summary = ", ".join(
         f"{s['name']}({s['status']})" for s in pipeline.stages
         if s["name"] in selected or s["name"] == "report")

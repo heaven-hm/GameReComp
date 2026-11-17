@@ -90,6 +90,43 @@ class StagePlanTests(unittest.TestCase):
         self.assertTrue(any("report" in e for e in errors))
 
 
+class InputIdentityTests(unittest.TestCase):
+    def test_auto_detects_the_fixture(self):
+        identity, error = cli._resolve_input(FIXTURE_EXE, "auto", "auto")
+        self.assertIsNone(error)
+        self.assertEqual(identity, ("windows", "x86"))
+
+    def test_explicit_match_is_accepted(self):
+        identity, error = cli._resolve_input(FIXTURE_EXE, "windows", "x86")
+        self.assertIsNone(error)
+        self.assertEqual(identity, ("windows", "x86"))
+
+    def test_wrong_declared_arch_is_refused(self):
+        identity, error = cli._resolve_input(FIXTURE_EXE, "windows", "arm64")
+        self.assertIsNone(identity)
+        self.assertIn("header says x86", error)
+
+    def test_wrong_declared_os_is_refused(self):
+        identity, error = cli._resolve_input(FIXTURE_EXE, "linux", "auto")
+        self.assertIsNone(identity)
+        self.assertIn("header says windows", error)
+
+    def test_not_a_pe_is_refused(self):
+        with tempfile.NamedTemporaryFile(suffix=".exe", delete=False) as f:
+            f.write(b"MZ" + b"\x00" * 64)            # MZ magic, e_lfanew = 0
+            bad = f.name
+        identity, error = cli._resolve_input(Path(bad), "auto", "auto")
+        self.assertIsNone(identity)
+        self.assertIn("PE signature", error)
+
+    def test_out_mode_aliases_map_to_the_same_plan(self):
+        for alias, canon in (("full", "both"), ("source-only", "source"),
+                             ("binary-only", "binary")):
+            self.assertEqual(cli.OUT_MODE_STAGES[alias],
+                             cli.OUT_MODE_STAGES[canon],
+                             f"{alias} != {canon}")
+
+
 class TargetTests(unittest.TestCase):
     def test_host_resolves(self):
         with mock.patch.object(cli.platform, "system", return_value="Darwin"), \
