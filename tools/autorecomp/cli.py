@@ -436,6 +436,19 @@ def main(argv=None):
     pe_path = Path(args.pe_file).expanduser()
     if not pe_path.is_file():
         print(f"error: input executable not found: {pe_path}", file=sys.stderr)
+        if "..." in str(args.pe_file):
+            print("hint: '...' in a path is shorthand, not a real path; pass "
+                  "the full absolute path to the .exe", file=sys.stderr)
+        if str(args.pe_file).startswith("~"):
+            print("hint: '~' at the start of a path needs expanding; the "
+                  "shell does it unquoted, so avoid quoting that argument",
+                  file=sys.stderr)
+        corpus = os.environ.get("SMALL_GAMES_PATH")
+        if corpus and not Path(pe_path).is_absolute():
+            guess = Path(corpus).expanduser() / pe_path
+            if guess.is_file():
+                print(f"hint: found it in SMALL_GAMES_PATH: {guess}",
+                      file=sys.stderr)
         return EXIT_STAGE_FAILED
 
     target, target_error = _resolve_target(args.target_os, args.target_arch)
