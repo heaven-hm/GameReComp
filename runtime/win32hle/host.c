@@ -208,7 +208,15 @@ static void set_guest_arguments(int argc, char **argv) {
 }
 
 int recomp_host_main(int argc, char **argv) {
-    if (argc < 2) { fprintf(stderr, "usage: %s <image.exe> [args...]\n", argv[0]); return 64; }
+    if (argc < 2) {
+        fprintf(stderr,
+                "usage: %s <original-game.exe> [args...]\n"
+                "The rebuilt binary carries the game's reconstructed code; the\n"
+                "original Windows executable supplies its data. Point it at the\n"
+                "game file you are porting, as you supplied it to GameReComp.\n",
+                argv[0]);
+        return 64;
+    }
     /* RECOMP_TRACE=1 logs every import dispatch. Without a hook the only way
      * to see which shim a guest reaches was to recompile the layer, which is
      * what made the last audit report "no shim-level runtime trace" as a

@@ -53,7 +53,12 @@ static void honour_trace(void) {
 int main(int argc, char **argv) {
     if (!permissive_requested()) return recomp_host_main(argc, argv);
     if (argc < 2) {
-        fprintf(stderr, "usage: %s <image.exe> [args...]\\n", argv[0]);
+        fprintf(stderr,
+                "usage: %s <original-game.exe> [args...]\\n"
+                "The rebuilt binary carries the game's reconstructed code; the\\n"
+                "original Windows executable supplies its data. Point it at the\\n"
+                "game file you are porting, as you supplied it to GameReComp.\\n",
+                argv[0]);
         return 64;
     }
     honour_trace();
