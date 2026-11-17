@@ -2,11 +2,11 @@
 
 Every game this project knows about: locally supplied corpus, the legacy engine baseline for the same binaries, and the upstream PCRecomp project table. Filenames and hashes only - no game binaries or assets are stored here.
 
-`PASS /100` is the RevEng pipeline score for the measured input: weighted work, not a verdict. inspect 10, recover 10, translate 10, project 10, compile 20, report 10, run 15 (full when the rebuilt process launched on its own, half when it launched then faulted, none when it never reached its entry), verify 15 (full for a verified scenario, 8 for a launch without an oracle). A stage only counts when it succeeded for the recorded hash, so a binary that never boots scores 70, not 85. Untested rows are 0.
+`PASS /100` is the GameReComp pipeline score for the measured input: weighted work, not a verdict. inspect 10, recover 10, translate 10, project 10, compile 20, report 10, run 15 (full when the rebuilt process launched on its own, half when it launched then faulted, none when it never reached its entry), verify 15 (full for a verified scenario, 8 for a launch without an oracle). A stage only counts when it succeeded for the recorded hash, so a binary that never boots scores 70, not 85. Untested rows are 0.
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-10-30T19:04:09Z by `python -m tools.gamesdb`. Measured 31; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-17T18:56:34Z by `python -m tools.gamesdb`. Measured 31; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **Cave Story** (DoConfig.exe) at 93/100, partial: process launched and exited 1; no oracle supplied.
 
@@ -17,7 +17,7 @@ Best measured result: **Cave Story** (DoConfig.exe) at 93/100, partial: process 
 | Cave Story | DoConfig.exe | i386 | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/DoConfig/reports/report.json (host: Darwin arm64) |
 | Cave Story | Doukutsu.exe | i386 | Windows | 93 | partial: process launched and stayed alive until the 15s timeout; no crash observed, no oracle | projects/Doukutsu/reports/report.json (host: Darwin arm64) |
 | Cave Story | OrgView.exe | i386 | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/OrgView/reports/report.json (host: Darwin arm64) |
-| Ikachan | dxIka.exe | i386 | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/dxIka/reports/report.json (host: Darwin arm64) |
+| Ikachan | dxIka.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/dxIka/reports/report.html (host: Darwin arm64 (host build)) |
 | Warning Forever | wf.exe | i386 | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/wf/reports/report.json (host: Darwin arm64) |
 | Gunroar | gr.exe | i386 | Windows | 77 | launch-failed: rebuilt process crashed (exit -10) | projects/gr/reports/report.json (host: Darwin arm64) |
 | GeneRally | GeneRally.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/GeneRally/reports/report.json (host: Darwin arm64) |
