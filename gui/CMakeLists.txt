@@ -4,16 +4,16 @@ cmake_minimum_required(VERSION 3.20)
 # is read from a file the pipeline wrote; it never computes a status itself,
 # because a GUI that derives "pass" from anything but the record is a GUI that
 # can disagree with the CLI.
-project(reveng-studio-gui LANGUAGES CXX)
+project(gamerecomp-gui LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 qt_standard_project_setup()
-qt_add_executable(reveng-studio
+qt_add_executable(gamerecomp
     main.cpp
     projectmodel.cpp projectmodel.h
     peinfo.cpp peinfo.h
     mainwindow.cpp mainwindow.h
 )
-target_link_libraries(reveng-studio PRIVATE Qt6::Widgets)
-set_target_properties(reveng-studio PROPERTIES MACOSX_BUNDLE FALSE)
+target_link_libraries(gamerecomp PRIVATE Qt6::Widgets)
+set_target_properties(gamerecomp PROPERTIES MACOSX_BUNDLE FALSE)

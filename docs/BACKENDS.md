@@ -44,7 +44,7 @@ separate runtime for a different host story; it is not used by `autorecomp`.
 
 ### rev.ng
 
-`RevEng readability` looks for rev.ng via `REVNG_BIN`/`PATH` or a
+`GameReComp readability` looks for rev.ng via `REVNG_BIN`/`PATH` or a
 `REVNG_DECOMPILE_CMD` template and records candidate `*.c` files under the
 project's `readability/revng/`. Candidates are **not compiled into the
 project**: there is no ABI bridge that lets a rev.ng function stand in for a

@@ -689,7 +689,7 @@ class Pipeline:
         self._write_manifest()
         report = {
             "schema": 1,
-            "tool": "reveng-studio autorecomp",
+            "tool": "GameReComp autorecomp",
             "version": "0.1.0",
             "generated_at": _now(),
             "input": str(self.pe_path),

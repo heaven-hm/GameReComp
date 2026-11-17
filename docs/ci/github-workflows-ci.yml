@@ -75,7 +75,7 @@ jobs:
         run: brew install sdl2 sdl2_ttf
       - name: Pipeline on the synthetic fixture
         run: |
-          ./RevEng tests/fixtures/pe32-minimal.exe \
+          ./GameReComp tests/fixtures/pe32-minimal.exe \
             --project-dir "$RUNNER_TEMP/pe32-minimal" --timeout 10 --no-table
       - name: Upload the report
         if: always()

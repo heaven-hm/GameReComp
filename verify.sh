@@ -56,21 +56,21 @@ fi
 
 # ------------------------------------------------------------------- gui
 head1 "gui"
-if [ -x gui/build/reveng-studio ]; then
-    if QT_QPA_PLATFORM=offscreen gui/build/reveng-studio --selftest projects/cavestory-doukutsu --repo "$PWD" \
+if [ -x gui/build/gamerecomp ]; then
+    if QT_QPA_PLATFORM=offscreen gui/build/gamerecomp --selftest projects/cavestory-doukutsu --repo "$PWD" \
          > /tmp/verify-gui.log 2>&1; then
         ok "gui reads a real project headlessly" "$(grep '^functions:' /tmp/verify-gui.log)"
     else
         bad "gui reads a real project headlessly" "$(head -2 /tmp/verify-gui.log | tr '\n' ' ')"
     fi
-    if QT_QPA_PLATFORM=offscreen gui/build/reveng-studio --selftest-pe tests/fixtures/pe32-minimal.exe \
+    if QT_QPA_PLATFORM=offscreen gui/build/gamerecomp --selftest-pe tests/fixtures/pe32-minimal.exe \
          > /tmp/verify-gui-pe.log 2>&1; then
         ok "gui accepts a supported executable"
     else
         bad "gui accepts a supported executable" "$(head -2 /tmp/verify-gui-pe.log | tr '\n' ' ')"
     fi
 else
-    skip "gui checks" "gui/build/reveng-studio not built (cmake -S gui -B gui/build)"
+    skip "gui checks" "gui/build/gamerecomp not built (cmake -S gui -B gui/build)"
 fi
 
 # ------------------------------------------------------------ regression

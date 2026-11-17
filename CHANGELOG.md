@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to this repository: the RevEng-Studio PCRecomp-first product
+All notable changes to this repository: the GameReComp PCRecomp-first product
 (`tools/autorecomp` and the generated tooling) and the upstream pcrecomp toolbox.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/).
@@ -29,7 +29,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follo
 
 ## [0.1.0] - 2026-10-29
 
-First vertical slice of the RevEng-Studio product: one command from a Windows
+First vertical slice of the GameReComp product: one command from a Windows
 PE32 game executable to a generated C project, a compiled native executable and a
 fail-closed verification report. All generated functions are `LOW_LEVEL_FALLBACK`
 register-transfer C; no game has passed a gameplay scenario yet, and the desktop
@@ -110,7 +110,7 @@ inputs are preserved as `not-run` rows (0/100).
 ## [Unreleased]
 
 ### Added
-- **The RevEng product**: `./RevEng <game.exe>` runs inspect → recover →
+- **The GameReComp product**: `./GameReComp <game.exe>` runs inspect → recover →
   translate → project → compile → run → verify → report in one command, and
   writes a self-contained project (generated C, the pinned runtime copy, CMake,
   logs, `report.json`/`report.html`). `./autorecomp` remains as a shim that
@@ -160,7 +160,7 @@ inputs are preserved as `not-run` rows (0/100).
   of the README so the README is this product's own.
 
 ### Changed
-- The README is RevEng-Studio's: what it is, what it adds over the toolbox it is
+- The README is GameReComp's: what it is, what it adds over the toolbox it is
   built on, the measured corpus, the honest limits and the roadmap. It credits
   pcrecomp and its contributors and links the pinned licences.
 - A run's score is weighted work, not a verdict, and the outcome-dependent half

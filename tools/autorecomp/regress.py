@@ -213,9 +213,9 @@ def tier_fast(record=False, baseline=None):
     })
 
     # The end-to-end path, on the input that ships with the repository.
-    project = Path("/tmp/reveng-regress-fixture")
+    project = Path("/tmp/gamerecomp-regress-fixture")
     shutil.rmtree(project, ignore_errors=True)
-    e2e = _run(["./RevEng", "tests/fixtures/pe32-minimal.exe",
+    e2e = _run(["./GameReComp", "tests/fixtures/pe32-minimal.exe",
                 "--project-dir", str(project), "--timeout", "10", "--no-table"],
                timeout=900)
     observed = _observed(project)
@@ -232,7 +232,7 @@ def tier_fast(record=False, baseline=None):
     # it will show an empty dashboard, and an empty dashboard is indistinguishable
     # from a project that produced nothing. Skipped when Qt has not been built,
     # with the reason, rather than passing silently.
-    gui = ROOT / "gui" / "build" / "reveng-studio"
+    gui = ROOT / "gui" / "build" / "gamerecomp"
     if gui.is_file():
         import os
         env = dict(os.environ, QT_QPA_PLATFORM="offscreen")
@@ -284,7 +284,7 @@ def tier_fast(record=False, baseline=None):
 
     # The high-level bridge: a module for another binary must be refused, not
     # applied. This is the bug that replaced the fixture's entry point.
-    applied = _run(["./RevEng", "tests/fixtures/pe32-minimal.exe",
+    applied = _run(["./GameReComp", "tests/fixtures/pe32-minimal.exe",
                     "--project-dir", str(project) + "-hl", "--timeout", "10",
                     "--highlevel", "highlevel", "--no-table"], timeout=900)
     report = _report_of(str(project) + "-hl") or {}
@@ -319,7 +319,7 @@ def tier_games(record=False, baseline=None, only=None):
             })
             continue
         project = ROOT / "projects" / game["name"]
-        proc = _run(["./RevEng", str(exe), "--assets-dir", str(exe.parent),
+        proc = _run(["./GameReComp", str(exe), "--assets-dir", str(exe.parent),
                      "--project-dir", str(project), "--timeout", "12",
                      "--import-trace", "--fresh-build", "--no-table"],
                     timeout=3600)

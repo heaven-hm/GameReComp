@@ -55,7 +55,7 @@ QColor statusColour(const QString &status)
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     buildUi();
-    setWindowTitle(QStringLiteral("RevEng Studio"));
+    setWindowTitle(QStringLiteral("GameReComp"));
     resize(1180, 760);
     refresh();
 }
@@ -500,7 +500,7 @@ void MainWindow::runPipeline()
     connect(m_proc, &QProcess::readyReadStandardOutput, this, &MainWindow::pipelineOutput);
     connect(m_proc, &QProcess::finished, this, &MainWindow::pipelineFinished);
 
-    QStringList args{QStringLiteral("RevEng"), pe, QStringLiteral("--project-dir"), dir,
+    QStringList args{QStringLiteral("GameReComp"), pe, QStringLiteral("--project-dir"), dir,
                      QStringLiteral("--timeout"), QStringLiteral("12"), QStringLiteral("--no-table")};
     if (!m_assets->text().trimmed().isEmpty())
         args << QStringLiteral("--assets-dir") << m_assets->text().trimmed();

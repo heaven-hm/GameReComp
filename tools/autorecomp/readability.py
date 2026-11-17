@@ -141,7 +141,7 @@ class ReadabilityHarness:
         self.log_path = self.project / "logs" / "readability.log"
         self.report = {
             "schema": 1,
-            "tool": "reveng-studio readability harness",
+            "tool": "GameReComp readability harness",
             "generated_at": _now(),
             "project": str(self.project),
             "budget_seconds": float(max_seconds),

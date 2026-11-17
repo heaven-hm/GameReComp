@@ -4,7 +4,7 @@ This guide takes you from a clean checkout to your first inspected, rebuilt and
 reported game executable. It describes what the tool does and does not do today,
 so you can read your own reports without over-trusting them.
 
-**Use only executables you are legally entitled to run.** RevEng-Studio never
+**Use only executables you are legally entitled to run.** GameReComp never
 downloads games, never bundles game data, and never copies a game binary into the
 repository. Your corpus stays where you put it.
 
@@ -94,24 +94,24 @@ variables only tell the database how to record the path relative to your corpus.
 ## 4. First run
 
 ```sh
-./RevEng "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
+./GameReComp "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
 ```
 
 Useful variants:
 
 ```sh
-./RevEng game.exe --assets-dir /path/to/game   # where the game reads its data
-./RevEng game.exe --project-dir projects/mygame
-./RevEng game.exe --timeout 60                 # allow a longer run (default 30 s)
-./RevEng game.exe --json                       # machine-readable final report
-./RevEng game.exe --no-build --no-run          # stop after source generation
-./RevEng game.exe --interactive                # real SDL window/audio
-./RevEng game.exe --split 2000 --split-bytes 16777216   # larger source units
-./RevEng game.exe --jobs 8                     # parallel build
-./RevEng game.exe --out-mode source            # stop after the generated C project
-./RevEng game.exe --stages inspect,recover,translate    # an explicit stage plan
-./RevEng game.exe --dry-run                    # print the plan, build nothing
-./RevEng --list-stages                         # stage names and weights
+./GameReComp game.exe --assets-dir /path/to/game   # where the game reads its data
+./GameReComp game.exe --project-dir projects/mygame
+./GameReComp game.exe --timeout 60                 # allow a longer run (default 30 s)
+./GameReComp game.exe --json                       # machine-readable final report
+./GameReComp game.exe --no-build --no-run          # stop after source generation
+./GameReComp game.exe --interactive                # real SDL window/audio
+./GameReComp game.exe --split 2000 --split-bytes 16777216   # larger source units
+./GameReComp game.exe --jobs 8                     # parallel build
+./GameReComp game.exe --out-mode source            # stop after the generated C project
+./GameReComp game.exe --stages inspect,recover,translate    # an explicit stage plan
+./GameReComp game.exe --dry-run                    # print the plan, build nothing
+./GameReComp --list-stages                         # stage names and weights
 ```
 
 Exit codes:
@@ -216,8 +216,8 @@ measured 375 MiB build used about 4.6 s/MiB wall clock with `--jobs 8`, so the
 budget is deliberately above that. Override it explicitly if you know better:
 
 ```sh
-./RevEng game.exe --build-timeout 900     # seconds
-./RevEng game.exe --build-timeout 0       # disable the deadline
+./GameReComp game.exe --build-timeout 900     # seconds
+./GameReComp game.exe --build-timeout 0       # disable the deadline
 ```
 
 On expiry the whole configure/build process group is killed (not just the direct
@@ -228,12 +228,12 @@ generated-source size. Nothing is silently retried.
 
 ## 8. Readability pass (optional)
 
-`RevEng readability` improves the generated source *after* the pipeline has
+`GameReComp readability` improves the generated source *after* the pipeline has
 proved the project, never before. It is a separate, gated step:
 
 ```sh
-./RevEng readability projects/noiz2sa --providers revng
-./RevEng readability projects/noiz2sa --providers all --max-units 1 \
+./GameReComp readability projects/noiz2sa --providers revng
+./GameReComp readability projects/noiz2sa --providers all --max-units 1 \
     --max-attempts 3 --max-seconds 900 --provider-timeout 300
 ```
 

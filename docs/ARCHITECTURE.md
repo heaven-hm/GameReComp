@@ -6,7 +6,7 @@ describes measured behaviour, not intentions.
 
 ## Scope
 
-RevEng-Studio takes a user-supplied Windows PC-game PE executable and its data
+GameReComp takes a user-supplied Windows PC-game PE executable and its data
 files, and produces:
 
 1. a project tree containing generated C source for every recovered function,

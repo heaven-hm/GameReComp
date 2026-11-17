@@ -22,7 +22,7 @@ find "$ROOT" -type f -name '*.exe' | sort | while IFS= read -r exe; do
   rel=${exe#"$ROOT"/}
   assets=$(dirname "$exe")
   start=$(date +%s)
-  ./RevEng "$exe" --assets-dir "$assets" --timeout "$TIMEOUT" --no-table \
+  ./GameReComp "$exe" --assets-dir "$assets" --timeout "$TIMEOUT" --no-table \
       > /dev/null 2>&1
   rc=$?
   end=$(date +%s)

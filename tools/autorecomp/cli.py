@@ -287,7 +287,7 @@ class _StageProgress:
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="RevEng",
+        prog="GameReComp",
         description="Windows PE -> PCRecomp C -> native executable -> run -> "
                     "verification reports. Game data stays where the user "
                     "supplied it; nothing is downloaded.")
@@ -380,7 +380,7 @@ def build_parser():
     parser.add_argument("--json", action="store_true",
                         help="print the final report JSON")
     parser.add_argument("--version", action="version",
-                        version=f"RevEng {__version__}")
+                        version=f"GameReComp {__version__}")
     return parser
 
 

@@ -1,5 +1,5 @@
-// main.cpp -- RevEng Studio, a Qt 6 Widgets front end over the same backend as
-// the CLI. It links no reconstruction logic: it runs `./RevEng` as a subprocess
+// main.cpp -- GameReComp, a Qt 6 Widgets front end over the same backend as
+// the CLI. It links no reconstruction logic: it runs `./GameReComp` as a subprocess
 // and reads the records that command writes, so the GUI and the CLI cannot
 // disagree about what happened.
 #include "mainwindow.h"
@@ -79,12 +79,12 @@ static int selftest(const QString &dir, const QString &repoRoot)
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QApplication::setApplicationName(QStringLiteral("RevEng Studio"));
+    QApplication::setApplicationName(QStringLiteral("GameReComp"));
     QApplication::setApplicationVersion(QStringLiteral("0.1"));
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("Desktop front end for the RevEng pipeline. Every status it shows is "
+        QStringLiteral("Desktop front end for the GameReComp pipeline. Every status it shows is "
                        "read from a record the pipeline wrote."));
     parser.addHelpOption();
     parser.addVersionOption();

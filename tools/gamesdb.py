@@ -1,7 +1,7 @@
 """Games database: renders table.md from corpus metadata, legacy baseline,
 upstream PCRecomp claims and measured autorecomp runs.
 
-PASS /100 is the RevEng pipeline score: weighted work, not a verdict.
+PASS /100 is the GameReComp pipeline score: weighted work, not a verdict.
 inspect 10, recover 10, translate 10, project 10, compile 20, report 10,
 and the outcome-dependent half: run 15 (full when the rebuilt process
 launched on its own, half when it launched and then faulted, none when it
@@ -583,7 +583,7 @@ def render_table(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
                "PCRecomp project table. Filenames and hashes only - no game "
                "binaries or assets are stored here.")
     out.append("")
-    out.append("`PASS /100` is the RevEng pipeline score for the measured "
+    out.append("`PASS /100` is the GameReComp pipeline score for the measured "
                "input: weighted work, not a verdict. inspect 10, recover 10, "
                "translate 10, project 10, compile 20, report 10, run 15 (full "
                "when the rebuilt process launched on its own, half when it "
@@ -614,7 +614,7 @@ def render_table(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
         out.append(_table(measured))
     else:
         out.append("No autorecomp runs recorded yet. Run "
-                   "`./RevEng <game.exe>` to add the first row.")
+                   "`./GameReComp <game.exe>` to add the first row.")
     out.append("")
     out.append("## Local corpus (not yet measured)")
     out.append("")
