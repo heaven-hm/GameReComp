@@ -138,7 +138,10 @@ def _resolve_input(pe_path, os_choice, arch_choice):
     if in_arch not in SUPPORTED_INPUT_ARCH:
         return None, (f"unsupported input architecture: {in_arch} "
                       f"(this pipeline reconstructs PE32 "
-                      f"{'/'.join(SUPPORTED_INPUT_ARCH)} guests)")
+                      f"{'/'.join(SUPPORTED_INPUT_ARCH)} guests; a 64-bit "
+                      f"build of the same game, if one exists, would be a "
+                      f"different binary to reconstruct -- 64-bit guest "
+                      f"support is planned, not implemented)")
     return (in_os, in_arch), None
 
 
