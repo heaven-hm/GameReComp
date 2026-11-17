@@ -65,6 +65,9 @@ tools/ne/win16_imports.json
 # rev.ng's marked-up C for a whole game is 146 MB and is a derived
 # artifact; the stripped .c beside it is what the pipeline reads.
 *.ptml
+# rev.ng's stderr capture for that same step; keep it out of status, it is
+# empty on success and a tool log, not evidence, either way.
+*.ptml.err
 
 # rev.ng decompilation of a whole game: 5.1 MB of C and 146 MB of marked-up C.
 # Both are derived; regenerate with
