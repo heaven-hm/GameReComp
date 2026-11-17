@@ -95,7 +95,15 @@ int main(void) {
     fwrite(riff, 1, sizeof riff, f);
     fclose(f);
     hle_set_drive('Z', "/");
-    uint32_t h = call("mmioOpenA", 3, (uint32_t[]){ hle_scratch_copy("Z:\\tmp\\hle_selftest.wav", 25), 0, 0 });
+    /* The WAV lives in this process's tmpdir; the guest path must point at
+     * that same file. It used to open Z:\tmp\hle_selftest.wav, a file the
+     * per-pid rename of the tmpdir left nonexistent, so mmioOpenA returned 0
+     * and all four mmio checks failed behind it. */
+    char guest_wav[280];
+    snprintf(guest_wav, sizeof guest_wav, "Z:%s", wav_path);
+    uint32_t h = call("mmioOpenA", 3,
+                      (uint32_t[]){ hle_scratch_copy(guest_wav,
+                                                     (uint32_t)strlen(guest_wav) + 1), 0, 0 });
     ok("mmioOpenA", h != 0);
     uint32_t *form = (uint32_t *)hle_alloc(20), *ck = (uint32_t *)hle_alloc(20);
     form[2] = 0x45564157u;                               /* 'WAVE' */
