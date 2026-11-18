@@ -70,11 +70,24 @@ typedef struct {
 
 typedef struct { uint32_t VirtualAddress, SizeOfBlock; } pe_base_reloc;
 
+/* The 32-bit TLS directory (DataDirectory[9]). AddressOfIndex is the VA of the
+ * module's _tls_index cell; Start/End delimit the raw template a thread's block
+ * is copied from, and SizeOfZeroFill pads it. */
+typedef struct {
+    uint32_t StartAddressOfRawData;
+    uint32_t EndAddressOfRawData;
+    uint32_t AddressOfIndex;
+    uint32_t AddressOfCallBacks;
+    uint32_t SizeOfZeroFill;
+    uint32_t Characteristics;
+} pe_tls_dir32;
+
 #pragma pack(pop)
 
 #define PE_DIR_IMPORT    1
 #define PE_DIR_RESOURCE  2
 #define PE_DIR_BASERELOC 5
+#define PE_DIR_TLS       9
 #define PE_REL_HIGHLOW   3
 #define PE_ORDINAL_FLAG  0x80000000u
 

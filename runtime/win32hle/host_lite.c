@@ -212,6 +212,16 @@ static void regs_load(const regs_t *r) {
  * MEM32(g_fs_base + n); the host's own TLS stays separate, so a guest SEH frame
  * never lands on a chain the host walks. */
 #define GUEST_STACK (4u << 20)
+/* Windows' TEB gives a thread 64 TLS slots (fs:[0x2C] -> array of 64 pointers,
+ * one per loaded module that declares __declspec(thread)). */
+#define TLS_SLOTS_MAX 64u
+
+/* The main image's static-TLS template, set by the host at boot (host.c). A
+ * thread's block is a private copy of [g_tls_raw_start, g_tls_raw_end) plus
+ * g_tls_zero_fill zero bytes, with its address stored in fs:[0x2C]+index*4 --
+ * exactly what the Windows loader gives each thread. Zero g_tls_raw_end means
+ * the image declared no __declspec(thread) data. */
+uint32_t g_tls_raw_start, g_tls_raw_end, g_tls_zero_fill, g_tls_index;
 
 static uint32_t make_tib(uint32_t lo, uint32_t hi) {
     uint32_t *t = (uint32_t *)hle_alloc(0x1000);
@@ -220,6 +230,23 @@ static uint32_t make_tib(uint32_t lo, uint32_t hi) {
     t[1]        = hi;                          /* StackBase                   */
     t[2]        = lo;                          /* StackLimit                  */
     t[0x18/4]   = hle_va(t);                   /* Self (fs:[0x18])            */
+    /* ThreadLocalStoragePointer (fs:[0x2C]): the array statically-linked TLS
+     * indexes. Windows makes it a 64-entry array of module blocks; a PE's
+     * __declspec(thread) reads `[fs:[0x2C] + _tls_index*4]` directly, without
+     * going through TlsGetValue. GameMaker does exactly that and crashed on a
+     * null fs:[0x2C]. */
+    uint32_t *tls = (uint32_t *)hle_alloc(TLS_SLOTS_MAX * 4);
+    if (!tls) hle_fatal("no guest memory for a thread's TLS array");
+    for (int i = 0; i < TLS_SLOTS_MAX; i++) tls[i] = 0;
+    t[0x2C/4]   = hle_va(tls);                 /* ThreadLocalStoragePointer   */
+    if (g_tls_raw_end > g_tls_raw_start) {
+        uint32_t sz = (g_tls_raw_end - g_tls_raw_start) + g_tls_zero_fill;
+        uint8_t *blk = (uint8_t *)hle_alloc(sz);
+        if (blk) {
+            memcpy(blk, hle_ptr(g_tls_raw_start), g_tls_raw_end - g_tls_raw_start);
+            tls[g_tls_index & (TLS_SLOTS_MAX - 1)] = hle_va(blk);
+        }
+    }
     return hle_va(t);
 }
 

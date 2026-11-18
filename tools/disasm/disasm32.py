@@ -680,6 +680,38 @@ class Disassembler:
 
         return targets
 
+    # Alignment padding MSVC and GCC emit between functions. A function start
+    # right after a `ret` + some of these is a real entry, not a label.
+    _PAD_1 = (b'\x90', b'\xcc', b'\x00')                     # nop, int3, zero
+    _PAD_2 = (b'\x8b\xc0', b'\x8b\xff', b'\x66\x90')        # mov reg,reg nops
+
+    def _after_ret_padding(self, va: int) -> bool:
+        """True when va begins right after a `ret` and only alignment padding.
+
+        Walks back over padding bytes (single-byte nops, and the two-byte
+        `mov reg,reg` nops MSVC emits) and reports a `ret` (C3) or `ret n` (C2)
+        immediately before them. That is the shape a data-scan pointer has when
+        it names a tiny function the neighbour's extent decoded over.
+        """
+        end = va
+        while end > 0:
+            two = self.read_bytes(end - 2, 2)
+            if two in self._PAD_2:
+                end -= 2
+                continue
+            one = self.read_bytes(end - 1, 1)
+            if one in self._PAD_1:
+                end -= 1
+                continue
+            break
+        if end == va:
+            return False                          # no padding at all
+        if self.read_bytes(end - 1, 1) == b'\xc3':        # ret
+            return True
+        if self.read_bytes(end - 1, 1) == b'\xc2':        # ret imm16
+            return True
+        return False
+
     def find_data_code_pointers(self, code_start: int, code_end: int,
                                 covered: set, queued: set,
                                 interior: bytearray = None) -> set:
@@ -722,17 +754,32 @@ class Disassembler:
                 va = int.from_bytes(data[off:off + 4], 'little')
                 if not (code_start <= va < code_end):
                     continue
-                # A pointer that names a canonical prologue immediately after
-                # padding is strong evidence of a real entry, even when an
+                # A pointer that names a real entry immediately after the
+                # padding that follows a `ret` is strong evidence, even when an
                 # earlier pass already queued it: an overlong neighbour decoded
                 # through the padding into this function, and that neighbour is
-                # the one whose extent is wrong. Recording it here keeps the
-                # eviction pass from dropping it again. Hero Core's GameMaker
-                # runtime has ~30 such table entries.
-                if (self.read_bytes(va - 1, 1) in (b'\x00', b'\x90', b'\xcc')
-                        and self.read_bytes(va, 3) in (b'\x55\x8b\xec', b'\x55\x89\xe5')):
+                # the one whose extent is wrong. Two shapes carry it:
+                #   - a canonical prologue (55 8B EC / 55 89 E5), or
+                #   - any body start whose preceding bytes are a `ret` followed
+                #     only by alignment padding (90, CC, 00, or the 2-byte
+                #     `mov reg,reg` nops MSVC emits: 8B C0 / 8B FF / 66 90).
+                # Hero Core's GameMaker runtime has ~30 such table entries
+                # (both shapes); missed, they lift to nothing and every
+                # indirect call through their slot is an unresolved ICALL.
+                if self.read_bytes(va, 3) in (b'\x55\x8b\xec', b'\x55\x89\xe5'):
+                    if self.read_bytes(va - 1, 1) in (b'\x00', b'\x90', b'\xcc'):
+                        self._strong_starts.add(va)
+                elif self._after_ret_padding(va):
                     self._strong_starts.add(va)
                 if va in queued or va in found:
+                    continue
+                if va in self._strong_starts:
+                    # A real entry a neighbour's extent decoded over: decode it
+                    # now (it is not in `queued`), so it gets a body. This is
+                    # the case the prologue/pointer scan missed because the
+                    # function does not open with a prologue (a tiny
+                    # `sub [x],1; ret` needs none).
+                    found.add(va)
                     continue
                 if is_code_section:
                     # A code section also holds data: vtable and callback tables

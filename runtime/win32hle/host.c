@@ -22,10 +22,43 @@
 #endif
 #include "win32hle.h"
 #include "pe_loader.h"
+#include "pe_format.h"
 #include "host.h"
 
 static pe_image g_img;
 static int      g_booted;
+
+/* main.c's image loader sets these for the static-TLS template; make_tib (in
+ * host_lite.c) copies them into each thread's block. */
+extern uint32_t g_tls_raw_start, g_tls_raw_end, g_tls_zero_fill, g_tls_index;
+
+/* Read the image's TLS directory and publish the template for make_tib, and
+ * write the module's _tls_index cell. Windows' loader gives every module a TLS
+ * slot; with one main image the index is 0. A module with no TLS directory
+ * leaves the template empty, which make_tib reads as "no block". */
+static void setup_static_tls(const pe_image *img) {
+    g_tls_raw_start = g_tls_raw_end = g_tls_zero_fill = g_tls_index = 0;
+    /* The mapped image starts with the DOS header, so the NT headers are at
+     * base + e_lfanew (not base). */
+    pe_dos_header *dos = (pe_dos_header *)hle_ptr(img->base);
+    if (dos->e_magic != 0x5A4D) return;
+    pe_nt_headers32 *nt = (pe_nt_headers32 *)hle_ptr(img->base + (uint32_t)dos->e_lfanew);
+    pe_opt_header32 *opt = &nt->OptionalHeader;
+    if (opt->NumberOfRvaAndSizes <= PE_DIR_TLS) return;
+    pe_data_dir d = opt->DataDirectory[PE_DIR_TLS];
+    if (!d.VirtualAddress || !d.Size) return;
+    pe_tls_dir32 *tls = (pe_tls_dir32 *)hle_ptr(img->base + d.VirtualAddress);
+    uint32_t start = tls->StartAddressOfRawData;
+    uint32_t end = tls->EndAddressOfRawData;
+    if (end <= start) return;
+    g_tls_raw_start = start;
+    g_tls_raw_end = end;
+    g_tls_zero_fill = tls->SizeOfZeroFill;
+    g_tls_index = 0;                          /* one image -> slot 0 */
+    if (tls->AddressOfIndex) MEM32(tls->AddressOfIndex) = g_tls_index;
+    fprintf(stderr, "[pe] static TLS: template 0x%08X..0x%08X (+%u zero), index %u\n",
+            start, end, g_tls_zero_fill, g_tls_index);
+}
 
 /* A fault in lifted code is a bad guest address, and without a debugger the
  * only useful fact is which function and which address. Report both, then let
@@ -253,6 +286,10 @@ static int boot(const char *path, uint32_t (*resolve)(const char *)) {
     char guest[1024];
     hle_guest_path(image, guest, sizeof guest);
     hle_module_add(guest, g_img.base, g_img.resource_rva, g_img.resource_size, 1);
+    /* static TLS: the template a thread's block is copied from (host_lite.c
+     * make_tib). Must run before the first lifted call, which is when a
+     * thread's TIB is built. */
+    setup_static_tls(&g_img);
     /* Bundled DLLs first: their images must be at their preferred base before
      * the main IAT is bound, because a bound slot holds an address inside one
      * of them. A companion that will not map is a boot failure in strict mode
