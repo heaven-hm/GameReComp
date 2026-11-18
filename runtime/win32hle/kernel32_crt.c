@@ -129,6 +129,11 @@ static void k_SetHandleCount(void){ RET(A32(0), 1); }
 
 /* --- codepages --- */
 static void k_GetACP(void)  { RET(1252u, 0); }     /* Windows-1252 */
+/* IsDBCSLeadByte(b): whether b begins a double-byte character in the ANSI code
+ * page. This layer's code page is 1252 (see GetACP), which has no double-byte
+ * characters, so the answer is always no; the CP_ACP variant (1252 too) agrees. */
+static void k_IsDBCSLeadByte(void) { RET(0, 1); }
+static void k_IsDBCSLeadByteEx(void) { RET(0, 2); }
 static void k_GetOEMCP(void){ RET(437u, 0); }
 static void k_IsValidCodePage(void) { uint32_t cp = A32(0); RET(cp == 1252u || cp == 437u || cp == 0u || cp == 1u, 1); }
 static void k_GetCPInfo(void) {                    /* (cp, &CPINFO) */
@@ -575,6 +580,8 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "SetStdHandle",                 k_SetStdHandle },
     { "SetHandleCount",               k_SetHandleCount },
     { "GetACP",                       k_GetACP },
+    { "IsDBCSLeadByte",               k_IsDBCSLeadByte },
+    { "IsDBCSLeadByteEx",             k_IsDBCSLeadByteEx },
     { "GetOEMCP",                     k_GetOEMCP },
     { "IsValidCodePage",              k_IsValidCodePage },
     { "GetCPInfo",                    k_GetCPInfo },

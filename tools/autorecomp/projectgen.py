@@ -18,9 +18,11 @@ RECOMP32 = RUNTIME_ROOT / "recomp32"
 
 MAIN_C = """\
 /* Entry point for the rebuilt game.
- * recomp_host_main() boots the original PE named by argv[1] - a fresh copy of
- * the game executable, not the rebuilt one - then calls the recompiled entry
- * point and runs the guest until it returns.
+ * recomp_host_main() maps the image and runs the recompiled entry point until
+ * the guest exits. The image is embedded at build time, so the original
+ * Windows executable is NOT needed at run time. When the game needs its own
+ * data files, pass the game's directory as the first argument; otherwise just
+ * run it.
  *
  * Strict binding is the default: an unresolved import fails the boot. Setting
  * RECOMP_PERMISSIVE=1 binds unresolved imports to the runtime's self-naming
@@ -30,43 +32,31 @@ MAIN_C = """\
  * game: the stub cannot return, so the run always stops at the first
  * unimplemented import.
  *
- * RECOMP_TRACE=1 logs every import dispatch, as recomp_host_main does; without
- * it a crash in lifted code gives no clue which shim ran last.
+ * RECOMP_TRACE=1 logs every import dispatch; without it a crash in lifted code
+ * gives no clue which shim ran last.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "host.h"
-#include "win32hle.h"
-
-static int permissive_requested(void) {
-    const char *v = getenv("RECOMP_PERMISSIVE");
-    return v != NULL && v[0] != '\\0' && strcmp(v, "0") != 0;
-}
-
-static void honour_trace(void) {
-    const char *v = getenv("RECOMP_TRACE");
-    win32hle_trace = v != NULL && v[0] != '\\0' && v[0] != '0';
-}
 
 int main(int argc, char **argv) {
-    if (!permissive_requested()) return recomp_host_main(argc, argv);
-    if (argc < 2) {
-        fprintf(stderr,
-                "usage: %s <original-game.exe> [args...]\\n"
-                "The rebuilt binary carries the game's reconstructed code; the\\n"
-                "original Windows executable supplies its data. Point it at the\\n"
-                "game file you are porting, as you supplied it to GameReComp.\\n",
-                argv[0]);
-        return 64;
-    }
-    honour_trace();
-    recomp_host_init();
-    int rc = recomp_host_boot_permissive(argv[1]);
-    if (rc) return rc;
-    return (int)recomp_host_run();
+    return recomp_host_main(argc, argv);
 }
+"""
+
+IMAGE_ASM = """\
+/* Auto-generated: the original PE, embedded so the rebuilt binary runs without
+ * it. .incbin reads the copy beside this file, by absolute path (the assembler
+ * runs from the build directory). The symbol carries the platform's C prefix. */
+#if defined(__APPLE__)
+#define SYM(x) _##x
+    .section __DATA,__const
+#else
+#define SYM(x) x
+    .section .rodata
+#endif
+    .p2align 4
+    .globl SYM(recomp_original_image)
+SYM(recomp_original_image):
+    .incbin "@BLOB@"
 """
 
 CMAKE = """\
@@ -74,6 +64,7 @@ CMAKE = """\
 #   cmake -S . -B build && cmake --build build -j
 cmake_minimum_required(VERSION 3.16)
 project(@NAME@ C)
+enable_language(ASM)
 
 set(CMAKE_C_STANDARD 11)
 if(NOT CMAKE_BUILD_TYPE)
@@ -94,9 +85,16 @@ endif()
 file(GLOB RECOMP_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/recomp/gen/recomp_*.c")
 file(GLOB RUNTIME_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime/win32hle/*.c")
 
+# The embedded original image (recomp_image.S + .bin), when this project was
+# built to run without the original executable.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/recomp/gen/recomp_image.S")
+  set(RECOMP_IMAGE_ASM src/recomp/gen/recomp_image.S)
+endif()
+
 add_executable(@NAME@
   src/main.c
   ${RECOMP_SOURCES}
+  ${RECOMP_IMAGE_ASM}
   src/recomp/gen/recomp_dispatch.c
   ${RUNTIME_SOURCES}
 )
@@ -243,7 +241,7 @@ def _copy_runtime(project_dir: Path) -> dict:
 
 
 def write_project(project_dir, name, exe_name, pe_info, extra=None,
-                  highlevel_modules=None) -> dict:
+                  highlevel_modules=None, embed_image=None) -> dict:
     """Write main.c, CMakeLists.txt, README and project.json.
 
     pe_info: dict of inspect-stage metadata for project.json provenance.
@@ -251,6 +249,8 @@ def write_project(project_dir, name, exe_name, pe_info, extra=None,
         sources are copied in, the adapters are generated beside them, and the
         dispatch table (written by the translator) points at the adapters. The
         mechanical bodies stay compiled under their __lowlevel names.
+    embed_image: path to the original PE to embed, so the rebuilt binary runs
+        without it. None leaves the file-based boot (needs the original exe).
     Returns a small summary dict.
     """
     project_dir = Path(project_dir)
@@ -283,6 +283,29 @@ def write_project(project_dir, name, exe_name, pe_info, extra=None,
     (project_dir / "README.md").write_text(
         README.replace("@NAME@", name).replace("@EXE@", exe_name))
 
+    image_files = []
+    if embed_image:
+        # Embed the original PE so the rebuilt binary does not need it at run
+        # time. The bytes go in a .bin (compiled via .incbin, so a large image
+        # does not become megabytes of C source), and the base name in a tiny
+        # C file for the guest's own command line.
+        gen = project_dir / "src" / "recomp" / "gen"
+        gen.mkdir(parents=True, exist_ok=True)
+        blob = gen / "recomp_image.bin"
+        blob.write_bytes(Path(embed_image).read_bytes())
+        safe = exe_name.replace('\\', '\\\\').replace('"', '\\"')
+        (gen / "recomp_image.c").write_text(
+            "/* Auto-generated: the original executable's base name and size, and the\n"
+            " * flag that says the image is embedded. The bytes are recomp_image.S. */\n"
+            "const int recomp_has_embedded_image = 1;\n"
+            f"const unsigned long recomp_original_image_size = {blob.stat().st_size}UL;\n"
+            f'const char recomp_original_name[] = "{safe}";\n')
+        (gen / "recomp_image.S").write_text(
+            IMAGE_ASM.replace("@BLOB@", str(blob.resolve())))
+        image_files = ["src/recomp/gen/recomp_image.bin",
+                       "src/recomp/gen/recomp_image.c",
+                       "src/recomp/gen/recomp_image.S"]
+
     record = {
         "schema": 1,
         "name": name,
@@ -298,6 +321,8 @@ def write_project(project_dir, name, exe_name, pe_info, extra=None,
         "pe": pe_info,
         "runtime_files": runtime["files"],
         "highlevel_files": highlevel_files,
+        "image_files": image_files,
+        "image_embedded": bool(embed_image),
     }
     if extra:
         record.update(extra)

@@ -18,10 +18,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <math.h>
 #include <unistd.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include "win32hle.h"
+
+/* kernel32_crt.c's codepage conversion (ANSI <-> UTF-16), shared by the wide
+ * text calls. */
+int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
 
 #define TRANSPARENT 1
 #define OPAQUE      2
@@ -744,6 +749,28 @@ static void g_GetTextExtentPoint32A(void) {              /* (hdc, text, n, &SIZE
     if (A32(3)) MEM32(A32(3)) = (uint32_t)w, MEM32(A32(3) + 4) = (uint32_t)h;
     RET(1, 4);
 }
+/* GetTextExtentPoint32W: the wide text's extent. Convert to ANSI (the face's
+ * metrics are byte-oriented here) and answer the same way the A variant does. */
+static void g_GetTextExtentPoint32W(void) {
+    dc_t *d = DC(A32(0));
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    int n = (int)A32(2), w = 6 * n, h = 13;
+    if (t) {
+        char buf[1024];
+        const uint16_t *ws = (const uint16_t *)hle_ptr(A32(1));
+        int m = n;
+        if (m >= (int)sizeof buf) m = sizeof buf - 1;
+        if (ws && hle_wide_to_ansi(ws, buf, sizeof buf)) {
+            for (int i = 0; i < m; i++) if (!buf[i]) buf[i] = '?';
+            buf[m] = 0;
+            TTF_SizeText(t, buf, &w, &h);
+            if (f->synth_bold) w += m;
+        } else { w = 0; h = TTF_FontHeight(t); }
+    }
+    if (A32(3)) MEM32(A32(3)) = (uint32_t)w, MEM32(A32(3) + 4) = (uint32_t)h;
+    RET(1, 4);
+}
 static void g_GetTextMetricsA(void) {                    /* TEXTMETRICA */
     dc_t *d = DC(A32(0));
     font_t *f = FONT(d ? d->font : SYSTEM_FONT);
@@ -851,20 +878,18 @@ static uint8_t *text_ink(const font_t *f, TTF_Font *t, const char *buf, int n, i
     return ink;
 }
 
-static void g_TextOutA(void) {                           /* (hdc, x, y, text, n) */
-    dc_t *d = DC(A32(0));
-    int n = (int)A32(4);
-    if (!d || !d->px || n <= 0 || (d->bpp != 16 && d->bpp != 32)) RET(1, 5);
+/* Draw a run of ANSI text at the pen position, honouring the DC's alignment.
+ * TextOutA and ExtTextOutW share it; the wide variant converts first. */
+static void rectfill(dc_t *d, int l, int t, int r, int b, uint32_t cr);
+static void text_out_ansi(dc_t *d, int x, int y, const char *buf, int n) {
+    if (!d || !d->px || n <= 0 || (d->bpp != 16 && d->bpp != 32)) return;
     font_t *f = FONT(d->font);
     TTF_Font *t = ttf_of(f);
-    if (!t) RET(1, 5);
-    char buf[1024];
-    if (n >= (int)sizeof buf) n = sizeof buf - 1;
-    memcpy(buf, APTR(3), (size_t)n), buf[n] = 0;
+    if (!t) return;
     int iw, ih;
     uint8_t *ink = text_ink(f, t, buf, n, &iw, &ih);
-    if (!ink) RET(1, 5);
-    int x = (int)A32(1) - d->wox + d->vox, y = (int)A32(2) - d->woy + d->voy;
+    if (!ink) return;
+    x = x - d->wox + d->vox, y = y - d->woy + d->voy;
     if ((d->align & 6) == 6) x -= iw / 2;                /* TA_CENTER */
     else if (d->align & 2) x -= iw;                      /* TA_RIGHT */
     if ((d->align & 24) == 24) y -= TTF_FontAscent(t);   /* TA_BASELINE */
@@ -881,7 +906,38 @@ static void g_TextOutA(void) {                           /* (hdc, x, y, text, n)
         }
     }
     free(ink);
+}
+static void g_TextOutA(void) {                           /* (hdc, x, y, text, n) */
+    dc_t *d = DC(A32(0));
+    int n = (int)A32(4);
+    char buf[1024];
+    if (n >= (int)sizeof buf) n = sizeof buf - 1;
+    if (n > 0) { memcpy(buf, APTR(3), (size_t)n); }
+    buf[n > 0 ? n : 0] = 0;
+    text_out_ansi(d, (int)A32(1), (int)A32(2), buf, n);
     RET(1, 5);
+}
+/* ExtTextOutW(hdc, x, y, options, &rect, wide, count, dx): the wide text path.
+ * options' ETO_OPAQUE fills the rect with the background first, which is what
+ * a caller drawing a label over a picture relies on. */
+static void g_ExtTextOutW(void) {
+    dc_t *d = DC(A32(0));
+    int x = (int)A32(1), y = (int)A32(2);
+    uint32_t opt = A32(3), rc = A32(4), wstr = A32(5), cnt = A32(6);
+    if (d && (opt & 2) && rc)                        /* ETO_OPAQUE */
+        rectfill(d, (int)MEM32(rc), (int)MEM32(rc + 4), (int)MEM32(rc + 8), (int)MEM32(rc + 12), d->bk);
+    char buf[1024];
+    int n = (int)cnt;
+    if (n > (int)sizeof buf - 1) n = (int)sizeof buf - 1;
+    if (n > 0) {
+        const uint16_t *w = (const uint16_t *)hle_ptr(wstr);
+        int ok = w ? hle_wide_to_ansi(w, buf, sizeof buf) : 0;
+        if (!ok) memset(buf, 0, sizeof buf);
+        for (int i = 0; i < n; i++) if (!buf[i]) buf[i] = ' ';
+        buf[n] = 0;
+    }
+    text_out_ansi(d, x, y, buf, n);
+    RET(1, 8);
 }
 
 /* ---- drawing ---- */
@@ -949,6 +1005,128 @@ static void g_LineTo(void) {                             /* Bresenham cp -> (x,y
     }
     if (d) { d->cpx = x1; d->cpy = y1; } RET(1, 3);
 }
+/* One pen-coloured line from (x0,y0) to (x1,y1), the Bresenham body LineTo
+ * uses; Polyline/Polygon call it per segment so the pen's null style is
+ * honoured once, and the viewport origin is applied per pixel. */
+static void line_pen(dc_t *d, uint32_t v, int x0, int y0, int x1, int y1) {
+    if (!d || !d->px) return;
+    int dx = abs(x1 - x0), dy = -abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx + dy;
+    for (;;) {
+        int px = x0 - d->wox + d->vox, py = y0 - d->woy + d->voy;
+        if (px >= 0 && py >= 0 && px < d->w && py < d->h) put(d, px, py, v);
+        if (x0 == x1 && y0 == y1) break;
+        int e2 = 2 * e;
+        if (e2 >= dy) { e += dy; x0 += sx; }
+        if (e2 <= dx) { e += dx; y0 += sy; }
+    }
+}
+static void g_Polyline(void) {                           /* (hdc, POINT[], n): pen through each vertex */
+    dc_t *d = DC(A32(0)); uint32_t pts = A32(1); int n = (int)A32(2), pn = 0;
+    if (d && pts && n > 0) {
+        uint32_t v = pack(d, pen_color(d, &pn));
+        if (!pn) {
+            int px = (int)MEM32(pts), py = (int)MEM32(pts + 4);
+            for (int i = 1; i < n; i++) {
+                int x = (int)MEM32(pts + 8u * (uint32_t)i), y = (int)MEM32(pts + 8u * (uint32_t)i + 4);
+                line_pen(d, v, px, py, x, y);
+                px = x, py = y;
+            }
+        }
+        if (d->win) g_win_seq++;
+    }
+    RET(1, 3);
+}
+/* Even-odd scanline fill at (x,y), in a COLORREF; the brush's colour for
+ * Polygon/Ellipse, the pen's for neither. */
+static void fill_poly(dc_t *d, uint32_t v, const int *xs, const int *ys, int n) {
+    if (!d || !d->px || n < 3) return;
+    int miny = ys[0], maxy = ys[0];
+    for (int i = 1; i < n; i++) { if (ys[i] < miny) miny = ys[i]; if (ys[i] > maxy) maxy = ys[i]; }
+    for (int y = miny; y <= maxy; y++) {
+        int xin[256], nx = 0;
+        for (int i = 0, j = n - 1; i < n && nx < 254; j = i++) {
+            int yi = ys[i], yj = ys[j];
+            if ((yi > y) != (yj > y)) {
+                int x = xs[i] + (int)((long)(y - yi) * (xs[j] - xs[i]) / (yj - yi));
+                xin[nx++] = x;
+            }
+        }
+        for (int a = 0; a < nx; a++) for (int b = a + 1; b < nx; b++) if (xin[b] < xin[a]) { int t = xin[a]; xin[a] = xin[b]; xin[b] = t; }
+        for (int k = 0; k + 1 < nx; k += 2)
+            for (int x = xin[k]; x <= xin[k + 1]; x++) {
+                int px = x - d->wox + d->vox, py = y - d->woy + d->voy;
+                if (px >= 0 && py >= 0 && px < d->w && py < d->h) put(d, px, py, v);
+            }
+    }
+}
+static void g_Polygon(void) {                            /* (hdc, POINT[], n): brush fill + pen outline */
+    dc_t *d = DC(A32(0)); uint32_t pts = A32(1); int n = (int)A32(2);
+    if (d && pts && n > 0) {
+        int xs[256], ys[256];
+        if (n > 256) n = 256;
+        for (int i = 0; i < n; i++) xs[i] = (int)MEM32(pts + 8u * (uint32_t)i), ys[i] = (int)MEM32(pts + 8u * (uint32_t)i + 4);
+        int hollow = 0, pn = 0;
+        uint32_t bc = brush_color(d, &hollow), pv = pack(d, pen_color(d, &pn));
+        if (!hollow) fill_poly(d, pack(d, bc), xs, ys, n);
+        if (!pn) for (int i = 0, j = n - 1; i < n; j = i++) line_pen(d, pv, xs[j], ys[j], xs[i], ys[i]);
+        if (d->win) g_win_seq++;
+    }
+    RET(1, 3);
+}
+static void g_Ellipse(void) {                            /* (hdc, l, t, r, b): brush fill + pen outline */
+    dc_t *d = DC(A32(0)); int l = (int)A32(1), t = (int)A32(2), r = (int)A32(3), b = (int)A32(4);
+    if (d && d->px && r > l && b > t) {
+        int hollow = 0, pn = 0;
+        uint32_t bc = brush_color(d, &hollow), pv = pack(d, pen_color(d, &pn));
+        long cx2 = (long)l + r, cy2 = (long)t + b, rx = (long)(r - l), ry = (long)(b - t);
+        if (!hollow)
+            for (int y = t; y <= b; y++) {
+                long dy = 2L * y - cy2;
+                long t2 = rx * rx * (ry * ry - dy * dy);
+                if (t2 < 0) continue;
+                long half = (long)(sqrt((double)t2) / (double)ry);
+                for (long x = cx2 / 2 - half; x <= cx2 / 2 + half; x++) {
+                    int px = (int)x - d->wox + d->vox, py = y - d->woy + d->voy;
+                    if (px >= 0 && py >= 0 && px < d->w && py < d->h) put(d, px, py, pack(d, bc));
+                }
+            }
+        if (!pn) {                                       /* the outline: sample the ellipse */
+            int n = (int)((rx + ry) / 2) + 8; if (n < 16) n = 16; if (n > 512) n = 512;
+            int pxs = 0, pys = 0;
+            for (int i = 0; i <= n; i++) {
+                double a = 6.283185307179586 * i / n;
+                int x = (int)(cx2 / 2 + (long)(rx / 2 * cos(a))), y = (int)(cy2 / 2 + (long)(ry / 2 * sin(a)));
+                if (i) line_pen(d, pv, pxs, pys, x, y);
+                pxs = x, pys = y;
+            }
+        }
+        if (d->win) g_win_seq++;
+    }
+    RET(1, 5);
+}
+static void g_IntersectClipRect(void) {                  /* (hdc, l, t, r, b): clip to the current clip ∩ rect */
+    dc_t *d = DC(A32(0)); int l = (int)A32(1), t = (int)A32(2), r = (int)A32(3), b = (int)A32(4);
+    if (!d) RET(1, 5);
+    if (!d->clip) { d->clip = 1, d->cl = l, d->ct = t, d->cr = r, d->cb = b; }
+    else {
+        if (l > d->cl) d->cl = l; if (t > d->ct) d->ct = t;
+        if (r < d->cr) d->cr = r; if (b < d->cb) d->cb = b;
+    }
+    RET(d->cl >= d->cr || d->ct >= d->cb ? 1u : 2u, 5);  /* NULLREGION, SIMPLEREGION */
+}
+static void g_SetMapMode(void) { RET(1u, 2); }           /* MM_TEXT is the only mode: recorded as a no-op */
+
+/* ---- the printing surface ----
+ * StartDoc/StartPage/EndPage/EndDoc are a printer's, and this layer has none.
+ * A program that only *draws* to a printer DC (a report, a screenshot export)
+ * gets an information DC (gdidc's CreateICA) and its drawing is harmless; the
+ * document calls report success so the program walks its normal path to the
+ * end and never learns there was no device. That is honest: the pixels went
+ * nowhere because nothing was printing them. */
+static void g_StartDocA(void) { RET(1, 2); }             /* (hdc, &DOCINFO) -> a positive job id */
+static void g_EndDoc(void)   { RET(1, 1); }
+static void g_StartPage(void) { RET(1, 1); }
+static void g_EndPage(void)  { RET(1, 1); }
 /* ---- blits (DC -> DC); like-for-like bpp, which is what a game's own
  * back-buffer-to-window blit is ---- */
 static void blt(dc_t *dst, int dx, int dy, int w, int h, dc_t *src, int sx, int sy, int sw, int sh) {
@@ -989,6 +1167,10 @@ const win32hle_shim win32hle_gdidc[] = {
     { "FillRect", g_FillRect }, { "FrameRect", g_FrameRect }, { "Rectangle", g_Rectangle }, { "PatBlt", g_PatBlt },
     { "SetPixel", g_SetPixel }, { "SetPixelV", g_SetPixel }, { "GetPixel", g_GetPixel },
     { "MoveToEx", g_MoveToEx }, { "LineTo", g_LineTo }, { "BitBlt", g_BitBlt }, { "StretchBlt", g_StretchBlt },
+    { "Polyline", g_Polyline }, { "Polygon", g_Polygon }, { "Ellipse", g_Ellipse },
+    { "IntersectClipRect", g_IntersectClipRect }, { "SetMapMode", g_SetMapMode },
+    { "StartDocA", g_StartDocA }, { "EndDoc", g_EndDoc },
+    { "StartPage", g_StartPage }, { "EndPage", g_EndPage },
     { "CreateFontA", g_CreateFontA }, { "CreateFontIndirectA", g_CreateFontIndirectA },
     { "EnumFontFamiliesA", g_EnumFontFamiliesA },
     { "DeleteObject", g_DeleteObject }, { "GetStockObject", g_GetStockObject }, { "SelectObject", g_SelectObject },
@@ -1003,6 +1185,7 @@ const win32hle_shim win32hle_gdidc[] = {
     { "GetBkMode", g_GetBkMode }, { "SetViewportOrgEx", g_SetViewportOrgEx }, { "SetWindowOrgEx", g_SetWindowOrgEx },
     { "DPtoLP", g_DPtoLP }, { "SetGraphicsMode", g_SetGraphicsMode }, { "ModifyWorldTransform", g_ModifyWorldTransform },
     { "GetTextExtentPoint32A", g_GetTextExtentPoint32A }, { "GetTextExtentPointA", g_GetTextExtentPoint32A },
-    { "GetTextMetricsA", g_GetTextMetricsA }, { "TextOutA", g_TextOutA },
+    { "GetTextExtentPoint32W", g_GetTextExtentPoint32W },
+    { "GetTextMetricsA", g_GetTextMetricsA }, { "TextOutA", g_TextOutA }, { "ExtTextOutW", g_ExtTextOutW },
     { 0, 0 }
 };

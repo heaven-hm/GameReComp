@@ -125,14 +125,21 @@ def rebase_pe(data: bytes, new_base: int) -> bytes:
 def pick_base(old_base: int, span: int, occupied: list[tuple[int, int]]) -> int:
     """A free 64K-aligned base with `span` bytes clear of every occupied range.
 
-    Deterministic: walks upward from 0x10000000 in 1 MiB steps, which keeps a
-    given project's choice stable across runs (so a rebuild does not move the
-    DLL under a cached object). Raises if nothing fits below the 4 GB line.
+    Deterministic: walks DOWNWARD from just below the shim range (0x7F000000)
+    in 1 MiB steps, which keeps a given project's choice stable across runs.
+
+    Downward from the top, not upward from 0x10000000: the guest heap's
+    first-fit allocator also starts at 0x10000000 and grows upward through the
+    same gap an upstream walk would choose. A rebased DLL placed immediately
+    above another image (gconvapi.dll is ~37 MB) lands where the heap then
+    allocates during a companion's DllMain. The top of the 32-bit window is out
+    of the heap's boot path. Raises if nothing fits below the 4 GB line.
     """
     step = 0x100000
-    cand = 0x10000000
-    while cand + span < 0x100000000:
+    top = 0x7F000000              # just under the synthetic shim VAs
+    cand = (top - span) & ~0xFFFF
+    while cand >= 0x10000000:
         if all(cand >= hi or cand + span <= lo for lo, hi in occupied):
             return cand
-        cand += step
+        cand -= step
     raise RebaseError("no free base below 4 GB for the rebased image")

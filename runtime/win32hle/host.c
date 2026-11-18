@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #ifdef __APPLE__
 #include <ucontext.h>
 #include <mach-o/dyld.h>
@@ -127,6 +128,7 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_dinput);
     win32hle_register(win32hle_bink);
     win32hle_register(win32hle_mss);
+    win32hle_register(win32hle_wininet);
     hle_dsound_register_com();
 }
 
@@ -151,6 +153,18 @@ static uint32_t data_import(const char *name) {
  * address 0). */
 __attribute__((weak)) const recomp_companion_t *const recomp_companion_list = NULL;
 __attribute__((weak)) const uint32_t recomp_companion_count = 0;
+
+/* The rebuilt binary's embedded copy of the original PE (recomp_image.c/.S in
+ * the generated project). Weak *definitions*, like companion_list above: a
+ * project that does not embed an image keeps these defaults, and a project
+ * that does links the generated strong definitions over them. The flag says
+ * which, so the map is never attempted against the 1-byte placeholder. */
+__attribute__((weak)) const unsigned char recomp_original_image[1] = { 0 };
+__attribute__((weak)) const unsigned long recomp_original_image_size = 0;
+__attribute__((weak)) const char recomp_original_name[1] = { 0 };
+__attribute__((weak)) const int recomp_has_embedded_image = 0;
+
+static int have_embedded_image(void) { return recomp_has_embedded_image; }
 
 /* ---- bundled DLLs -------------------------------------------------------
  *
@@ -278,14 +292,9 @@ static void enter_image_directory(const char *image) {
         fprintf(stderr, "[host] cannot enter %s: %s\n", dir, strerror(errno));
 }
 
-static int boot(const char *path, uint32_t (*resolve)(const char *)) {
-    char image[1024];
-    if (!realpath(path, image)) { fprintf(stderr, "[host] cannot find %s: %s\n", path, strerror(errno)); return 1; }
-    enter_image_directory(image);
-    if (recomp_pe_map(image, &g_img) != 0) return 1;
-    char guest[1024];
-    hle_guest_path(image, guest, sizeof guest);
-    hle_module_add(guest, g_img.base, g_img.resource_rva, g_img.resource_size, 1);
+static int finish_boot(const char *log_name, const char *guest_name,
+                       uint32_t (*resolve)(const char *)) {
+    hle_module_add(guest_name, g_img.base, g_img.resource_rva, g_img.resource_size, 1);
     /* static TLS: the template a thread's block is copied from (host_lite.c
      * make_tib). Must run before the first lifted call, which is when a
      * thread's TIB is built. */
@@ -300,8 +309,43 @@ static int boot(const char *path, uint32_t (*resolve)(const char *)) {
                                                comp_ok ? companion_import : NULL);
     g_booted = 1;
     fprintf(stderr, "[host] %s booted: entry 0x%08X, %d unresolved imports\n",
-            image, g_img.entry, unresolved);
+            log_name, g_img.entry, unresolved);
     return unresolved;
+}
+
+static int boot(const char *path, uint32_t (*resolve)(const char *)) {
+    char image[1024];
+    if (!realpath(path, image)) { fprintf(stderr, "[host] cannot find %s: %s\n", path, strerror(errno)); return -1; }
+    enter_image_directory(image);
+    if (recomp_pe_map(image, &g_img) != 0) return -1;
+    char guest[1024];
+    hle_guest_path(image, guest, sizeof guest);
+    return finish_boot(image, guest, resolve);
+}
+
+/* Boot from the image embedded in this binary: the original executable is not
+ * needed. `assets_dir`, when given, is where the game's own data files live; it
+ * becomes the working directory (and the C: drive), exactly as running beside
+ * the original exe did. Companions (a bundled DLL the game ships) are still
+ * resolved relative to that directory -- they are the game's files. */
+static int boot_embedded(const char *assets_dir, uint32_t (*resolve)(const char *)) {
+    char dir[1024];
+    if (assets_dir && *assets_dir && realpath(assets_dir, dir)) {
+        hle_set_drive('C', dir);
+        if (chdir(dir) != 0)
+            fprintf(stderr, "[host] cannot enter %s: %s\n", dir, strerror(errno));
+    } else if (getcwd(dir, sizeof dir)) {
+        /* No assets argument: the working directory is where the game was
+         * launched, the way running beside the original exe worked. Map it to
+         * C:, as enter_image_directory does for the file-based boot. */
+        hle_set_drive('C', dir);
+    }
+    size_t n = (size_t)recomp_original_image_size;
+    if (recomp_pe_map_mem(recomp_original_image, n, &g_img) != 0) return -1;
+    char guest[512];
+    const char *name = recomp_original_name[0] ? recomp_original_name : "game.exe";
+    snprintf(guest, sizeof guest, "C:\\%s", name);
+    return finish_boot(guest, guest, resolve);
 }
 
 int recomp_host_boot(const char *path) {
@@ -326,15 +370,13 @@ uint32_t recomp_host_run(void) {
  * arguments the user gave this launcher. GetCommandLineA and the CRT's argv
  * must answer that, not the recompiler's path. The image is always on C: at
  * its own directory (enter_image_directory), so the guest exe is C:\<name>. */
-static void set_guest_arguments(int argc, char **argv) {
+static void set_guest_arguments(const char *exe_name, int argc, char **argv, int first) {
     static char image[512], line[2048], pool[2048];
     static char *vec[256];
-    const char *base = strrchr(argv[1], '/');
-    base = base ? base + 1 : argv[1];
-    snprintf(image, sizeof image, "C:\\%s", base);
+    snprintf(image, sizeof image, "C:\\%s", exe_name ? exe_name : "game.exe");
     int n = snprintf(line, sizeof line, "\"%s\"", image), vn = 0, pn = 0;
     vec[vn++] = image;
-    for (int i = 2; i < argc && vn < 255; i++) {
+    for (int i = first; i < argc && vn < 255; i++) {
         const char *a = argv[i];
         int quote = (*a == 0 || strpbrk(a, " \t\"") != NULL);
         char *copy = pool + pn;
@@ -352,16 +394,42 @@ static void set_guest_arguments(int argc, char **argv) {
     hle_set_argv(vn, vec);
 }
 
+/* Whether `path` names an existing directory (the optional assets argument of
+ * an embedded run). */
+static int is_directory(const char *path) {
+    struct stat st;
+    return path && stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+/* Whether `path` is an existing file ending in .exe -- the original executable,
+ * offered out of habit or by a test harness even though it is embedded. */
+static int is_exe_file(const char *path) {
+    struct stat st;
+    if (!path || stat(path, &st) != 0 || !S_ISREG(st.st_mode)) return 0;
+    size_t n = strlen(path);
+    return n > 4 && (path[n-4] == '.') &&
+           (path[n-3] | 0x20) == 'e' && (path[n-2] | 0x20) == 'x' && (path[n-1] | 0x20) == 'e';
+}
+
+/* The directory containing `path`, into `out`; returns out. */
+static const char *parent_dir(const char *path, char *out, size_t n) {
+    snprintf(out, n, "%s", path ? path : "");
+    char *sl = strrchr(out, '/');
+    if (sl) { if (sl == out) sl[1] = 0; else *sl = 0; }
+    return out;
+}
+
+/* The base name of the original executable the rebuilt binary was made from:
+ * the embedded name when present, else the path's last component. */
+static const char *original_basename(const char *path) {
+    if (have_embedded_image() && recomp_original_name[0])
+        return recomp_original_name;
+    if (!path) return "game.exe";
+    const char *b = strrchr(path, '/');
+    return b ? b + 1 : path;
+}
+
 int recomp_host_main(int argc, char **argv) {
-    if (argc < 2) {
-        fprintf(stderr,
-                "usage: %s <original-game.exe> [args...]\n"
-                "The rebuilt binary carries the game's reconstructed code; the\n"
-                "original Windows executable supplies its data. Point it at the\n"
-                "game file you are porting, as you supplied it to GameReComp.\n",
-                argv[0]);
-        return 64;
-    }
     /* RECOMP_TRACE=1 logs every import dispatch. Without a hook the only way
      * to see which shim a guest reaches was to recompile the layer, which is
      * what made the last audit report "no shim-level runtime trace" as a
@@ -370,9 +438,45 @@ int recomp_host_main(int argc, char **argv) {
         const char *trace = getenv("RECOMP_TRACE");
         win32hle_trace = trace && *trace && *trace != '0';
     }
+    const char *perm = getenv("RECOMP_PERMISSIVE");
+    int permissive = perm && *perm && *perm != '0';
+    uint32_t (*resolve)(const char *) =
+        permissive ? hle_resolve_import_or_stub : hle_resolve_import;   /* forward-declared below */
+
     recomp_host_init();
-    set_guest_arguments(argc, argv);
-    int rc = recomp_host_boot(argv[1]);
-    if (rc) return rc;
+
+    if (have_embedded_image()) {
+        /* The original executable is embedded: it is not needed at run time.
+         * The first argument, when it names a directory, is where the game's
+         * own data files live; when it names the original .exe (a harness, or
+         * an old invocation) its directory is used instead and it is not passed
+         * to the guest. Anything else is a guest argument. */
+        const char *assets = NULL;
+        char dirbuf[1024];
+        int first = 1;
+        if (argc > 1) {
+            if (is_directory(argv[1])) { assets = argv[1]; first = 2; }
+            else if (is_exe_file(argv[1])) { assets = parent_dir(argv[1], dirbuf, sizeof dirbuf); first = 2; }
+        }
+        set_guest_arguments(original_basename(NULL), argc, argv, first);
+        int unresolved = boot_embedded(assets, resolve);
+        if (unresolved < 0) return 1;                      /* map failed */
+        if (unresolved && !permissive) return 2;
+        return (int)recomp_host_run();
+    }
+
+    if (argc < 2) {
+        fprintf(stderr,
+                "usage: %s <original-game.exe> [args...]\n"
+                "The rebuilt binary carries the game's reconstructed code; this\n"
+                "one was built without an embedded image, so the original Windows\n"
+                "executable still supplies its data. Point it at the game file.\n",
+                argv[0]);
+        return 64;
+    }
+    set_guest_arguments(original_basename(argv[1]), argc, argv, 2);
+    int unresolved = boot(argv[1], resolve);
+    if (unresolved < 0) return 1;
+    if (unresolved && !permissive) return 2;
     return (int)recomp_host_run();
 }

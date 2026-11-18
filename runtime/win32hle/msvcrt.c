@@ -648,11 +648,8 @@ static void ms_store(uint32_t dst, uint64_t bits, int size) {
     }
 }
 
-static void c_sscanf(void) {                         /* (src, fmt, ...) */
-    ms_init();
-    const char *s = ASTR(0), *f = ASTR(1);
-    if (!s || !f) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
-    uint32_t args = g_esp + 4u + 8u;
+static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
+    uint32_t args = args_start;
     const char *p = s;
     int assigned = 0;
     while (*f) {
@@ -775,13 +772,20 @@ static void c_sscanf(void) {                         /* (src, fmt, ...) */
             /* A conversion this module does not read (a wide-character one, or
              * a typo): stop where the host would have, and say so. */
             fprintf(stderr, "[win32hle] sscanf: unsupported conversion '%%%c'\n", conv ? conv : '?');
-            RETC((uint32_t)(int32_t)(assigned ? assigned : 0xFFFFFFFFu));
+            return assigned ? assigned : -1;
         }
         if (n < 0) break;                            /* the input did not match here */
         p += n;
     }
-    if (assigned == 0 && *p == 0) RETC(0xFFFFFFFFu);  /* input ran out before the first conversion */
-    RETC((uint32_t)assigned);
+    if (assigned == 0 && *p == 0) return -1;         /* input ran out before the first conversion */
+    return assigned;
+}
+
+static void c_sscanf(void) {                         /* (src, fmt, ...) */
+    ms_init();
+    const char *s = ASTR(0), *f = ASTR(1);
+    if (!s || !f) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    RETC((uint32_t)ms_vsscanf(s, f, g_esp + 4u + 8u));
 }
 
 /* ---- the low-level descriptor calls ---- */
@@ -1421,6 +1425,112 @@ static void u_stdio_common_vsprintf(void) {
     memcpy(out, t_fmt, (size_t)n + 1);
     RETC((uint32_t)n);
 }
+/* __stdio_common_vfprintf(options, stream, format, locale, argptr): printf
+ * straight to a stream, argptr a guest va_list. options is a 64-bit mask in
+ * two words, so stream is A32(2) onward. */
+static void u_stdio_common_vfprintf(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(2));
+    const char *fmt = (const char *)hle_ptr(A32(3));
+    uint32_t args = A32(5);
+    if (!s) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    if (!fmt) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, args);
+    size_t w = fwrite(t_fmt, 1, (size_t)n, s->fp);
+    RETC(w == (size_t)n ? (uint32_t)n : 0xFFFFFFFFu);
+}
+/* __stdio_common_vsscanf(options, buffer, count, format, locale, argptr). */
+static void u_stdio_common_vsscanf(void) {
+    ms_init();
+    const char *buf = (const char *)hle_ptr(A32(2));
+    const char *fmt = (const char *)hle_ptr(A32(4));
+    uint32_t args = A32(6);
+    if (!buf || !fmt) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    RETC((uint32_t)ms_vsscanf(buf, fmt, args));
+}
+/* getenv(name): the guest's environment block, the same one __getmainargs and
+ * __p__environ expose. A Windows program has no claim on the host's variables,
+ * so this searches the Windows-like block, not the host's environ. */
+static void u_getenv(void) {
+    ms_init();
+    const char *name = ASTR(0);
+    if (!name) RETC(0);
+    size_t nl = strlen(name);
+    for (size_t i = 0; i < sizeof g_env_words / sizeof g_env_words[0]; i++) {
+        const char *e = g_env_words[i];
+        if (!strncmp(e, name, nl) && e[nl] == '=') RETC(hle_guest_strdup(e + nl + 1));
+    }
+    RETC(0);
+}
+/* __p__acmdln: the address of the CRT's `char *_acmdln`. Build the command
+ * line the same way _get_narrow_winmain_command_line does, but as the raw
+ * process command line, and hand back a stable cell holding it. */
+static void u_p_acmdln(void) {
+    ms_init();
+    static uint32_t cell;
+    if (!g_cmdline_va) {
+        char line[1024];
+        int n = 0;
+        for (int i = 0; i < g_host_argc && n < (int)sizeof line - 3; i++) {
+            if (i) line[n++] = ' ';
+            if (i == 0) {
+                /* argv[0] is unquoted, as the process command line is */
+                for (const char *p = g_host_argv[i]; *p && n < (int)sizeof line - 2; p++) line[n++] = *p;
+            } else {
+                line[n++] = '"';
+                for (const char *p = g_host_argv[i]; *p && n < (int)sizeof line - 3; p++) line[n++] = *p;
+                line[n++] = '"';
+            }
+        }
+        line[n] = 0;
+        g_cmdline_va = hle_guest_strdup(line);
+    }
+    if (!cell) { cell = hle_va(hle_alloc(4)); MEM32(cell) = g_cmdline_va; }
+    RETC(cell);
+}
+/* _set_invalid_parameter_handler(handler) -> the previous handler. The handler
+ * is a guest function; it is recorded (and reported by the noinfo paths below
+ * when set) rather than left to a default that terminates the process. */
+static uint32_t g_invalid_param_handler;
+static void u_set_invalid_parameter_handler(void) {
+    ms_init();
+    uint32_t was = g_invalid_param_handler;
+    g_invalid_param_handler = A32(0);
+    RETC(was);
+}
+/* __acrt_iob_func(index): &_iob[index], the per-stream _iobuf the CRT hands
+ * fopen's result as. */
+static void u_acrt_iob_func(void) {
+    ms_init();
+    uint32_t i = A32(0);
+    if (i >= NIOB) RETC(0);
+    RETC(g_iob_va + i * IOBUF);
+}
+/* _open_osfhandle(osfhandle, flags): wrap an existing OS handle as a CRT
+ * descriptor. The handle this layer gets from CreateFile is a file HANDLE;
+ * fdopen its host descriptor so the two share the open file. */
+static void u_open_osfhandle(void) {
+    ms_init();
+    uint32_t h = A32(0);
+    int fd = hle_file_fd(h);
+    if (fd < 0) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    const char *mode = (A32(1) & 3u) == 0 ? "r" : ((A32(1) & 3u) == 1 ? "w" : "a");
+    FILE *fp = fdopen(fd, mode);
+    if (!fp) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    int slot = ms_slot_alloc(fp, fd, 0);            /* the HANDLE owns the descriptor */
+    if (slot < 0) { fclose(fp); ms_seterrno(EMFILE); RETC(0xFFFFFFFFu); }
+    RETC((uint32_t)slot);
+}
+/* The string routines the api-ms-win-crt-string set carries that msvcrt's
+ * table did not: strcspn, strspn, and the wide strlen. */
+static void u_strcspn(void) { const char *s = ASTR(0), *r = ASTR(1); RETC((uint32_t)strcspn(s ? s : "", r ? r : "")); }
+static void u_strspn(void)  { const char *s = ASTR(0), *a = ASTR(1); RETC((uint32_t)strspn(s ? s : "", a ? a : "")); }
+static void u_wcslen(void) {
+    const uint16_t *w = (const uint16_t *)hle_ptr(A32(0));
+    uint32_t n = 0;
+    if (w) while (w[n]) n++;
+    RETC(n);
+}
 
 /* ---- vcruntime140 ----
  * The MSVC C++ runtime is a deliberate non-goal (see README: msvcp140 and the
@@ -1723,6 +1833,16 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "_time64",                      u_time64 },
     { "_get_stream_buffer_pointers",  u_get_stream_buffer_pointers },
     { "__stdio_common_vsprintf",      u_stdio_common_vsprintf },
+    { "__stdio_common_vfprintf",      u_stdio_common_vfprintf },
+    { "__stdio_common_vsscanf",       u_stdio_common_vsscanf },
+    { "getenv",                       u_getenv },
+    { "__p__acmdln",                  u_p_acmdln },
+    { "_set_invalid_parameter_handler", u_set_invalid_parameter_handler },
+    { "__acrt_iob_func",              u_acrt_iob_func },
+    { "_open_osfhandle",              u_open_osfhandle },
+    { "strcspn",                      u_strcspn },
+    { "strspn",                       u_strspn },
+    { "wcslen",                       u_wcslen },
     { "__std_exception_copy",         u_std_exception_copy },
     { "__std_exception_destroy",      u_std_exception_destroy },
     { "__telemetry_main_invoke_trigger", u_telemetry_trigger },

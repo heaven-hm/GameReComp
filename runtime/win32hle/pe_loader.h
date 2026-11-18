@@ -25,6 +25,10 @@ int recomp_pe_map(const char *path, pe_image *img);
 /* Map `path` wherever there is room and relocate it there: a DLL. */
 int recomp_pe_map_any(const char *path, pe_image *img);
 
+/* Map an image already in memory (a rebuilt binary's embedded original PE), at
+ * its preferred ImageBase. Same as recomp_pe_map but without a file. */
+int recomp_pe_map_mem(const uint8_t *data, size_t size, pe_image *img);
+
 /* Walk the import directory and write each IAT slot's resolved address, using
  * resolve(name) (hle_resolve for win32hle). Returns the count left unresolved. */
 int recomp_pe_bind(const pe_image *img, uint32_t (*resolve)(const char *name));

@@ -127,6 +127,7 @@ class PEInfo:
     # PE header info
     image_base: int = 0
     entry_point_rva: int = 0
+    size_of_image: int = 0     # the mapped span the loader reserves (SizeOfImage)
     timestamp: int = 0
     timestamp_str: str = ''
     linker_version: str = ''
@@ -216,6 +217,7 @@ def _analyze_with_pefile(filepath: str, info: PEInfo, pefile) -> None:
 
     info.image_base = oh.ImageBase
     info.entry_point_rva = oh.AddressOfEntryPoint
+    info.size_of_image = oh.SizeOfImage
     info.timestamp = fh.TimeDateStamp
     try:
         info.timestamp_str = datetime.datetime.fromtimestamp(
@@ -342,6 +344,7 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
     if opt_magic == 0x10B:  # PE32
         info.entry_point_rva = struct.unpack_from('<I', data, opt + 16)[0]
         info.image_base = struct.unpack_from('<I', data, opt + 28)[0]
+        info.size_of_image = struct.unpack_from('<I', data, opt + 56)[0]
         subsystem = struct.unpack_from('<H', data, opt + 68)[0]
         info.dll_characteristics = struct.unpack_from('<H', data, opt + 70)[0]
         num_dirs = struct.unpack_from('<I', data, opt + 92)[0]
@@ -349,6 +352,7 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
     elif opt_magic == 0x20B:  # PE32+
         info.entry_point_rva = struct.unpack_from('<I', data, opt + 16)[0]
         info.image_base = struct.unpack_from('<Q', data, opt + 24)[0]
+        info.size_of_image = struct.unpack_from('<I', data, opt + 56)[0]
         subsystem = struct.unpack_from('<H', data, opt + 68)[0]
         info.dll_characteristics = struct.unpack_from('<H', data, opt + 70)[0]
         num_dirs = struct.unpack_from('<I', data, opt + 108)[0]

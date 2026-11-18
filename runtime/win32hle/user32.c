@@ -803,6 +803,13 @@ static void p_MDIClient(void) {
     RET(def_proc(h, m, w, l), 4);
 }
 static void u_DefWindowProcA(void) { RET(def_proc(A32(0), A32(1), A32(2), A32(3)), 4); }
+/* DefDlgProcA(hDlg, msg, wParam, lParam): the default dialog procedure. It
+ * answers BOOL (TRUE handled) rather than a message result, so it wraps
+ * def_proc's result: the messages def_proc acts on (erase background, control
+ * colours, set text) are the ones a dialog's default proc also claims. */
+static void u_DefDlgProcA(void) {
+    RET(def_proc(A32(0), A32(1), A32(2), A32(3)) ? 1u : 0u, 4);
+}
 /* MDI default procs. DefFrameProc(hwndFrame, hwndMDIClient, msg, w, l); the
  * MDI-specific routing (activating/sizing children) is the MDI client's; the
  * frame's own default handling is DefWindowProc. DefMDIChildProc is 4-arg. */
@@ -2600,6 +2607,11 @@ static void u_SetMenuDefaultItem(void) {                 /* (menu, item, byPosit
 }
 static void u_SetMenu(void)         { win_t *x = W(A32(0)); if (x) x->menu = A32(1); RET(1, 2); }
 static void u_DrawMenuBar(void)     { RET(1, 1); }
+/* GetMenuItemRect(hwnd, hmenu, item, &rc): the item's screen rectangle. Menus
+ * here are kept as data (their text and ids) but never laid out or drawn --
+ * TrackPopupMenu returns "no selection" for the same reason -- so there is no
+ * rectangle to report. FALSE is the honest answer, not a made-up empty rect. */
+static void u_GetMenuItemRect(void) { (void)A32(3); RET(0, 4); }
 static void u_HiliteMenuItem(void)  { RET(1, 4); }
 static void u_TrackPopupMenu(void)  { RET(0, 7); }       /* no selection (not drawn yet) */
 static void u_LoadMenuA(void) {                          /* (hModule, lpMenuName) */
@@ -2782,6 +2794,7 @@ const win32hle_shim win32hle_user32[] = {
     { "CheckRadioButton", u_CheckRadioButton },
     { "GetMenuItemInfoA", u_GetMenuItemInfoA }, { "SetMenuDefaultItem", u_SetMenuDefaultItem },
     { "SetMenu", u_SetMenu }, { "DrawMenuBar", u_DrawMenuBar }, { "HiliteMenuItem", u_HiliteMenuItem },
+    { "GetMenuItemRect", u_GetMenuItemRect },
     { "TrackPopupMenu", u_TrackPopupMenu },
     { "GetCursor", u_GetCursor }, { "OpenClipboard", u_OpenClipboard }, { "CloseClipboard", u_CloseClipboard },
     { "EmptyClipboard", u_EmptyClipboard }, { "SetClipboardData", u_SetClipboardData }, { "GetClipboardData", u_GetClipboardData },
@@ -2814,6 +2827,7 @@ const win32hle_shim win32hle_user32[] = {
     { "RegisterClassA", u_RegisterClassA }, { "RegisterClassExA", u_RegisterClassExA }, { "UnregisterClassA", u_UnregisterClassA },
     { "GetClassInfoA", u_GetClassInfoA }, { "GetClassNameA", u_GetClassNameA },
     { "CreateWindowExA", u_CreateWindowExA }, { "DefWindowProcA", u_DefWindowProcA },
+    { "DefDlgProcA", u_DefDlgProcA },
     { "DefFrameProcA", u_DefFrameProcA }, { "DefMDIChildProcA", u_DefMDIChildProcA },
     { "CallWindowProcA", u_CallWindowProcA }, { "ShowWindow", u_ShowWindow },
     { "CloseWindow", u_CloseWindow }, { "DestroyWindow", u_DestroyWindow },

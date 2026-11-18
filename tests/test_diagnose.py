@@ -446,14 +446,13 @@ class MainTemplateTest(unittest.TestCase):
                 capture_output=True, text=True).returncode
 
     def test_template_calls_permissive_only_behind_the_env_var(self):
+        # main.c now delegates entirely to recomp_host_main; the strict-vs-
+        # permissive split lives in the runtime (host.c) so both the embedded
+        # and the file-based boot share it.
         self.assertIn("recomp_host_main(argc, argv)", projectgen.MAIN_C)
-        self.assertIn("recomp_host_boot_permissive(argv[1])", projectgen.MAIN_C)
-        self.assertIn("RECOMP_PERMISSIVE", projectgen.MAIN_C)
-        # The strict call must be the one on the no-env-var path.
-        strict_at = projectgen.MAIN_C.index("if (!permissive_requested())")
-        permissive_at = projectgen.MAIN_C.index(
-            "recomp_host_boot_permissive(argv[1])")
-        self.assertLess(strict_at, permissive_at)
+        host_c = (ROOT / "runtime" / "win32hle" / "host.c").read_text()
+        self.assertIn("RECOMP_PERMISSIVE", host_c)
+        self.assertIn("hle_resolve_import_or_stub", host_c)
 
     def test_template_compiles(self):
         self.assertEqual(self._compile(projectgen.MAIN_C), 0,

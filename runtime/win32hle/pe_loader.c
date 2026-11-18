@@ -49,21 +49,33 @@ void recomp_pe_relocate(uint32_t base, uint32_t reloc_rva, uint32_t reloc_size, 
     }
 }
 
-static int pe_map_at(const char *path, pe_image *img, int anywhere);
-int recomp_pe_map(const char *path, pe_image *img)     { return pe_map_at(path, img, 0); }
-int recomp_pe_map_any(const char *path, pe_image *img) { return pe_map_at(path, img, 1); }
+static int pe_map_buffer(const char *label, const uint8_t *file, size_t flen, pe_image *img, int anywhere);
 
 static int pe_map_at(const char *path, pe_image *img, int anywhere) {
     size_t flen;
     uint8_t *file = slurp(path, &flen);
     if (!file) { fprintf(stderr, "[pe] cannot read %s\n", path); return 1; }
+    int r = pe_map_buffer(path, file, flen, img, anywhere);
+    free(file);
+    return r;
+}
+int recomp_pe_map(const char *path, pe_image *img)     { return pe_map_at(path, img, 0); }
+int recomp_pe_map_any(const char *path, pe_image *img) { return pe_map_at(path, img, 1); }
+/* Map an image that is already in memory -- a rebuilt binary's embedded copy of
+ * the original PE -- so the user's original executable is not needed at run
+ * time. The buffer must outlive the map call; sections are copied into guest
+ * memory here, so it need not outlive that. */
+int recomp_pe_map_mem(const uint8_t *data, size_t size, pe_image *img) {
+    return pe_map_buffer("<embedded image>", data, size, img, 0);
+}
 
+static int pe_map_buffer(const char *label, const uint8_t *file, size_t flen, pe_image *img, int anywhere) {
     pe_dos_header *dos = (pe_dos_header *)file;
-    if (flen < sizeof *dos || dos->e_magic != 0x5A4D) { free(file); fprintf(stderr, "[pe] not MZ\n"); return 1; }
-    if ((size_t)dos->e_lfanew + sizeof(pe_nt_headers32) > flen) { free(file); fprintf(stderr, "[pe] bad e_lfanew\n"); return 1; }
+    if (flen < sizeof *dos || dos->e_magic != 0x5A4D) { fprintf(stderr, "[pe] not MZ\n"); return 1; }
+    if ((size_t)dos->e_lfanew + sizeof(pe_nt_headers32) > flen) { fprintf(stderr, "[pe] bad e_lfanew\n"); return 1; }
     pe_nt_headers32 *nt = (pe_nt_headers32 *)(file + dos->e_lfanew);
     if (nt->Signature != 0x00004550 || nt->OptionalHeader.Magic != 0x10B) {
-        free(file); fprintf(stderr, "[pe] not a PE32\n"); return 1;
+        fprintf(stderr, "[pe] not a PE32\n"); return 1;
     }
     pe_opt_header32 *opt = &nt->OptionalHeader;
     uint32_t image_base = opt->ImageBase;
@@ -76,7 +88,7 @@ static int pe_map_at(const char *path, pe_image *img, int anywhere) {
     uint32_t base = hle_vm_reserve(anywhere ? 0 : image_base, span);
     if (!base || (!anywhere && base != image_base)) {
         if (base) hle_vm_release(base, span);
-        free(file); fprintf(stderr, "[pe] map @ 0x%08X failed (the range is in use)\n", image_base); return 1;
+        fprintf(stderr, "[pe] map @ 0x%08X failed (the range is in use)\n", image_base); return 1;
     }
 
     /* headers, then each section's raw data (the rest of VirtualSize is the
@@ -113,8 +125,7 @@ static int pe_map_at(const char *path, pe_image *img, int anywhere) {
     img->resource_rva = opt->DataDirectory[PE_DIR_RESOURCE].VirtualAddress;
     img->resource_size = opt->DataDirectory[PE_DIR_RESOURCE].Size;
     img->stamp = nt->FileHeader.TimeDateStamp;
-    free(file);
-    fprintf(stderr, "[pe] %s mapped at 0x%08X, span 0x%X\n", path, base, span);
+    fprintf(stderr, "[pe] %s mapped at 0x%08X, span 0x%X\n", label, base, span);
     return 0;
 }
 

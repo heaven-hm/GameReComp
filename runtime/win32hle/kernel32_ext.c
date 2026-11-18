@@ -409,6 +409,32 @@ static void k_MoveFileA(void) {
     hle_set_last_error(errno_to_win(errno));
     RET(0, 2);
 }
+/* MoveFileExA(src, dst, flags): MOVEFILE_REPLACE_EXISTING (1) lets rename
+ * clobber the destination, which it already does; MOVEFILE_COPY_ALLOWED (2)
+ * across filesystems becomes a copy-then-delete, since rename(2) refuses to
+ * cross a mount. MOVEFILE_DELAY_UNTIL_REBOOT (4) has no meaning here and is
+ * refused rather than silently treated as an immediate move. */
+static void k_MoveFileExA(void) {
+    char a[1024], b[1024];
+    uint32_t flags = A32(2);
+    if (flags & 4u) { hle_set_last_error(120u); RET(0, 3); }   /* ERROR_CALL_NOT_IMPLEMENTED */
+    hle_host_path(ASTR(0), a, sizeof a);
+    hle_host_path(ASTR(1), b, sizeof b);
+    if (rename(a, b) == 0) RET(1, 3);
+    if (flags & 2u) {                                     /* COPY_ALLOWED: copy, then remove the source */
+        FILE *in = fopen(a, "rb"), *out = in ? fopen(b, "wb") : NULL;
+        if (in && out) {
+            char buf[65536]; size_t n; int ok = 1;
+            while ((n = fread(buf, 1, sizeof buf, in)) > 0) if (fwrite(buf, 1, n, out) != n) { ok = 0; break; }
+            fclose(out);
+            if (ok) unlink(a);
+            fclose(in);
+            if (ok) RET(1, 3);
+        } else { if (in) fclose(in); if (out) fclose(out); }
+    }
+    hle_set_last_error(errno_to_win(errno));
+    RET(0, 3);
+}
 static void k_CopyFileA(void) {                          /* (src, dst, failIfExists) */
     char a[1024], b[1024];
     int ok = 0;
@@ -770,6 +796,55 @@ static void k_GetFullPathNameA(void) {
     }
     RET(buf ? (uint32_t)strlen(buf) : (uint32_t)strlen(abs), 4);
 }
+/* SearchPathA(path, file, ext, buflen, buf, &filePart): find a file on a search
+ * path (NULL means the default: the current directory, then the Windows
+ * directories). Each `;`-separated directory (or `\`-terminated run) is tried
+ * in turn, with the extension appended when the name has none; the first that
+ * exists is written to buf and its length returned, else 0. */
+static void k_SearchPathA(void) {
+    const char *path = ASTR(0), *file = ASTR(1);
+    char buf[1024]; uint32_t n = 0;
+    if (!file) RET(0, 6);
+    int has_ext = 0;
+    for (const char *p = file; *p; p++) if (*p == '.' || *p == '\\' || *p == '/') { has_ext = 1; break; }
+    /* the candidate directories: the caller's, or the cwd + the notional Windows dirs */
+    const char *segs[16]; int nseg = 0;
+    char pathbuf[1024];
+    if (path && *path) {
+        snprintf(pathbuf, sizeof pathbuf, "%s", path);
+        for (char *q = pathbuf, *s = q; ; q++) {
+            if (*q == ';' || *q == 0) {
+                char end = *q; *q = 0;
+                if (nseg < 16 && *s) segs[nseg++] = s;
+                *q = end;
+                s = q + 1;
+                if (!end) break;
+            }
+        }
+    }
+    const char *fixed[] = { "", "C:\\WINDOWS\\SYSTEM32", "C:\\WINDOWS" };
+    int use_fixed = nseg == 0;
+    for (int i = 0; i < (use_fixed ? 3 : nseg); i++) {
+        const char *dir = use_fixed ? fixed[i] : segs[i];
+        char cand[1024], host[1024];
+        if (dir && *dir) snprintf(cand, sizeof cand, "%s\\%s", dir, file);
+        else snprintf(cand, sizeof cand, "%s", file);
+        if (!has_ext && ASTR(2)) snprintf(cand + strlen(cand), sizeof cand - strlen(cand), "%s", ASTR(2));
+        if (hle_host_path(cand, host, sizeof host)) {
+            snprintf(buf, sizeof buf, "%s", cand);
+            n = (uint32_t)strlen(buf);
+            break;
+        }
+    }
+    if (!n) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0, 6); }
+    uint32_t out = A32(3), outbuf = A32(4);
+    if (outbuf && out) { strncpy((char *)hle_ptr(outbuf), buf, out - 1); ((char *)hle_ptr(outbuf))[out - 1] = 0; }
+    if (A32(5) && outbuf) {
+        char *bs = strrchr(buf, '\\'), *fs = strrchr(buf, '/'), *p = bs > fs ? bs : fs;
+        MEM32(A32(5)) = outbuf + (uint32_t)((p ? p + 1 : buf) - buf);
+    }
+    RET(n, 6);
+}
 
 /* ---- file mappings ----
  * CreateFileMappingA keeps the file (a dup of its descriptor) or, for
@@ -846,6 +921,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "CreateFileMappingA", k_CreateFileMappingA }, { "MapViewOfFile", k_MapViewOfFile },
     { "UnmapViewOfFile", k_UnmapViewOfFile },
     { "GetFullPathNameA", k_GetFullPathNameA },
+    { "SearchPathA", k_SearchPathA },
     { "OpenFile", k_OpenFile }, { "_hread", k__lread }, { "_hwrite", k__lwrite },
     { "_lopen", k__lopen }, { "_lcreat", k__lcreat }, { "_lread", k__lread },
     { "_lwrite", k__lwrite }, { "_lclose", k__lclose }, { "_llseek", k__llseek },
@@ -867,6 +943,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "RemoveDirectoryA",           k_RemoveDirectoryA },
     { "DeleteFileA",                k_DeleteFileA },
     { "MoveFileA",                  k_MoveFileA },
+    { "MoveFileExA",                k_MoveFileExA },
     { "CopyFileA",                  k_CopyFileA },
     { "FindFirstFileA",             k_FindFirstFileA }, { "FindFirstFileW", k_FindFirstFileW },
     { "FindNextFileA",              k_FindNextFileA }, { "FindNextFileW", k_FindNextFileW },

@@ -76,7 +76,7 @@ CATEGORIES = ("HIGH_LEVEL_VERIFIED", "HIGH_LEVEL_UNVERIFIED",
 SHIMMED_DLLS = {
     "kernel32", "user32", "gdi32", "advapi32", "shell32", "ole32", "oleaut32",
     "winmm", "wsock32", "ws2_32", "ddraw", "dsound", "dinput", "version",
-    "comctl32", "comdlg32", "ntdll", "msvcrt", "imm32", "mpr", "rpcrt4",
+    "comctl32", "comdlg32", "ntdll", "msvcrt", "imm32", "mpr", "rpcrt4", "wininet",
     "uuid", "dplayx", "d3dim", "avifil32", "msvfw32", "lz32", "d3d7", "d3d8",
     "opengl32", "glu32", "winspool", "oledlg", "sdl", "sdl_mixer", "sdl12",
     "bink", "mss", "smackw32", "msvcp140", "vcruntime140", "vcruntime140_1",
@@ -102,8 +102,15 @@ def _find_companion_dlls(pe_path, info):
     already shims qualifies. Returned in import order, de-duplicated.
     """
     base_dir = Path(pe_path).resolve().parent
+    # A bundled DLL can itself bundle one (gconvapi.dll imports vqdll.dll,
+    # which ships beside it), so this is a breadth-first walk of the import
+    # graph, not one level: whatever interface a companion needs lifted must
+    # be lifted too, or its call binds to the unresolved stub and the whole
+    # image fails strict boot.
+    queue = list(info.import_dlls)
     seen, out = set(), []
-    for dll in info.import_dlls:
+    while queue:
+        dll = queue.pop(0)
         base = _dll_base_name(dll)
         if base in SHIMMED_DLLS or base in seen:
             continue
@@ -124,7 +131,23 @@ def _find_companion_dlls(pe_path, info):
         if cinfo.pe_type != "PE32" or not cinfo.is_dll or not cinfo.exports:
             continue
         out.append({"name": dll, "path": want, "info": cinfo})
+        queue.extend(cinfo.import_dlls)
     return out
+
+
+def _image_span(info):
+    """The span the loader reserves for an image at its base.
+
+    The runtime maps a PE at `round_up(SizeOfImage, PAGE)` (pe_loader.c), which
+    can be far larger than the code+data the analyzer walks: gconvapi.dll's
+    SizeOfImage is ~37 MB against a 0x44000 section span. Collision detection
+    must use the SAME number the loader reserves, or a companion is rebased onto
+    a base the runtime then finds occupied.
+    """
+    span = getattr(info, "size_of_image", 0) or 0
+    if span <= 0:
+        span = max((info.code_end - info.image_base) + 0x100000, 0x100000)
+    return (span + 0xFFF) & ~0xFFF
 
 
 def _rebase_companion(comp, occupied, dest_dir):
@@ -137,7 +160,7 @@ def _rebase_companion(comp, occupied, dest_dir):
     """
     from pe_rebase import RebaseError, pick_base, rebase_pe  # noqa: PLC0415
     ci = comp["info"]
-    span = max(ci.code_end - ci.image_base, 0x1000) + 0x100000
+    span = _image_span(ci)
     try:
         new_base = pick_base(ci.image_base, span, occupied)
         data = rebase_pe(comp["path"].read_bytes(), new_base)
@@ -281,11 +304,11 @@ class Pipeline:
         # companion) is rebased onto a free base here, exactly as the Windows
         # loader would relocate it, and the copy is what gets lifted.
         self.companions = []
-        used = [(info.image_base, info.code_end + 0x200000)]
+        used = [(info.image_base, info.image_base + _image_span(info))]
         for comp in _find_companion_dlls(self.pe_path, info):
             ci = comp["info"]
             lo = ci.image_base
-            hi = lo + max((ci.code_end - ci.image_base) + 0x100000, 0x100000)
+            hi = lo + _image_span(ci)
             if any(lo < u_hi and hi > u_lo for u_lo, u_hi in used):
                 # Preferred base collides with the game (or an earlier
                 # companion). Windows would relocate it; do the same once, here,
@@ -300,7 +323,7 @@ class Pipeline:
                 comp["rebased_from"] = ci.image_base
                 ci = new_info
                 lo = ci.image_base
-                hi = lo + max((ci.code_end - ci.image_base) + 0x100000, 0x100000)
+                hi = lo + _image_span(ci)
             used.append((lo, hi))
             self.companions.append(comp)
 
@@ -549,6 +572,7 @@ class Pipeline:
         record = projectgen.write_project(
             self.project_dir, self.name, self.pe_path.name, pe_info,
             highlevel_modules=self.highlevel_modules,
+            embed_image=self.pe_path,
             extra={"functions": total, "source_categories": categories,
                    "high_level_functions": high_level_report})
         self._write_companion_table()
@@ -727,7 +751,10 @@ class Pipeline:
         # it is large and it slows the run down.
         if self.import_trace:
             env["RECOMP_TRACE"] = "1"
-        cmd = [str(self.binary), str(self.pe_path)]
+        # The image is embedded in the rebuilt binary, so it no longer takes the
+        # original executable as an argument; the working directory is where
+        # the game's own data files are found.
+        cmd = [str(self.binary)]
         t0 = time.time()
         status, rc, timed_out = "exited", None, False
         with open(stdout_path, "w") as out, open(stderr_path, "w") as err:

@@ -395,6 +395,7 @@ void hle_audio_stream_gain(int id, float gain);
 void hle_audio_stream_close(int id);
 int  hle_file_fd(uint32_t handle);                    /* a file HANDLE's descriptor, or -1 */
 extern const win32hle_shim win32hle_mss[];            /* Miles: file helpers, an MP3 ASI codec on ffmpeg (mss.c) */
+extern const win32hle_shim win32hle_wininet[];        /* WININET: a session object, no network (wininet.c) */
 extern const win32hle_shim win32hle_bink[];           /* binkw32 on ffmpeg (bink.c; stubs without HLE_WITH_FFMPEG) */
 /* The SDL2 display and input for a DirectDraw game (screen.c): installs
  * itself as the pump hook. headless: no window (a script drives input). */
