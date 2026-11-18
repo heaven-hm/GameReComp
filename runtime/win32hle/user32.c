@@ -2082,6 +2082,106 @@ static void m_ret0_4(void) { RET(0, 4); }
 static void m_ret1_2(void) { RET(1, 2); }
 static void m_ret0_5(void) { RET(0, 5); }
 
+/* ---- keyboard, character and window state the GameMaker runtime uses ----
+ * herocore (GameMaker) imports a spread of these at startup and while drawing
+ * text. Each has one honest answer here: one thread, one keyboard layout, an
+ * en-US locale, a single-byte character set. They read the real window table
+ * where the answer is per-window state (scrollbars, properties, parenting), so
+ * a game that sets and then queries agrees with itself. */
+static void u_GetKeyboardType(void) { RET(A32(0) == 0 ? 4u : 0u, 1); }   /* enhanced 101/102-key */
+static void u_GetDoubleClickTime(void) { RET(500u, 0); }
+static void u_IsCharAlphaA(void) { int c = (int)(A32(0) & 0xFF); RET((c < 128 && ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))) ? 1u : 0u, 1); }
+static void u_IsCharAlphaNumericA(void) { int c = (int)(A32(0) & 0xFF); RET((c < 128 && ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) ? 1u : 0u, 1); }
+static void u_CharUpperBuffA(void) { char *p = ASTR(0); uint32_t n = A32(1); for (uint32_t i = 0; p && i < n && p[i]; i++) if (p[i] >= 'a' && p[i] <= 'z') p[i] -= 32; RET(n, 2); }
+static void u_CharLowerBuffA(void) { char *p = ASTR(0); uint32_t n = A32(1); for (uint32_t i = 0; p && i < n && p[i]; i++) if (p[i] >= 'A' && p[i] <= 'Z') p[i] += 32; RET(n, 2); }
+static void u_CharNextA(void) { char *p = ASTR(0); RET(!p || !*p ? (uint32_t)(uintptr_t)p : (uint32_t)(uintptr_t)(p + 1), 1); }
+static void u_CharToOemA(void) { char *s = ASTR(0), *d = (char *)APTR(1); if (s && d) for (; *s; s++, d++) *d = *s; RET(1, 2); }
+static void u_OemToCharA(void) { char *s = ASTR(0), *d = (char *)APTR(1); if (s && d) for (; *s; s++, d++) *d = *s; RET(1, 2); }
+static void u_GetKeyboardLayout(void) { RET(0x04090409u, 1); }
+static void u_GetKeyboardLayoutList(void) { if (A32(1) && A32(0)) MEM32(A32(1)) = 0x04090409u; RET(A32(1) ? 1u : 1u, 2); }
+static void u_ActivateKeyboardLayout(void) { RET(A32(0), 2); }
+static void u_LoadKeyboardLayoutA(void) { RET(0x04090409u, 2); }
+static void u_SetKeyboardState(void) { RET(1, 1); }
+static void u_keybd_event(void) { RETCV(); }
+static void u_GetMessageTime(void) { RET(0, 0); }
+static void u_GetPropA(void) { win_t *x = W(A32(0)); if (x) { for (int i = 0; i < 32; i += 2) if (x->extra[i] == A32(1)) RET(x->extra[i + 1], 2); } RET(0, 2); }
+static void u_SetPropA(void) {
+    win_t *x = W(A32(0)); if (!x) RET(0, 3);
+    for (int i = 0; i < 32; i += 2) if (x->extra[i] == A32(1)) { x->extra[i + 1] = A32(2); RET(1, 3); }
+    for (int i = 0; i < 32; i += 2) if (!x->extra[i]) { x->extra[i] = A32(1); x->extra[i + 1] = A32(2); RET(1, 3); }
+    RET(0, 3);
+}
+static void u_RemovePropA(void) {
+    win_t *x = W(A32(0)); if (!x) RET(0, 2);
+    for (int i = 0; i < 32; i += 2) if (x->extra[i] == A32(1)) { uint32_t v = x->extra[i + 1]; x->extra[i] = x->extra[i + 1] = 0; RET(v, 2); }
+    RET(0, 2);
+}
+static void u_GetScrollPos(void) { win_t *x = W(A32(0)); RET(x ? (uint32_t)x->sb[A32(1) & 1].pos : 0u, 2); }
+static void u_SetScrollPos(void) {
+    win_t *x = W(A32(0)); if (!x) RET(0, 3);
+    int w = (int)(A32(1) & 1), old = x->sb[w].pos, p = (int)A32(2);
+    if (p < x->sb[w].min) p = x->sb[w].min; if (p > x->sb[w].max) p = x->sb[w].max;
+    x->sb[w].pos = p; RET((uint32_t)old, 3);
+}
+static void u_GetScrollRange(void) {
+    win_t *x = W(A32(0)); if (!x) RET(0, 4);
+    int w = (int)(A32(1) & 1);
+    if (A32(2)) MEM32(A32(2)) = (uint32_t)x->sb[w].min;
+    if (A32(3)) MEM32(A32(3)) = (uint32_t)x->sb[w].max;
+    RET(1, 4);
+}
+static void u_SetScrollRange(void) { win_t *x = W(A32(0)); if (x) { int w = (int)(A32(1) & 1); x->sb[w].min = (int)A32(2); x->sb[w].max = (int)A32(3); } RET(1, 5); }
+static void u_EnableScrollBar(void) { RET(1, 3); }
+static void u_ShowScrollBar(void) { RET(1, 3); }
+static void u_ShowOwnedPopups(void) { RET(1, 2); }
+static void u_ScrollWindow(void) { RETCV(); }
+static void u_ScrollWindowEx(void) { RET(0, 7); }
+static void u_IsChild(void) { win_t *c = W(A32(1)); RET(c && is_descendant(c->parent, A32(0)) ? 1u : 0u, 2); }
+static void u_IsIconic(void) { win_t *x = W(A32(0)); RET(x && x->state == 1 ? 1u : 0u, 1); }
+static void u_IsZoomed(void) { win_t *x = W(A32(0)); RET(x && x->state == 2 ? 1u : 0u, 1); }
+static void u_GetWindowThreadProcessId(void) { if (A32(1)) MEM32(A32(1)) = 1; RET(hle_thread_id(), 2); }
+static void u_GetSystemMenu(void) { RET(0, 2); }
+static void u_GetMenuStringA(void) { RET(0, 5); }
+static void u_SetClassLongA(void) { RET(0, 3); }
+static void u_InsertMenuItemA(void) { RET(1, 4); }
+static void u_SetMenuItemInfoA(void) { RET(1, 4); }
+static void u_SetParent(void) { win_t *x = W(A32(0)); uint32_t old = x ? x->parent : 0; if (x) x->parent = A32(1); RET(old, 2); }
+static void u_SetWindowPlacement(void) { RET(1, 2); }
+static void u_TranslateMDISysAccel(void) { RET(0, 3); }
+static void u_GetLastActivePopup(void) { RET(A32(0), 1); }
+static void u_ChangeDisplaySettingsA(void) { RET(0, 2); }        /* DISP_CHANGE_SUCCESSFUL */
+static void u_CreateIcon(void) { RET(0x00020001u, 3); }
+static void u_DestroyIcon(void) { RET(1, 1); }
+static void u_DestroyCursor(void) { RET(1, 1); }
+static void u_GetIconInfo(void) { RET(0, 2); }
+static void u_DrawIcon(void) { RET(1, 4); }
+static void u_DrawIconEx(void) { RET(1, 7); }
+static void u_DrawEdge(void) { RET(1, 5); }
+static void u_DrawFocusRect(void) { RET(1, 2); }
+static void u_DrawFrameControl(void) { RET(1, 4); }
+static void u_GetCaretPos(void) { if (A32(0)) MEM32(A32(0)) = 0; RET(1, 1); }
+static void u_GetDCEx(void) { RET(0, 3); }
+static void u_GetWindowDC(void) { RET(0, 1); }
+/* Clipboard: no host bridge, so an empty clipboard answers "no formats" -- what
+ * a process with nothing copied would see. A registered format still gets a
+ * stable id, so register-then-query agrees. */
+static void u_EnumClipboardFormats(void) { RET(0, 1); }
+static void u_IsClipboardFormatAvailable(void) { RET(0, 1); }
+static void u_RegisterClipboardFormatA(void) {
+    static struct { uint32_t name_va; uint32_t id; } cf[16];
+    static int n;
+    const char *s = ASTR(0);
+    if (!s) RET(0, 1);
+    for (int i = 0; i < n; i++) {
+        const char *seen = (const char *)hle_ptr(cf[i].name_va);
+        if (seen && !strcmp(seen, s)) RET(cf[i].id, 1);
+    }
+    if (n >= 16) RET(0, 1);
+    cf[n].name_va = hle_guest_strdup(s), cf[n].id = 0xC000u + (uint32_t)n, n++;
+    RET(cf[n - 1].id, 1);
+}
+
+
 /* GetSystemMetrics: the screen is the game's display mode. */
 static void u_GetSystemMetrics(void) {
     switch (A32(0)) {
@@ -2626,6 +2726,34 @@ static void u_RegisterWindowMessageA(void) {
 static void u_SetMessageQueue(void) { RET(1, 1); }       /* obsolete since Win32; always succeeds */
 
 const win32hle_shim win32hle_user32[] = {
+    { "GetKeyboardType", u_GetKeyboardType }, { "GetDoubleClickTime", u_GetDoubleClickTime },
+    { "IsCharAlphaA", u_IsCharAlphaA }, { "IsCharAlphaNumericA", u_IsCharAlphaNumericA },
+    { "CharUpperBuffA", u_CharUpperBuffA }, { "CharLowerBuffA", u_CharLowerBuffA },
+    { "CharNextA", u_CharNextA }, { "CharToOemA", u_CharToOemA }, { "OemToCharA", u_OemToCharA },
+    { "GetKeyboardLayout", u_GetKeyboardLayout }, { "GetKeyboardLayoutList", u_GetKeyboardLayoutList },
+    { "ActivateKeyboardLayout", u_ActivateKeyboardLayout }, { "LoadKeyboardLayoutA", u_LoadKeyboardLayoutA },
+    { "SetKeyboardState", u_SetKeyboardState }, { "keybd_event", u_keybd_event },
+    { "GetMessageTime", u_GetMessageTime },
+    { "GetPropA", u_GetPropA }, { "SetPropA", u_SetPropA }, { "RemovePropA", u_RemovePropA },
+    { "GetScrollPos", u_GetScrollPos }, { "SetScrollPos", u_SetScrollPos },
+    { "GetScrollRange", u_GetScrollRange }, { "SetScrollRange", u_SetScrollRange },
+    { "EnableScrollBar", u_EnableScrollBar }, { "ShowScrollBar", u_ShowScrollBar },
+    { "ShowOwnedPopups", u_ShowOwnedPopups }, { "ScrollWindow", u_ScrollWindow },
+    { "ScrollWindowEx", u_ScrollWindowEx },
+    { "IsChild", u_IsChild }, { "IsIconic", u_IsIconic }, { "IsZoomed", u_IsZoomed },
+    { "GetWindowThreadProcessId", u_GetWindowThreadProcessId },
+    { "GetSystemMenu", u_GetSystemMenu }, { "GetMenuStringA", u_GetMenuStringA },
+    { "SetClassLongA", u_SetClassLongA }, { "InsertMenuItemA", u_InsertMenuItemA },
+    { "SetMenuItemInfoA", u_SetMenuItemInfoA }, { "SetParent", u_SetParent },
+    { "SetWindowPlacement", u_SetWindowPlacement }, { "TranslateMDISysAccel", u_TranslateMDISysAccel },
+    { "GetLastActivePopup", u_GetLastActivePopup }, { "ChangeDisplaySettingsA", u_ChangeDisplaySettingsA },
+    { "CreateIcon", u_CreateIcon }, { "DestroyIcon", u_DestroyIcon }, { "DestroyCursor", u_DestroyCursor },
+    { "GetIconInfo", u_GetIconInfo }, { "DrawIcon", u_DrawIcon }, { "DrawIconEx", u_DrawIconEx },
+    { "DrawEdge", u_DrawEdge }, { "DrawFocusRect", u_DrawFocusRect }, { "DrawFrameControl", u_DrawFrameControl },
+    { "GetCaretPos", u_GetCaretPos }, { "GetDCEx", u_GetDCEx }, { "GetWindowDC", u_GetWindowDC },
+    { "EnumClipboardFormats", u_EnumClipboardFormats },
+    { "IsClipboardFormatAvailable", u_IsClipboardFormatAvailable },
+    { "RegisterClipboardFormatA", u_RegisterClipboardFormatA },
     { "RegisterWindowMessageA", u_RegisterWindowMessageA },
     { "SetMessageQueue", u_SetMessageQueue },
     { "SetWindowsHookExA", u_SetWindowsHookExA }, { "SetWindowsHookExW", u_SetWindowsHookExA },

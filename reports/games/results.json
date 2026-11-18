@@ -2,6 +2,23 @@
   "schema": 1,
   "runs": [
     {
+      "relative_path": "herocore/herocore gm5.exe",
+      "game": "Hero Core",
+      "filename": "herocore gm5.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 70,
+      "verification": "not-run",
+      "status": "verification did not run",
+      "run_status": null,
+      "exit_code": null,
+      "host": "",
+      "input_sha256": "be411b8b64cf821470e17e1dc913410b14f1eaab46187c5ab57c8da03d09a8ce",
+      "evidence": "projects/herocore_gm5/reports/report.html",
+      "project_dir": "projects/herocore_gm5",
+      "generated_at": "2026-11-18T04:03:49Z"
+    },
+    {
       "relative_path": "tumiki_fighters/tf.exe",
       "game": "Tumiki Fighters",
       "filename": "tf.exe",
@@ -220,23 +237,6 @@
       "input_sha256": "6ea800ee918547ca1953a24bebdcd07c29cef4ada617d7321a7dc3701e825636",
       "evidence": "projects/gr/reports/report.json",
       "project_dir": "projects/gr",
-      "generated_at": "2026-10-30T19:04:09Z"
-    },
-    {
-      "relative_path": "herocore/herocore gm5.exe",
-      "game": "Hero Core",
-      "filename": "herocore gm5.exe",
-      "arch": "i386",
-      "os": "Windows",
-      "score": 70,
-      "verification": "launch-failed",
-      "status": "rebuilt process boot-failed (exit 2)",
-      "run_status": "boot-failed",
-      "exit_code": 2,
-      "host": "Darwin arm64",
-      "input_sha256": "be411b8b64cf821470e17e1dc913410b14f1eaab46187c5ab57c8da03d09a8ce",
-      "evidence": "projects/herocore_gm5/reports/report.json",
-      "project_dir": "projects/herocore_gm5",
       "generated_at": "2026-10-30T19:04:09Z"
     },
     {

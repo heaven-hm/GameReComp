@@ -267,6 +267,10 @@ class Disassembler:
         self.pe_data = pe_data
         self.image_base = image_base
         self.sections = sections
+        # Entries a function-pointer table names at a canonical prologue right
+        # after padding. They are starts on outside evidence, so the eviction
+        # pass must keep them (see find_data_code_pointers).
+        self._strong_starts = set()
         self.md = Cs(CS_ARCH_X86, CS_MODE_32)
         self.md.detail = True
 
@@ -718,6 +722,16 @@ class Disassembler:
                 va = int.from_bytes(data[off:off + 4], 'little')
                 if not (code_start <= va < code_end):
                     continue
+                # A pointer that names a canonical prologue immediately after
+                # padding is strong evidence of a real entry, even when an
+                # earlier pass already queued it: an overlong neighbour decoded
+                # through the padding into this function, and that neighbour is
+                # the one whose extent is wrong. Recording it here keeps the
+                # eviction pass from dropping it again. Hero Core's GameMaker
+                # runtime has ~30 such table entries.
+                if (self.read_bytes(va - 1, 1) in (b'\x00', b'\x90', b'\xcc')
+                        and self.read_bytes(va, 3) in (b'\x55\x8b\xec', b'\x55\x89\xe5')):
+                    self._strong_starts.add(va)
                 if va in queued or va in found:
                     continue
                 if is_code_section:
@@ -1017,6 +1031,7 @@ class Disassembler:
         if torn:
             print(f"[*] Dropped {len(torn)} entries inside a thunk-table slot")
         sizes = {a: f.size for a, f in functions.items()}
+        self._strong_starts &= set(sizes)
         callers = {}
         for a, f in functions.items():
             for t in f.calls_to:
@@ -1026,7 +1041,7 @@ class Disassembler:
         # Killing Floor's case).
         gone = drop_mid_instruction_entries(
             lambda va, n: self.read_bytes(va, n), sizes, code_start, code_end,
-            keep=set(seeds) & set(sizes), callers=callers, weak=weak & set(sizes))
+            keep=(set(seeds) | self._strong_starts) & set(sizes), callers=callers, weak=weak & set(sizes))
         for a in list(functions):
             if a not in sizes:
                 del functions[a]
