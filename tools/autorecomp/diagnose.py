@@ -731,7 +731,8 @@ def build_report(rows, generated_at, command, timeout, duplicates=None,
         "outcomes": {o: sum(1 for r in rows if r["outcome"] == o)
                      for o in sorted({r["outcome"] for r in rows})},
         "run_statuses": {st: sum(1 for r in rows if r.get("run_status") == st)
-                         for st in sorted({r.get("run_status") for r in rows})},
+                         for st in sorted({r.get("run_status") for r in rows},
+                                          key=lambda s: (s is None, s or ""))},
         "commit": commit,
         "runtime_source": runtime_source,
         "baseline": baseline,

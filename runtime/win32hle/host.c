@@ -111,6 +111,95 @@ static uint32_t data_import(const char *name) {
     return hle_msvcrt_data(name);
 }
 
+/* Weak defaults for the generated bundled-DLL table. A project with no
+ * companions does not define these; one with them does, and the linker picks
+ * the generated definitions. Weak *definitions* rather than declarations,
+ * for the same reason as hle_msvcrt_data above (Mach-O links a bare extern as
+ * address 0). */
+__attribute__((weak)) const recomp_companion_t *const recomp_companion_list = NULL;
+__attribute__((weak)) const uint32_t recomp_companion_count = 0;
+
+/* ---- bundled DLLs -------------------------------------------------------
+ *
+ * The pipeline reconstructs a bundled game DLL's functions into the same
+ * dispatch table as the game, at the DLL's preferred ImageBase, and generates
+ * recomp_companion_list (win32hle.h). Boot maps each DLL's data at that base
+ * so the lifted code's MEM32(va) references land, then the IAT binder answers
+ * the game's imports from the DLL's exports -- the export VA IS the lifted
+ * function's VA, so the call runs the reconstructed code.
+ *
+ * The DLL's own import table is bound the same way the game's is: its IAT
+ * slots hold raw RVAs until something writes them, and its lifted code calls
+ * through those slots. */
+static uint32_t hle_resolve_import(const char *name);
+static uint32_t companion_import(const char *dll, const char *name);
+
+static int map_companions(void) {
+    if (!recomp_companion_count) return 0;
+    for (uint32_t i = 0; i < recomp_companion_count; i++) {
+        const recomp_companion_t *c = &recomp_companion_list[i];
+        /* The mapped image's base must be its preferred one: the dispatch
+         * table entries and every generated address are absolute for it. */
+        pe_image img;
+        char host[1200];
+        /* A rebased copy is named absolutely; the game's own copy is resolved
+         * beside the exe. */
+        if (c->load && c->load[0]) {
+            snprintf(host, sizeof host, "%s", c->load);
+        } else if (!hle_host_path(c->dll, host, sizeof host)) {
+            fprintf(stderr, "[pe] companion %s: not found beside the game\n", c->dll);
+            return 1;
+        }
+        if (recomp_pe_map(host, &img) != 0 || img.base != c->base) {
+            fprintf(stderr, "[pe] companion %s: cannot map at 0x%08X\n",
+                    c->dll, c->base);
+            return 1;
+        }
+        hle_module_add(c->dll, img.base, img.resource_rva, img.resource_size, 0);
+        /* The DLL's own imports (its C runtime and kernel32 calls) are bound
+         * exactly like the game's: its IAT slots are the raw RVAs from the
+         * file until something writes them, and its lifted code calls them
+         * through the IAT like anyone else's. */
+        int dll_unresolved = recomp_pe_bind_companions(&img, hle_resolve_import,
+                                                       companion_import);
+        if (dll_unresolved)
+            fprintf(stderr, "[pe] companion %s: %d unresolved imports\n",
+                    c->dll, dll_unresolved);
+        fprintf(stderr, "[pe] companion %s mapped at 0x%08X (%u exports)\n",
+                c->dll, img.base, c->export_count);
+    }
+    return 0;
+}
+
+/* The import a bundled DLL answers, or 0. */
+static uint32_t companion_import(const char *dll, const char *name) {
+    if (!recomp_companion_count || !dll || !name) return 0;
+    /* Base names only: the import table carries a path, the companion table a
+     * bare file name. */
+    const char *d = dll, *n = name;
+    for (const char *p = dll; *p; p++) if (*p == '\\' || *p == '/') d = p + 1;
+    for (uint32_t i = 0; i < recomp_companion_count; i++) {
+        const recomp_companion_t *c = &recomp_companion_list[i];
+        const char *cb = c->dll;
+        for (const char *p = c->dll; *p; p++) if (*p == '\\' || *p == '/') cb = p + 1;
+        size_t k = 0;
+        while (d[k] && cb[k] && (d[k] == cb[k] || (d[k] | 32) == (cb[k] | 32))) k++;
+        if (d[k] || cb[k]) continue;                     /* not this companion */
+        /* An ordinal import ("dll#N") has no name to match by. */
+        if (n[0] == '#') return 0;
+        for (uint32_t e = 0; e < c->export_count; e++)
+            if (c->exports[e].name && !strcmp(c->exports[e].name, n))
+                return c->exports[e].va;
+        return 0;
+    }
+    return 0;
+}
+
+/* Declared in win32hle.h; the binder-facing wrapper around the table lookup. */
+uint32_t recomp_companion_resolve(const char *dll, const char *name) {
+    return companion_import(dll, name);
+}
+
 /* The IAT resolver for a real bind: a data import first (its slot must hold the
  * object's own address), then a function shim. Both the strict and the
  * permissive boot go through here, so a data import resolves the same way
@@ -152,7 +241,14 @@ static int boot(const char *path, uint32_t (*resolve)(const char *)) {
     char guest[1024];
     hle_guest_path(image, guest, sizeof guest);
     hle_module_add(guest, g_img.base, g_img.resource_rva, g_img.resource_size, 1);
-    int unresolved = recomp_pe_bind(&g_img, resolve);
+    /* Bundled DLLs first: their images must be at their preferred base before
+     * the main IAT is bound, because a bound slot holds an address inside one
+     * of them. A companion that will not map is a boot failure in strict mode
+     * (its code is what the game calls); permissive mode carries on so the
+     * run still reports the first thing the guest reaches. */
+    int comp_ok = (map_companions() == 0);
+    int unresolved = recomp_pe_bind_companions(&g_img, resolve,
+                                               comp_ok ? companion_import : NULL);
     g_booted = 1;
     fprintf(stderr, "[host] %s booted: entry 0x%08X, %d unresolved imports\n",
             image, g_img.entry, unresolved);

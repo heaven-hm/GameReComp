@@ -1619,6 +1619,45 @@ static void u_EnumChildWindows(void) {                   /* (parent, proc, lPara
     }
     RET(1, 3);
 }
+/* EnumWindows(proc, lParam) / EnumThreadWindows(tid, proc, lParam): every
+ * top-level window, to the guest's callback, until it answers 0.
+ *
+ * One guest thread owns every window this layer creates, so "windows of thread
+ * T" and "all top-level windows" are the same set; EnumThreadWindows forwards
+ * to the same walk. That is the honest answer here, not an approximation of a
+ * multi-threaded window owner that does not exist.
+ *
+ * proc's return value is a BOOL: the walk stops on 0, exactly as Windows
+ * documents, so a handler that collected what it wanted can end the walk. */
+static void u_EnumWindows(void) {                        /* (proc, lParam) */
+    uint32_t proc = A32(0), lp = A32(1);
+    uint32_t list[MAX_WIN];
+    int n = 0;
+    for (int i = 0; i < MAX_WIN; i++)
+        if (g_win[i].used && !g_win[i].parent) list[n++] = g_win[i].hwnd;
+    for (int i = 0; i < n; i++) {
+        if (!W(list[i])) continue;
+        uint32_t a[2] = { list[i], lp };
+        if (!hle_call_guest(proc, 2, a)) break;
+    }
+    RET(1, 2);
+}
+/* (dwThreadId, lpfn, lParam) -- the thread id is checked against the one
+ * thread this layer runs; anything else enumerates nothing. */
+static void u_EnumThreadWindows(void) {
+    if (A32(0) && A32(0) != hle_thread_id()) RET(1, 3);
+    uint32_t proc = A32(1), lp = A32(2);
+    uint32_t list[MAX_WIN];
+    int n = 0;
+    for (int i = 0; i < MAX_WIN; i++)
+        if (g_win[i].used && !g_win[i].parent) list[n++] = g_win[i].hwnd;
+    for (int i = 0; i < n; i++) {
+        if (!W(list[i])) continue;
+        uint32_t a[2] = { list[i], lp };
+        if (!hle_call_guest(proc, 2, a)) break;
+    }
+    RET(1, 3);
+}
 static void u_FindWindowA(void) {                        /* (class, title) */
     int c = find_class(STR_OR_ATOM(0));
     for (int i = 0; i < MAX_WIN; i++) {
@@ -2622,6 +2661,7 @@ const win32hle_shim win32hle_user32[] = {
     { "GetCursorPos", u_GetCursorPos }, { "SetCursorPos", u_SetCursorPos },
     { "GetDesktopWindow", u_GetDesktopWindow }, { "GetParent", u_GetParent }, { "GetWindow", u_GetWindow },
     { "GetTopWindow", u_GetTopWindow }, { "EnumChildWindows", u_EnumChildWindows },
+    { "EnumWindows", u_EnumWindows }, { "EnumThreadWindows", u_EnumThreadWindows },
     { "GetFocus", u_GetFocus }, { "SetFocus", u_SetFocus }, { "SetCapture", u_SetCapture },
     { "ReleaseCapture", u_ReleaseCapture }, { "GetCapture", u_GetCapture },
     { "GetActiveWindow", u_GetActiveWindow }, { "GetForegroundWindow", u_GetForegroundWindow },

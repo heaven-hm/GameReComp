@@ -66,6 +66,38 @@ int main(void) {
         if (MEM8(hle_va(event) + EV_TYPE) == 2 && u16(hle_va(event) + EV_KEY_SYM) == SDLK_a)
             saw_key = 1;
     ok("SDL_PollEvent", saw_key);
+
+    /* A 4-bit palettised BMP: the colour table sits between the header and the
+     * pixels, so the pixel offset is NOT the header end. The loader used to
+     * read that gap as channel masks (assuming BI_BITFIELDS) and reject every
+     * 1/4-bit image; noiz2sa's title art is exactly this shape. */
+    {
+        enum { W = 2, H = 1, PAL = 2, OFF = 14 + 40 + PAL * 4 };
+        uint32_t n = OFF + 4;                       /* one padded 4-bit row */
+        uint8_t *bmp = hle_alloc(n);
+        memset(bmp, 0, n);
+        bmp[0] = 'B'; bmp[1] = 'M';
+        *(uint32_t *)(bmp + 2) = n;
+        *(uint32_t *)(bmp + 10) = OFF;              /* pixel data offset */
+        *(uint32_t *)(bmp + 14) = 40;               /* BITMAPINFOHEADER */
+        *(int32_t *)(bmp + 18) = W;
+        *(int32_t *)(bmp + 22) = H;
+        *(uint16_t *)(bmp + 26) = 1;                /* planes */
+        *(uint16_t *)(bmp + 28) = 4;                /* bpp */
+        *(uint32_t *)(bmp + 30) = 0;                /* BI_RGB */
+        *(uint32_t *)(bmp + 46) = PAL;              /* clrused */
+        bmp[54 + 0] = 0x00; bmp[54 + 1] = 0x00; bmp[54 + 2] = 0xFF;  /* colour 0 = blue */
+        bmp[58 + 0] = 0xFF; bmp[58 + 1] = 0x00; bmp[58 + 2] = 0x00;  /* colour 1 = red  */
+        bmp[OFF] = 0x10;                            /* pixel 0 = colour 1, pixel 1 = colour 0 */
+        uint32_t rw = call("SDL_RWFromMem", 2, (uint32_t[]){ hle_va(bmp), n });
+        uint32_t surf = call("SDL_LoadBMP_RW", 2, (uint32_t[]){ rw, 1 });
+        ok("SDL_LoadBMP_RW accepts a 4-bit palettised BMP", surf != 0);
+        if (surf) {
+            ok("SDL_LoadBMP_RW 4-bit dimensions", MEM32(surf + SF_W) == W && MEM32(surf + SF_H) == H);
+            call("SDL_FreeSurface", 1, &surf);
+        }
+    }
+
     call("SDL_FreeSurface", 1, &src);
     call("SDL_Quit", 0, NULL);
     if (!fails) printf("sdl12_selftest: all checks passed\n");

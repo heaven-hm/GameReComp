@@ -272,5 +272,60 @@ class DryRunTests(unittest.TestCase):
         self.assertEqual(rc, cli.EXIT_STAGE_FAILED)
 
 
+class IdentityDefaultTests(unittest.TestCase):
+    """Omitted input/output identity is assumed, and said so.
+
+    The four knobs are independently defaultable: input OS/arch from the PE
+    header, output OS/arch from this host. That is what lets the common run
+    be a single argument, but the result is an assumption, so it is warned
+    about once, naming every knob the caller left out.
+    """
+
+    def test_omitted_identity_warns_and_defaults(self):
+        args = cli.build_parser().parse_args([str(FIXTURE_EXE)])
+        stream = io.StringIO()
+        cli._identity_defaults(args, stream)
+        out = stream.getvalue()
+        self.assertIn("not fully specified", out)
+        self.assertIn("--input-os", out)
+        self.assertIn("--input-arch", out)
+        self.assertIn("--target-os", out)
+        self.assertIn("--target-arch", out)
+        self.assertEqual(args.input_os, "auto")
+        self.assertEqual(args.input_arch, "auto")
+        self.assertEqual(args.target_os, "host")
+        self.assertEqual(args.target_arch, "host")
+
+    def test_explicit_identity_does_not_warn(self):
+        args = cli.build_parser().parse_args([
+            str(FIXTURE_EXE), "--input-os", "windows", "--input-arch", "x86",
+            "--target-os", "macos", "--target-arch", "arm64"])
+        stream = io.StringIO()
+        cli._identity_defaults(args, stream)
+        self.assertEqual(stream.getvalue(), "")
+        self.assertEqual(args.input_os, "windows")
+        self.assertEqual(args.target_arch, "arm64")
+
+    def test_partial_identity_warns_about_the_rest(self):
+        args = cli.build_parser().parse_args([
+            str(FIXTURE_EXE), "--input-os", "windows"])
+        stream = io.StringIO()
+        cli._identity_defaults(args, stream)
+        out = stream.getvalue()
+        self.assertNotIn("omitted: --input-os", out)
+        self.assertIn("omitted: --input-arch", out)
+        self.assertIn("omitted: --target-os", out)
+        self.assertIn("omitted: --target-arch", out)
+
+    def test_identity_aliases_parse(self):
+        args = cli.build_parser().parse_args([
+            str(FIXTURE_EXE), "--in-os", "windows", "--in-arch", "x86",
+            "--out-os", "macos", "--out-arch", "arm64"])
+        self.assertEqual(args.input_os, "windows")
+        self.assertEqual(args.input_arch, "x86")
+        self.assertEqual(args.target_os, "macos")
+        self.assertEqual(args.target_arch, "arm64")
+
+
 if __name__ == "__main__":
     unittest.main()

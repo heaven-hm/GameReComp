@@ -29,6 +29,13 @@ int recomp_pe_map_any(const char *path, pe_image *img);
  * resolve(name) (hle_resolve for win32hle). Returns the count left unresolved. */
 int recomp_pe_bind(const pe_image *img, uint32_t (*resolve)(const char *name));
 
+/* The same walk, but each import first offers (dll, name) to comp_resolve: a
+ * bundled DLL the pipeline reconstructed answers with its lifted export VA.
+ * comp_resolve may be NULL for the plain behaviour. */
+int recomp_pe_bind_companions(const pe_image *img,
+                              uint32_t (*resolve)(const char *name),
+                              uint32_t (*comp_resolve)(const char *dll, const char *name));
+
 /* Apply HIGHLOW base relocations for `delta` over the reloc directory at
  * base+reloc_rva (reloc_size bytes). Used by the loader when the base differs,
  * and exposed on its own so it can be tested directly. */

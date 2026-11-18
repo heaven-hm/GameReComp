@@ -119,6 +119,16 @@ static int pe_map_at(const char *path, pe_image *img, int anywhere) {
 }
 
 int recomp_pe_bind(const pe_image *img, uint32_t (*resolve)(const char *name)) {
+    return recomp_pe_bind_companions(img, resolve, NULL);
+}
+
+/* The companion-aware bind: for each descriptor, `comp_resolve(dll, name)` is
+ * asked first, so an import from a bundled DLL binds to that DLL's lifted
+ * export instead of a shim of the same name (or the unresolved stub). Only
+ * when it answers 0 does the ordinary resolver run. */
+int recomp_pe_bind_companions(const pe_image *img,
+                             uint32_t (*resolve)(const char *name),
+                             uint32_t (*comp_resolve)(const char *dll, const char *name)) {
     if (!img->import_rva) return 0;
     uint32_t base = img->base;
     int unresolved = 0, bound = 0;
@@ -140,11 +150,13 @@ int recomp_pe_bind(const pe_image *img, uint32_t (*resolve)(const char *name)) {
                 for (; dll[k] && k < 80; k++) nm[k] = (char)(dll[k] >= 'A' && dll[k] <= 'Z' ? dll[k] + 32 : dll[k]);
                 snprintf(nm + k, sizeof nm - k, "#%u", *ilt & 0xFFFFu);
                 char *name = strdup(nm);
-                va = resolve(name);
+                va = comp_resolve ? comp_resolve(dll, name) : 0;
+                if (!va) va = resolve(name);
                 if (!va) fprintf(stderr, "[pe] unresolved import %s\n", name);
             } else {
                 const char *name = (const char *)hle_ptr(base + *ilt + 2); /* skip hint word */
-                va = resolve(name);
+                va = comp_resolve ? comp_resolve(dll, name) : 0;
+                if (!va) va = resolve(name);
                 if (!va) fprintf(stderr, "[pe] unresolved import %s!%s\n", dll, name);
             }
             if (va) bound++; else unresolved++;

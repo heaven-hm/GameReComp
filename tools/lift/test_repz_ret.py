@@ -40,6 +40,18 @@ def main():
         if not insn.is_ret:
             print("FAIL %s: is_ret is False" % enc.hex())
             bad += 1
+    # The rest of the F2 family: capstone folds the `bnd` prefix into the
+    # mnemonic, so `bnd jne`/`bnd jmp` used to fall through to UNIMPLEMENTED.
+    # TrackEditor's __security_check_cookie tails with `bnd jmp
+    # __report_gsfailure`; dropped, the cookie check jumped into the report
+    # stub with 0xC0000409. A branch must lift as a branch, prefix or not.
+    for enc, want in ((b"\xf2\x75\x03\x90\x90\x90", "goto L_00001006;"),
+                      (b"\xf2\xe9\x00\x00\x00\x00", "goto L_00001006;"),
+                      (b"\xf2\xff\x25\x00\x10\x40\x00", "RECOMP_ITAIL")):
+        c, _insn = emit(enc)
+        if "UNIMPLEMENTED" in c or want not in c:
+            print("FAIL %s: bnd branch not lifted as one:\n%s" % (enc.hex(), c))
+            bad += 1
     # __security_check_cookie's shape, then a neighbour: the extent stops at the
     # `repz ret` path's jmp, and is clean, rather than running on.
     code = (b"\x3b\x0d\x90\xc5\xb7\x00"   # cmp ecx, [0xb7c590]

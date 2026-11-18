@@ -1066,6 +1066,16 @@ static void c_isspace(void) {                        /* (c) */
     if (c < -1 || c > 255) RETC(0);
     RETC((uint32_t)(((const uint16_t *)hle_ptr(g_ctype_va))[c + 1] & CT_SPACE));
 }
+/* isdigit(c): the same table test the other ctype shims use. */
+static void c_isdigit(void) {
+    ms_init();
+    int c = (int)A32(0);
+    if (c < -1 || c > 255) RETC(0);
+    RETC((uint32_t)(((const uint16_t *)hle_ptr(g_ctype_va))[c + 1] & CT_DIGIT));
+}
+/* abs(n): MSVC's 32-bit abs, including the INT_MIN case (which is UB in C but
+ * returns INT_MIN on MSVC, as it does here because the negation wraps). */
+static void c_abs(void) { int32_t v = (int32_t)A32(0); RETC((uint32_t)(v < 0 ? (uint32_t)(-v) : (uint32_t)v)); }
 
 /* ========================================================== conversions */
 static void c_atoi(void) {
@@ -1535,6 +1545,30 @@ static void u_terminate(void) {
     fprintf(stderr, "[msvcrt] std::terminate called\n");
     hle_exit(3);
 }
+/* _CxxThrowException(exceptionObject, throwInfo): MSVC's `throw` entry point.
+ *
+ * Reached only when a guest actually throws. This layer has no guest SEH (the
+ * README says so: RaiseException ends the run), so it cannot walk the guest's
+ * frame chain and find a catch. Answering "success" would resume the guest at
+ * whatever PC followed the throw, with the exception uncaught and its frames
+ * never unwound -- silent corruption. Report and stop instead, naming the
+ * throw, so a title that never throws (TrackEditor, GeneRally) is unaffected
+ * and one that does fails where it threw rather than somewhere later. */
+static void u_cxx_throw_exception(void) {
+    fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
+                    "0x%08X type 0x%08X, no guest SEH to unwind it\n",
+            A32(0), A32(1));
+    hle_exit(3);
+}
+/* _except_handler4_common: every /GS-checked MSVC function's handler stub
+ * tail-calls this with the FuncInfo, and it runs only on an exception. Same
+ * answer as _CxxThrowException, for the same reason: it cannot be executed
+ * truthfully without guest SEH. */
+static void u_except_handler4_common(void) {
+    fprintf(stderr, "[msvcrt] _except_handler4_common: guest SEH exception %d "
+                    "with no guest unwind support\n", A32(1));
+    hle_exit(3);
+}
 /* _register_thread_local_exe_atexit_callback(cb): the UCRT runs these when the
  * thread exits.  This layer's guest threads end inside hle_call_guest, so the
  * callbacks are run at process exit instead - the callback really runs, at a
@@ -1579,6 +1613,17 @@ static void c_atexit(void) {                         /* (fn) -> 0 ok, nonzero fa
     RETC(ms_atexit_add(A32(0)) ? 0u : 1u);
 }
 static void c_onexit(void) {                         /* (fn) -> fn, or NULL */
+    ms_init();
+    uint32_t fn = A32(0);
+    RETC(ms_atexit_add(fn) ? fn : 0u);
+}
+/* __dllonexit(func, pbegin, pend): the DLL's exit-function registrar. MSVC's
+ * signature is (onexit_t, onexit_t **, onexit_t **) and it returns the
+ * function on success; the begin/end cells belong to the caller's own table.
+ * This layer keeps one exit chain per process (ms_atexit), which is what the
+ * two cells an EXE's CRT would manage also resolve to, so the function is
+ * added there and returned. */
+static void c_dllonexit(void) {
     ms_init();
     uint32_t fn = A32(0);
     RETC(ms_atexit_add(fn) ? fn : 0u);
@@ -1697,6 +1742,8 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "_set_app_type",                c_set_app_type },
     { "_c_exit",                      c_cexit },
     { "terminate",                    u_terminate },
+    { "_CxxThrowException",           u_cxx_throw_exception },
+    { "_except_handler4_common",      u_except_handler4_common },
     { "__getmainargs",                c_getmainargs },
     { "__set_app_type",               c_set_app_type },
     { "__setusermatherr",             c_setusermatherr },
@@ -1779,8 +1826,10 @@ const win32hle_shim win32hle_msvcrt[] = {
     /* ctype */
     { "_isctype",                     c_isctype },
     { "isspace",                      c_isspace },
+    { "isdigit",                      c_isdigit },
     /* conversions */
     { "atoi",                         c_atoi },
+    { "abs",                          c_abs },
     { "strtol",                       c_strtol },
     { "strtoul",                      c_strtoul },
     { "strtod",                       c_strtod },
@@ -1806,6 +1855,7 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "_cexit",                       c_cexit },
     { "atexit",                       c_atexit },
     { "_onexit",                      c_onexit },
+    { "__dllonexit",                  c_dllonexit },
     { "abort",                        c_abort },
     { "_assert",                      c_assert },
     { "signal",                       c_signal },

@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-17T18:56:34Z by `python -m tools.gamesdb`. Measured 31; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-18T01:37:39Z by `python -m tools.gamesdb`. Measured 31; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **Cave Story** (DoConfig.exe) at 93/100, partial: process launched and exited 1; no oracle supplied.
 
@@ -17,18 +17,18 @@ Best measured result: **Cave Story** (DoConfig.exe) at 93/100, partial: process 
 | Cave Story | DoConfig.exe | i386 | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/DoConfig/reports/report.json (host: Darwin arm64) |
 | Cave Story | Doukutsu.exe | i386 | Windows | 93 | partial: process launched and stayed alive until the 15s timeout; no crash observed, no oracle | projects/Doukutsu/reports/report.json (host: Darwin arm64) |
 | Cave Story | OrgView.exe | i386 | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/OrgView/reports/report.json (host: Darwin arm64) |
+| GeneRally | TrackEditor.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/TrackEditor/reports/report.html (host: Darwin arm64 (host build)) |
 | Ikachan | dxIka.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/dxIka/reports/report.html (host: Darwin arm64 (host build)) |
 | Warning Forever | wf.exe | i386 | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/wf/reports/report.json (host: Darwin arm64) |
+| rRootage | rr.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 2; no oracle supplied | projects/rr/reports/report.html (host: Darwin arm64 (host build)) |
 | Gunroar | gr.exe | i386 | Windows | 77 | launch-failed: rebuilt process crashed (exit -10) | projects/gr/reports/report.json (host: Darwin arm64) |
+| Noiz2sa | noiz2sa.exe | i386 (PE32) | Windows | 77 | launch-failed: rebuilt process crashed (exit -10) | projects/noiz2sa/reports/report.html (host: Darwin arm64 (host build)) |
+| Parsec47 | p47.exe | i386 (PE32) | Windows | 77 | launch-failed: rebuilt process crashed (exit -10) | projects/p47/reports/report.html (host: Darwin arm64 (host build)) |
 | GeneRally | GeneRally.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/GeneRally/reports/report.json (host: Darwin arm64) |
-| GeneRally | TrackEditor.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/TrackEditor/reports/report.json (host: Darwin arm64) |
 | Hero Core | herocore gm5.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore_gm5/reports/report.json (host: Darwin arm64) |
 | Hero Core | herocore gm7.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore_gm7/reports/report.json (host: Darwin arm64) |
-| Noiz2sa | noiz2sa.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/noiz2sa/reports/report.json (host: Darwin arm64) |
-| Parsec47 | p47.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/p47/reports/report.json (host: Darwin arm64) |
 | Torus Trooper | tt.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/tt/reports/report.json (host: Darwin arm64) |
 | Tumiki Fighters | tf.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/tf/reports/report.json (host: Darwin arm64) |
-| rRootage | rr.exe | i386 | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/rr/reports/report.json (host: Darwin arm64) |
 | Cannonball | cannonball.exe | x86-64 | Windows | 10 | not-run: verification did not run | projects/cannonball/reports/report.json (host: Darwin arm64) |
 | Data | file0001.exe | None | Windows | 10 | not-run: verification did not run | projects/file0001/reports/report.json (host: Darwin arm64) |
 | Data | file0002.exe | None | Windows | 10 | not-run: verification did not run | projects/file0002/reports/report.json (host: Darwin arm64) |

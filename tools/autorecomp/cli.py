@@ -386,29 +386,40 @@ def build_parser():
                              "be skipped)")
     parser.add_argument("--list-stages", action="store_true",
                         help="print the stage plan with weights and exit")
-    parser.add_argument("--input-os", choices=["auto", "windows"],
-                        default="auto",
-                        help="what the input binary is (default: auto -- read "
-                             "it from the PE header). An explicit declaration "
-                             "that disagrees with the bytes is refused")
-    parser.add_argument("--input-arch", choices=["auto", "x86"],
-                        default="auto",
-                        help="guest CPU architecture of the input (default: "
-                             "auto from the PE header; the pipeline "
-                             "reconstructs 32-bit x86 guests)")
-    parser.add_argument("--target-os", "--output-os", dest="target_os",
+    parser.add_argument("--input-os", "--in-os", dest="input_os",
+                        choices=["auto", "windows"], default=None,
+                        help="what the input binary is (omit to assume 'auto': "
+                             "the PE header is read; an explicit declaration "
+                             "that disagrees with the bytes is refused). "
+                             "Defaults to auto -- but pass it explicitly, with "
+                             "--input-arch, --target-os and --target-arch, to "
+                             "silence the missing-identity warning")
+    parser.add_argument("--input-arch", "--in-arch", dest="input_arch",
+                        choices=["auto", "x86"], default=None,
+                        help="guest CPU architecture of the input (omit to "
+                             "assume 'auto' from the PE header; the pipeline "
+                             "reconstructs 32-bit x86 guests). Defaults to "
+                             "auto -- but pass it explicitly to silence the "
+                             "missing-identity warning")
+    parser.add_argument("--target-os", "--output-os", "--out-os",
+                        dest="target_os",
                         choices=["host", "linux", "macos", "windows"],
-                        default="host",
-                        help="output platform (default: host; --output-os is "
-                             "an alias). Anything other than the build host "
-                             "is refused: cross-compilation is not "
-                             "implemented, and a mislabeled host binary is "
-                             "worse than no binary")
-    parser.add_argument("--target-arch", "--output-arch", dest="target_arch",
-                        choices=["host", "x86_64", "arm64"], default="host",
-                        help="output CPU architecture (default: host; "
-                             "--output-arch is an alias; see --target-os for "
-                             "the refusal rule)")
+                        default=None,
+                        help="output platform (omit to assume 'host'; "
+                             "--output-os and --out-os are aliases). Anything "
+                             "other than the build host is refused: "
+                             "cross-compilation is not implemented, and a "
+                             "mislabeled host binary is worse than no binary. "
+                             "Defaults to host -- but pass it explicitly to "
+                             "silence the missing-identity warning")
+    parser.add_argument("--target-arch", "--output-arch", "--out-arch",
+                        dest="target_arch",
+                        choices=["host", "x86_64", "arm64"], default=None,
+                        help="output CPU architecture (omit to assume 'host'; "
+                             "--output-arch and --out-arch are aliases; see "
+                             "--target-os for the refusal rule). Defaults to "
+                             "host -- but pass it explicitly to silence the "
+                             "missing-identity warning")
     parser.add_argument("--timeout", type=float, default=30.0,
                         help="seconds to let the rebuilt binary run (default 30)")
     parser.add_argument("--interactive", action="store_true",
@@ -484,12 +495,17 @@ def _print_plan(args, pe_path, selected, target):
     os_name, arch = target
     identity, _ = _pe_identity(pe_path)
     in_os, in_arch = identity if identity else ("unknown", "unknown")
+    in_os_decl = args.input_os if args.input_os is not None else "auto"
+    in_arch_decl = args.input_arch if args.input_arch is not None else "auto"
+    out_os_decl = args.target_os if args.target_os is not None else "host"
+    out_arch_decl = args.target_arch if args.target_arch is not None else "host"
     print("plan (dry run; nothing was built):")
     print(f"  input:       {pe_path}")
-    print(f"  input os:    {in_os} ({args.input_os if args.input_os != 'auto' else 'auto from header'})")
-    print(f"  input arch:  {in_arch} ({args.input_arch if args.input_arch != 'auto' else 'auto from header'})")
+    print(f"  input os:    {in_os} ({in_os_decl})")
+    print(f"  input arch:  {in_arch} ({in_arch_decl})")
     print(f"  name:        {pe_path.stem}")
-    print(f"  output:      {os_name}/{arch} native")
+    print(f"  output:      {os_name}/{arch} native "
+          f"({out_os_decl}/{out_arch_decl})")
     print(f"  out-mode:    {args.out_mode or ('stages' if args.stages else 'both')}")
     print(f"  project dir: {project_dir}")
     print(f"  assets dir:  "
@@ -498,6 +514,48 @@ def _print_plan(args, pe_path, selected, target):
           f"headless: {not args.interactive}  jobs: {args.jobs or 'default'}")
     print("  stages:")
     _print_stage_plan(sys.stdout, selected)
+
+
+def _identity_defaults(args, stream=None):
+    """Fill in the omitted input/output identity knobs, warning about each.
+
+    The four knobs are independent and all defaultable: input OS and arch
+    come from the PE header ('auto'), output OS and arch default to this
+    build host. Leaving them out is fine -- that is what makes the common
+    "reconstruct this exe for this machine" run one argument -- but the
+    result is an assumption, not a statement by the caller, so it is
+    reported once on stderr naming every omitted knob. Passing any of them
+    explicitly stays silent for that knob; passing all four says nothing.
+    """
+    stream = sys.stderr if stream is None else stream
+    omitted = []
+    if args.input_os is None:
+        args.input_os = "auto"
+        omitted.append("--input-os (assuming auto, from the PE header)")
+    if args.input_arch is None:
+        args.input_arch = "auto"
+        omitted.append("--input-arch (assuming auto, from the PE header)")
+    if args.target_os is None:
+        args.target_os = "host"
+        omitted.append("--target-os (assuming host)")
+    if args.target_arch is None:
+        args.target_arch = "host"
+        omitted.append("--target-arch (assuming host)")
+    if not omitted:
+        return args
+    host_os, host_arch = _host_pair()
+    effective_out = (
+        host_os if args.target_os == "host" else args.target_os,
+        host_arch if args.target_arch == "host" else args.target_arch)
+    print("warning: input/output OS and architecture were not fully "
+          "specified; assuming input windows/x86 -> output "
+          f"{effective_out[0]}/{effective_out[1]} (this host).", file=stream)
+    for line in omitted:
+        print(f"         omitted: {line}", file=stream)
+    print("         pass --input-os, --input-arch, --target-os and "
+          "--target-arch explicitly to declare them and silence this "
+          "warning.", file=stream)
+    return args
 
 
 def projectgen_default(pe_path):
@@ -541,6 +599,12 @@ def main(argv=None):
                 print(f"hint: found it in SMALL_GAMES_PATH: {guess}",
                       file=sys.stderr)
         return EXIT_STAGE_FAILED
+
+    # Fill in any omitted --input-os/--input-arch/--target-os/--target-arch and
+    # say so. The defaults are the ones that make the one-argument run work
+    # (input identity from the header, output = this host), but they are an
+    # assumption the caller did not state, so they are named on stderr.
+    args = _identity_defaults(args)
 
     target, target_error = _resolve_target(args.target_os, args.target_arch)
     if target_error:

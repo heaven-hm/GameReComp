@@ -316,6 +316,15 @@ static void k_GetLocaleInfoA(void) {               /* (lcid, type, buf, n) */
 static void k_GetUserDefaultLCID(void)   { RET(0x0409u, 0); }
 static void k_GetSystemDefaultLCID(void) { RET(0x0409u, 0); }
 static void k_GetUserDefaultLangID(void) { RET(0x0409u, 0); }
+/* GetSystemDefaultLangID(): the same 0x0409 (en-US) the user default and the
+ * thread locale answer -- this layer is one locale, so the "system" and user
+ * answers agree rather than disagreeing about a machine nobody configured. */
+static void k_GetSystemDefaultLangID(void) { RET(0x0409u, 0); }
+/* SetThreadLocale(lcid): recorded, answered success. This layer has one locale
+ * (setlocale is process-wide), so the thread picks the same one the process
+ * already has; returning the previous value would require a per-thread store
+ * for a knob nothing here consults. */
+static void k_SetThreadLocale(void) { RET(1, 1); }
 static void k_GetThreadLocale(void)      { RET(0x0409u, 0); }
 static void k_IsValidLocale(void)        { RET(A32(0) == 0x0409u || A32(0) == 0x0400u || A32(0) == 0x0800u ? 1u : 0u, 2); }
 /* EnumSystemLocalesA(proc, flags): the one locale, to the guest's callback. */
@@ -581,6 +590,8 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "GetUserDefaultLCID",           k_GetUserDefaultLCID },
     { "GetSystemDefaultLCID",         k_GetSystemDefaultLCID },
     { "GetUserDefaultLangID",         k_GetUserDefaultLangID },
+    { "GetSystemDefaultLangID",       k_GetSystemDefaultLangID },
+    { "SetThreadLocale",              k_SetThreadLocale },
     { "GetThreadLocale",              k_GetThreadLocale },
     { "IsValidLocale",                k_IsValidLocale },
     { "EnumSystemLocalesA",           k_EnumSystemLocalesA },

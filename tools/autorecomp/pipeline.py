@@ -66,6 +66,93 @@ def default_build_timeout(source_bytes):
 CATEGORIES = ("HIGH_LEVEL_VERIFIED", "HIGH_LEVEL_UNVERIFIED",
               "LOW_LEVEL_FALLBACK", "UNRESOLVED")
 
+# DLLs the runtime answers with shims. A DLL with one of these base names is
+# never lifted from disk even if a same-named file sits next to the game: the
+# shim is the answer, and re-lifting e.g. SDL.dll would compile the real SDL
+# against shims that already wrap the host's SDL2 -- two implementations of one
+# library, and the shimmed one is the tested path. This is the runtime's
+# registration list (host.c) plus the C++ runtimes, which are decisions (see
+# runtime/win32hle/README.md), not code to reconstruct.
+SHIMMED_DLLS = {
+    "kernel32", "user32", "gdi32", "advapi32", "shell32", "ole32", "oleaut32",
+    "winmm", "wsock32", "ws2_32", "ddraw", "dsound", "dinput", "version",
+    "comctl32", "comdlg32", "ntdll", "msvcrt", "imm32", "mpr", "rpcrt4",
+    "uuid", "dplayx", "d3dim", "avifil32", "msvfw32", "lz32", "d3d7", "d3d8",
+    "opengl32", "glu32", "winspool", "oledlg", "sdl", "sdl_mixer", "sdl12",
+    "bink", "mss", "smackw32", "msvcp140", "vcruntime140", "vcruntime140_1",
+    "ucrtbase", "api-ms-win-crt-runtime-l1-1-0",
+}
+
+
+def _dll_base_name(name):
+    """'bulletml.dll' / 'C:\\x\\bulletml.DLL' -> 'bulletml' (lower case)."""
+    import os
+    base = os.path.basename(str(name).replace("\\", "/")).lower()
+    return base[:-4] if base.endswith(".dll") else base
+
+
+def _find_companion_dlls(pe_path, info):
+    """Local, non-shimmed DLLs the executable imports and ships beside it.
+
+    A game that loads its own engine DLL (BulletML here) bundles that DLL next
+    to the exe. On Windows the loader maps it and the IAT points at its
+    exports. This pipeline reconstructs the *game*; a bundled DLL with no shim
+    is more code to reconstruct, not a system call to answer. Only a PE32 DLL
+    that exists beside the exe, exports functions, and is not one the runtime
+    already shims qualifies. Returned in import order, de-duplicated.
+    """
+    base_dir = Path(pe_path).resolve().parent
+    seen, out = set(), []
+    for dll in info.import_dlls:
+        base = _dll_base_name(dll)
+        if base in SHIMMED_DLLS or base in seen:
+            continue
+        seen.add(base)
+        # The file name as imported, matched case-insensitively on disk.
+        want = None
+        if base_dir.is_dir():
+            for p in base_dir.iterdir():
+                if p.is_file() and p.name.lower() == f"{base}.dll":
+                    want = p
+                    break
+        if not want:
+            continue
+        try:
+            cinfo = analyze_pe(str(want))
+        except Exception:
+            continue
+        if cinfo.pe_type != "PE32" or not cinfo.is_dll or not cinfo.exports:
+            continue
+        out.append({"name": dll, "path": want, "info": cinfo})
+    return out
+
+
+def _rebase_companion(comp, occupied, dest_dir):
+    """Give a colliding companion a free base by rewriting its relocations.
+
+    Returns (new_path, new_info) or (None, reason). The rebased copy lives in
+    the project, never next to the user's file: the game data stays where the
+    user put it. The copy is analysed afresh so the lifted code targets the new
+    base.
+    """
+    from pe_rebase import RebaseError, pick_base, rebase_pe  # noqa: PLC0415
+    ci = comp["info"]
+    span = max(ci.code_end - ci.image_base, 0x1000) + 0x100000
+    try:
+        new_base = pick_base(ci.image_base, span, occupied)
+        data = rebase_pe(comp["path"].read_bytes(), new_base)
+    except RebaseError as exc:
+        return None, f"cannot rebase: {exc}"
+    dest_dir = Path(dest_dir)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    out_path = dest_dir / Path(comp["name"]).name
+    out_path.write_bytes(data)
+    try:
+        new_info = analyze_pe(str(out_path))
+    except Exception as exc:                      # malformed rebased copy
+        return None, f"rebased copy unreadable: {exc}"
+    return out_path, new_info
+
 
 def _now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -187,6 +274,36 @@ class Pipeline:
         self.iat_map = build_iat_map(info)
         self.name = projectgen.executable_name(self.pe_path)
 
+        # Bundled (non-shimmed) DLLs the game imports. Their functions are code
+        # the game runs, so they are reconstructed too: recovered into the same
+        # dispatch table, and mapped at their preferred base at runtime. A DLL
+        # whose preferred base collides with the main image (or an earlier
+        # companion) is rebased onto a free base here, exactly as the Windows
+        # loader would relocate it, and the copy is what gets lifted.
+        self.companions = []
+        used = [(info.image_base, info.code_end + 0x200000)]
+        for comp in _find_companion_dlls(self.pe_path, info):
+            ci = comp["info"]
+            lo = ci.image_base
+            hi = lo + max((ci.code_end - ci.image_base) + 0x100000, 0x100000)
+            if any(lo < u_hi and hi > u_lo for u_lo, u_hi in used):
+                # Preferred base collides with the game (or an earlier
+                # companion). Windows would relocate it; do the same once, here,
+                # and lift the rebased copy at its new base.
+                new_path, new_info = _rebase_companion(
+                    comp, used, self.project_dir / "_companions")
+                if new_path is None:
+                    comp["skipped"] = new_info
+                    continue
+                comp["path"] = new_path
+                comp["info"] = new_info
+                comp["rebased_from"] = ci.image_base
+                ci = new_info
+                lo = ci.image_base
+                hi = lo + max((ci.code_end - ci.image_base) + 0x100000, 0x100000)
+            used.append((lo, hi))
+            self.companions.append(comp)
+
         data = {
             "path": str(self.pe_path),
             "size": info.filesize,
@@ -218,6 +335,18 @@ class Pipeline:
         with contextlib.redirect_stdout(buf):
             functions = discover_functions(self.pe_data, self.info,
                                            self.iat_map)
+            # Bundled DLLs are reconstructed into the same table. Their VAs are
+            # distinct from the exe's (the collision check in stage_inspect saw
+            # to that), so a plain merge is safe; merging their IAT maps lets
+            # their own imports resolve through the same lifter.
+            for comp in self.companions:
+                dll_data = comp["path"].read_bytes()
+                dll_iat = build_iat_map(comp["info"])
+                dll_fns = discover_functions(dll_data, comp["info"], dll_iat)
+                for addr, fn in dll_fns.items():
+                    functions.setdefault(addr, fn)
+                self.iat_map.update(dll_iat)
+                comp["function_count"] = len(dll_fns)
         log_path.write_text(buf.getvalue())
         self.functions = functions
         ordered = sorted(functions.values(), key=lambda f: f.address)
@@ -335,6 +464,56 @@ class Pipeline:
                                f"emitted as UNRESOLVED stubs that abort when called")
         return f"{len(units)} source files, {total_bytes} bytes, {errors} lift errors", data
 
+    def _write_companion_table(self):
+        """Emit recomp_companions.c: the bundled DLLs to map and their exports.
+
+        The runtime maps each listed DLL at its preferred base at boot and
+        answers the main image's IAT slots for its exports with the export VA
+        (which is also the lifted function's VA, since the DLL was lifted at
+        that base). Generating the table now means the runtime does no PE
+        parsing beyond what the loader already does.
+        """
+        if not self.companions:
+            return
+        gen = self.project_dir / "src" / "recomp" / "gen"
+        gen.mkdir(parents=True, exist_ok=True)
+        lines = ['/* Generated: bundled (non-system) DLLs the game imports. */',
+                 '#include "win32hle.h"', '']
+        for i, comp in enumerate(self.companions):
+            ci = comp["info"]
+            lines.append(f"static const recomp_export_t recomp_exports_{i}[] = {{")
+            seen = set()
+            for e in ci.exports:
+                if not e.name or not e.rva or e.name in seen:
+                    continue
+                seen.add(e.name)
+                va = ci.image_base + e.rva
+                esc = e.name.replace('\\', '\\\\').replace('"', '\\"')
+                lines.append(f'    {{ "{esc}", 0x{va:08X}u }},')
+            lines.append("};")
+        lines.append("")
+        lines.append("const recomp_companion_t recomp_companion_array[] = {")
+        for i, comp in enumerate(self.companions):
+            ci = comp["info"]
+            name = comp["name"].replace('\\', '\\\\').replace('"', '\\"')
+            if comp.get("rebased_from") is not None:
+                # The rebased copy lives in the project; name it absolutely so
+                # the runtime maps that copy (whose header now says the new
+                # base) rather than the game's original next to the exe.
+                load = '"' + str(comp["path"].resolve()).replace('\\', '\\\\').replace('"', '\\"') + '"'
+            else:
+                load = "NULL"                    # resolve `name` beside the game
+            lines.append(f'    {{ "{name}", 0x{ci.image_base:08X}u, {load}, '
+                         f'recomp_exports_{i}, '
+                         f'(uint32_t)(sizeof recomp_exports_{i} / sizeof recomp_exports_{i}[0]) }},')
+        lines.append("};")
+        lines.append(f"const uint32_t recomp_companion_count = "
+                     f"{len(self.companions)};")
+        lines.append("const recomp_companion_t *const recomp_companion_list = "
+                     "recomp_companion_array;")
+        lines.append("")
+        (gen / "recomp_companions.c").write_text("\n".join(lines))
+
     def stage_project(self):
         pe_info = {
             "path": str(self.pe_path),
@@ -372,6 +551,7 @@ class Pipeline:
             highlevel_modules=self.highlevel_modules,
             extra={"functions": total, "source_categories": categories,
                    "high_level_functions": high_level_report})
+        self._write_companion_table()
         data = {
             "project": str(self.project_dir),
             "name": self.name,
@@ -581,7 +761,11 @@ class Pipeline:
         if not timed_out:
             if rc is not None and rc < 0:
                 status = "crashed"
-            elif rc == 2 and "unresolved imports" in output:
+            elif rc == 2 and re.search(r"\[pe\] bound \d+ imports, [1-9]\d* unresolved", boot_output):
+                # A boot failure leaves the loader's own line naming unresolved
+                # imports. The exit status alone is not enough: a guest can
+                # exit 2 itself (rrootage does, after SDL refuses an OpenGL
+                # screen), and that is a *run*, not a boot the loader refused.
                 status = "boot-failed"
             else:
                 status = "exited"

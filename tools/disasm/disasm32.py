@@ -711,19 +711,30 @@ class Disassembler:
         """
         found = set()
         probed = rejected = mid = padded = 0
-        for s in self.sections:
-            if s.is_code:
-                continue
-            base = self.image_base + s.virtual_address
-            data = self.read_bytes(base, s.raw_size)
-            if not data:
-                continue
+
+        def scan(data, base, is_code_section):
+            nonlocal probed, rejected, mid, padded
             for off in range(len(data) - 3):
                 va = int.from_bytes(data[off:off + 4], 'little')
                 if not (code_start <= va < code_end):
                     continue
                 if va in queued or va in found:
                     continue
+                if is_code_section:
+                    # A code section also holds data: vtable and callback tables
+                    # are laid down between functions, in the padding after a
+                    # `ret`, and in the section's tail. Only bytes no decoded
+                    # instruction claims can be a pointer: reading four bytes of
+                    # an instruction as an address is how the operative-word
+                    # scan invents starts. `covered` has instruction starts and
+                    # `interior` every byte after one, so an unclaimed window is
+                    # neither, byte for byte.
+                    if interior is None:
+                        continue
+                    src = base + off
+                    if any(interior[src + k - code_start] or (src + k) in covered
+                           for k in range(4) if code_start <= src + k < code_end):
+                        continue
                 if va in covered:
                     # An instruction some body already decoded. Normally a
                     # label in that body; but when it is 16-aligned right
@@ -743,6 +754,13 @@ class Disassembler:
                     rejected += 1
                     continue
                 found.add(va)
+
+        for s in self.sections:
+            base = self.image_base + s.virtual_address
+            data = self.read_bytes(base, s.raw_size)
+            if not data:
+                continue
+            scan(data, base, s.is_code)
         if padded:
             print(f"[*] Data scan: {padded} pointer targets start a function after padding "
                   f"that another body ran through")

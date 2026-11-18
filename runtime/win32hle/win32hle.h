@@ -487,3 +487,31 @@ int hle_screenshot_count(void);
 uint8_t * hle_szdd_expand(const uint8_t *in, uint32_t n, uint32_t *out_n);
 static void hle_unimplemented(void);
 int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
+
+/* ---- bundled (non-system) DLLs the game imports -------------------------
+ *
+ * A game that ships its own engine DLL (BulletML, an image library, ...) has
+ * that DLL's code imported through its IAT, not answered by a shim. The
+ * pipeline reconstructs the DLL's functions into the same dispatch table as
+ * the game, at the DLL's preferred base, and generates a table describing
+ * them. The host maps each DLL at its preferred base at boot and answers the
+ * main image's IAT slots for its exports with the export VA. Nothing here is
+ * a shim: the code that runs is the lifted DLL's own. */
+typedef struct { const char *name; uint32_t va; } recomp_export_t;
+typedef struct {
+    const char *dll;             /* as imported: "bulletml.dll" */
+    uint32_t base;               /* ImageBase the lifted code targets */
+    const char *load;            /* host path to map: the game's copy, or a
+                                  * rebased copy kept in the project (NULL ->
+                                  * resolve `dll` beside the game) */
+    const recomp_export_t *exports;   /* name -> export VA (name == lifted VA) */
+    uint32_t export_count;
+} recomp_companion_t;
+
+/* Defined by the generated recomp_companions.c (count 0 when there are none). */
+extern const recomp_companion_t *const recomp_companion_list;
+extern const uint32_t recomp_companion_count;
+
+/* The export VA for `dll`/`name`, or 0. dll is matched by base name, case
+ * insensitively. Called by the IAT binder before falling back to a shim. */
+uint32_t recomp_companion_resolve(const char *dll, const char *name);

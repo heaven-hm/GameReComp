@@ -797,6 +797,20 @@ class Lifter:
         # which MSVC 2005 and later emit, __security_check_cookie among them.
         # Unlifted, every /GS-checked function fell through into
         # __report_gsfailure (Tiberium Wars). `bnd ret` (F2 C3) is MPX's.
+        #
+        # `bnd` (F2) is an MPX bounds hint: the CPU decodes it, checks nothing
+        # unless MPX is enabled for the thread, and executes the wrapped
+        # instruction exactly as written. It is therefore semantically a no-op
+        # prefix, and capstone folds it into the mnemonic ('bnd jne', 'bnd jmp',
+        # 'bnd ret'). Stripping it only for `ret` left `bnd jne` / `bnd jmp`
+        # UNIMPLEMENTED -- and a /GS check whose `bnd jne` to __report_gsfailure
+        # is dropped instead of branched still *looks* fine, but a `bnd jmp`
+        # that is the tail of a dispatch does not: TrackEditor's
+        # __security_check_cookie jumped into the report stub. Strip the prefix
+        # for every mnemonic; the operands (a branch target included) decode
+        # unchanged.
+        if m.startswith('bnd ') and len(m) > 4:
+            m = m[4:]
         if m.split()[-1] in ('ret', 'retn') and m.split()[0] in ('rep', 'repz', 'repe', 'bnd'):
             m = m.split()[-1]
         ops = insn.operands if insn.operands else []

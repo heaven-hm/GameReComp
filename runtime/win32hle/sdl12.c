@@ -979,7 +979,15 @@ static uint32_t load_bmp(uint32_t rw) {
     if (store_bpp != 8 && store_bpp != 16 && store_bpp != 24 && store_bpp != 32) { hle_scratch_release(mark); error("SDL_LoadBMP_RW: unsupported bit depth"); return 0; }
     uint32_t rmask = 0, gmask = 0, bmask = 0, amask = 0;
     if (compression == S12_BI_RGB) {
-        if (offbits != 14 + hdrsize) compression = S12_BI_BITFIELDS;   /* masks follow the header */
+        /* A palette may sit between the header and the pixels: for a
+         * palettised image (store_bpp 8) offbits > header end always, and that
+         * gap is the colour table, not masks. Only a depth that actually
+         * carries channel masks (16/32) may have them placed before the
+         * pixels when the file forgot to set BI_BITFIELDS. Reading the gap as
+         * masks unconditionally rejected every 1/4-bit BMP (noiz2sa's
+         * images/title_n.bmp is 4-bit with a 15-colour table). */
+        if ((store_bpp == 16 || store_bpp == 32) && offbits != 14 + hdrsize)
+            compression = S12_BI_BITFIELDS;   /* masks follow the header */
         else if (store_bpp == 16) rmask = 0x7C00u, gmask = 0x03E0u, bmask = 0x001Fu;
         else if (store_bpp == 24) rmask = 0x00FF0000u, gmask = 0x0000FF00u, bmask = 0x000000FFu;
         else if (store_bpp == 32) rmask = 0x00FF0000u, gmask = 0x0000FF00u, bmask = 0x000000FFu;
