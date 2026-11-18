@@ -103,11 +103,16 @@ GAMES = [
     {
         "name": "gunroar",
         "exe": "gunroar/gr.exe",
-        "why": "binds every import and then faults in lifted CRT startup; the "
-               "fault is the known state and must not become a binding failure",
+        "why": "binds every import and reaches the guest's own Borland C++ "
+               "raise (0xE0440001). It used to fault inside lifted CRT startup "
+               "at the empty static-container lookup; the SEH funclet `ret` now "
+               "returns to its continuation, so the fault became the exception. "
+               "Guest SEH unwinding is still missing, so it exits 3 -- that is "
+               "the known state and must not become a binding failure",
         "expect": {
             "unresolved": 0,
-            "run_status": "crashed",
+            "run_status": "exited",
+            "exit_code": 3,
         },
     },
 ]

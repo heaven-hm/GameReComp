@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "recorded_at": "2026-10-30T08:08:47Z",
+  "recorded_at": "2026-11-18T07:51:30Z",
   "note": "Behavioural baseline for tools/autorecomp/regress.py. Expected values are outcomes, not exact counts, so a faster shim does not read as a regression.",
   "games": {
     "cavestory-doukutsu": {
@@ -22,7 +22,7 @@
         "run_status": "timeout",
         "exit_code": null,
         "unresolved": 0,
-        "dispatches": 360953,
+        "dispatches": 353446,
         "calls": [
           "CloseHandle",
           "CreateCompatibleDC",
@@ -66,9 +66,9 @@
           "timeGetTime"
         ],
         "categories": {
-          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_VERIFIED": 7,
           "HIGH_LEVEL_UNVERIFIED": 0,
-          "LOW_LEVEL_FALLBACK": 3260,
+          "LOW_LEVEL_FALLBACK": 3310,
           "UNRESOLVED": 0
         },
         "failed_stages": []
@@ -133,7 +133,7 @@
         "categories": {
           "HIGH_LEVEL_VERIFIED": 0,
           "HIGH_LEVEL_UNVERIFIED": 0,
-          "LOW_LEVEL_FALLBACK": 551,
+          "LOW_LEVEL_FALLBACK": 603,
           "UNRESOLVED": 0
         },
         "failed_stages": []
@@ -187,7 +187,7 @@
         "categories": {
           "HIGH_LEVEL_VERIFIED": 2,
           "HIGH_LEVEL_UNVERIFIED": 0,
-          "LOW_LEVEL_FALLBACK": 480,
+          "LOW_LEVEL_FALLBACK": 543,
           "UNRESOLVED": 0
         },
         "failed_stages": []
@@ -252,38 +252,46 @@
         "categories": {
           "HIGH_LEVEL_VERIFIED": 0,
           "HIGH_LEVEL_UNVERIFIED": 0,
-          "LOW_LEVEL_FALLBACK": 2624,
+          "LOW_LEVEL_FALLBACK": 2817,
           "UNRESOLVED": 0
         },
         "failed_stages": []
       }
     },
     "gunroar": {
-      "why": "binds every import and then faults in lifted CRT startup; the fault is the known state and must not become a binding failure",
+      "why": "binds every import and reaches the guest's own Borland C++ raise (0xE0440001). It used to fault inside lifted CRT startup at the empty static-container lookup; the SEH funclet `ret` now returns to its continuation, so the fault became the exception. Guest SEH unwinding is still missing, so it exits 3 -- that is the known state and must not become a binding failure",
       "expected": {
         "unresolved": 0,
-        "run_status": "crashed"
+        "run_status": "exited",
+        "exit_code": 3
       },
       "observed": {
-        "verification": "launch-failed",
-        "run_status": "crashed",
-        "exit_code": -10,
+        "verification": "partial",
+        "run_status": "exited",
+        "exit_code": 3,
         "unresolved": 0,
-        "dispatches": 27,
+        "dispatches": 110,
         "calls": [
+          "CreateFileW",
+          "DuplicateHandle",
           "EnterCriticalSection",
           "GetACP",
           "GetCPInfo",
           "GetCommandLineA",
+          "GetCurrentProcess",
+          "GetCurrentThread",
           "GetCurrentThreadId",
           "GetEnvironmentStrings",
           "GetModuleFileNameA",
           "GetModuleHandleA",
           "GetStdHandle",
+          "GetSystemTime",
           "GetTickCount",
+          "GetTimeZoneInformation",
           "GetVersion",
           "InitializeCriticalSection",
           "LeaveCriticalSection",
+          "RaiseException",
           "SetHandleCount",
           "SetUnhandledExceptionFilter",
           "VirtualAlloc"
@@ -291,7 +299,7 @@
         "categories": {
           "HIGH_LEVEL_VERIFIED": 0,
           "HIGH_LEVEL_UNVERIFIED": 0,
-          "LOW_LEVEL_FALLBACK": 3288,
+          "LOW_LEVEL_FALLBACK": 3318,
           "UNRESOLVED": 0
         },
         "failed_stages": []

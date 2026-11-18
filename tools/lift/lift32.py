@@ -2317,6 +2317,27 @@ class Lifter:
         lines.append("} }")
         return lines
 
+    def _has_computed_ret(self, func) -> bool:
+        """True when this function ends a block with `push <code>; ...; ret`.
+
+        That is MSVC's SEH `__finally` epilogue: the pushed value is the
+        continuation the `ret` must jump to (a label in the same function, or a
+        recovered entry just past its end), not the caller's return address.
+        Only a push whose immediate lands in the code image counts; a push of
+        an ordinary data address does not make `ret` computed.
+        """
+        for block in func.blocks.values():
+            for insn in block.instructions:
+                if insn.mnemonic != 'push':
+                    continue
+                ops = insn.operands
+                if len(ops) != 1 or ops[0].type != X86_OP_IMM:
+                    continue
+                tgt = ops[0].imm & 0xFFFFFFFF
+                if tgt in self._labels or (self.lifted and tgt in self.lifted):
+                    return True
+        return False
+
     def lift_function(self, func) -> str:
         """Lift an entire function to C code."""
         lines = []
@@ -2337,6 +2358,17 @@ class Lifter:
         # Emit blocks in address order
         self._labels = set(func.blocks.keys())
         self._jump_targets = set(getattr(func, 'jump_targets', ()) or ())
+        # MSVC's `__finally`/SEH epilogue ends with `push <continuation>; ...
+        # ; ret`, and that `ret` goes to the pushed address -- a label inside
+        # this function or a recovered entry just past its end -- not to the
+        # caller. A plain `ret` (esp += 4; return) pops the continuation as if
+        # it were the caller's address, so the function returns whatever EAX
+        # held and the epilogue (which restores the result) never runs: p47's
+        # operator new returned 0 for every block it had just allocated.
+        # Enable computed_ret for a function only when it carries the idiom:
+        # a push whose immediate names a code address (a block label here or a
+        # lifted entry), which is otherwise not something a PE push does.
+        self.computed_ret = self._has_computed_ret(func)
         sorted_addrs = sorted(func.blocks.keys())
         # Blocks are emitted lowest-address-first, but the entry is not always
         # the lowest: a function sharing a body with one below it (a jump-table
