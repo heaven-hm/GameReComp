@@ -767,6 +767,17 @@ class Pipeline:
                 # exit 2 itself (rrootage does, after SDL refuses an OpenGL
                 # screen), and that is a *run*, not a boot the loader refused.
                 status = "boot-failed"
+            elif rc == 3 and re.search(
+                    r"guest exceptions are not handled|no guest SEH|"
+                    r"no guest unwind support|_CxxThrowException|"
+                    r"std::terminate called|invalid parameter passed",
+                    boot_output):
+                # The guest raised a C++ exception this layer cannot unwind
+                # (RaiseException/_CxxThrowException/_except_handler4_common),
+                # so the *runtime* ended the process with hle_exit(3). That is
+                # not the guest exiting on its own: counting it as a clean exit
+                # would be a fake pass. Half credit, the same as a fault.
+                status = "aborted"
             else:
                 status = "exited"
 
@@ -820,6 +831,15 @@ class Pipeline:
             status = "launch-failed"
             reason = (f"rebuilt process {run['status']}"
                       + (f" (exit {run['exit_code']})" if run["exit_code"] is not None else ""))
+        elif run["status"] == "aborted":
+            # The runtime ended the process because the guest raised a C++
+            # exception this layer cannot unwind. The binary did start, so it
+            # is not a boot failure -- but the game did not run either, so it
+            # is not a partial pass. Name the gap plainly.
+            status = "launch-failed"
+            reason = ("rebuilt process aborted on an unhandled guest C++ "
+                      f"exception (exit {run['exit_code']}); guest SEH "
+                      "unwinding is not implemented")
         elif self.oracle_path:
             oracle = json.loads(self.oracle_path.read_text())
             mismatches = []
@@ -963,7 +983,7 @@ class Pipeline:
                     continue
                 if run_status in ("exited", "timeout"):
                     total += STAGE_WEIGHTS["run"]
-                elif run_status in ("crashed", "signalled"):
+                elif run_status in ("crashed", "signalled", "aborted"):
                     total += STAGE_WEIGHTS["run"] // 2
                 # boot-failed earns nothing: the rebuilt binary never started.
             elif st["name"] == "compile" and st.get("data", {}).get("skipped"):

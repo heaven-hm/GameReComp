@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-18T08:44:02Z by `python -m tools.gamesdb`. Measured 31; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-18T09:08:56Z by `python -m tools.gamesdb`. Measured 31; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **Cave Story** (DoConfig.exe) at 93/100, partial: process launched and exited 1; no oracle supplied.
 

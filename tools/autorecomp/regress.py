@@ -107,11 +107,11 @@ GAMES = [
                "raise (0xE0440001). The SEH funclet `ret` now returns to its "
                "continuation, so the fault at the empty static-container lookup "
                "became the guest's exception. Guest SEH unwinding is still "
-               "missing, so it exits 3 -- that is the known state and must not "
-               "become a binding failure",
+               "missing, so the runtime aborts the process (exit 3) -- that is "
+               "the known state and must not become a binding failure",
         "expect": {
             "unresolved": 0,
-            "run_status": "exited",
+            "run_status": "aborted",
             "exit_code": 3,
         },
     },
