@@ -2,6 +2,23 @@
   "schema": 1,
   "runs": [
     {
+      "relative_path": "parsec47/p47.exe",
+      "game": "Parsec47",
+      "filename": "p47.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 70,
+      "verification": "not-run",
+      "status": "verification did not run",
+      "run_status": null,
+      "exit_code": null,
+      "host": "",
+      "input_sha256": "41b2f77d2d7ac96821a85a38be3ee7f0f95b4e5096588e38f0c9092e224e520b",
+      "evidence": "projects/p47/reports/report.html",
+      "project_dir": "projects/p47",
+      "generated_at": "2026-11-18T08:44:02Z"
+    },
+    {
       "relative_path": "tumiki_fighters/tf.exe",
       "game": "Tumiki Fighters",
       "filename": "tf.exe",
@@ -16,7 +33,7 @@
       "input_sha256": "8e77d496d636431384fe49577450fa5b7ddf1211b2521d09de73174500305ce1",
       "evidence": "projects/tf/reports/report.html",
       "project_dir": "projects/tf",
-      "generated_at": "2026-11-18T07:15:13Z"
+      "generated_at": "2026-11-18T08:43:25Z"
     },
     {
       "relative_path": "torus_trooper/tt.exe",
@@ -33,12 +50,12 @@
       "input_sha256": "b3a93b12e110e885d5ccc5546722dbee8864e69d1b9cf111c31e43b1012ce1cb",
       "evidence": "projects/tt/reports/report.html",
       "project_dir": "projects/tt",
-      "generated_at": "2026-11-18T07:14:20Z"
+      "generated_at": "2026-11-18T08:42:52Z"
     },
     {
-      "relative_path": "parsec47/p47.exe",
-      "game": "Parsec47",
-      "filename": "p47.exe",
+      "relative_path": "gunroar/gr.exe",
+      "game": "Gunroar",
+      "filename": "gr.exe",
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 70,
@@ -47,10 +64,10 @@
       "run_status": null,
       "exit_code": null,
       "host": "",
-      "input_sha256": "41b2f77d2d7ac96821a85a38be3ee7f0f95b4e5096588e38f0c9092e224e520b",
-      "evidence": "projects/p47/reports/report.html",
-      "project_dir": "projects/p47",
-      "generated_at": "2026-11-18T06:56:28Z"
+      "input_sha256": "6ea800ee918547ca1953a24bebdcd07c29cef4ada617d7321a7dc3701e825636",
+      "evidence": "projects/gr/reports/report.html",
+      "project_dir": "projects/gr",
+      "generated_at": "2026-11-18T08:42:17Z"
     },
     {
       "relative_path": "herocore/herocore gm5.exe",
@@ -67,7 +84,7 @@
       "input_sha256": "be411b8b64cf821470e17e1dc913410b14f1eaab46187c5ab57c8da03d09a8ce",
       "evidence": "projects/herocore_gm5/reports/report.html",
       "project_dir": "projects/herocore_gm5",
-      "generated_at": "2026-11-18T06:11:28Z"
+      "generated_at": "2026-11-18T08:26:33Z"
     },
     {
       "relative_path": "rrootage/rr.exe",
@@ -220,23 +237,6 @@
       "input_sha256": "868175b2cc2461ee0fe4d7b599eabfd94581d6dd54ea75a47f89f41617e82391",
       "evidence": "projects/GeneRally/reports/report.json",
       "project_dir": "projects/GeneRally",
-      "generated_at": "2026-10-30T19:04:09Z"
-    },
-    {
-      "relative_path": "gunroar/gr.exe",
-      "game": "Gunroar",
-      "filename": "gr.exe",
-      "arch": "i386",
-      "os": "Windows",
-      "score": 77,
-      "verification": "launch-failed",
-      "status": "rebuilt process crashed (exit -10)",
-      "run_status": "crashed",
-      "exit_code": -10,
-      "host": "Darwin arm64",
-      "input_sha256": "6ea800ee918547ca1953a24bebdcd07c29cef4ada617d7321a7dc3701e825636",
-      "evidence": "projects/gr/reports/report.json",
-      "project_dir": "projects/gr",
       "generated_at": "2026-10-30T19:04:09Z"
     },
     {

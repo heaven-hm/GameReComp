@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "recorded_at": "2026-11-18T07:51:30Z",
+  "recorded_at": "2026-11-18T09:00:41Z",
   "note": "Behavioural baseline for tools/autorecomp/regress.py. Expected values are outcomes, not exact counts, so a faster shim does not read as a regression.",
   "games": {
     "cavestory-doukutsu": {
@@ -22,7 +22,7 @@
         "run_status": "timeout",
         "exit_code": null,
         "unresolved": 0,
-        "dispatches": 353446,
+        "dispatches": 354778,
         "calls": [
           "CloseHandle",
           "CreateCompatibleDC",
@@ -259,7 +259,7 @@
       }
     },
     "gunroar": {
-      "why": "binds every import and reaches the guest's own Borland C++ raise (0xE0440001). It used to fault inside lifted CRT startup at the empty static-container lookup; the SEH funclet `ret` now returns to its continuation, so the fault became the exception. Guest SEH unwinding is still missing, so it exits 3 -- that is the known state and must not become a binding failure",
+      "why": "binds every import and reaches the guest's own Borland C++ raise (0xE0440001). The SEH funclet `ret` now returns to its continuation, so the fault at the empty static-container lookup became the guest's exception. Guest SEH unwinding is still missing, so it exits 3 -- that is the known state and must not become a binding failure",
       "expected": {
         "unresolved": 0,
         "run_status": "exited",

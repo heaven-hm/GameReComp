@@ -2318,23 +2318,39 @@ class Lifter:
         return lines
 
     def _has_computed_ret(self, func) -> bool:
-        """True when this function ends a block with `push <code>; ...; ret`.
+        """True when this function pushes a code address it then `ret`s to.
 
-        That is MSVC's SEH `__finally` epilogue: the pushed value is the
-        continuation the `ret` must jump to (a label in the same function, or a
-        recovered entry just past its end), not the caller's return address.
-        Only a push whose immediate lands in the code image counts; a push of
-        an ordinary data address does not make `ret` computed.
+        That is MSVC's SEH `__finally` epilogue: `push <continuation>; ...;
+        ret`, where the continuation is a label the `ret` must jump to, not the
+        caller's return address. A plain `ret` (esp += 4; return) would pop the
+        continuation as if it were the caller's address, so the epilogue that
+        restores the result never ran: p47's operator new returned 0 for every
+        block it had just allocated.
+
+        Two exact shapes carry it, both seen in Borland/MSVC C++ binaries:
+          - the continuation is a label still inside this function's own body
+            (`push cont; push arg; call __local_unwind; add esp,4; ret`), or
+          - the continuation is the instruction immediately after a `ret` in
+            the same block (the epilogue was split into its own recovered
+            entry just past this one).
+        A `push` of an arbitrary function pointer (a callback, a vtable arm)
+        matches neither, so the extra compare on `ret` stays out of the rest.
         """
         for block in func.blocks.values():
-            for insn in block.instructions:
-                if insn.mnemonic != 'push':
+            insns = block.instructions
+            if not insns:
+                continue
+            ret_next = {i.address + i.size for i in insns
+                        if i.mnemonic in ('ret', 'retn')}
+            for i in insns:
+                if i.mnemonic != 'push' or len(i.operands) != 1:
                     continue
-                ops = insn.operands
-                if len(ops) != 1 or ops[0].type != X86_OP_IMM:
+                if i.operands[0].type != X86_OP_IMM:
                     continue
-                tgt = ops[0].imm & 0xFFFFFFFF
-                if tgt in self._labels or (self.lifted and tgt in self.lifted):
+                tgt = i.operands[0].imm & 0xFFFFFFFF
+                if tgt in ret_next:
+                    return True
+                if func.address <= tgt < func.end:
                     return True
         return False
 
