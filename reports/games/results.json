@@ -2,6 +2,40 @@
   "schema": 1,
   "runs": [
     {
+      "relative_path": "tumiki_fighters/tf.exe",
+      "game": "Tumiki Fighters",
+      "filename": "tf.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 77,
+      "verification": "launch-failed",
+      "status": "rebuilt process crashed (exit -10)",
+      "run_status": "crashed",
+      "exit_code": -10,
+      "host": "Darwin arm64 (host build)",
+      "input_sha256": "8e77d496d636431384fe49577450fa5b7ddf1211b2521d09de73174500305ce1",
+      "evidence": "projects/tf/reports/report.html",
+      "project_dir": "projects/tf",
+      "generated_at": "2026-11-18T03:20:56Z"
+    },
+    {
+      "relative_path": "torus_trooper/tt.exe",
+      "game": "Torus Trooper",
+      "filename": "tt.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 77,
+      "verification": "launch-failed",
+      "status": "rebuilt process crashed (exit -10)",
+      "run_status": "crashed",
+      "exit_code": -10,
+      "host": "Darwin arm64 (host build)",
+      "input_sha256": "b3a93b12e110e885d5ccc5546722dbee8864e69d1b9cf111c31e43b1012ce1cb",
+      "evidence": "projects/tt/reports/report.html",
+      "project_dir": "projects/tt",
+      "generated_at": "2026-11-18T03:20:19Z"
+    },
+    {
       "relative_path": "parsec47/p47.exe",
       "game": "Parsec47",
       "filename": "p47.exe",
@@ -16,7 +50,7 @@
       "input_sha256": "41b2f77d2d7ac96821a85a38be3ee7f0f95b4e5096588e38f0c9092e224e520b",
       "evidence": "projects/p47/reports/report.html",
       "project_dir": "projects/p47",
-      "generated_at": "2026-11-18T01:37:39Z"
+      "generated_at": "2026-11-18T03:19:40Z"
     },
     {
       "relative_path": "rrootage/rr.exe",
@@ -33,7 +67,7 @@
       "input_sha256": "f3d81d7025738cde59e26b5f2af082e5c43ee75937dbc00aa8f5326fcabe5def",
       "evidence": "projects/rr/reports/report.html",
       "project_dir": "projects/rr",
-      "generated_at": "2026-11-18T01:29:36Z"
+      "generated_at": "2026-11-18T03:19:05Z"
     },
     {
       "relative_path": "noiz2sa/noiz2sa.exe",
@@ -41,16 +75,16 @@
       "filename": "noiz2sa.exe",
       "arch": "i386 (PE32)",
       "os": "Windows",
-      "score": 77,
-      "verification": "launch-failed",
-      "status": "rebuilt process crashed (exit -10)",
-      "run_status": "crashed",
-      "exit_code": -10,
+      "score": 93,
+      "verification": "partial",
+      "status": "process launched and stayed alive until the 15s timeout; no crash observed, no oracle",
+      "run_status": "timeout",
+      "exit_code": null,
       "host": "Darwin arm64 (host build)",
       "input_sha256": "389af5a46ee800419e1596c0fae8114ecfedc650f3658907eed4371264ccd3a5",
       "evidence": "projects/noiz2sa/reports/report.html",
       "project_dir": "projects/noiz2sa",
-      "generated_at": "2026-11-18T01:07:30Z"
+      "generated_at": "2026-11-18T03:17:50Z"
     },
     {
       "relative_path": "generally/TrackEditor.exe",
@@ -475,40 +509,6 @@
       "input_sha256": "207d311be674c17be31131df095534003e0120b1a00a6569b697e00ae0c2d373",
       "evidence": "projects/snake_windows_x86_64/reports/report.json",
       "project_dir": "projects/snake_windows_x86_64",
-      "generated_at": "2026-10-30T19:04:09Z"
-    },
-    {
-      "relative_path": "torus_trooper/tt.exe",
-      "game": "Torus Trooper",
-      "filename": "tt.exe",
-      "arch": "i386",
-      "os": "Windows",
-      "score": 70,
-      "verification": "launch-failed",
-      "status": "rebuilt process boot-failed (exit 2)",
-      "run_status": "boot-failed",
-      "exit_code": 2,
-      "host": "Darwin arm64",
-      "input_sha256": "b3a93b12e110e885d5ccc5546722dbee8864e69d1b9cf111c31e43b1012ce1cb",
-      "evidence": "projects/tt/reports/report.json",
-      "project_dir": "projects/tt",
-      "generated_at": "2026-10-30T19:04:09Z"
-    },
-    {
-      "relative_path": "tumiki_fighters/tf.exe",
-      "game": "Tumiki Fighters",
-      "filename": "tf.exe",
-      "arch": "i386",
-      "os": "Windows",
-      "score": 70,
-      "verification": "launch-failed",
-      "status": "rebuilt process boot-failed (exit 2)",
-      "run_status": "boot-failed",
-      "exit_code": 2,
-      "host": "Darwin arm64",
-      "input_sha256": "8e77d496d636431384fe49577450fa5b7ddf1211b2521d09de73174500305ce1",
-      "evidence": "projects/tf/reports/report.json",
-      "project_dir": "projects/tf",
       "generated_at": "2026-10-30T19:04:09Z"
     },
     {

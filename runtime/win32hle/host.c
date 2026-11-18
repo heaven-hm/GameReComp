@@ -165,6 +165,18 @@ static int map_companions(void) {
         if (dll_unresolved)
             fprintf(stderr, "[pe] companion %s: %d unresolved imports\n",
                     c->dll, dll_unresolved);
+        /* Run DllMain(DLL_PROCESS_ATTACH), the way the Windows loader does.
+         * A DLL's CRT static initialisers live behind its entry point -- the
+         * global std::map/string/singletons its exported functions assume
+         * exist are constructed there. Skipping this left every such global
+         * null: BulletML's parser crashed reading a map head that was still
+         * zero because DllMain had never run. The entry is lifted like any
+         * other function; call it with (hinstDLL, DLL_PROCESS_ATTACH, 0). */
+        uint32_t attach[3] = { img.base, 1u /* DLL_PROCESS_ATTACH */, 0u };
+        uint32_t ok = hle_call_guest(img.entry, 3, attach);
+        if (!ok)
+            fprintf(stderr, "[pe] companion %s: DllMain(DLL_PROCESS_ATTACH) returned 0\n",
+                    c->dll);
         fprintf(stderr, "[pe] companion %s mapped at 0x%08X (%u exports)\n",
                 c->dll, img.base, c->export_count);
     }
