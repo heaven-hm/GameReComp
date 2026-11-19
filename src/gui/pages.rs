@@ -80,14 +80,74 @@ pub fn render_agents_page(
         );
     }
 
+    let ai_cmd_active = app.effective_ai_cmd();
+    let policy_panel = style::panel_box(t)
+        .flex_shrink_0()
+        .child(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .justify_between()
+                .gap(px(8.0))
+                .px(px(18.0))
+                .py(px(12.0))
+                .border_b_1()
+                .border_color(rgb(t.line_soft))
+                .child(
+                    div()
+                        .font_family(t.ui_font)
+                        .font_weight(FontWeight::BOLD)
+                        .text_size(px(t.ui_px(15.5)))
+                        .text_color(rgb(t.ink))
+                        .child("Optional AI Policy — Readable C Source Improvement Only"),
+                )
+                .child(if ai_cmd_active.is_some() {
+                    style::status_badge(
+                        "✓ AI ENABLED · READABILITY ONLY",
+                        t.match_bg,
+                        t.match_ink,
+                    )
+                } else {
+                    style::status_badge(
+                        "AI DISABLED · DETERMINISTIC ONLY",
+                        t.bg_alt,
+                        t.muted,
+                    )
+                }),
+        )
+        .child(
+            div()
+                .p(px(18.0))
+                .flex()
+                .flex_col()
+                .gap(px(6.0))
+                .child(info_kv(
+                    t,
+                    "100% Optional",
+                    "Zero AI is required for disassembly, lifting, compiling, or running any game or app.",
+                ))
+                .child(info_kv(
+                    t,
+                    "Scope",
+                    "AI is ONLY used when you enable it to improve readable C source code (names, comments, clarity).",
+                ))
+                .child(info_kv(
+                    t,
+                    "Safety Gate",
+                    "Every AI edit is rebuilt and re-run against baseline evidence; failed edits are automatically reverted.",
+                )),
+        );
+
     page_shell(
         "agents_page_scroll",
         t,
         viewport_w,
         "AGENTS & MODELS",
-        "Your AI agents",
-        "Helper agents are optional and drive GameReComp's provenance-gated readability harness via REVENG_AI_CMD.",
+        "Optional AI readability helpers",
+        "AI is strictly optional and ONLY used to improve readable C source code. Core disassembly, lifting, compilation, and execution run 100% locally without AI.",
     )
+    .child(policy_panel)
     .child(
         style::panel_box(t)
             .flex_shrink_0()
@@ -151,7 +211,7 @@ pub fn render_agents_page(
                             .font_family(t.ui_font)
                             .text_size(px(t.ui_px(13.0)))
                             .text_color(rgb(t.muted))
-                            .child("GameReComp sends recovery prompts on stdin and validates proposed C against the oracle before promoting provenance."),
+                            .child("Optional: GameReComp uses REVENG_AI_CMD solely to improve readable C source code (variable names, comments, structure) and compiles + verifies every edit against baseline evidence before accepting."),
                     )
                     .child(
                         div()
@@ -803,6 +863,16 @@ pub fn render_about_page(
                 .flex_col()
                 .gap(px(8.0))
                 .child(info_kv(t, "Version", &format!("GameReComp v{}", crate::cli::VERSION)))
+                .child(info_kv(
+                    t,
+                    "License",
+                    "GNU Affero General Public License v3.0 (AGPL-3.0-only)",
+                ))
+                .child(info_kv(
+                    t,
+                    "AI Policy",
+                    "Optional — ONLY used to improve readable C source code (compile- & evidence-verified)",
+                ))
                 .child(info_kv(t, "GUI Framework", "GPUI Kit 0.10 (longbridge/gpui-kit + gpui-component)"))
                 .child(info_kv(t, "Binaries", "game-recomp-cli (CLI) & game-recomp-gui (GPUI Kit)"))
                 .child(info_kv(t, "WASM Core", "game_recomp verified on wasm32-unknown-unknown"))
@@ -852,6 +922,11 @@ pub fn render_about_page(
                 t,
                 "GPUI Kit 0.10",
                 Some(t.accent_fg()),
+            ))
+            .child(style::chip_outlined(
+                t,
+                "AGPL-3.0-only",
+                Some(t.info),
             ))
             .child(style::chip_outlined(t, "WASM32 READY", Some(t.match_ink))),
     )
@@ -1165,8 +1240,8 @@ pub fn render_project_context_menu(
     cx: &mut Context<GameReCompApp>,
 ) -> Option<Stateful<Div>> {
     let cm = app.context_menu.as_ref()?;
-    let menu_w = 248.0f32;
-    let menu_h = 430.0f32;
+    let menu_w = 264.0f32;
+    let menu_h = 468.0f32;
     let left = cm.x.min((viewport_w - menu_w - 12.0).max(12.0)).max(12.0);
     let top = cm.y.min((viewport_h - menu_h - 12.0).max(12.0)).max(12.0);
 
@@ -1199,6 +1274,7 @@ pub fn render_project_context_menu(
     let dir_opts = cm.dir.clone();
     let name_opts = cm.name.clone();
     let dir_rerun = cm.dir.clone();
+    let dir_ai = cm.dir.clone();
     let dir_rename = cm.dir.clone();
     let name_rename = cm.name.clone();
     let dir_settings = cm.dir.clone();
@@ -1329,13 +1405,26 @@ pub fn render_project_context_menu(
             )),
         );
     } else {
-        card = card.child(
-            ctx_menu_row("ctx_rerun", t, "↻  Re-run Recompilation", false).on_click(cx.listener(
-                move |this, _, _, cx| {
-                    this.rerun_project_by_dir(dir_rerun.clone(), cx);
-                },
-            )),
-        );
+        card = card
+            .child(
+                ctx_menu_row("ctx_rerun", t, "↻  Re-run Recompilation", false).on_click(cx.listener(
+                    move |this, _, _, cx| {
+                        this.rerun_project_by_dir(dir_rerun.clone(), cx);
+                    },
+                )),
+            )
+            .child(
+                ctx_menu_row(
+                    "ctx_ai_readability",
+                    t,
+                    "✨  Improve C Readability (AI, optional)",
+                    false,
+                )
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.context_menu = None;
+                    this.start_readability_agent_for_dir(dir_ai.clone(), None, cx);
+                })),
+            );
     }
 
     card = card

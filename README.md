@@ -53,6 +53,8 @@ It is not intended to facilitate malware development, unauthorised access, softw
 
 Users are responsible for ensuring they have the necessary rights and permissions to analyse, modify, and distribute any third-party software they work with.
 
+Where optional AI tools are used, they are strictly scoped to improving human readability of recovered C source code under local compile and execution verification gates.
+
 ## What it does
 
 ```text
@@ -61,6 +63,7 @@ Windows game.exe → recover & lift → generate C → compile → run → verif
 
 - Generates a rebuildable **C source project** and **native executable** with Windows API shims.
 - Uses **rev.ng** for higher-level source recovery; preserves a low-level fallback where needed.
+- **Optional AI source readability:** Core disassembly, lifting, compilation, and execution are **100% deterministic and offline with zero AI**. AI is strictly **optional** and **only used to improve readable C source code** (naming, comments, formatting) when explicitly enabled — every edit is compile-checked and re-run against baseline execution evidence, and automatically reverted on failure.
 - Records build provenance, execution results, and verification evidence. **Currently supports PE32 (x86) inputs.**
 
 ## Proof & gameplay
@@ -251,6 +254,7 @@ Standalone native executable / WASM browser port → runtime checks + Unicorn di
 | **Lifting & Recovery** | [PCRecomp](https://github.com/sp00nznet/pcrecomp) / [Capstone](https://github.com/capstone-engine/capstone) & [rev.ng](https://github.com/revng/revng) | x86 PE32 function discovery, CFG recovery, static C lifting, and readable high-level C recovery |
 | **Runtime Shims** | `recomp32` + `win32hle` / [SDL2](https://github.com/libsdl-org/SDL) | Self-contained C Win32/DirectX shims compiled via CMake + Clang/GCC (and optional FFmpeg) |
 | **Verification** | [Unicorn](https://github.com/unicorn-engine/unicorn) | Differential testing of machine-code behavior against the original PE |
+| **Source Readability (Optional)** | `tools/autorecomp/readability.py` + `REVENG_AI_CMD` | Optional AI pass — strictly used **only** to improve readable C source code, compile-checked & baseline-verified (auto-reverted on failure) |
 
 **Note:** The current executable path is **PCRecomp-generated C → C compiler**. rev.ng-based readable-source replacement and multi-lifter fallback are being developed; LLVM IR is not currently the required build artifact. [Architecture](docs/ARCHITECTURE.md) · [Lifter fallback roadmap](https://github.com/heaven-hm/GameReComp/issues/25)
 
@@ -323,6 +327,7 @@ Generated projects default to `~/GameReComp/projects/<game>/` (customizable in S
 
 - **Project CRUD & Right-Click Menu:** Right-click (or click `⋯`) on any project in the sidebar or home grid to **Open & Inspect**, **Run Standalone**, **Run with Game Data Folder**, **Pause / Resume / Stop**, **Re-run**, **Rename**, **Create Support Issue**, or **Remove / Delete**.
 - **Run Game Options:** Launch self-contained rebuilt executables directly, or select an external game data/assets folder (`cwd`, `RECOMP_ASSETS_DIR`, and `argv[1]`) for titles that load external levels/data.
+- **Optional AI C Source Readability:** Off by default — enable **Improve readable C source code with AI after build** (or trigger 1-click readability passes from the Function Inspector, Project Overview, or right-click menu). Core recompilation requires zero AI; AI is strictly limited to improving readable C source code and every edit is compile- & evidence-verified.
 - **Auto RAM/CPU Parallel Concurrency & Pause/Resume:** Defaults to `Auto` parallel workers based on system RAM and CPU cores (with manual `1..=8` override), plus process-group Pause/Resume during active recompilation.
 - **One-Click Support Issue Reporting:** Failed preflight checks or builds offer **Create Support Issue** with sanitized diagnostics and log tails.
 
@@ -358,6 +363,11 @@ sh verify.sh --fast
 ./target/release/game-recomp-cli /path/to/game.exe --no-progress --verbose
 ./target/release/game-recomp-cli batch /path/to/flat-win32-directory --timeout 10 --clean-objects --verify-standalone
 ./target/release/game-recomp-cli serve ~/GameReComp/projects/my_game --port 8087
+
+# Optional AI readable C source improvement (only improves readable C; compile- & evidence-verified)
+./target/release/game-recomp-cli /path/to/game.exe --ai-readability
+./target/release/game-recomp-cli agent ~/GameReComp/projects/my_game --cmd "claude -p" --function 0x00402020
+./target/release/game-recomp-cli about
 ```
 
 Exit codes: `0` verified/success, `2` a stage failed, `3` ran but unverified,
@@ -378,4 +388,6 @@ Contributions to binary lifting, readable C recovery, runtime shims, and reprodu
 
 ## License
 
-**[GNU Affero General Public License v3.0](LICENSE)** (AGPL-3.0-only) · [Third-party notices](NOTICE) · [Dependency licenses](docs/LICENSES.md)
+**[GNU Affero General Public License v3.0](LICENSE)** (`AGPL-3.0-only`) · [Third-party notices](NOTICE) · [Dependency licenses](docs/LICENSES.md)
+
+GameReComp bundles no proprietary game binaries and no AI model weights/services; any optional AI configuration is supplied by the user solely to improve readable C source code.

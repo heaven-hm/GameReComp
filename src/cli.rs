@@ -20,7 +20,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
     name = "game-recomp-cli",
     version = VERSION,
     about = "GameReComp CLI — Pick your game and turn it to native port",
-    long_about = "Pick your game and turn it to native port. GameReComp turns Windows PE32 x86 games you own into standalone native C or WebAssembly builds with provenance tracking, verification, and optional AI readability agents.",
+    long_about = "Pick your game and turn it to native port. GameReComp turns Windows PE32 x86 games you own into standalone native C or WebAssembly builds with deterministic lifting and verification. AI is strictly optional and ONLY used to improve readable C source code (compile- and evidence-verified). Licensed under AGPL-3.0-only.",
     disable_help_subcommand = false,
     args_conflicts_with_subcommands = true
 )]
@@ -107,12 +107,12 @@ pub enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    /// Run source readability & provenance harness on a project
+    /// Run gated C source readability pass (rev.ng + optional AI polish)
     Readability {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    /// Drive AI-assisted recovery via REVENG_AI_CMD
+    /// Optional AI pass — improve readable C source code only (REVENG_AI_CMD)
     Agent {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
@@ -332,8 +332,8 @@ fn print_styled_overview(cfg: &AppConfig) {
         ("game-recomp-cli serve <project>", "Serve a built WebAssembly app over local HTTP"),
         ("game-recomp-cli batch <paths...>", "Batch recompile & verify standalone binaries"),
         ("game-recomp-cli tasks", "List all reconstructed project statuses"),
-        ("game-recomp-cli readability <dir>", "Run source readability & provenance harness"),
-        ("game-recomp-cli agent <dir>", "Drive AI-assisted recovery via REVENG_AI_CMD"),
+        ("game-recomp-cli readability <dir>", "Run gated C source readability pass (rev.ng + optional AI polish)"),
+        ("game-recomp-cli agent <dir>", "Optional AI pass — improve readable C source code only (REVENG_AI_CMD)"),
     ];
     for (cmd, desc) in rows {
         println!("    {:<36} {}", cmd.bold(), desc.dimmed());
@@ -635,7 +635,10 @@ pub fn run_setup_cmd(cfg: &AppConfig) -> i32 {
     }
 
     println!();
-    println!("  {}", "AI HELPER AGENTS (OPTIONAL)".dimmed());
+    println!(
+        "  {}",
+        "AI HELPER AGENTS (OPTIONAL — READABLE C SOURCE IMPROVEMENT ONLY)".dimmed()
+    );
     for ag in &tc.agents {
         let mark = if ag.installed {
             "✓".green().bold().to_string()
@@ -689,7 +692,7 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     println!(
         "  {:<18} {}",
         "GUI Framework".dimmed(),
-        "GPUI 0.2.2 (Zed GPU-accelerated Rust UI)".bold()
+        "GPUI Kit 0.10 (longbridge/gpui-kit + gpui-component)".bold()
     );
     println!(
         "  {:<18} {}",
@@ -699,7 +702,17 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     println!(
         "  {:<18} {}",
         "Binaries".dimmed(),
-        "game-recomp-cli (CLI) · game-recomp-gui (GPUI Desktop)"
+        "game-recomp-cli (CLI) · game-recomp-gui (GPUI Kit Desktop)"
+    );
+    println!(
+        "  {:<18} {}",
+        "License".dimmed(),
+        "GNU Affero General Public License v3.0 (AGPL-3.0-only)".bold()
+    );
+    println!(
+        "  {:<18} {}",
+        "AI Policy".dimmed(),
+        "Optional — ONLY used to improve readable C source code (verified & reverted on failure)"
     );
     println!(
         "  {:<18} {}",
@@ -751,7 +764,7 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     );
     println!(
         "    {}",
-        "--import-trace  --clean-objects  --verify-standalone  --capture-screenshots"
+        "--import-trace  --clean-objects  --verify-standalone  --capture-screenshots  --ai-readability"
             .dimmed()
     );
     println!();

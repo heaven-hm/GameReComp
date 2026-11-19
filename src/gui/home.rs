@@ -4,7 +4,9 @@ use gpui::{
 };
 
 use super::style;
-use super::{ActiveJob, DropState, FocusInput, GameReCompApp, JobStatus, ProjectTab, StageExecState};
+use super::{
+    ActiveJob, DropState, FocusInput, GameReCompApp, JobStatus, ProjectTab, Route, StageExecState,
+};
 use crate::pipeline_opts::{ALL_STAGES, AppProfile, OutMode, STAGE_DESCRIPTIONS};
 use crate::theme_tokens::ThemeTokens;
 
@@ -72,7 +74,7 @@ pub fn render_home(
                     .font_family(t.ui_font)
                     .text_size(px(t.ui_px(13.0)))
                     .text_color(rgb(t.muted))
-                    .child("Your game never leaves this computer. Recompilation, builds, and verification run locally; AI readability only runs when you explicitly configure an agent."),
+                    .child("Your game never leaves this computer. Core disassembly, lifting, compilation, and verification are 100% deterministic with zero AI. AI is strictly optional and ONLY used to improve readable C source code when you enable it."),
             ),
     );
 
@@ -442,7 +444,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
         (
             "3",
             "Watch live & inspect",
-            "Track every animated stage in real time, explore the Function Map, or run AI agents",
+            "Track every animated stage live, explore the Function Map, or optionally polish C readability with AI",
         ),
     ];
 
@@ -1251,6 +1253,9 @@ fn render_drop_picked(
         })),
     );
 
+    // Optional AI Readable Source Code Improvement Toggle (off by default)
+    box_div = box_div.child(render_ai_readability_toggle("home_ai", app, t, cx));
+
     // Parallel concurrency selector (Auto RAM/CPU or manual 1..=8)
     let active_now = app.active_slot_count();
     let eff_limit = app.effective_max_concurrent_jobs();
@@ -1367,6 +1372,82 @@ fn render_drop_picked(
     );
 
     box_div
+}
+
+/// Shared toggle allowing users to opt into AI solely to improve readable C source code.
+pub fn render_ai_readability_toggle(
+    id_prefix: &'static str,
+    app: &GameReCompApp,
+    t: &ThemeTokens,
+    cx: &mut Context<GameReCompApp>,
+) -> Div {
+    let enabled = app.opts.improve_readability_with_ai;
+    let ai_cmd = app.effective_ai_cmd();
+    let sub = match ai_cmd.as_ref() {
+        Some(cmd) => format!(
+            "Off by default. AI is strictly optional and ONLY used to improve readable C source code (renaming, comments, structure) using `{cmd}` — every edit is compile- & evidence-verified and reverted on failure."
+        ),
+        None => "Off by default. AI is strictly optional and ONLY used to improve readable C source code (compile- & evidence-verified, reverted on failure). Configure an AI CLI in Agents & models.".to_string(),
+    };
+    let toggle_id: &'static str = if id_prefix == "home_ai" {
+        "opt_ai_readability"
+    } else {
+        "ps_ai_readability"
+    };
+    let cfg_btn_id: &'static str = if id_prefix == "home_ai" {
+        "opt_ai_cfg_btn"
+    } else {
+        "ps_ai_cfg_btn"
+    };
+
+    div()
+        .flex()
+        .flex_col()
+        .gap(px(6.0))
+        .child(
+            style::toggle_checkbox(
+                toggle_id,
+                t,
+                enabled,
+                "✨ Optional: Improve readable C source code with AI after build",
+                Some(&sub),
+            )
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.opts.improve_readability_with_ai = !this.opts.improve_readability_with_ai;
+                cx.notify();
+            })),
+        )
+        .when(enabled && ai_cmd.is_none(), |el| {
+            el.child(
+                div()
+                    .px(px(10.0))
+                    .py(px(7.0))
+                    .rounded(px(3.0))
+                    .bg(rgb(t.work_bg))
+                    .border_1()
+                    .border_color(rgb(t.work))
+                    .flex()
+                    .flex_wrap()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(8.0))
+                    .child(
+                        div()
+                            .font_family(t.ui_font)
+                            .text_size(px(t.ui_px(11.5)))
+                            .text_color(rgb(t.work))
+                            .child("No REVENG_AI_CMD agent is configured yet — set one to run the optional C readability pass."),
+                    )
+                    .child(
+                        style::ghost_btn(cfg_btn_id, t, "⚙ Configure AI CLI…").on_click(
+                            cx.listener(|this, _, _, cx| {
+                                this.route = Route::Agents;
+                                cx.notify();
+                            }),
+                        ),
+                    ),
+            )
+        })
 }
 
 /// Shared panel rendering EVERY remaining GameReComp CLI parameter cleanly (reused in Home & Project Settings).

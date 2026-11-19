@@ -131,6 +131,8 @@ pub struct PipelineOptions {
     pub verify_standalone: bool,
     pub capture_screenshots: bool,
     pub auto_launch_after_build: bool,
+    #[serde(default)]
+    pub improve_readability_with_ai: bool,
 }
 
 /// Automatically detected output OS for the current machine (WASM-safe).
@@ -196,6 +198,7 @@ impl Default for PipelineOptions {
             verify_standalone: true,
             capture_screenshots: false,
             auto_launch_after_build: false,
+            improve_readability_with_ai: false,
         }
     }
 }
@@ -450,6 +453,9 @@ impl PipelineOptions {
         if self.verify_standalone {
             parts.push("--verify-standalone".to_string());
         }
+        if self.improve_readability_with_ai {
+            parts.push("--ai-readability".to_string());
+        }
         parts.join(" ")
     }
 }
@@ -499,5 +505,12 @@ mod tests {
         assert!(def.resolved_target_summary().contains("Auto ->"));
         let args = def.to_backend_args();
         assert!(args.contains(&"host".to_string()));
+        assert!(!def.improve_readability_with_ai);
+        assert!(!def.format_command_preview().contains("--ai-readability"));
+
+        let mut with_ai = PipelineOptions::default();
+        with_ai.pe_file = "demo.exe".to_string();
+        with_ai.improve_readability_with_ai = true;
+        assert!(with_ai.format_command_preview().contains("--ai-readability"));
     }
 }

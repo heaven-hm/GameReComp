@@ -21,6 +21,7 @@ pub fn render_function_inspector(
     let is_star = model.ui_meta.starred.contains(&func.address);
     let addr_for_star = func.address.clone();
     let addr_for_agent = func.address.clone();
+    let dir_for_agent = model.dir.clone();
     let addr_for_note = func.address.clone();
     let sym_for_copy = func.symbol.clone();
     let src_for_copy = app.inspector_source.clone();
@@ -187,12 +188,19 @@ pub fn render_function_inspector(
                     ))
                 })
                 .child(
-                    style::ghost_btn("insp_run_agent", t, "Run agent on fn").on_click(cx.listener(
-                        move |this, _, _, cx| {
-                            this.agent_target_fn = addr_for_agent.clone();
-                            this.start_readability_agent(cx);
-                        },
-                    )),
+                    style::ghost_btn(
+                        "insp_run_agent",
+                        t,
+                        "✨ Improve C Readability (AI)",
+                    )
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.agent_target_fn = addr_for_agent.clone();
+                        this.start_readability_agent_for_dir(
+                            dir_for_agent.clone(),
+                            Some(addr_for_agent.clone()),
+                            cx,
+                        );
+                    })),
                 ),
         );
 

@@ -40,8 +40,12 @@ Arial/MS Sans Serif metrics through SDL2_ttf; no font files are vendored.
 - **rev.ng** — the readability harness runs a user-installed rev.ng through
   `REVNG_BIN`/`REVNG_DECOMPILE_CMD`. Its licence and distribution terms are
   those of the user's rev.ng installation.
-- **AI readability command** — whatever the user configures in `REVENG_AI_CMD`;
-  this repository ships no model or service integration.
+- **AI readability command (`REVENG_AI_CMD`, strictly optional)** — AI is
+  never required for disassembly, lifting, compiling, or running games, and is
+  **only used when explicitly enabled to improve readable C source code**
+  (compile-checked and re-run against baseline execution evidence; failed edits
+  are automatically reverted). This repository ships no model or AI service
+  integration.
 
 ## Game inputs
 

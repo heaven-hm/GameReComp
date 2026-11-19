@@ -49,6 +49,7 @@ pub struct ParsedCli {
     pub clean_objects: bool,
     pub verify_standalone: bool,
     pub capture_screenshots: bool,
+    pub ai_readability: bool,
     pub profile: Option<String>,
     pub backend_args: Vec<String>,
 }
@@ -74,6 +75,7 @@ impl Default for ParsedCli {
             clean_objects: false,
             verify_standalone: false,
             capture_screenshots: false,
+            ai_readability: false,
             profile: None,
             backend_args: Vec::new(),
         }
@@ -130,6 +132,10 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
             }
             "--capture-screenshots" => {
                 out.capture_screenshots = true;
+                i += 1;
+            }
+            "--ai-readability" => {
+                out.ai_readability = true;
                 i += 1;
             }
             "--profile" => {
@@ -401,6 +407,9 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
         println!("  target:  {target_os}/{target_arch}");
         println!("  project: {}", proj_dir.display());
         println!("  stages:  {}", stages.join(", "));
+        if parsed.ai_readability {
+            println!("  ai_opt:  optional C source readability pass enabled (compile- & evidence-verified)");
+        }
         return EXIT_OK;
     }
 
@@ -565,6 +574,31 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
         let _ = fs::create_dir_all(cfg.repo_root.join("reports").join("games"));
     }
 
+    if parsed.ai_readability && (exit_code == EXIT_OK || exit_code == EXIT_UNVERIFIED) {
+        if cfg.reveng_ai_cmd.is_some() {
+            log_project_event(
+                &proj_dir,
+                "orchestrator",
+                "running optional AI readable-source-code pass",
+            );
+            if !parsed.quiet && !parsed.json {
+                eprintln!("ai-readability: running optional C source readability pass (compile- & evidence-verified)...");
+            }
+            let _ = crate::agent::run_readability(
+                cfg,
+                &[
+                    proj_dir.display().to_string(),
+                    "--providers".to_string(),
+                    "ai".to_string(),
+                ],
+            );
+        } else if !parsed.quiet && !parsed.json {
+            eprintln!(
+                "note: --ai-readability skipped because REVENG_AI_CMD is not configured. AI is strictly optional and only used to improve readable C source code."
+            );
+        }
+    }
+
     exit_code
 }
 
@@ -616,5 +650,16 @@ mod tests {
         assert_eq!(parsed.target_arch, "wasm32");
         assert!(parsed.capture_screenshots);
         assert!(parsed.dry_run);
+        assert!(!parsed.ai_readability);
+    }
+
+    #[test]
+    fn parses_optional_ai_readability_flag() {
+        let args: Vec<String> = vec!["game.exe", "--ai-readability"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let parsed = parse_pipeline_args(&args).unwrap();
+        assert!(parsed.ai_readability);
     }
 }

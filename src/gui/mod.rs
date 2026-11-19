@@ -214,6 +214,7 @@ pub struct ActiveJob {
     pub has_wasm: bool,
     pub failure_summary: String,
     pub auto_launch_after_build: bool,
+    pub auto_ai_readability: bool,
     pub is_dry_run: bool,
     pub status: JobStatus,
     pub stage: String,
@@ -1399,6 +1400,7 @@ impl GameReCompApp {
         let clean_objects = opts.clean_objects;
         let verify_standalone = opts.verify_standalone;
         let auto_launch_after_build = opts.auto_launch_after_build;
+        let auto_ai_readability = opts.improve_readability_with_ai;
         let is_dry_run = opts.dry_run;
         let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
         let child_for_thread = Arc::clone(&child_slot);
@@ -1448,6 +1450,7 @@ impl GameReCompApp {
             has_wasm: false,
             failure_summary: String::new(),
             auto_launch_after_build,
+            auto_ai_readability,
             is_dry_run,
             status: JobStatus::Running,
             stage: "inspect".to_string(),
@@ -1544,17 +1547,51 @@ impl GameReCompApp {
         let Some(dir) = self.active_project_dir.clone() else {
             return;
         };
+        let target_fn = self.agent_target_fn.trim().to_string();
+        let target = if target_fn.is_empty() {
+            None
+        } else {
+            Some(target_fn)
+        };
+        self.start_readability_agent_for_dir(dir, target, cx);
+    }
+
+    pub fn start_readability_agent_for_dir(
+        &mut self,
+        dir: PathBuf,
+        target_fn: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(ai_cmd) = self.effective_ai_cmd() else {
+            self.push_toast(
+                "Optional AI agent not configured",
+                "AI is optional and only improves readable C source code. Choose a preset or set REVENG_AI_CMD in Agents & models first.",
+                self.tokens().work,
+                false,
+            );
+            self.route = Route::Agents;
+            cx.notify();
+            return;
+        };
         if self.jobs.iter().any(|j| {
             j.is_active()
                 && j.kind == WorkerKind::Readability
                 && j.project_dir.as_ref() == Some(&dir)
         }) {
+            self.push_toast(
+                "AI readability already running",
+                "An optional C readability pass is already running for this project.",
+                self.tokens().info,
+                false,
+            );
+            cx.notify();
             return;
         }
         let id = self.alloc_job_id();
         let repo_root = self.cfg.repo_root.clone();
-        let ai_cmd = self.effective_ai_cmd();
-        let target_fn = self.agent_target_fn.trim().to_string();
+        let target_fn = target_fn
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
         let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
         let child_for_thread = Arc::clone(&child_slot);
         let pgid_slot: Arc<Mutex<Option<u32>>> = Arc::new(Mutex::new(None));
@@ -1564,16 +1601,17 @@ impl GameReCompApp {
             "-m".to_string(),
             "tools.autorecomp.readability".to_string(),
             dir.display().to_string(),
+            "--providers".to_string(),
+            "ai".to_string(),
         ];
-        if !target_fn.is_empty() {
+        if let Some(ref f) = target_fn {
             args.push("--function".to_string());
-            args.push(target_fn.clone());
+            args.push(f.clone());
         }
 
-        let stage = if target_fn.is_empty() {
-            "readability harness".to_string()
-        } else {
-            format!("function {target_fn}")
+        let stage = match target_fn {
+            Some(ref f) => format!("C readability ({f})"),
+            None => "C source readability".to_string(),
         };
         let proj_name = dir
             .file_name()
@@ -1585,7 +1623,7 @@ impl GameReCompApp {
         self.jobs.push(ActiveJob {
             id,
             kind: WorkerKind::Readability,
-            name: format!("Agent: {proj_name}"),
+            name: format!("AI Readability: {proj_name}"),
             pe_path: String::new(),
             pe_summary: String::new(),
             target_label: stage.clone(),
@@ -1594,6 +1632,7 @@ impl GameReCompApp {
             has_wasm: false,
             failure_summary: String::new(),
             auto_launch_after_build: false,
+            auto_ai_readability: false,
             is_dry_run: false,
             status: JobStatus::Running,
             stage,
@@ -1602,29 +1641,31 @@ impl GameReCompApp {
             paused_total: Duration::ZERO,
             finished_secs: None,
             current_file: String::new(),
-            current_task_detail: "Running readability & provenance pass".to_string(),
+            current_task_detail: "Optional AI pass — improving readable C source code (compile- & evidence-verified)".to_string(),
             compile_pct: None,
             processed_files: Vec::new(),
             live_stages: fresh_live_stages(),
-            live_logs: vec![format!("$ python3 {}", args.join(" "))],
+            live_logs: vec![format!("$ REVENG_AI_CMD=\"{ai_cmd}\" python3 {}", args.join(" "))],
             child: child_slot,
             pgid: pgid_slot,
             rx: Some(rx),
         });
         self.selected_job_id = Some(id);
-        self.push_feed("agent", &format!("started readability pass on {proj_name}"), false);
+        self.push_feed(
+            "agent",
+            &format!("started optional AI C readability pass on {proj_name}"),
+            false,
+        );
         cx.notify();
 
         thread::spawn(move || {
             let mut cmd = Command::new("python3");
             cmd.current_dir(&repo_root)
                 .env("PYTHONPATH", &repo_root)
+                .env("REVENG_AI_CMD", &ai_cmd)
                 .args(&args)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
-            if let Some(ai) = ai_cmd {
-                cmd.env("REVENG_AI_CMD", ai);
-            }
             let code = run_streaming_child_inner(cmd, child_for_thread, pgid_for_thread, &tx);
             let _ = tx.send(WorkerMsg::Finished {
                 kind: WorkerKind::Readability,
@@ -1633,9 +1674,9 @@ impl GameReCompApp {
                 built_binary: None,
                 has_wasm: false,
                 summary: if code == 0 {
-                    "Readability pass finished cleanly".to_string()
+                    "Optional AI C readability pass finished cleanly".to_string()
                 } else {
-                    format!("Readability pass exited with status {code}")
+                    format!("Optional AI C readability pass exited with status {code} (check reports/readability.html)")
                 },
             });
         });
@@ -1693,6 +1734,7 @@ impl GameReCompApp {
             has_wasm: false,
             failure_summary: String::new(),
             auto_launch_after_build: false,
+            auto_ai_readability: false,
             is_dry_run: false,
             status: JobStatus::Running,
             stage: format!("scanning {}", folder.display()),
@@ -2837,6 +2879,7 @@ impl GameReCompApp {
             built_binary: Option<PathBuf>,
             has_wasm: bool,
             auto_launch: bool,
+            auto_ai_readability: bool,
             is_dry_run: bool,
             name: String,
             summary: String,
@@ -2992,6 +3035,7 @@ impl GameReCompApp {
                             built_binary,
                             has_wasm,
                             auto_launch: job.auto_launch_after_build,
+                            auto_ai_readability: job.auto_ai_readability,
                             is_dry_run: job.is_dry_run,
                             name: job.name.clone(),
                             summary,
@@ -3046,6 +3090,18 @@ impl GameReCompApp {
                                     self.launch_or_open_wasm(&dir);
                                 } else if let Some(ref bin) = ev.built_binary {
                                     self.launch_rebuilt_binary(bin);
+                                }
+                            }
+                            if ok && !ev.is_dry_run && ev.auto_ai_readability {
+                                if self.effective_ai_cmd().is_some() {
+                                    self.start_readability_agent_for_dir(dir.clone(), None, cx);
+                                } else {
+                                    self.push_toast(
+                                        "Skipped optional AI readability",
+                                        "Build finished! Configure an AI CLI in Agents & models to run the optional C readability pass.",
+                                        self.tokens().info,
+                                        false,
+                                    );
                                 }
                             }
                         }

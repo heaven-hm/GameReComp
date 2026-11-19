@@ -5,7 +5,9 @@ use gpui::{
     prelude::*, px, relative, rgb,
 };
 
-use super::home::{render_advanced_cli_options, render_live_stage_stepper};
+use super::home::{
+    render_advanced_cli_options, render_ai_readability_toggle, render_live_stage_stepper,
+};
 use super::style;
 use super::{
     FnFilter, FnSort, FocusInput, GameReCompApp, JobStatus, MapColorMode, ProjectTab, Route,
@@ -570,6 +572,7 @@ fn render_overview_tab(
         let proj_dir_wasm = model.dir.clone();
         let proj_dir_data = model.dir.clone();
         let proj_title_data = model.display_title().to_string();
+        let proj_dir_ai = model.dir.clone();
         let proj_dir_open = model.dir.clone();
         let mut actions = div().flex().flex_wrap().items_center().gap(px(8.0));
         if let Some(bin) = bin_opt {
@@ -607,6 +610,16 @@ fn render_overview_tab(
             );
         }
         actions = actions
+            .child(
+                style::ghost_btn(
+                    "post_ai_readability_btn",
+                    t,
+                    "✨ Improve C Readability (AI)",
+                )
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.start_readability_agent_for_dir(proj_dir_ai.clone(), None, cx);
+                })),
+            )
             .child(
                 style::ghost_btn("post_open_dir_btn", t, "Open Output Folder").on_click(
                     cx.listener(move |_, _, _, _| {
@@ -1016,7 +1029,7 @@ fn render_overview_tab(
                         .child(if !model.diag.build_passed {
                             "Next: run the pipeline to compile this project"
                         } else if verified_fns == 0 {
-                            "Next: polish & verify functions with AI readability agents"
+                            "Next: optionally improve C readability or review verified functions"
                         } else {
                             "Ready: launch the rebuilt binary or configure WebAssembly export"
                         }),
@@ -1942,19 +1955,40 @@ fn render_agents_tab(
         .child(
             div()
                 .flex()
+                .flex_wrap()
                 .items_center()
                 .justify_between()
+                .gap(px(8.0))
                 .px(px(16.0))
                 .py(px(11.0))
                 .border_b_1()
                 .border_color(rgb(t.line_soft))
                 .child(
                     div()
-                        .font_family(t.ui_font)
-                        .font_weight(FontWeight::BOLD)
-                        .text_size(px(t.ui_px(15.0)))
-                        .text_color(rgb(t.ink))
-                        .child("Your agents here"),
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(
+                            div()
+                                .font_family(t.ui_font)
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(t.ui_px(15.0)))
+                                .text_color(rgb(t.ink))
+                                .child("Optional AI Source Readability"),
+                        )
+                        .child(if ai_cmd.is_some() {
+                            style::status_badge(
+                                "AI CONFIGURED · READABILITY ONLY",
+                                t.match_bg,
+                                t.match_ink,
+                            )
+                        } else {
+                            style::status_badge(
+                                "AI OFF · DETERMINISTIC ONLY",
+                                t.bg_alt,
+                                t.muted,
+                            )
+                        }),
                 )
                 .child(if agent_running {
                     style::danger_btn("ag_stop_btn", t, "■ Stop").on_click(cx.listener(
@@ -1964,7 +1998,7 @@ fn render_agents_tab(
                         },
                     ))
                 } else {
-                    style::primary_btn("ag_start_btn", t, "▶ Run readability agent", true)
+                    style::primary_btn("ag_start_btn", t, "✨ Improve C Readability (AI)", true)
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.start_readability_agent(cx);
                         }))
@@ -1976,6 +2010,18 @@ fn render_agents_tab(
                 .flex()
                 .flex_col()
                 .gap(px(12.0))
+                .child(
+                    div()
+                        .p(px(10.0))
+                        .rounded(px(4.0))
+                        .bg(rgb(t.code_bg))
+                        .border_1()
+                        .border_color(rgb(t.line_soft))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.0)))
+                        .text_color(rgb(t.ink_2))
+                        .child("AI is strictly optional and ONLY used here to improve readable C source code (variable names, comments, cleaner formatting). Core disassembly, lifting, compilation, and execution use zero AI. Every edit is rebuilt, re-run against baseline evidence, and reverted automatically on failure."),
+                )
                 .when(agent_running, |el| {
                     el.child(
                         div()
@@ -1999,7 +2045,7 @@ fn render_agents_tab(
                                             .font_weight(FontWeight::BOLD)
                                             .text_size(px(t.ui_px(14.0)))
                                             .text_color(rgb(t.ink))
-                                            .child("Readability & Provenance Agent #1"),
+                                            .child("Optional AI Source Readability Pass #1"),
                                     ),
                             )
                             .child(style::animated_workbar("ag_workbar", t, 4.0))
@@ -2018,7 +2064,23 @@ fn render_agents_tab(
                             .font_family(t.ui_font)
                             .text_size(px(t.ui_px(13.0)))
                             .text_color(rgb(t.muted))
-                            .child("No agent works on this game right now. Configure REVENG_AI_CMD in Agents & models and press Run readability agent."),
+                            .child(if ai_cmd.is_some() {
+                                "Ready to polish recovered C readability cleanly with compile- & baseline-evidence verification."
+                            } else {
+                                "AI is currently off (deterministic build & run need zero AI). Configure REVENG_AI_CMD in Agents & models to run an optional C readability pass."
+                            }),
+                    )
+                })
+                .when(ai_cmd.is_none(), |el| {
+                    el.child(
+                        div().child(
+                            style::ghost_btn("ag_proj_cfg_btn", t, "⚙ Configure AI CLI…").on_click(
+                                cx.listener(|this, _, _, cx| {
+                                    this.route = Route::Agents;
+                                    cx.notify();
+                                }),
+                            ),
+                        ),
                     )
                 })
                 .child(kv_line(
@@ -2419,6 +2481,7 @@ fn render_project_settings_tab(
                         cx.notify();
                     })),
                 )
+                .child(render_ai_readability_toggle("proj_ai", app, t, cx))
                 .child(render_advanced_cli_options(app, t, cx))
                 .child(
                     div()
