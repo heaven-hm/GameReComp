@@ -731,7 +731,7 @@ pub fn render_about_page(
         t,
         "ABOUT",
         "GameReComp",
-        "Static PE32 x86 recompilation to portable C, native executables, and WebAssembly — built in Rust with GPUI.",
+        "Pick your game and turn it to native port — static PE32 x86 recompilation to native executables and WebAssembly, built in Rust with GPUI.",
     )
     .child(
         div()
@@ -740,7 +740,11 @@ pub fn render_about_page(
             .gap(px(14.0))
             .child(style::brand_mark(t))
             .child(style::chip_inverted(t, format!("v{}", crate::cli::VERSION)))
-            .child(style::chip_outlined(t, "GPUI 0.2.2", Some(t.hl)))
+            .child(style::chip_outlined(
+                t,
+                "GPUI 0.2.2",
+                Some(if t.dark { t.hl } else { t.info }),
+            ))
             .child(style::chip_outlined(t, "WASM32 READY", Some(t.match_ink))),
     )
     .child(arch_cards)

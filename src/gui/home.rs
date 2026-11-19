@@ -324,7 +324,7 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
         .flex_col()
         .gap(px(12.0))
         .pt(px(8.0))
-        .child(style::eyebrow(t, "STATIC RECOMPILATION · GPUI + WASM-READY"))
+        .child(style::eyebrow(t, "GAMERECOMP · NATIVE PORT STUDIO"))
         .child(
             div()
                 .font_family(FONT_SANS)
@@ -332,7 +332,7 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
                 .text_size(px(44.0))
                 .line_height(px(46.0))
                 .text_color(rgb(t.ink))
-                .child("Pick your game.\nTurn it into C\nand WebAssembly."),
+                .child("Pick your game\nand turn it to\nnative port."),
         )
         .child(
             div()
@@ -340,7 +340,7 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
                 .text_size(px(15.0))
                 .line_height(px(23.0))
                 .text_color(rgb(t.ink_2))
-                .child("32-bit Windows PE32 games and apps statically recompiled for macOS, Linux, Windows, or WebAssembly via Win32 HLE — with full CLI option control, live stage animations, and provenance verification."),
+                .child("Turn 32-bit Windows games and apps into standalone native ports for macOS, Linux, Windows, or WebAssembly — with automatic machine detection, live per-file animations, and one-click game launch."),
         )
         .child(step_list)
 }

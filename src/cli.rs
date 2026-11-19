@@ -19,8 +19,8 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[command(
     name = "game-recomp-cli",
     version = VERSION,
-    about = "GameReComp CLI — PE32 static recompilation, verification & AI-assisted recovery",
-    long_about = "GameReComp turns Windows PE32 x86 games you own into standalone native C or WebAssembly builds with provenance tracking, verification, and optional AI readability agents.",
+    about = "GameReComp CLI — Pick your game and turn it to native port",
+    long_about = "Pick your game and turn it to native port. GameReComp turns Windows PE32 x86 games you own into standalone native C or WebAssembly builds with provenance tracking, verification, and optional AI readability agents.",
     disable_help_subcommand = false,
     args_conflicts_with_subcommands = true
 )]
@@ -318,7 +318,7 @@ fn print_styled_overview(cfg: &AppConfig) {
     println!("  {}", brand_banner());
     println!(
         "  {}",
-        "PE32 x86 static recompilation to native C & WebAssembly, with provenance.".dimmed()
+        "Pick your game and turn it to native port.".dimmed()
     );
     println!();
     println!("  {}", "COMMANDS".bright_yellow().bold());
@@ -682,7 +682,7 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     println!("  {}", brand_banner());
     println!(
         "  {}",
-        "Static PE32 x86 recompilation to portable C, native executables, and WebAssembly."
+        "Pick your game and turn it to native port."
             .dimmed()
     );
     println!("  {}", "─".repeat(72).dimmed());

@@ -1945,7 +1945,7 @@ pub fn launch_gui(cfg: AppConfig, open_dir: Option<&Path>) -> i32 {
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             titlebar: Some(TitlebarOptions {
-                title: Some("GameReComp".into()),
+                title: Some("GameReComp — Pick your game and turn it to native port".into()),
                 appears_transparent: false,
                 ..Default::default()
             }),
