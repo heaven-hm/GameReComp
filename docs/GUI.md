@@ -1,100 +1,50 @@
-# Desktop GUI
+# Desktop GUI & Rust CLI
 
-**Status: implemented in Rust + SDL2/SDL2_ttf (`src/gui.rs`).** Both the
-`./GameReComp` CLI and the desktop GUI compile into a single native Rust binary
-(`target/release/gamerecomp`, staged at `gui/build/gamerecomp` by
-`gui/CMakeLists.txt`), sharing `AppConfig`, `ProjectModel`, `pe::inspect_pe`,
-and `orchestrator` directly without Python/Qt/webview dependencies.
+**Status: implemented in Rust + GPUI (`src/gui/`) and clap v4 (`src/cli.rs`), with a WASM-ready shared core (`gamerecomp_core` in `src/lib.rs`).** Both the `./GameReComp` CLI and the GPU-accelerated desktop GUI compile into a single native Rust binary (`target/release/gamerecomp`, staged at `gui/build/gamerecomp` by `gui/CMakeLists.txt`), sharing `pe`, `pipeline_opts`, `theme_tokens`, `AppConfig`, `ProjectModel`, and `orchestrator` directly with zero Python UI/Qt/WebView dependencies.
 
-The GUI is a native window over the same orchestration backend and `reports/`
-contract as the CLI: every run spawns `./GameReComp` / the `autorecomp`
-pipeline and reads produced `project.json` and `reports/*.json` files rather
-than maintaining a second interpretation of pipeline results.
+## Architecture & Stack
 
-## Stack decision
+- **Desktop GUI**: **GPUI (`gpui 0.2.2`, `runtime_shaders`)** — Zed's GPU-accelerated Rust UI framework (Metal on macOS, Vulkan/Blade on Linux, DirectX on Windows) styled with the **"Marked Listing"** dark/light design system (embedded OFL `Archivo` and `IBM Plex Mono` fonts).
+- **Rust CLI**: **`clap` v4 + `owo-colors` + `indicatif`** — structured subcommands (`gui`, `open`, `inspect`, `status`, `setup`, `about`, `run`, `batch`, `serve`, `tasks`, `readability`, `agent`) plus 100% backward-compatible direct invocation (`./GameReComp <game.exe> [options]`).
+- **WASM-ready shared core (`gamerecomp_core`)**: `src/lib.rs` (`pe`, `pipeline_opts`, `theme_tokens`) compiles cleanly to `wasm32-unknown-unknown` (`cargo check --target wasm32-unknown-unknown --lib --no-default-features`) so the exact PE32 byte inspector, CLI option builder, and theme tokens can be reused directly in future WebAssembly web ports.
 
-**Rust (`edition = "2021"`, zero third-party Cargo crates) + SDL2 / SDL2_ttf**
-(`build.rs` discovers `sdl2` and `SDL2_ttf` via `pkg-config`):
+## Views & Capabilities
 
-- Matches the 3-tier architecture: Rust for GUI, CLI, orchestration, tasks,
-  configuration, logging, reporting, and agent integration (`src/*.rs`); Python
-  for PCRecomp reverse engineering (`tools/`); C/C++ for Win32 HLE and generated
-  code (`runtime/`, generated `src/recomp/gen/`).
-- No Python UI framework, Qt installation, web service, or browser webview is
-  required.
-- AI-assisted readability remains optional and goes through `REVENG_AI_CMD` via
-  `./GameReComp readability <project>` or `./GameReComp agent <project>`
-  (see `src/agent.rs` and [SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md)).
+1. **Sidebar (248px)** — `[GR] GameReComp` brand mark, notification center bell with unread badge, full-width `+ New project` action menu, filterable `PROJECTS` list with colored swatches, animated pulsing working dots and progress meters, plus navigation to `Agents & models`, `Compilers & tools`, `Settings`, `About GameReComp`, `Report a problem`, light/dark theme switcher, and quit.
+2. **Home / New Project** — Hero overview, native drag-and-drop PE32 dropzone (`ExternalPaths`) & file browser (`rfd`), fail-closed PE32 inspection card, and complete **GameReComp CLI Parameter Configurator**:
+   - Application profile (`Game`, `Desktop App`, `Console App`)
+   - Input OS/Arch (`auto`, `windows`, `x86`) and Output OS/Arch/Machine (`host`, `macos`, `linux`, `windows`, `web/wasm32`)
+   - Output mode (`Full`, `Binary only`, `Source only`, `Custom stages` with all 8 stage pills)
+   - Output folder (`--project-dir`), Assets dir (`--assets-dir`), Highlevel dir (`--highlevel`), Oracle JSON (`--oracle`)
+   - Logging & output controls (`--verbose`, `--quiet`, `--no-progress`, `--json`, `--no-table`, `--dry-run`)
+   - Build & runtime knobs (`--timeout`, `--build-timeout`, `--jobs`, `--split`, `--interactive`, `--fresh-build`, `--reuse-build`, `--import-trace`, `--clean-objects`, `--verify-standalone`, `RECOMP_SCREENSHOT`)
+   - Live copyable `./GameReComp ...` command preview bar.
+3. **Animated Live Stage Stepper** — Real-time GPUI animations (`with_animation`, pulsing dots, sliding workbar) showing all 8 stages (`inspect → recover → translate → project → compile → run → verify → report`), active step elapsed time, completion badges, and trailing logs.
+4. **Project Workspace** — Sticky header with chips, yellow-highlighted uppercase project title + inline rename, Launch / Serve WASM / Report HTML / Run pipeline actions, progress meter, and 6 tabs:
+   - **Overview**: Interactive color-coded Function Map with live hover readout & click-to-inspect, 4 ruled KPI columns, Next-step callout, Runtime summary, and bottom panels.
+   - **Functions**: Searchable (`/`), filterable, sortable table of all recovered & high-level functions with starring (`★`).
+   - **Stages & Build**: Stage breakdown, manifest SHA-256 verification, and live colorized console.
+   - **Agents**: Readability & provenance worker (`REVENG_AI_CMD`), timestamped activity feed, and certified verdicts.
+   - **Frames**: Native GPUI image viewer for captured PNG/BMP screenshots.
+   - **Settings**: Full project CLI options editor + project metadata.
+5. **Slide-over Function Inspector Drawer** — Right-aligned expandable drawer (`Esc` closes, `J`/`K` steps next/prev) with syntax-colored C source, provenance evidence, copy/open actions, and persistent per-function notes.
+6. **Global Pages** — `Agents & models`, `Compilers & tools`, `Settings`, and `About GameReComp` (architecture, WASM readiness, keyboard shortcuts, licenses, and diagnostics).
 
-## Contract with the CLI
+## Building & Verification
 
-| GUI action | Backing invocation / file |
-|---|---|
-| Run the pipeline | `./GameReComp <input.exe> --project-dir <dir> [--timeout N] [--oracle JSON]` |
-| Resume an existing project | the same command against the existing project directory |
-| Readability pass | `./GameReComp readability <project>` |
-| Stage progress | the `==> <stage>` markers the CLI writes to stdout/stderr |
-| Stage results | `<project>/reports/run.json` |
-| Function inventory and provenance | `<project>/reports/functions.json` |
-| Verification status | `<project>/reports/verification.json` |
-| Human-readable report | `<project>/reports/report.html` |
-| Readability outcome | `<project>/reports/readability.json`, `readability.html` |
-| Rebuilt executable | the path recorded in `reports/run.json` |
-| Evidence hashes | `manifest.json` (input SHA-256, source digest, binary SHA-256) |
+```sh
+# 1. Verify WASM-compatible core library
+cargo check --target wasm32-unknown-unknown --lib --no-default-features
 
-Exit codes are the CLI's, unchanged: `0` verified scenario pass, `3` ran but
-unverified, `2` a stage failed. The GUI shows the code; it does not reinterpret
-it.
+# 2. Run Rust unit tests (core + CLI + GPUI helpers)
+cargo test --release
 
-Progress shown must come from observed stage markers and elapsed time. If the
-pipeline has not reported a stage, the stage is not shown as running or
-complete. No animated "processing" substitute for real progress.
+# 3. Build release binary and stage gui/build/gamerecomp
+cmake -S gui -B gui/build && cmake --build gui/build
 
-## Screens
+# 4. Run full verification gate
+sh verify.sh --fast
 
-1. **Project wizard** — browse for the original `.exe`, validate that it is a
-   PE and which architecture (PE32 accepted, PE32+ rejected with the same
-   fail-closed message as the CLI), choose the project directory, optional
-   timeout and oracle JSON. Shows the asset-ownership reminder: the tool does
-   not download or redistribute game files, and derived output carries the
-   original program's rights.
-2. **Run dashboard** — the stage graph (inspect → recover → translate →
-   project → compile → run → verify → report) drawn from observed markers,
-   with counts per stage, elapsed time, exit status and a cancel button that
-   terminates the child process. Log panes mirror the CLI's stdout/stderr
-   streams separately, as the run report does.
-3. **Source explorer** — function tree from `reports/functions.json`,
-   searchable by address, name and block; each function shows its provenance
-   category (`LOW_LEVEL_FALLBACK`, `UNRESOLVED`, and the reserved
-   `HIGH_LEVEL_*`) and its generated C unit. Category totals come from
-   `project.json`; the explorer never computes its own.
-4. **Build & run** — the compile log, binary path, binary SHA-256, source
-   digest and the exact build invocation, all as recorded in the run report.
-5. **Verification dashboard** — the recorded status, compared observables
-   (exit code, stdout/stderr assertions, fatal markers), oracle gaps and the
-   artifact hashes that tie the run to the source tree.
-6. **Project management** — list projects under a working directory, show each
-   one's latest status from its report files, and open a project in the other
-   screens. Import/export is the project directory itself; no database.
-
-## Packaging and tests
-
-- Built cleanly offline with `cargo build --release` or staged into
-  `gui/build/gamerecomp` via `cmake -S gui -B gui/build && cmake --build gui/build`.
-- Headless verification runs without opening a window via:
-  - `gui/build/gamerecomp --selftest <project_dir> --repo .` (loads `project.json`
-    and `reports/` using `ProjectModel` and validates stage/provenance/build hashes)
-  - `gui/build/gamerecomp --selftest-pe <pe_file>` (validates PE32 vs PE32+
-    inspection using `src/pe.rs`, matching CLI fail-closed rules).
-- Interactive launch: `gui/build/gamerecomp [-o <project_dir>]` or
-  `./GameReComp --gui [-o <project_dir>]`.
-
-## Implementation status
-
-| Piece | Status |
-|---|---|
-| Rust + SDL2/SDL2_ttf stack (`src/gui.rs`, `build.rs`) | implemented |
-| Headless GUI & PE selftests (`--selftest`, `--selftest-pe`) | implemented (verified in `verify.sh`) |
-| Project model loader & provenance parity (`src/model.rs`, `src/json.rs`) | implemented |
-| Interactive PE selector, stage view, function explorer & live runner | implemented in `src/gui.rs` (`sdl_ui`) |
-| CLI parity / report consistency | shared `ProjectModel` & `pe::inspect_pe` |
+# 5. Launch native GPUI desktop GUI
+./GameReComp gui
+```

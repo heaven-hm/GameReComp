@@ -5,4 +5,4 @@ BIN="$ROOT/target/release/gamerecomp"
 if [ ! -x "$BIN" ]; then
     cargo build --release --manifest-path "$ROOT/Cargo.toml" >&2
 fi
-exec "$BIN" "$@"
+exec env GAMERECOMP_CLI=1 "$BIN" "$@"

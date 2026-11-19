@@ -4,6 +4,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub repo_root: PathBuf,
@@ -12,6 +14,73 @@ pub struct AppConfig {
     pub screenshot_dir: Option<PathBuf>,
     pub assets_dir: Option<PathBuf>,
     pub default_timeout_secs: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserSettings {
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    #[serde(default)]
+    pub reveng_ai_cmd: String,
+    #[serde(default)]
+    pub projects_root: String,
+    #[serde(default)]
+    pub custom_projects: Vec<String>,
+    #[serde(default = "default_timeout_u64")]
+    pub default_timeout_secs: u64,
+    #[serde(default)]
+    pub rom_library_dir: String,
+}
+
+fn default_theme() -> String {
+    "dark".to_string()
+}
+
+fn default_timeout_u64() -> u64 {
+    12
+}
+
+impl Default for UserSettings {
+    fn default() -> Self {
+        Self {
+            theme: default_theme(),
+            reveng_ai_cmd: String::new(),
+            projects_root: String::new(),
+            custom_projects: Vec::new(),
+            default_timeout_secs: default_timeout_u64(),
+            rom_library_dir: String::new(),
+        }
+    }
+}
+
+impl UserSettings {
+    pub fn settings_path() -> Option<PathBuf> {
+        let home = env::var_os("HOME")
+            .or_else(|| env::var_os("USERPROFILE"))
+            .map(PathBuf::from)?;
+        Some(home.join(".gamerecomp").join("settings.json"))
+    }
+
+    pub fn load() -> Self {
+        let Some(path) = Self::settings_path() else {
+            return Self::default();
+        };
+        let Ok(raw) = fs::read_to_string(path) else {
+            return Self::default();
+        };
+        serde_json::from_str(&raw).unwrap_or_default()
+    }
+
+    pub fn save(&self) -> Result<(), String> {
+        let Some(path) = Self::settings_path() else {
+            return Err("cannot determine home directory".to_string());
+        };
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let body = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        fs::write(&path, body).map_err(|e| e.to_string())
+    }
 }
 
 impl AppConfig {
@@ -32,10 +101,18 @@ impl AppConfig {
             }
         }
 
+        let user_settings = UserSettings::load();
         let reveng_ai_cmd = env::var("REVENG_AI_CMD")
             .ok()
             .filter(|s| !s.trim().is_empty())
-            .or_else(|| corpus_env.get("REVENG_AI_CMD").cloned());
+            .or_else(|| corpus_env.get("REVENG_AI_CMD").cloned())
+            .or_else(|| {
+                if user_settings.reveng_ai_cmd.trim().is_empty() {
+                    None
+                } else {
+                    Some(user_settings.reveng_ai_cmd.clone())
+                }
+            });
 
         let screenshot_dir = env::var("RECOMP_SCREENSHOT")
             .ok()
@@ -122,6 +199,13 @@ pub fn find_executable(name: &str) -> Option<PathBuf> {
         if is_executable_file(&candidate) {
             return Some(candidate);
         }
+        #[cfg(windows)]
+        {
+            let exe_cand = dir.join(format!("{name}.exe"));
+            if is_executable_file(&exe_cand) {
+                return Some(exe_cand);
+            }
+        }
     }
     None
 }
@@ -139,11 +223,52 @@ fn is_executable_file(path: &Path) -> bool {
     path.is_file()
 }
 
+fn probe_version(bin: &str, args: &[&str]) -> String {
+    Command::new(bin)
+        .args(args)
+        .output()
+        .ok()
+        .and_then(|out| {
+            let txt = if out.stdout.is_empty() {
+                String::from_utf8_lossy(&out.stderr).to_string()
+            } else {
+                String::from_utf8_lossy(&out.stdout).to_string()
+            };
+            txt.lines().next().map(|l| l.trim().to_string())
+        })
+        .unwrap_or_default()
+}
+
+#[derive(Debug, Clone)]
+pub struct ToolCardInfo {
+    pub name: String,
+    pub category: String,
+    pub description: String,
+    pub installed: bool,
+    pub path: String,
+    pub version: String,
+    pub install_hint: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub struct DetectedAgentInfo {
+    pub id: String,
+    pub name: String,
+    pub binary: String,
+    pub installed: bool,
+    pub path: String,
+    pub preset_cmd: String,
+    pub description: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct ToolchainStatus {
     pub present: Vec<String>,
     pub missing: Vec<String>,
     pub sdl2_present: bool,
+    pub cards: Vec<ToolCardInfo>,
+    pub agents: Vec<DetectedAgentInfo>,
 }
 
 impl ToolchainStatus {
@@ -163,10 +288,16 @@ impl ToolchainStatus {
                 .status()
                 .map(|s| s.success())
                 .unwrap_or(false);
+
+        let cards = detect_tool_cards(sdl2_present);
+        let agents = detect_agents();
+
         Self {
             present,
             missing,
             sdl2_present,
+            cards,
+            agents,
         }
     }
 
@@ -186,11 +317,168 @@ impl ToolchainStatus {
     }
 
     pub fn is_ready(&self) -> bool {
-        self.missing
-            .iter()
-            .all(|m| m == "pkg-config")
-            && self.sdl2_present
+        self.missing.iter().all(|m| m == "pkg-config") && self.sdl2_present
     }
+}
+
+fn detect_tool_cards(sdl2_present: bool) -> Vec<ToolCardInfo> {
+    let mut cards = Vec::new();
+    let specs: &[(&str, &str, &str, &str, &[&str], &str)] = &[
+        (
+            "Python 3",
+            "RE Backend",
+            "Drives PE inspection, x86 disassembly, lifting, and verification harness.",
+            "python3",
+            &["--version"],
+            "Install Python 3.10+ (brew install python / apt install python3)",
+        ),
+        (
+            "C Compiler (cc / clang)",
+            "Native Build",
+            "Compiles lifted x86 C translation units and the Win32 HLE runtime.",
+            "cc",
+            &["--version"],
+            "Install Xcode CLT (xcode-select --install) or clang/gcc",
+        ),
+        (
+            "CMake",
+            "Native Build",
+            "Configures and builds generated standalone C projects.",
+            "cmake",
+            &["--version"],
+            "brew install cmake / apt install cmake",
+        ),
+        (
+            "pkg-config",
+            "Native Build",
+            "Discovers SDL2 include and library paths for recompiled native games.",
+            "pkg-config",
+            &["--version"],
+            "brew install pkg-config / apt install pkg-config",
+        ),
+        (
+            "Clang (WebAssembly)",
+            "WebAssembly",
+            "Compiles lifted C and wasm32 Win32 HLE runtime to standalone .wasm.",
+            "clang",
+            &["--version"],
+            "brew install llvm / apt install clang lld",
+        ),
+        (
+            "Node.js",
+            "WebAssembly",
+            "Headless WebAssembly verification runner (run_wasm_node.mjs).",
+            "node",
+            &["--version"],
+            "brew install node / nodejs.org",
+        ),
+    ];
+
+    for &(name, cat, desc, bin, ver_args, hint) in specs {
+        let found = find_executable(bin);
+        let version = if found.is_some() {
+            probe_version(bin, ver_args)
+        } else {
+            String::new()
+        };
+        cards.push(ToolCardInfo {
+            name: name.to_string(),
+            category: cat.to_string(),
+            description: desc.to_string(),
+            installed: found.is_some(),
+            path: found
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "not found in PATH".to_string()),
+            version,
+            install_hint: hint.to_string(),
+        });
+    }
+
+    let sdl_ver = if sdl2_present {
+        probe_version("pkg-config", &["--modversion", "sdl2"])
+    } else {
+        String::new()
+    };
+    cards.push(ToolCardInfo {
+        name: "SDL2".to_string(),
+        category: "Game Runtime".to_string(),
+        description: "Windowing, 2D/D3D framebuffer presentation, input, and audio for recompiled native games.".to_string(),
+        installed: sdl2_present,
+        path: if sdl2_present {
+            "pkg-config: sdl2".to_string()
+        } else {
+            "not found via pkg-config".to_string()
+        },
+        version: sdl_ver,
+        install_hint: "brew install sdl2 / apt install libsdl2-dev".to_string(),
+    });
+
+    cards
+}
+
+fn detect_agents() -> Vec<DetectedAgentInfo> {
+    let specs: &[(&str, &str, &str, &str, &str)] = &[
+        (
+            "claude",
+            "Claude Code",
+            "claude",
+            "claude -p",
+            "Anthropic CLI agent for provenance-gated high-level C recovery.",
+        ),
+        (
+            "codex",
+            "Codex CLI",
+            "codex",
+            "codex exec -",
+            "OpenAI Codex CLI helper for C readability and recovery passes.",
+        ),
+        (
+            "agy",
+            "Antigravity CLI",
+            "agy",
+            "agy -p",
+            "Google Antigravity CLI helper agent.",
+        ),
+        (
+            "opencode",
+            "opencode",
+            "opencode",
+            "opencode run",
+            "Multi-provider terminal agent (DeepSeek, Qwen, Kimi, Anthropic, OpenAI).",
+        ),
+        (
+            "cursor",
+            "Cursor Agent",
+            "cursor-agent",
+            "cursor-agent -p",
+            "Headless Cursor Agent CLI.",
+        ),
+        (
+            "ollama",
+            "Ollama (Local)",
+            "ollama",
+            "ollama run qwen2.5-coder:14b",
+            "Run local coding models completely offline with zero data leaving your machine.",
+        ),
+    ];
+
+    specs
+        .iter()
+        .map(|&(id, name, bin, preset, desc)| {
+            let found = find_executable(bin);
+            DetectedAgentInfo {
+                id: id.to_string(),
+                name: name.to_string(),
+                binary: bin.to_string(),
+                installed: found.is_some(),
+                path: found
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|| "not installed".to_string()),
+                preset_cmd: preset.to_string(),
+                description: desc.to_string(),
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]

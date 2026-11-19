@@ -2,13 +2,42 @@
 name = "gamerecomp"
 version = "0.0.1"
 edition = "2021"
-description = "GameReComp Rust application, GUI, CLI, pipeline orchestrator, task runner, and agent integration"
+description = "GameReComp native Rust CLI and GPUI desktop GUI (with WASM-ready core) for PE32 static recompilation"
+
+[lib]
+name = "gamerecomp_core"
+path = "src/lib.rs"
 
 [[bin]]
 name = "gamerecomp"
 path = "src/main.rs"
+required-features = ["native"]
+
+[features]
+default = ["native"]
+native = [
+    "dep:clap",
+    "dep:chrono",
+    "dep:gpui",
+    "dep:indicatif",
+    "dep:open",
+    "dep:owo-colors",
+    "dep:rfd",
+]
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Native desktop + CLI dependencies (excluded on wasm32-unknown-unknown lib builds)
+chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }
+clap = { version = "4.6", features = ["derive", "color", "wrap_help"], optional = true }
+gpui = { version = "0.2.2", features = ["runtime_shaders"], optional = true }
+indicatif = { version = "0.18", optional = true }
+open = { version = "5", optional = true }
+owo-colors = { version = "4", optional = true }
+rfd = { version = "0.18", optional = true }
 
 [profile.release]
 opt-level = 2
+lto = "thin"

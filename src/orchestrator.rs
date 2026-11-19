@@ -1,7 +1,11 @@
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::Instant;
+use std::time::{Duration, Instant};
+
+use indicatif::{ProgressBar, ProgressStyle};
+use owo_colors::OwoColorize;
 
 use crate::config::AppConfig;
 use crate::logging::log_project_event;
@@ -44,6 +48,8 @@ pub struct ParsedCli {
     pub json: bool,
     pub clean_objects: bool,
     pub verify_standalone: bool,
+    pub capture_screenshots: bool,
+    pub profile: Option<String>,
     pub backend_args: Vec<String>,
 }
 
@@ -67,6 +73,8 @@ impl Default for ParsedCli {
             json: false,
             clean_objects: false,
             verify_standalone: false,
+            capture_screenshots: false,
+            profile: None,
             backend_args: Vec::new(),
         }
     }
@@ -119,6 +127,23 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
             "--verify-standalone" => {
                 out.verify_standalone = true;
                 i += 1;
+            }
+            "--capture-screenshots" => {
+                out.capture_screenshots = true;
+                i += 1;
+            }
+            "--profile" => {
+                let val = args.get(i + 1).ok_or("--profile requires a value (game|desktop|console)")?;
+                match val.as_str() {
+                    "game" | "desktop" | "console" => {
+                        out.profile = Some(val.clone());
+                        if val == "game" || val == "desktop" {
+                            out.capture_screenshots = true;
+                        }
+                    }
+                    other => return Err(format!("unknown --profile: {other} (expected game, desktop, or console)")),
+                }
+                i += 2;
             }
             "--no-table" => {
                 out.no_table = true;
@@ -400,6 +425,10 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
     }
     if let Some(ref sdir) = cfg.screenshot_dir {
         cmd.env("RECOMP_SCREENSHOT", sdir);
+    } else if parsed.capture_screenshots {
+        let shots = proj_dir.join("screenshots");
+        let _ = fs::create_dir_all(&shots);
+        cmd.env("RECOMP_SCREENSHOT", shots);
     }
     if let Some(ref adir) = cfg.assets_dir {
         cmd.env("RECOMP_ASSETS_DIR", adir);
@@ -408,15 +437,94 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
         cmd.args(["--timeout", &format!("{}", cfg.default_timeout_secs)]);
     }
 
-    cmd.stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
+    let use_spinner = !parsed.quiet && !parsed.json && !parsed.no_progress;
 
-    let exit_code = match cmd.status() {
-        Ok(st) => st.code().unwrap_or(EXIT_STAGE_FAILED),
-        Err(e) => {
-            eprintln!("error: failed to launch Python backend: {e}");
-            EXIT_STAGE_FAILED
+    let exit_code = if use_spinner {
+        let title = pe_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("executable");
+        eprintln!(
+            "  {}{}  {} {} -> {}/{}",
+            "Game".bold(),
+            "ReComp".black().on_bright_yellow().bold(),
+            title.bold(),
+            format!("({in_os}/{in_arch})").dimmed(),
+            target_os,
+            target_arch
+        );
+
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::with_template("  {spinner:.yellow} {msg}  [{elapsed_precise}]")
+                .unwrap_or_else(|_| ProgressStyle::default_spinner()),
+        );
+        pb.enable_steady_tick(Duration::from_millis(90));
+        pb.set_message("stage: inspect");
+
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        match cmd.spawn() {
+            Ok(mut child) => {
+                let pb_err = pb.clone();
+                let err_handle = child.stderr.take().map(|err| {
+                    std::thread::spawn(move || {
+                        for line in BufReader::new(err).lines().map_while(Result::ok) {
+                            if let Some(rest) = line.trim().strip_prefix("==>") {
+                                pb_err.set_message(format!("stage: {}", rest.trim()));
+                            }
+                            pb_err.println(line);
+                        }
+                    })
+                });
+                if let Some(out) = child.stdout.take() {
+                    for line in BufReader::new(out).lines().map_while(Result::ok) {
+                        if let Some(rest) = line.trim().strip_prefix("==>") {
+                            pb.set_message(format!("stage: {}", rest.trim()));
+                        }
+                        pb.println(line);
+                    }
+                }
+                if let Some(h) = err_handle {
+                    let _ = h.join();
+                }
+                let code = child
+                    .wait()
+                    .ok()
+                    .and_then(|st| st.code())
+                    .unwrap_or(EXIT_STAGE_FAILED);
+                if code == EXIT_OK || code == EXIT_UNVERIFIED {
+                    pb.finish_with_message(format!(
+                        "{} finished (exit {code})",
+                        "✓".green().bold()
+                    ));
+                } else {
+                    pb.finish_with_message(format!(
+                        "{} failed (exit {code})",
+                        "✗".red().bold()
+                    ));
+                }
+                code
+            }
+            Err(e) => {
+                pb.finish_and_clear();
+                eprintln!("error: failed to launch Python backend: {e}");
+                EXIT_STAGE_FAILED
+            }
+        }
+    } else {
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+        match cmd.status() {
+            Ok(st) => st.code().unwrap_or(EXIT_STAGE_FAILED),
+            Err(e) => {
+                eprintln!("error: failed to launch Python backend: {e}");
+                EXIT_STAGE_FAILED
+            }
         }
     };
 
@@ -484,5 +592,29 @@ mod tests {
     fn generates_cmake_safe_project_name() {
         assert_eq!(executable_name(Path::new("/tmp/putty-w32.exe")), "putty_w32");
         assert_eq!(executable_name(Path::new("/tmp/123app.exe")), "game_123app");
+    }
+
+    #[test]
+    fn parses_profile_and_screenshot_flags() {
+        let args: Vec<String> = vec![
+            "game.exe",
+            "--profile",
+            "console",
+            "--target-os",
+            "web",
+            "--target-arch",
+            "wasm32",
+            "--capture-screenshots",
+            "--dry-run",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let parsed = parse_pipeline_args(&args).unwrap();
+        assert_eq!(parsed.profile.as_deref(), Some("console"));
+        assert_eq!(parsed.target_os, "web");
+        assert_eq!(parsed.target_arch, "wasm32");
+        assert!(parsed.capture_screenshots);
+        assert!(parsed.dry_run);
     }
 }

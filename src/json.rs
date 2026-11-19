@@ -10,6 +10,7 @@ pub enum JsonValue {
     Object(Vec<(String, JsonValue)>),
 }
 
+#[allow(dead_code)]
 impl JsonValue {
     pub fn parse(input: &str) -> Result<Self, String> {
         let mut parser = Parser {

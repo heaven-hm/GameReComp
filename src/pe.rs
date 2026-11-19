@@ -2,7 +2,9 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-#[derive(Debug, Clone, Default)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PeInfo {
     pub ok: bool,
     pub error: String,
@@ -12,6 +14,61 @@ pub struct PeInfo {
     pub image_base: u64,
     pub input_os: Option<String>,
     pub input_arch: Option<String>,
+}
+
+/// Pure byte-slice PE header inspector (works on native and wasm32-unknown-unknown).
+pub fn inspect_pe_bytes(data: &[u8]) -> PeInfo {
+    let mut info = PeInfo::default();
+    let size = data.len();
+    if size < 0x40 {
+        info.error = "file is shorter than a DOS header -- this is not a PE executable".to_string();
+        return info;
+    }
+    if data[0] != b'M' || data[1] != b'Z' {
+        info.error = "no MZ signature -- this is not a DOS/Windows executable".to_string();
+        return info;
+    }
+    let pe_off = u32_le(data, 0x3c) as usize;
+    if pe_off < 0x40 || pe_off + 0x40 > size {
+        info.error = "the PE header offset points outside the file -- likely not a PE, or a truncated file".to_string();
+        return info;
+    }
+    let pe_head = &data[pe_off..pe_off + 0x40];
+    if &pe_head[..4] != b"PE\0\0" {
+        info.error = "no PE\\0\\0 signature at the offset the DOS header names".to_string();
+        return info;
+    }
+    let machine = u16_le(pe_head, 4);
+    let opt_off = 24;
+    let opt_magic = u16_le(pe_head, opt_off);
+
+    info.machine = match machine {
+        0x014c => "i386".to_string(),
+        0x8664 => "x86-64".to_string(),
+        0x01c4 => "ARMv7".to_string(),
+        0xaa64 => "ARM64".to_string(),
+        other => format!("unknown (0x{other:04x})"),
+    };
+    info.magic = if opt_magic == 0x20b {
+        "PE32+".to_string()
+    } else {
+        "PE32".to_string()
+    };
+    info.pe32_x86 = machine == 0x014c && opt_magic == 0x10b;
+    info.image_base = if opt_magic == 0x20b {
+        u32_le(pe_head, opt_off + 24) as u64
+    } else {
+        u32_le(pe_head, opt_off + 28) as u64
+    };
+    info.input_os = Some("windows".to_string());
+    info.input_arch = Some(match machine {
+        0x014c => "x86".to_string(),
+        0x8664 => "x86_64".to_string(),
+        0xaa64 => "arm64".to_string(),
+        _ => info.machine.clone(),
+    });
+    info.ok = true;
+    info
 }
 
 fn u16_le(b: &[u8], off: usize) -> u16 {
@@ -192,6 +249,15 @@ mod tests {
         assert_eq!(info.machine, "i386");
         assert!(info.pe32_x86);
         assert_eq!(info.image_base, 0x400000);
+
+        let raw = std::fs::read(&p).unwrap();
+        let from_bytes = inspect_pe_bytes(&raw);
+        assert!(from_bytes.ok);
+        assert_eq!(from_bytes.magic, info.magic);
+        assert_eq!(from_bytes.image_base, info.image_base);
+
+        let bad = inspect_pe_bytes(b"not a pe binary");
+        assert!(!bad.ok);
     }
 
     #[test]
