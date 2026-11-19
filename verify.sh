@@ -10,7 +10,7 @@
 #   sh verify.sh --fast     # skip the parts that need a game corpus
 #
 # Exit 0 only when every check passed. A skipped check is reported as skipped with
-# its reason and does NOT fail the run -- a machine without Qt is not a broken
+# its reason and does NOT fail the run -- a machine without SDL2 or Cargo is not a broken
 # project -- but a check that ran and failed always does.
 set -u
 cd "$(dirname "$0")" || exit 1
@@ -54,6 +54,18 @@ else
     skip "win32hle selftests" "SDL2 not found via pkg-config"
 fi
 
+# ------------------------------------------------------------------ rust
+head1 "rust"
+if command -v cargo > /dev/null 2>&1; then
+    if cargo test --release -q > /tmp/verify-cargo.log 2>&1; then
+        ok "rust crate unit tests" "$(grep 'test result:' /tmp/verify-cargo.log | tail -1)"
+    else
+        bad "rust crate unit tests" "$(tail -3 /tmp/verify-cargo.log | tr '\n' ' ')"
+    fi
+else
+    skip "rust crate unit tests" "cargo not found"
+fi
+
 # ------------------------------------------------------------------- gui
 head1 "gui"
 if [ -x gui/build/gamerecomp ]; then
@@ -70,7 +82,7 @@ if [ -x gui/build/gamerecomp ]; then
         bad "gui accepts a supported executable" "$(head -2 /tmp/verify-gui-pe.log | tr '\n' ' ')"
     fi
 else
-    skip "gui checks" "gui/build/gamerecomp not built (cmake -S gui -B gui/build)"
+    skip "gui checks" "gui/build/gamerecomp not built (cmake -S gui -B gui/build && cmake --build gui/build)"
 fi
 
 # ------------------------------------------------------------ regression

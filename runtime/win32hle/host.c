@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
+#include <strings.h>
 #include <sys/stat.h>
 #ifdef __APPLE__
 #include <ucontext.h>
@@ -130,6 +131,7 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_mss);
     win32hle_register(win32hle_wininet);
     hle_dsound_register_com();
+    hle_user32_enable_desktop_window(1);
 }
 
 /* Weak default: no data imports until msvcrt.c is linked in, which is when
@@ -183,26 +185,44 @@ static uint32_t companion_import(const char *dll, const char *name);
 
 static int map_companions(void) {
     if (!recomp_companion_count) return 0;
+    /* Two passes: map (reserve the VAs of) every companion first, then bind and
+     * run DllMain. A companion's DllMain allocates through the guest heap,
+     * whose first-fit allocator starts at 0x10000000; mapping in one loop ran
+     * each DllMain before reserving the next companion's base, and the heap
+     * could take it. Each image is either embedded in this binary (image !=
+     * NULL) or, for a build that does not embed companions, read from
+     * `load`/beside the game. */
+    enum { MAX_COMP = 32 };
+    static pe_image imgs[MAX_COMP];
+    if (recomp_companion_count > MAX_COMP) {
+        fprintf(stderr, "[pe] too many companions (%u)\n", recomp_companion_count);
+        return 1;
+    }
     for (uint32_t i = 0; i < recomp_companion_count; i++) {
         const recomp_companion_t *c = &recomp_companion_list[i];
+        int rc;
+        if (c->image && c->image_size) {
+            rc = recomp_pe_map_mem(c->image, c->image_size, &imgs[i]);
+        } else {
+            char host[1200];
+            if (c->load && c->load[0]) snprintf(host, sizeof host, "%s", c->load);
+            else if (!hle_host_path(c->dll, host, sizeof host)) {
+                fprintf(stderr, "[pe] companion %s: not found beside the game\n", c->dll);
+                return 1;
+            }
+            rc = recomp_pe_map(host, &imgs[i]);
+        }
         /* The mapped image's base must be its preferred one: the dispatch
          * table entries and every generated address are absolute for it. */
-        pe_image img;
-        char host[1200];
-        /* A rebased copy is named absolutely; the game's own copy is resolved
-         * beside the exe. */
-        if (c->load && c->load[0]) {
-            snprintf(host, sizeof host, "%s", c->load);
-        } else if (!hle_host_path(c->dll, host, sizeof host)) {
-            fprintf(stderr, "[pe] companion %s: not found beside the game\n", c->dll);
+        if (rc != 0 || imgs[i].base != c->base) {
+            fprintf(stderr, "[pe] companion %s: cannot map at 0x%08X\n", c->dll, c->base);
             return 1;
         }
-        if (recomp_pe_map(host, &img) != 0 || img.base != c->base) {
-            fprintf(stderr, "[pe] companion %s: cannot map at 0x%08X\n",
-                    c->dll, c->base);
-            return 1;
-        }
-        hle_module_add(c->dll, img.base, img.resource_rva, img.resource_size, 0);
+        hle_module_add(c->dll, imgs[i].base, imgs[i].resource_rva, imgs[i].resource_size, 0);
+    }
+    for (uint32_t i = 0; i < recomp_companion_count; i++) {
+        const recomp_companion_t *c = &recomp_companion_list[i];
+        pe_image img = imgs[i];
         /* The DLL's own imports (its C runtime and kernel32 calls) are bound
          * exactly like the game's: its IAT slots are the raw RVAs from the
          * file until something writes them, and its lifted code calls them
@@ -416,6 +436,7 @@ static const char *parent_dir(const char *path, char *out, size_t n) {
     snprintf(out, n, "%s", path ? path : "");
     char *sl = strrchr(out, '/');
     if (sl) { if (sl == out) sl[1] = 0; else *sl = 0; }
+    else snprintf(out, n, ".");
     return out;
 }
 
@@ -425,6 +446,12 @@ static const char *original_basename(const char *path) {
     if (have_embedded_image() && recomp_original_name[0])
         return recomp_original_name;
     if (!path) return "game.exe";
+    const char *b = strrchr(path, '/');
+    return b ? b + 1 : path;
+}
+
+static const char *path_basename(const char *path) {
+    if (!path) return "";
     const char *b = strrchr(path, '/');
     return b ? b + 1 : path;
 }
@@ -447,16 +474,24 @@ int recomp_host_main(int argc, char **argv) {
 
     if (have_embedded_image()) {
         /* The original executable is embedded: it is not needed at run time.
-         * The first argument, when it names a directory, is where the game's
-         * own data files live; when it names the original .exe (a harness, or
-         * an old invocation) its directory is used instead and it is not passed
-         * to the guest. Anything else is a guest argument. */
-        const char *assets = NULL;
+         * RECOMP_ASSETS_DIR, or a single directory argument (argc == 2), names
+         * where the game's own data files live; when argv[1] names the
+         * original .exe (a harness, or an old invocation) its directory is used
+         * instead and it is not passed to the guest. Anything else is a guest
+         * argument so multi-argument CLI invocations keep their arguments. */
+        const char *env_assets = getenv("RECOMP_ASSETS_DIR");
+        const char *assets = (env_assets && *env_assets) ? env_assets : NULL;
         char dirbuf[1024];
         int first = 1;
         if (argc > 1) {
-            if (is_directory(argv[1])) { assets = argv[1]; first = 2; }
-            else if (is_exe_file(argv[1])) { assets = parent_dir(argv[1], dirbuf, sizeof dirbuf); first = 2; }
+            if (is_exe_file(argv[1]) &&
+                (!recomp_original_name[0] || !strcasecmp(path_basename(argv[1]), recomp_original_name))) {
+                if (!assets) assets = parent_dir(argv[1], dirbuf, sizeof dirbuf);
+                first = 2;
+            } else if (argc == 2 && is_directory(argv[1])) {
+                if (!assets) assets = argv[1];
+                first = 2;
+            }
         }
         set_guest_arguments(original_basename(NULL), argc, argv, first);
         int unresolved = boot_embedded(assets, resolve);

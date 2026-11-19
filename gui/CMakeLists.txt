@@ -1,19 +1,16 @@
 cmake_minimum_required(VERSION 3.20)
-# The GUI layer of Phase 5: a C++17 / Qt 6 Widgets application over the same
-# backend as the CLI, not a second implementation of it. Every number it shows
-# is read from a file the pipeline wrote; it never computes a status itself,
-# because a GUI that derives "pass" from anything but the record is a GUI that
-# can disagree with the CLI.
-project(gamerecomp-gui LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
-qt_standard_project_setup()
-qt_add_executable(gamerecomp
-    main.cpp
-    projectmodel.cpp projectmodel.h
-    peinfo.cpp peinfo.h
-    mainwindow.cpp mainwindow.h
+# The GUI layer is implemented in Rust (src/gui.rs) and built via Cargo at the
+# repository root. CMake keeps the gui/build/gamerecomp entrypoint working cleanly.
+project(gamerecomp-gui NONE)
+
+get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+find_program(CARGO_BIN cargo REQUIRED)
+
+add_custom_target(gamerecomp ALL
+    COMMAND "${CARGO_BIN}" build --release
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${REPO_ROOT}/target/release/gamerecomp"
+        "${CMAKE_CURRENT_BINARY_DIR}/gamerecomp"
+    WORKING_DIRECTORY "${REPO_ROOT}"
+    COMMENT "Building Rust GUI and staging gui/build/gamerecomp"
 )
-target_link_libraries(gamerecomp PRIVATE Qt6::Widgets)
-set_target_properties(gamerecomp PROPERTIES MACOSX_BUNDLE FALSE)

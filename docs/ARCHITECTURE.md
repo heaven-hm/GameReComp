@@ -13,17 +13,41 @@ files, and produces:
 2. a native executable built from exactly that tree,
 3. reports tying both back to the input by hash.
 
-No game binary or game asset is copied into this repository. The rebuilt
-executable needs the user's own copy of the original executable at run time:
-`./build/<name> /path/to/original.exe`.
+No game binary or game asset is checked into this repository. When a project is
+generated with image embedding enabled (the default), `src/recomp/gen/recomp_image.S`
+(and `recomp_companion_images.S` when companion DLLs exist) embeds the PE
+bytes at build time, so `./build/<name>` runs standalone without requiring the
+original `.exe` on disk at runtime (when external game asset files are needed,
+pass the game directory as the first argument or run from it). Non-embedded
+builds accept `./build/<name> /path/to/original.exe`.
 
 The current backend translates **PE32 (i386) input only**. PE32+ is detected and
 rejected fail-closed at the `inspect` stage; it is not silently mis-translated.
 
+## Three-Tier Architecture
+
+GameReComp separates user-facing tooling and orchestration from reverse
+engineering and native execution:
+
+1. **Rust application & orchestrator (`Cargo.toml`, `src/*.rs`)**: Implements
+   the `./GameReComp` CLI (`src/main.rs`), desktop GUI (`src/gui.rs`), pipeline
+   orchestration (`src/orchestrator.rs`), task and batch automation (`src/tasks.rs`),
+   configuration (`src/config.rs`), PE header validation (`src/pe.rs`), project
+   reporting (`src/model.rs`, `src/logging.rs`), AI readability/agent driver
+   (`src/agent.rs`), and minimal JSON parser (`src/json.rs`), with zero third-party
+   Cargo dependencies.
+2. **Python reverse-engineering backend (`tools/pe/`, `tools/disasm/`, `tools/lift/`,
+   `tools/autorecomp/`, `tools/gamesdb.py`)**: Retains the PCRecomp disassembly,
+   function recovery, x86 lifting, analysis, and C source-generation scripts.
+3. **C/C++ native layer (`runtime/win32hle/`, `runtime/recomp32/`, generated C)**:
+   Generated game source code, low-level recompilation output, Win32 HLE/runtime,
+   OS compatibility layers, and SDL2 graphics/audio/input.
+
 ## Pipeline stages
 
-The pipeline lives in `tools/autorecomp/pipeline.py` and is driven by
-`tools/autorecomp/cli.py`. Each stage records its own status and evidence in
+The Rust orchestrator (`src/orchestrator.rs`) drives the Python pipeline backend
+in `tools/autorecomp/pipeline.py` (which remains directly invocable via
+`tools/autorecomp/cli.py`). Each stage records its own status and evidence in
 `reports/`; a failure stops dependent stages, but `verify` (when a run exists)
 and `report` still execute so the failure is inspectable.
 
@@ -124,11 +148,11 @@ success path.
 
 ```
 <project>/
-  CMakeLists.txt          C11, Release default, pkg-config for SDL2/SDL2_ttf
+  CMakeLists.txt          C11 + ASM, Release default, pkg-config for SDL2/SDL2_ttf
   README.md               how to build and how to run
-  project.json            provenance: input hash, backend, runtime, categories
+  project.json            provenance: input hash, image_embedded, backend, runtime, categories
   src/main.c              calls recomp_host_main()
-  src/recomp/gen/         recomp_XXXX.c, recomp_dispatch.c, recomp_funcs.h
+  src/recomp/gen/         recomp_XXXX.c, recomp_dispatch.c, recomp_funcs.h, recomp_image.S
   src/runtime/win32hle/   pinned copy of the runtime sources
   src/runtime/recomp32/   recomp_types.h
 ```

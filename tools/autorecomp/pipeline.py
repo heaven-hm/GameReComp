@@ -228,7 +228,7 @@ class Pipeline:
                  split=1000, build=True, run_binary=True, on_event=None,
                  split_bytes=MAX_UNIT_BYTES, build_timeout=None,
                  reuse_build=False, fresh_build=False, import_trace=False,
-                 highlevel_dir=None):
+                 highlevel_dir=None, target=None):
         self.pe_path = Path(pe_path).expanduser().resolve()
         self.project_dir = Path(project_dir or projectgen.default_project_dir(self.pe_path)).resolve()
         self.assets_dir = Path(assets_dir).expanduser().resolve() if assets_dir else self.pe_path.parent
@@ -244,6 +244,7 @@ class Pipeline:
         self.reuse_build = reuse_build
         self.fresh_build = fresh_build
         self.import_trace = import_trace
+        self.target = target
         # Where the typed replacements live. None means the default
         # highlevel/ directory, which is empty in a fresh checkout.
         self.highlevel_dir = highlevel_dir
@@ -488,22 +489,50 @@ class Pipeline:
         return f"{len(units)} source files, {total_bytes} bytes, {errors} lift errors", data
 
     def _write_companion_table(self):
-        """Emit recomp_companions.c: the bundled DLLs to map and their exports.
+        """Emit recomp_companions.c + recomp_companion_images.S.
 
-        The runtime maps each listed DLL at its preferred base at boot and
-        answers the main image's IAT slots for its exports with the export VA
-        (which is also the lifted function's VA, since the DLL was lifted at
-        that base). Generating the table now means the runtime does no PE
-        parsing beyond what the loader already does.
+        Each bundled DLL's bytes are embedded in the rebuilt binary (a .bin per
+        DLL, compiled through .incbin) so no DLL file is needed at run time --
+        the rebuilt binary is self-contained. The runtime maps each embedded
+        image at its preferred base at boot and answers the main image's IAT
+        slots for its exports with the export VA (also the lifted function's
+        VA, since the DLL was lifted at that base).
         """
         if not self.companions:
             return
         gen = self.project_dir / "src" / "recomp" / "gen"
         gen.mkdir(parents=True, exist_ok=True)
+
+        # Bytes: the rebased copy when there is one (that is what the lifted
+        # code targets), else the game's own DLL.
+        asm = ["/* Generated: bundled DLL images, embedded so the rebuilt binary",
+               " * needs no DLL files at run time. */",
+               "#if defined(__APPLE__)",
+               "#define SYM(x) _##x",
+               "    .section __DATA,__const",
+               "#else",
+               "#define SYM(x) x",
+               "    .section .rodata",
+               "#endif", ""]
+        sizes = {}
+        for i, comp in enumerate(self.companions):
+            data = Path(comp["path"]).read_bytes()
+            blob = gen / f"recomp_companion_{i}.bin"
+            blob.write_bytes(data)
+            sizes[i] = len(data)
+            asm.append("    .p2align 4")
+            asm.append(f"    .globl SYM(recomp_companion_image_{i})")
+            asm.append(f"SYM(recomp_companion_image_{i}):")
+            asm.append(f'    .incbin "{blob.resolve()}"')
+        asm.append("")
+        (gen / "recomp_companion_images.S").write_text("\n".join(asm))
+
         lines = ['/* Generated: bundled (non-system) DLLs the game imports. */',
                  '#include "win32hle.h"', '']
         for i, comp in enumerate(self.companions):
             ci = comp["info"]
+            lines.append(f"extern const unsigned char recomp_companion_image_{i}[];")
+            lines.append(f"static const uint32_t recomp_companion_size_{i} = {sizes[i]}UL;")
             lines.append(f"static const recomp_export_t recomp_exports_{i}[] = {{")
             seen = set()
             for e in ci.exports:
@@ -519,14 +548,8 @@ class Pipeline:
         for i, comp in enumerate(self.companions):
             ci = comp["info"]
             name = comp["name"].replace('\\', '\\\\').replace('"', '\\"')
-            if comp.get("rebased_from") is not None:
-                # The rebased copy lives in the project; name it absolutely so
-                # the runtime maps that copy (whose header now says the new
-                # base) rather than the game's original next to the exe.
-                load = '"' + str(comp["path"].resolve()).replace('\\', '\\\\').replace('"', '\\"') + '"'
-            else:
-                load = "NULL"                    # resolve `name` beside the game
-            lines.append(f'    {{ "{name}", 0x{ci.image_base:08X}u, {load}, '
+            lines.append(f'    {{ "{name}", 0x{ci.image_base:08X}u, NULL, '
+                         f'recomp_companion_image_{i}, recomp_companion_size_{i}, '
                          f'recomp_exports_{i}, '
                          f'(uint32_t)(sizeof recomp_exports_{i} / sizeof recomp_exports_{i}[0]) }},')
         lines.append("};")
@@ -606,6 +629,10 @@ class Pipeline:
         source_files = _source_files(self.project_dir)
         source_digest = _source_digest(source_files)
         source_bytes = sum(f["size"] for f in source_files)
+
+        if self.target == ("web", "wasm32"):
+            return self._compile_wasm(build_dir, source_digest, source_bytes, log_path)
+
         binary = build_dir / self.name
         if os.name == "nt":
             binary = binary.with_suffix(".exe")
@@ -669,6 +696,166 @@ class Pipeline:
             "source_bytes": source_bytes,
             "build_timeout_seconds": timeout or None,
             "build_timeout_adaptive": adaptive,
+        }
+
+    def _compile_wasm(self, build_dir, source_digest, source_bytes, log_path):
+        import concurrent.futures
+
+        wasm_path = build_dir / f"{self.name}.wasm"
+        if self.reuse_build:
+            self.binary = self._adopt_reused_binary(wasm_path, source_digest, log_path)
+            return f"{wasm_path} ({wasm_path.stat().st_size} bytes, reused build)", {
+                "binary": str(wasm_path),
+                "sha256": _sha256_file(wasm_path),
+                "seconds": 0.0,
+                "source_bytes": source_bytes,
+                "reused": True,
+                "reused_source_digest": source_digest,
+            }
+
+        env = dict(os.environ)
+        for z3_dir in sorted(Path("/opt/homebrew/Cellar/z3").glob("*/lib")):
+            if (z3_dir / "libz3.5.1.dylib").exists():
+                prev = env.get("DYLD_LIBRARY_PATH", "")
+                env["DYLD_LIBRARY_PATH"] = f"{z3_dir}:{prev}" if prev else str(z3_dir)
+                break
+
+        clang = None
+        for cand in ("/opt/homebrew/opt/llvm/bin/clang", shutil.which("clang")):
+            if cand and Path(cand).exists():
+                probe = subprocess.run([cand, "--print-targets"], env=env,
+                                       capture_output=True, text=True)
+                if probe.returncode == 0 and "wasm32" in probe.stdout:
+                    clang = cand
+                    break
+        if not clang:
+            raise StageFailure("clang with wasm32 target support not found")
+
+        wasm_ld_candidates = [shutil.which("wasm-ld")]
+        wasm_ld_candidates.extend(
+            str(p) for p in Path.home().glob(".rustup/toolchains/*/lib/rustlib/*/bin/gcc-ld/wasm-ld"))
+        wasm_ld_candidates.append("/opt/homebrew/opt/lld/bin/wasm-ld")
+        wasm_ld = next((c for c in wasm_ld_candidates if c and Path(c).exists()), None)
+        if not wasm_ld:
+            raise StageFailure("wasm-ld not found on PATH or rustup toolchain")
+
+        obj_dir = build_dir / "obj"
+        obj_dir.mkdir(parents=True, exist_ok=True)
+        gen_dir = self.project_dir / "src" / "recomp" / "gen"
+
+        # Emit C arrays for embedded PE + companion DLL images (replaces ELF/Mach-O .S/.incbin)
+        def write_byte_array_c(out_c, header_lines, arrays):
+            lines = list(header_lines)
+            for sym, raw in arrays:
+                lines.append(f"const unsigned char {sym}[] = {{")
+                for off in range(0, len(raw), 16):
+                    lines.append("  " + ",".join(f"0x{b:02x}" for b in raw[off:off + 16]) + ",")
+                lines.append("};")
+            out_c.write_text("\n".join(lines) + "\n")
+
+        pe_bytes = (gen_dir / "recomp_image.bin").read_bytes()
+        safe_exe = self.pe_path.name.replace("\\", "\\\\").replace('"', '\\"')
+        img_c = build_dir / "recomp_image_wasm.c"
+        write_byte_array_c(
+            img_c,
+            [
+                "const int recomp_has_embedded_image = 1;",
+                f"const unsigned long recomp_original_image_size = {len(pe_bytes)}UL;",
+                f'const char recomp_original_name[] = "{safe_exe}";',
+            ],
+            [("recomp_embedded_image", pe_bytes)],
+        )
+
+        sources = []
+        for p in sorted(gen_dir.glob("recomp_*.c")):
+            if p.name != "recomp_image.c":
+                sources.append(p)
+        sources.append(img_c)
+
+        if self.companions:
+            comp_img_c = build_dir / "recomp_companion_images_wasm.c"
+            arrays = []
+            for i in range(len(self.companions)):
+                cblob = gen_dir / f"recomp_companion_{i}.bin"
+                if cblob.is_file():
+                    arrays.append((f"recomp_companion_image_{i}", cblob.read_bytes()))
+            if arrays:
+                write_byte_array_c(comp_img_c, ["/* companion images */"], arrays)
+                sources.append(comp_img_c)
+
+        hl_dir = self.project_dir / "src" / "highlevel"
+        if hl_dir.is_dir():
+            sources.extend(sorted(hl_dir.glob("*.c")))
+
+        wasm_rt = _ROOT / "runtime" / "wasm32"
+        sources.extend(sorted(wasm_rt.glob("*.c")))
+
+        cflags = [
+            clang, "--target=wasm32-unknown-unknown", "-nostdinc",
+            "-isystem", str(wasm_rt / "include"),
+            "-I", str(_ROOT / "runtime" / "recomp32"),
+            "-I", str(wasm_rt / "include"),
+            "-I", str(gen_dir),
+            "-I", str(hl_dir),
+            "-O2", "-w",
+        ]
+
+        t0 = time.time()
+        objs = [obj_dir / f"{s.stem}.o" for s in sources]
+        errors = []
+        jobs = int(self.jobs or os.cpu_count() or 4)
+
+        def compile_one(pair):
+            src, obj = pair
+            cmd = [*cflags, "-c", str(src), "-o", str(obj)]
+            res = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            if res.returncode != 0:
+                return f"$ {' '.join(cmd)}\n{res.stderr or res.stdout}"
+            return None
+
+        with open(log_path, "w") as log:
+            log.write(f"# wasm32 compile: {len(sources)} units -> {wasm_path}\n")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+                for err in pool.map(compile_one, zip(sources, objs)):
+                    if err:
+                        errors.append(err)
+                        log.write(err + "\n")
+            if errors:
+                raise StageFailure(
+                    f"wasm32 compile failed (see {log_path})\n{_tail(log_path)}",
+                    {"log": str(log_path), "returncode": 1})
+            link_cmd = [
+                wasm_ld, "--no-entry",
+                "--initial-memory=67108864", "--max-memory=536870912",
+                "-z", "stack-size=2097152",
+                *[str(o) for o in objs], "-o", str(wasm_path),
+            ]
+            log.write("$ " + " ".join(link_cmd) + "\n")
+            lres = subprocess.run(link_cmd, env=env, capture_output=True, text=True)
+            log.write(lres.stdout or "")
+            log.write(lres.stderr or "")
+            if lres.returncode != 0:
+                raise StageFailure(
+                    f"wasm-ld link failed (see {log_path})\n{_tail(log_path)}",
+                    {"log": str(log_path), "returncode": lres.returncode})
+
+        shutil.copyfile(wasm_rt / "run_wasm_node.mjs", build_dir / "run_wasm_node.mjs")
+        html = (wasm_rt / "index.html").read_text()
+        html = html.replace("@TITLE@", self.name).replace("@WASM_FILE@", wasm_path.name)
+        (build_dir / "index.html").write_text(html)
+
+        seconds = round(time.time() - t0, 1)
+        if not wasm_path.exists():
+            raise StageFailure(f"wasm32 build reported success but {wasm_path} is missing",
+                               {"log": str(log_path)})
+        self.binary = wasm_path
+        return f"{wasm_path} ({wasm_path.stat().st_size} bytes, {seconds}s)", {
+            "binary": str(wasm_path),
+            "sha256": _sha256_file(wasm_path),
+            "seconds": seconds,
+            "source_bytes": source_bytes,
+            "target": "web/wasm32",
+            "web_entry": str(build_dir / "index.html"),
         }
 
     def _adopt_reused_binary(self, binary, source_digest, log_path):
@@ -754,7 +941,13 @@ class Pipeline:
         # The image is embedded in the rebuilt binary, so it no longer takes the
         # original executable as an argument; the working directory is where
         # the game's own data files are found.
-        cmd = [str(self.binary)]
+        if self.binary.suffix == ".wasm":
+            node = shutil.which("node") or str(Path.home() / ".local" / "bin" / "node")
+            if not node or not Path(node).exists():
+                raise StageFailure("node executable not found for wasm32 run stage")
+            cmd = [node, str(self.binary.parent / "run_wasm_node.mjs"), str(self.binary)]
+        else:
+            cmd = [str(self.binary)]
         t0 = time.time()
         status, rc, timed_out = "exited", None, False
         with open(stdout_path, "w") as out, open(stderr_path, "w") as err:
@@ -917,8 +1110,10 @@ class Pipeline:
             "scope": "process" if status in ("scenario-pass", "trace-diverged") else "launch",
             "game": self.pe_path.name,
             "executable_sha256": _sha256_file(self.pe_path),
-            "target": {"os": sys.platform, "arch": platform.machine(),
-                       "label": f"{platform.system()} {platform.machine()} (host build)"},
+            "target": ({"os": "web", "arch": "wasm32", "label": "WebAssembly wasm32 (web app)"}
+                       if self.target == ("web", "wasm32")
+                       else {"os": sys.platform, "arch": platform.machine(),
+                             "label": f"{platform.system()} {platform.machine()} (host build)"}),
             "checks": checks,
             "oracle_gaps": gaps,
             "run": run,
@@ -931,7 +1126,7 @@ class Pipeline:
         report = {
             "schema": 1,
             "tool": "GameReComp autorecomp",
-            "version": "0.1.0",
+            "version": "0.0.1",
             "generated_at": _now(),
             "input": str(self.pe_path),
             "project": str(self.project_dir),
@@ -973,8 +1168,10 @@ class Pipeline:
                 "sha256": _sha256_file(self.binary),
                 "size": self.binary.stat().st_size,
                 "built_from_source_digest": source_digest,
-                "build_command": f"cmake -S {self.project_dir} -B {self.binary.parent} "
-                                 f"&& cmake --build {self.binary.parent}",
+                "build_command": (f"clang --target=wasm32-unknown-unknown + wasm-ld -> {self.binary.name}"
+                                  if self.binary.suffix == ".wasm"
+                                  else f"cmake -S {self.project_dir} -B {self.binary.parent} "
+                                       f"&& cmake --build {self.binary.parent}"),
             }
         self.manifest = manifest
         (self.project_dir / "manifest.json").write_text(

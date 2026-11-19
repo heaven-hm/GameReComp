@@ -1,18 +1,8 @@
-#!/usr/bin/env python3
-"""GameReComp: Windows PE -> readable C source -> native executable, one command.
-
-    export SMALL_GAMES_PATH=/path/to/your/games
-    ./GameReComp "$SMALL_GAMES_PATH/cavestory/Doukutsu.exe"
-
-The pipeline behind this entry point lives in tools/autorecomp/.
-"""
-
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from tools.autorecomp.cli import main  # noqa: E402
-
-if __name__ == "__main__":
-    sys.exit(main())
+#!/bin/sh
+set -eu
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+BIN="$ROOT/target/release/gamerecomp"
+if [ ! -x "$BIN" ]; then
+    cargo build --release --manifest-path "$ROOT/Cargo.toml" >&2
+fi
+exec "$BIN" "$@"

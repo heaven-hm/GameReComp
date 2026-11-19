@@ -77,20 +77,21 @@ void hle_gdi_release_dc(uint32_t h) { dc_t *x = DC(h); if (x) x->used = 0; }
  * every window: a game that draws its whole screen into one top-level window
  * is what it serves. Off (no surface), a window DC is state only. */
 static uint8_t *g_win_px;
-static int g_win_w, g_win_h, g_win_pitch, g_win_bpp;
+static int g_win_w, g_win_h, g_win_pitch, g_win_bpp, g_win_yoff;
 static volatile unsigned g_win_seq;
+void hle_gdi_window_yoffset(int yoff) { g_win_yoff = yoff; }
 void hle_gdi_window_surface(uint8_t *px, int w, int h, int pitch, int bpp) {
     g_win_px = px, g_win_w = w, g_win_h = h, g_win_pitch = pitch, g_win_bpp = bpp;
     g_win_seq++;
     /* A window DC the game keeps (Civilization III's jgl holds its own)
      * follows a mode change: it had been drawing into the old pixels. */
     for (int i = 0; i < MAX_DC; i++)
-        if (g_dc[i].used && g_dc[i].win) g_dc[i].px = px, g_dc[i].w = w, g_dc[i].h = h, g_dc[i].pitch = pitch, g_dc[i].bpp = bpp;
+        if (g_dc[i].used && g_dc[i].win) g_dc[i].px = px, g_dc[i].w = w, g_dc[i].h = h, g_dc[i].pitch = pitch, g_dc[i].bpp = bpp, g_dc[i].voy = g_win_yoff;
 }
 uint32_t hle_gdi_window_dc(void) {
     uint32_t d = new_dc();
     dc_t *x = DC(d);
-    if (x && g_win_px) x->px = g_win_px, x->w = g_win_w, x->h = g_win_h, x->pitch = g_win_pitch, x->bpp = g_win_bpp, x->win = 1;
+    if (x && g_win_px) x->px = g_win_px, x->w = g_win_w, x->h = g_win_h, x->pitch = g_win_pitch, x->bpp = g_win_bpp, x->win = 1, x->voy = g_win_yoff;
     return d;
 }
 void (*hle_gdi_window_hook)(void);                     /* the presenter: a blit reached the window */
@@ -99,6 +100,47 @@ int hle_gdi_window_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bp
     if (!g_win_px) return 0;
     *px = g_win_px, *w = g_win_w, *h = g_win_h, *pitch = g_win_pitch, *bpp = g_win_bpp;
     if (seq) *seq = g_win_seq;
+    return 1;
+}
+
+static void rectfill(dc_t *d, int l, int t, int r, int b, uint32_t cr);
+static font_t *FONT(uint32_t h);
+static TTF_Font *ttf_of(font_t *f);
+static void text_out_ansi(dc_t *d, int x, int y, const char *buf, int n);
+
+void hle_gdi_draw_rect(uint32_t hdc, int l, int t, int r, int b, uint32_t cr) {
+    dc_t *d = DC(hdc);
+    if (d) rectfill(d, l, t, r, b, cr);
+}
+
+void hle_gdi_draw_text(uint32_t hdc, int x, int y, const char *s, uint32_t fg_cr, uint32_t bg_cr, int transparent) {
+    dc_t *d = DC(hdc);
+    if (!d || !s || !*s) return;
+    uint32_t ofg = d->text, obg = d->bk;
+    int om = d->bkmode;
+    d->text = fg_cr, d->bk = bg_cr, d->bkmode = transparent ? TRANSPARENT : OPAQUE;
+    text_out_ansi(d, x, y, s, (int)strlen(s));
+    d->text = ofg, d->bk = obg, d->bkmode = om;
+}
+
+int hle_gdi_measure_text(uint32_t hdc, const char *s, int *w, int *h) {
+    dc_t *d = DC(hdc);
+    if (!s) return 0;
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    if (!t) {
+        if (w) *w = (int)strlen(s) * 7;
+        if (h) *h = 13;
+        return 0;
+    }
+    int tw = 0, th = 0;
+    if (TTF_SizeText(t, s, &tw, &th) != 0) {
+        if (w) *w = (int)strlen(s) * 7;
+        if (h) *h = 13;
+        return 0;
+    }
+    if (w) *w = tw + (f->synth_bold ? (int)strlen(s) + 1 : 0);
+    if (h) *h = th;
     return 1;
 }
 
@@ -1131,6 +1173,8 @@ static void g_EndPage(void)  { RET(1, 1); }
  * back-buffer-to-window blit is ---- */
 static void blt(dc_t *dst, int dx, int dy, int w, int h, dc_t *src, int sx, int sy, int sw, int sh) {
     if (!dst || !dst->px || !src || !src->px || w <= 0 || h <= 0) return;
+    dx += dst->vox - dst->wox, dy += dst->voy - dst->woy;
+    sx += src->vox - src->wox, sy += src->voy - src->woy;
     int same = src->bpp == dst->bpp && src->is555 == dst->is555 && src->bpp != 8;
     if (dst->win) g_win_seq++;
     for (int j = 0; j < h; j++) {
@@ -1150,6 +1194,335 @@ static void g_StretchBlt(void) { dc_t *d = DC(A32(0)), *s = DC(A32(5)); blt(d,(i
 static void g_CreateCompatibleDC(void) { RET(new_dc(), 1); }   /* a memory DC; a bitmap is selected into it */
 static void g_CreateICA(void) { RET(new_dc(), 4); }            /* an information context has the same query surface */
 static void g_DeleteDC(void) { hle_gdi_release_dc(A32(0)); RET(1, 1); }
+
+static void g_ExtTextOutA(void) {
+    dc_t *d = DC(A32(0));
+    int x = (int)A32(1), y = (int)A32(2);
+    uint32_t opt = A32(3), rc = A32(4), cnt = A32(6);
+    const char *s = ASTR(5);
+    if (d && (opt & 2) && rc)
+        rectfill(d, (int)MEM32(rc), (int)MEM32(rc + 4), (int)MEM32(rc + 8), (int)MEM32(rc + 12), d->bk);
+    if (d && s && (int)cnt > 0) text_out_ansi(d, x, y, s, (int)cnt);
+    RET(1, 8);
+}
+
+static void g_ExcludeClipRect(void) {
+    dc_t *d = DC(A32(0));
+    int el = (int)A32(1), et = (int)A32(2), er = (int)A32(3), eb = (int)A32(4);
+    if (!d) { RET(0, 5); return; }
+    if (!d->clip) { d->cl = 0; d->ct = 0; d->cr = d->w; d->cb = d->h; }
+    if (el <= d->cl && er >= d->cr && et <= d->ct && eb >= d->cb) {
+        d->clip = 1; d->cl = d->ct = d->cr = d->cb = 0;
+        RET(1 /* NULLREGION */, 5); return;
+    }
+    RET(2 /* SIMPLEREGION */, 5);
+}
+
+static void g_GetClipBox(void) {
+    dc_t *d = DC(A32(0));
+    uint32_t rc = A32(1);
+    if (!d || !rc) { RET(0 /* ERROR */, 2); return; }
+    if (d->clip) {
+        MEM32(rc) = (uint32_t)d->cl; MEM32(rc + 4) = (uint32_t)d->ct;
+        MEM32(rc + 8) = (uint32_t)d->cr; MEM32(rc + 12) = (uint32_t)d->cb;
+        RET((d->cr <= d->cl || d->cb <= d->ct) ? 1u : 2u, 2); return;
+    }
+    MEM32(rc) = 0; MEM32(rc + 4) = 0; MEM32(rc + 8) = (uint32_t)d->w; MEM32(rc + 12) = (uint32_t)d->h;
+    RET(2 /* SIMPLEREGION */, 2);
+}
+
+static void g_RectVisible(void) {
+    dc_t *d = DC(A32(0));
+    uint32_t rc = A32(1);
+    if (!d || !rc) { RET(0, 2); return; }
+    int rl = (int)MEM32(rc), rt = (int)MEM32(rc + 4), rr = (int)MEM32(rc + 8), rb = (int)MEM32(rc + 12);
+    int cl = d->clip ? d->cl : 0, ct = d->clip ? d->ct : 0;
+    int cr = d->clip ? d->cr : d->w, cb = d->clip ? d->cb : d->h;
+    RET((rr > cl && rl < cr && rb > ct && rt < cb) ? 1u : 0u, 2);
+}
+
+static void g_GetCurrentObject(void) {
+    dc_t *d = DC(A32(0));
+    if (!d) { RET(0, 2); return; }
+    switch (A32(1)) {
+    case 1: RET(d->pen ? d->pen : stock(7), 2); return;     /* OBJ_PEN */
+    case 2: RET(d->brush ? d->brush : stock(0), 2); return; /* OBJ_BRUSH */
+    case 5: RET(d->pal, 2); return;                         /* OBJ_PAL */
+    case 6: RET(d->font ? d->font : SYSTEM_FONT, 2); return;/* OBJ_FONT */
+    case 7: RET(d->bmp, 2); return;                         /* OBJ_BITMAP */
+    default: RET(0, 2); return;
+    }
+}
+
+static void g_GetCurrentPositionEx(void) {
+    dc_t *d = DC(A32(0)); uint32_t pt = A32(1);
+    if (!d || !pt) { RET(0, 2); return; }
+    MEM32(pt) = (uint32_t)d->cpx; MEM32(pt + 4) = (uint32_t)d->cpy;
+    RET(1, 2);
+}
+
+static void g_GetBrushOrgEx(void) { if (A32(1)) { MEM32(A32(1)) = 0; MEM32(A32(1) + 4) = 0; } RET(1, 2); }
+static void g_SetBrushOrgEx(void) { if (A32(3)) { MEM32(A32(3)) = 0; MEM32(A32(3) + 4) = 0; } RET(1, 4); }
+static void g_GetWindowOrgEx(void) {
+    dc_t *d = DC(A32(0)); uint32_t pt = A32(1);
+    if (!d || !pt) { RET(0, 2); return; }
+    MEM32(pt) = (uint32_t)d->wox; MEM32(pt + 4) = (uint32_t)d->woy;
+    RET(1, 2);
+}
+static void g_GetDCOrgEx(void) { if (A32(1)) { MEM32(A32(1)) = 0; MEM32(A32(1) + 4) = 0; } RET(1, 2); }
+
+static void g_LPtoDP(void) {
+    dc_t *d = DC(A32(0)); uint32_t pts = A32(1); int n = (int)A32(2);
+    if (d && pts) for (int i = 0; i < n; i++) {
+        int32_t x = (int32_t)MEM32(pts + 8u * i), y = (int32_t)MEM32(pts + 8u * i + 4u);
+        MEM32(pts + 8u * i) = (uint32_t)(x - d->wox + d->vox);
+        MEM32(pts + 8u * i + 4u) = (uint32_t)(y - d->woy + d->voy);
+    }
+    RET(1, 3);
+}
+
+static void g_SetROP2(void) { RET(13 /* R2_COPYPEN */, 2); }
+static void g_SetStretchBltMode(void) { RET(3 /* COLORONCOLOR */, 2); }
+static void g_UnrealizeObject(void) { RET(1, 1); }
+
+static void g_TranslateCharsetInfo(void) {
+    uint32_t cs = A32(1);
+    if (!cs) { RET(0, 3); return; }
+    memset(hle_ptr(cs), 0, 32);
+    MEM32(cs) = 0; MEM32(cs + 4) = 1252;
+    RET(1, 3);
+}
+
+static int glyph_adv(TTF_Font *t, font_t *f, uint32_t ch) {
+    int adv = 7;
+    if (t) {
+        if (TTF_GlyphMetrics(t, (Uint16)ch, NULL, NULL, NULL, NULL, &adv) != 0) {
+            int w = 0, h = 0;
+            char s[4] = { (char)(ch < 128 ? ch : 'W'), 0, 0, 0 };
+            TTF_SizeText(t, s, &w, &h);
+            adv = w > 0 ? w : 7;
+        }
+    }
+    return adv + (f ? f->synth_bold : 0);
+}
+
+static void g_GetCharWidth_impl(void) {
+    dc_t *d = DC(A32(0)); uint32_t first = A32(1), last = A32(2), buf = A32(3);
+    if (!buf || last < first) { RET(0, 4); return; }
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    for (uint32_t c = first, i = 0; c <= last; c++, i++)
+        MEM32(buf + 4u * i) = (uint32_t)glyph_adv(t, f, c);
+    RET(1, 4);
+}
+
+static void g_GetCharABCWidthsFloatA(void) {
+    dc_t *d = DC(A32(0)); uint32_t first = A32(1), last = A32(2), buf = A32(3);
+    if (!buf || last < first) { RET(0, 4); return; }
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    for (uint32_t c = first, i = 0; c <= last; c++, i++) {
+        float w = (float)glyph_adv(t, f, c);
+        uint32_t bits = 0; memcpy(&bits, &w, 4);
+        MEM32(buf + 12u * i) = 0;
+        MEM32(buf + 12u * i + 4u) = bits;
+        MEM32(buf + 12u * i + 8u) = 0;
+    }
+    RET(1, 4);
+}
+
+static void g_GetCharacterPlacementW(void) {
+    dc_t *d = DC(A32(0)); uint32_t wstr = A32(1), cnt = A32(2), res = A32(4);
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    const uint16_t *ws = (const uint16_t *)hle_ptr(wstr);
+    int total_w = 0, h = t ? TTF_FontHeight(t) : 13;
+    uint32_t dx_va = res ? MEM32(res + 8) : 0;
+    uint32_t caret_va = res ? MEM32(res + 12) : 0;
+    for (uint32_t i = 0; i < cnt; i++) {
+        int a = glyph_adv(t, f, ws ? ws[i] : ' ');
+        if (caret_va) MEM32(caret_va + 4u * i) = (uint32_t)total_w;
+        if (dx_va) MEM32(dx_va + 4u * i) = (uint32_t)a;
+        total_w += a;
+    }
+    if (res) MEM32(res + 24) = cnt; /* nGlyphs */
+    RET(((uint32_t)(total_w & 0xFFFF) | ((uint32_t)(h & 0xFFFF) << 16)), 6);
+}
+
+static void g_GetOutlineTextMetricsA(void) {
+    dc_t *d = DC(A32(0)); uint32_t cb = A32(1), otm = A32(2);
+    const uint32_t need = 212u;
+    if (!otm || cb < need) RET(need, 3);
+    memset(hle_ptr(otm), 0, cb);
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    int asc = t ? TTF_FontAscent(t) : 10, desc = t ? -TTF_FontDescent(t) : 3;
+    MEM32(otm) = cb;
+    MEM32(otm + 4) = (uint32_t)(asc + desc);
+    MEM32(otm + 8) = (uint32_t)asc;
+    MEM32(otm + 12) = (uint32_t)desc;
+    RET(cb, 3);
+}
+
+static void g_GetTextExtentExPointA(void) {
+    dc_t *d = DC(A32(0));
+    const char *s = (const char *)APTR(1);
+    int n = (int)A32(2), max_ext = (int)A32(3);
+    uint32_t fit_va = A32(4), dx_va = A32(5), sz_va = A32(6);
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    int h = t ? TTF_FontHeight(t) : 13, fit = 0, w = 0;
+    for (int i = 0; i < n; i++) {
+        w += glyph_adv(t, f, s ? (uint8_t)s[i] : ' ');
+        if (dx_va) MEM32(dx_va + 4u * (uint32_t)i) = (uint32_t)w;
+        if (!fit_va || max_ext < 0 || w <= max_ext) fit = i + 1;
+    }
+    if (fit_va) MEM32(fit_va) = (uint32_t)fit;
+    if (sz_va) { MEM32(sz_va) = (uint32_t)w; MEM32(sz_va + 4) = (uint32_t)h; }
+    RET(1, 7);
+}
+
+static void g_GetDIBits(void) {
+    gobj_t *o = GOBJ(A32(1));
+    uint32_t start = A32(2), clines = A32(3), bits = A32(4), bmi = A32(5);
+    if (!o || o->type != GO_BITMAP || !bmi) { RET(0, 7); return; }
+    int w = o->w, h = o->h > 0 ? o->h : 1;
+    if (!bits) {
+        MEM32(bmi + 0) = 40; MEM32(bmi + 4) = (uint32_t)w; MEM32(bmi + 8) = (uint32_t)h;
+        MEM16(bmi + 12) = 1; MEM16(bmi + 14) = 32; MEM32(bmi + 16) = 0;
+        MEM32(bmi + 20) = (uint32_t)(w * h * 4);
+        RET((uint32_t)h, 7); return;
+    }
+    if (!o->px) { RET(0, 7); return; }
+    uint32_t copied = 0;
+    int topdown = (int32_t)MEM32(bmi + 8) < 0;
+    uint16_t bpp = MEM16(bmi + 14) ? MEM16(bmi + 14) : 32;
+    int dst_stride = (((w * bpp + 31) / 32) * 4);
+    uint8_t *dst = (uint8_t *)hle_ptr(bits);
+    for (uint32_t i = 0; i < clines && (int)(start + i) < h; i++) {
+        int sy = topdown ? (int)(start + i) : (h - 1 - (int)(start + i));
+        const uint8_t *sr = o->px + sy * o->pitch;
+        uint8_t *dr = dst + (int)i * dst_stride;
+        if (bpp == 32 && o->bpp == 32) memcpy(dr, sr, (size_t)w * 4);
+        else memset(dr, 0, (size_t)dst_stride);
+        copied++;
+    }
+    RET(copied, 7);
+}
+
+static void g_CreateDIBitmap(void) {
+    uint32_t hdr = A32(1), init = A32(2), bits = A32(3);
+    if (!hdr) { RET(0, 6); return; }
+    int w = (int32_t)MEM32(hdr + 4), rh = (int32_t)MEM32(hdr + 8), h = rh < 0 ? -rh : rh;
+    if (w <= 0 || h <= 0) { RET(0, 6); return; }
+    uint32_t handle = new_obj(GO_BITMAP);
+    gobj_t *o = GOBJ(handle);
+    if (!o) { RET(0, 6); return; }
+    o->w = w; o->h = h; o->bpp = 32; o->pitch = w * 4; o->owns = 1;
+    o->px = (uint8_t *)calloc((size_t)(w * 4), (size_t)h);
+    if ((init & 4 /* CBM_INIT */) && bits && o->px) {
+        uint16_t sbpp = MEM16(hdr + 14);
+        int sstride = ((w * sbpp + 31) / 32) * 4;
+        const uint8_t *src = (const uint8_t *)hle_ptr(bits);
+        if (sbpp == 32) for (int y = 0; y < h; y++) {
+            int sy = rh < 0 ? y : (h - 1 - y);
+            memcpy(o->px + y * o->pitch, src + sy * sstride, (size_t)w * 4);
+        }
+    }
+    RET(handle, 6);
+}
+
+static void g_GetDIBColorTable(void) {
+    dc_t *d = DC(A32(0)); uint32_t start = A32(1), cnt = A32(2), rgbq = A32(3);
+    if (!d || !rgbq) { RET(0, 4); return; }
+    gobj_t *o = d->bmp ? GOBJ(d->bmp) : NULL;
+    const uint32_t *tab = (o && o->pal) ? o->pal : d->ctab;
+    int maxn = (o && o->pal) ? o->paln : (d->ctab ? 256 : 0);
+    uint32_t got = 0;
+    for (uint32_t i = 0; i < cnt && (int)(start + i) < maxn; i++, got++) {
+        uint32_t c = tab[start + i];
+        MEM8(rgbq + 4u * i + 0) = (uint8_t)((c >> 16) & 0xFF); /* rgbBlue or stored? g_SetDIBColorTable uses RGB */
+        MEM8(rgbq + 4u * i + 1) = (uint8_t)((c >> 8) & 0xFF);
+        MEM8(rgbq + 4u * i + 2) = (uint8_t)(c & 0xFF);
+        MEM8(rgbq + 4u * i + 3) = 0;
+    }
+    RET(got, 4);
+}
+
+static void g_GetBitmapBits(void) {
+    gobj_t *o = GOBJ(A32(0)); uint32_t cb = A32(1), out = A32(2);
+    if (!o || o->type != GO_BITMAP || !o->px || !out) { RET(0, 3); return; }
+    uint32_t avail = (uint32_t)(o->pitch * o->h);
+    uint32_t cp = cb < avail ? cb : avail;
+    memcpy(hle_ptr(out), o->px, cp);
+    RET(cp, 3);
+}
+
+static void g_MaskBlt(void) {
+    dc_t *d = DC(A32(0)), *s = DC(A32(5));
+    blt(d, (int)A32(1), (int)A32(2), (int)A32(3), (int)A32(4), s, (int)A32(6), (int)A32(7), (int)A32(3), (int)A32(4));
+    RET(1, 12);
+}
+
+static void g_CreateDCA(void) { RET(new_dc(), 4); }
+static void g_CreateHalftonePalette(void) {
+    uint32_t h = new_obj(GO_PALETTE);
+    gobj_t *o = GOBJ(h);
+    if (o) { o->pal = (uint32_t *)calloc(256, 4); o->paln = 256; }
+    RET(h, 1);
+}
+static void g_SetAbortProc(void) { RET(1, 2); }
+
+static void write_enh_header(uint32_t dst_va, uint32_t sz) {
+    if (!dst_va || !sz) return;
+    memset(hle_ptr(dst_va), 0, sz);
+    if (sz >= 88) {
+        MEM32(dst_va + 0) = 1;           /* EMR_HEADER */
+        MEM32(dst_va + 4) = 88;          /* nSize */
+        MEM32(dst_va + 40) = 0x464D4520; /* " EMF" dSignature */
+        MEM32(dst_va + 44) = 0x10000;    /* nVersion */
+        MEM32(dst_va + 48) = 88;         /* nBytes */
+    }
+}
+
+static void g_CreateEnhMetaFileA(void) { RET(new_dc(), 4); }
+static void g_CloseEnhMetaFile(void) { hle_gdi_release_dc(A32(0)); RET(0x0DE10001u, 1); }
+static void g_DeleteEnhMetaFile(void) { RET(1, 1); }
+static void g_CopyEnhMetaFileA(void) { RET(A32(0) ? A32(0) : 0x0DE10001u, 2); }
+static void g_PlayEnhMetaFile(void) { RET(1, 3); }
+static void g_GetEnhMetaFileBits(void) {
+    uint32_t sz = A32(1), buf = A32(2);
+    if (!buf) { RET(88, 3); return; }
+    uint32_t cp = sz < 88 ? sz : 88;
+    write_enh_header(buf, cp);
+    RET(cp, 3);
+}
+static void g_SetEnhMetaFileBits(void) { RET(0x0DE10001u, 2); }
+static void g_GetEnhMetaFileHeader(void) {
+    uint32_t sz = A32(1), hdr = A32(2);
+    if (!hdr) { RET(88, 3); return; }
+    uint32_t cp = sz < 88 ? sz : 88;
+    write_enh_header(hdr, cp);
+    RET(cp, 3);
+}
+static void g_GetEnhMetaFileDescriptionA(void) { RET(0, 3); }
+static void g_GetEnhMetaFilePaletteEntries(void) { RET(0, 3); }
+static void g_GetWinMetaFileBits(void) { RET(0, 5); }
+static void g_SetWinMetaFileBits(void) { RET(0x0DE10001u, 4); }
+
+/* WinSpool shims */
+static void sp_OpenPrinterA(void) {
+    if (A32(1)) MEM32(A32(1)) = 0;
+    hle_set_last_error(1801 /* ERROR_INVALID_PRINTER_NAME */);
+    RET(0, 3);
+}
+static void sp_ClosePrinter(void) { RET(1, 1); }
+static void sp_DocumentPropertiesA(void) { RET(A32(5) == 0 ? 156u : 0xFFFFFFFFu, 6); }
+static void sp_EnumPrintersA(void) {
+    if (A32(5)) MEM32(A32(5)) = 0;
+    if (A32(6)) MEM32(A32(6)) = 0;
+    RET(1, 7);
+}
 
 const win32hle_shim win32hle_gdidc[] = {
     { "GetSysColorBrush", g_GetSysColorBrush },
@@ -1186,6 +1559,32 @@ const win32hle_shim win32hle_gdidc[] = {
     { "DPtoLP", g_DPtoLP }, { "SetGraphicsMode", g_SetGraphicsMode }, { "ModifyWorldTransform", g_ModifyWorldTransform },
     { "GetTextExtentPoint32A", g_GetTextExtentPoint32A }, { "GetTextExtentPointA", g_GetTextExtentPoint32A },
     { "GetTextExtentPoint32W", g_GetTextExtentPoint32W },
-    { "GetTextMetricsA", g_GetTextMetricsA }, { "TextOutA", g_TextOutA }, { "ExtTextOutW", g_ExtTextOutW },
+    { "GetTextMetricsA", g_GetTextMetricsA }, { "TextOutA", g_TextOutA },
+    { "ExtTextOutA", g_ExtTextOutA }, { "ExtTextOutW", g_ExtTextOutW },
+    { "ExcludeClipRect", g_ExcludeClipRect }, { "GetClipBox", g_GetClipBox }, { "RectVisible", g_RectVisible },
+    { "GetCurrentObject", g_GetCurrentObject }, { "GetCurrentPositionEx", g_GetCurrentPositionEx },
+    { "GetBrushOrgEx", g_GetBrushOrgEx }, { "SetBrushOrgEx", g_SetBrushOrgEx },
+    { "GetWindowOrgEx", g_GetWindowOrgEx }, { "GetDCOrgEx", g_GetDCOrgEx }, { "LPtoDP", g_LPtoDP },
+    { "SetROP2", g_SetROP2 }, { "SetStretchBltMode", g_SetStretchBltMode },
+    { "UnrealizeObject", g_UnrealizeObject }, { "TranslateCharsetInfo", g_TranslateCharsetInfo },
+    { "GetCharWidthA", g_GetCharWidth_impl }, { "GetCharWidthW", g_GetCharWidth_impl },
+    { "GetCharWidth32A", g_GetCharWidth_impl }, { "GetCharWidth32W", g_GetCharWidth_impl },
+    { "GetCharABCWidthsFloatA", g_GetCharABCWidthsFloatA },
+    { "GetCharacterPlacementW", g_GetCharacterPlacementW },
+    { "GetOutlineTextMetricsA", g_GetOutlineTextMetricsA },
+    { "GetTextExtentExPointA", g_GetTextExtentExPointA },
+    { "GetDIBits", g_GetDIBits }, { "CreateDIBitmap", g_CreateDIBitmap },
+    { "GetDIBColorTable", g_GetDIBColorTable }, { "GetBitmapBits", g_GetBitmapBits },
+    { "MaskBlt", g_MaskBlt }, { "CreateDCA", g_CreateDCA },
+    { "CreateHalftonePalette", g_CreateHalftonePalette }, { "SetAbortProc", g_SetAbortProc },
+    { "CreateEnhMetaFileA", g_CreateEnhMetaFileA }, { "CloseEnhMetaFile", g_CloseEnhMetaFile },
+    { "DeleteEnhMetaFile", g_DeleteEnhMetaFile }, { "CopyEnhMetaFileA", g_CopyEnhMetaFileA },
+    { "PlayEnhMetaFile", g_PlayEnhMetaFile }, { "GetEnhMetaFileBits", g_GetEnhMetaFileBits },
+    { "SetEnhMetaFileBits", g_SetEnhMetaFileBits }, { "GetEnhMetaFileHeader", g_GetEnhMetaFileHeader },
+    { "GetEnhMetaFileDescriptionA", g_GetEnhMetaFileDescriptionA },
+    { "GetEnhMetaFilePaletteEntries", g_GetEnhMetaFilePaletteEntries },
+    { "GetWinMetaFileBits", g_GetWinMetaFileBits }, { "SetWinMetaFileBits", g_SetWinMetaFileBits },
+    { "OpenPrinterA", sp_OpenPrinterA }, { "ClosePrinter", sp_ClosePrinter },
+    { "DocumentPropertiesA", sp_DocumentPropertiesA }, { "EnumPrintersA", sp_EnumPrintersA },
     { 0, 0 }
 };

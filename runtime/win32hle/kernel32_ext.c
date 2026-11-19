@@ -914,12 +914,130 @@ static void k_CreateToolhelp32Snapshot(void) { hle_set_last_error(5); RET(INVALI
 static void k_Process32First(void) { hle_set_last_error(18); RET(0, 2); }                     /* ERROR_NO_MORE_FILES */
 static void k_OpenProcess(void) { hle_set_last_error(5); RET(0, 3); }
 
+/* ---- additional filesystem, pipe, mapping, and volume shims ---- */
+static void k_DeleteFileW(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024], path[1024];
+    if (w && hle_wide_to_ansi(w, name, sizeof name) && hle_host_path(name, path, sizeof path) && unlink(path) == 0) RET(1, 1);
+    hle_set_last_error(ERROR_FILE_NOT_FOUND);
+    RET(0, 1);
+}
+static void k_FindFirstFileExW(void) {                   /* (nameW, infoLevel, &data, searchOp, filter, flags) */
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char pat[1024];
+    if (!w || !*w) { hle_set_last_error(ERROR_PATH_NOT_FOUND); RET(INVALID_HANDLE, 6); }
+    if (!hle_wide_to_ansi(w, pat, sizeof pat)) { hle_set_last_error(ERROR_INVALID_NAME); RET(INVALID_HANDLE, 6); }
+    RET(find_first("FindFirstFileExW", pat, A32(2), 1), 6);
+}
+static uint32_t file_attrs_ex(const char *name, uint32_t out) {
+    char path[1024];
+    struct stat st;
+    if (!name || !hle_host_path(name, path, sizeof path) || stat(path, &st) != 0) {
+        hle_set_last_error(ERROR_FILE_NOT_FOUND);
+        return 0;
+    }
+    if (out) {
+        MEM32(out + 0) = attrs_of(&st);
+        put_ft(out + 4, unix_to_ft(st.st_mtim.tv_sec, st.st_mtim.tv_nsec));
+        put_ft(out + 12, unix_to_ft(st.st_atim.tv_sec, st.st_atim.tv_nsec));
+        put_ft(out + 20, unix_to_ft(st.st_mtim.tv_sec, st.st_mtim.tv_nsec));
+        MEM32(out + 28) = (uint32_t)((uint64_t)st.st_size >> 32);
+        MEM32(out + 32) = (uint32_t)st.st_size;
+    }
+    return 1;
+}
+static void k_GetFileAttributesExA(void) { RET(file_attrs_ex(ASTR(0), A32(2)), 3); }
+static void k_GetFileAttributesExW(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024];
+    if (!w || !hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_INVALID_NAME); RET(0, 3); }
+    RET(file_attrs_ex(name, A32(2)), 3);
+}
+static void k_GetFileSizeEx(void) {                      /* (hFile, &LARGE_INTEGER) */
+    int fd = fd_of(A32(0));
+    uint32_t out = A32(1);
+    struct stat st;
+    if (fd < 0 || fstat(fd, &st) != 0) { hle_set_last_error(ERROR_INVALID_HANDLE); RET(0, 2); }
+    uint64_t sz = (uint64_t)st.st_size;
+    if (out) { MEM32(out) = (uint32_t)sz; MEM32(out + 4) = (uint32_t)(sz >> 32); }
+    RET(1, 2);
+}
+static void k_SetFilePointerEx(void) {                 /* (hFile, distLo, distHi, &newPos, method) */
+    int fd = fd_of(A32(0));
+    if (fd < 0) { hle_set_last_error(ERROR_INVALID_HANDLE); RET(0, 5); }
+    int64_t dist = (int64_t)((uint64_t)A32(1) | ((uint64_t)A32(2) << 32));
+    int whence = A32(4) == 1 ? SEEK_CUR : A32(4) == 2 ? SEEK_END : SEEK_SET;
+    off_t pos = lseek(fd, (off_t)dist, whence);
+    if (pos < 0) { hle_set_last_error(errno_to_win(errno)); RET(0, 5); }
+    if (A32(3)) {
+        uint64_t u = (uint64_t)pos;
+        MEM32(A32(3)) = (uint32_t)u;
+        MEM32(A32(3) + 4) = (uint32_t)(u >> 32);
+    }
+    RET(1, 5);
+}
+static void k_SetHandleInformation(void) { RET(1, 3); }
+static void k_LockFileEx(void) { RET(1, 6); }
+static void k_GetDiskFreeSpaceExA(void) {                /* (dir, &avail, &total, &free) */
+    uint64_t avail = 0x40000000ULL, total = 0x80000000ULL;
+    if (A32(1)) { MEM32(A32(1)) = (uint32_t)avail; MEM32(A32(1) + 4) = (uint32_t)(avail >> 32); }
+    if (A32(2)) { MEM32(A32(2)) = (uint32_t)total; MEM32(A32(2) + 4) = (uint32_t)(total >> 32); }
+    if (A32(3)) { MEM32(A32(3)) = (uint32_t)avail; MEM32(A32(3) + 4) = (uint32_t)(avail >> 32); }
+    RET(1, 4);
+}
+static void k_GetVolumeInformationW(void) {              /* (rootW, nameW, nameN, &serial, &maxComp, &flags, fsW, fsN) */
+    uint16_t *nw = (uint16_t *)APTR(1), *fw = (uint16_t *)APTR(6);
+    if (nw && A32(2)) hle_ansi_to_wide("HLE", nw, A32(2));
+    if (A32(3)) MEM32(A32(3)) = 0x1234ABCDu;
+    if (A32(4)) MEM32(A32(4)) = 255;
+    if (A32(5)) MEM32(A32(5)) = 0x3u;
+    if (fw && A32(7)) hle_ansi_to_wide("NTFS", fw, A32(7));
+    RET(1, 8);
+}
+static void k_GetCompressedFileSizeA(void) {             /* (name, &high) */
+    char path[1024];
+    struct stat st;
+    if (!ASTR(0) || !hle_host_path(ASTR(0), path, sizeof path) || stat(path, &st) != 0) {
+        hle_set_last_error(ERROR_FILE_NOT_FOUND);
+        RET(0xFFFFFFFFu, 2);
+    }
+    uint64_t sz = (uint64_t)st.st_size;
+    if (A32(1)) MEM32(A32(1)) = (uint32_t)(sz >> 32);
+    hle_set_last_error(0);
+    RET((uint32_t)sz, 2);
+}
+static void k_FindFirstVolumeW(void)  { hle_set_last_error(ERROR_NO_MORE_FILES); RET(INVALID_HANDLE, 2); }
+static void k_FindNextVolumeW(void)   { hle_set_last_error(ERROR_NO_MORE_FILES); RET(0, 3); }
+static void k_FindVolumeClose(void)   { RET(1, 1); }
+static void k_ReadDirectoryChangesW(void) { hle_set_last_error(120u); RET(0, 8); }
+static void k_OpenFileMappingA(void)  { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0, 3); }
+static void k_CreatePipe(void) {                         /* (&hRead, &hWrite, sa, size) */
+    int fds[2];
+    if (pipe(fds) != 0) { hle_set_last_error(errno_to_win(errno)); RET(0, 4); }
+    uint32_t hr = new_file(fds[0]), hw = new_file(fds[1]);
+    if (hr == INVALID_HANDLE || hw == INVALID_HANDLE) {
+        if (hr != INVALID_HANDLE) hle_handle_close(hr); else close(fds[0]);
+        if (hw != INVALID_HANDLE) hle_handle_close(hw); else close(fds[1]);
+        RET(0, 4);
+    }
+    if (A32(0)) MEM32(A32(0)) = hr;
+    if (A32(1)) MEM32(A32(1)) = hw;
+    RET(1, 4);
+}
+static void k_CreateNamedPipeA(void) { hle_set_last_error(ERROR_ACCESS_DENIED); RET(INVALID_HANDLE, 8); }
+static void k_ConnectNamedPipe(void) { hle_set_last_error(ERROR_INVALID_HANDLE); RET(0, 2); }
+static void k_WaitNamedPipeA(void)   { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0, 2); }
+static void k_PeekNamedPipe(void)    { hle_set_last_error(ERROR_INVALID_HANDLE); RET(0, 6); }
+
 const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetProcessAffinityMask", k_GetProcessAffinityMask }, { "SetProcessAffinityMask", k_SetProcessAffinityMask },
     { "CreateToolhelp32Snapshot", k_CreateToolhelp32Snapshot }, { "Process32First", k_Process32First },
     { "Process32Next", k_Process32First }, { "OpenProcess", k_OpenProcess },
-    { "CreateFileMappingA", k_CreateFileMappingA }, { "MapViewOfFile", k_MapViewOfFile },
-    { "UnmapViewOfFile", k_UnmapViewOfFile },
+    { "CreateFileMappingA", k_CreateFileMappingA }, { "OpenFileMappingA", k_OpenFileMappingA },
+    { "MapViewOfFile", k_MapViewOfFile }, { "UnmapViewOfFile", k_UnmapViewOfFile },
+    { "CreatePipe", k_CreatePipe }, { "CreateNamedPipeA", k_CreateNamedPipeA },
+    { "ConnectNamedPipe", k_ConnectNamedPipe }, { "WaitNamedPipeA", k_WaitNamedPipeA },
+    { "PeekNamedPipe", k_PeekNamedPipe },
     { "GetFullPathNameA", k_GetFullPathNameA },
     { "SearchPathA", k_SearchPathA },
     { "OpenFile", k_OpenFile }, { "_hread", k__lread }, { "_hwrite", k__lwrite },
@@ -929,27 +1047,42 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "ReadFile",                   k_ReadFile },
     { "WriteFile",                  k_WriteFile },
     { "SetFilePointer",             k_SetFilePointer },
+    { "SetFilePointerEx",           k_SetFilePointerEx },
     { "SetEndOfFile",               k_SetEndOfFile },
     { "FlushFileBuffers",           k_FlushFileBuffers },
     { "GetFileSize",                k_GetFileSize },
+    { "GetFileSizeEx",              k_GetFileSizeEx },
     { "GetFileType",                k_GetFileType },
+    { "SetHandleInformation",       k_SetHandleInformation },
+    { "LockFileEx",                 k_LockFileEx },
     { "CloseHandle",                k_CloseHandle },
     { "GetFileTime",                k_GetFileTime },
     { "SetFileTime",                k_SetFileTime },
     { "GetFileInformationByHandle", k_GetFileInformationByHandle },
     { "GetFileAttributesA",         k_GetFileAttributesA },
+    { "GetFileAttributesExA",       k_GetFileAttributesExA },
+    { "GetFileAttributesExW",       k_GetFileAttributesExW },
     { "SetFileAttributesA",         k_SetFileAttributesA },
     { "CreateDirectoryA",           k_CreateDirectoryA },
     { "RemoveDirectoryA",           k_RemoveDirectoryA },
-    { "DeleteFileA",                k_DeleteFileA },
+    { "DeleteFileA",                k_DeleteFileA }, { "DeleteFileW", k_DeleteFileW },
     { "MoveFileA",                  k_MoveFileA },
     { "MoveFileExA",                k_MoveFileExA },
     { "CopyFileA",                  k_CopyFileA },
     { "FindFirstFileA",             k_FindFirstFileA }, { "FindFirstFileW", k_FindFirstFileW },
+    { "FindFirstFileExW",           k_FindFirstFileExW },
     { "FindNextFileA",              k_FindNextFileA }, { "FindNextFileW", k_FindNextFileW },
     { "FindClose",                  k_FindClose },
     { "GetDiskFreeSpaceA",          k_GetDiskFreeSpaceA },
+    { "GetDiskFreeSpaceExA",        k_GetDiskFreeSpaceExA },
+    { "GetDiskFreeSpaceExW",        k_GetDiskFreeSpaceExA },
     { "GetVolumeInformationA",      k_GetVolumeInformationA },
+    { "GetVolumeInformationW",      k_GetVolumeInformationW },
+    { "GetCompressedFileSizeA",     k_GetCompressedFileSizeA },
+    { "FindFirstVolumeW",           k_FindFirstVolumeW },
+    { "FindNextVolumeW",            k_FindNextVolumeW },
+    { "FindVolumeClose",            k_FindVolumeClose },
+    { "ReadDirectoryChangesW",      k_ReadDirectoryChangesW },
     { "GetDriveTypeA",              k_GetDriveTypeA },
     { "GetSystemTime",              k_GetSystemTime },
     { "GetLocalTime",               k_GetLocalTime },

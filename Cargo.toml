@@ -1,0 +1,14 @@
+[package]
+name = "gamerecomp"
+version = "0.0.1"
+edition = "2021"
+description = "GameReComp Rust application, GUI, CLI, pipeline orchestrator, task runner, and agent integration"
+
+[[bin]]
+name = "gamerecomp"
+path = "src/main.rs"
+
+[dependencies]
+
+[profile.release]
+opt-level = 2

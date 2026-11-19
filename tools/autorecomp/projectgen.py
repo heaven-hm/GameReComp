@@ -85,10 +85,13 @@ endif()
 file(GLOB RECOMP_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/recomp/gen/recomp_*.c")
 file(GLOB RUNTIME_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime/win32hle/*.c")
 
-# The embedded original image (recomp_image.S + .bin), when this project was
-# built to run without the original executable.
+# The embedded images (the original PE, and any bundled DLLs), when this
+# project was built to run without the original executable or its DLLs.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/recomp/gen/recomp_image.S")
-  set(RECOMP_IMAGE_ASM src/recomp/gen/recomp_image.S)
+  list(APPEND RECOMP_IMAGE_ASM src/recomp/gen/recomp_image.S)
+endif()
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/recomp/gen/recomp_companion_images.S")
+  list(APPEND RECOMP_IMAGE_ASM src/recomp/gen/recomp_companion_images.S)
 endif()
 
 add_executable(@NAME@
@@ -143,8 +146,10 @@ Rebuilt from `@EXE@` by GameReComp autorecomp.
   replaced function stays compiled as `sub_XXXXXXXX__lowlevel`)
 - Runtime: `src/runtime/win32hle/` (pinned copy), `src/runtime/recomp32/recomp_types.h`
 - Build: `cmake -S . -B build && cmake --build build -j`
-- Run: `./build/@NAME@ /path/to/@EXE@` (the original executable supplies the
-  program image and data; it is never modified)
+- Run: `./build/@NAME@` (the program image from `@EXE@` and any bundled DLLs
+  are embedded in the rebuilt binary, so the original executable is not
+  needed at run time; pass `[assets-dir]` or set `RECOMP_ASSETS_DIR` if the
+  program reads external data files)
 
 Build dependencies: a C compiler, CMake >= 3.16, SDL2 + SDL2_ttf development
 packages, pthreads. FFmpeg (libavformat/libavcodec/libavutil/libswresample) is

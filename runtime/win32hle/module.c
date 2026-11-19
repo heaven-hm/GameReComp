@@ -22,6 +22,7 @@
 
 /* kernel32_crt.c's codepage-1252 conversion (it owns the mapping). */
 int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
+int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
 #include "pe_loader.h"
 
 #define ERROR_MOD_NOT_FOUND       126u
@@ -33,7 +34,7 @@ int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
 static struct {
     char     guest[260];          /* full guest path, C:\...\name.dll */
     char     base_name[64];       /* lower case, for matching */
-    uint32_t base, rsrc, rsrc_size;
+    uint32_t base, rsrc, rsrc_size, image_size;
     int      system, refs;
 } g_mod[MAX_MODULES];
 static int g_nmod;
@@ -250,13 +251,30 @@ static uint32_t dir_lookup(uint32_t root, uint32_t dir, uint32_t want, int any) 
  * lookup, from the now-mapped PE's DataDirectory[2]. Without this an EXE's own
  * resources (MFC's strings, dialogs, menus) are invisible and MFC aborts. */
 static void ensure_rsrc(int m) {
-    if (m < 0 || g_mod[m].rsrc || !g_mod[m].base) return;
+    if (m < 0 || !g_mod[m].base || g_mod[m].system) return;
+    if (g_mod[m].rsrc && g_mod[m].image_size) return;
     uint32_t base = g_mod[m].base;
     if (MEM16(base) != 0x5A4D) return;                   /* 'MZ' */
     uint32_t nt = base + MEM32(base + 0x3C);
     if (MEM32(nt) != 0x00004550u || MEM16(nt + 24) != 0x10B) return;   /* 'PE\0\0', PE32 */
-    uint32_t dd = nt + 24 + 0x70;                        /* optional header + DataDirectory[2] (resource) */
-    g_mod[m].rsrc = MEM32(dd), g_mod[m].rsrc_size = MEM32(dd + 4);
+    if (!g_mod[m].image_size) g_mod[m].image_size = (MEM32(nt + 24 + 0x38) + 0xFFFu) & ~0xFFFu;
+    if (!g_mod[m].rsrc) {
+        uint32_t dd = nt + 24 + 0x70;                    /* optional header + DataDirectory[2] (resource) */
+        g_mod[m].rsrc = MEM32(dd), g_mod[m].rsrc_size = MEM32(dd + 4);
+    }
+}
+int hle_module_region(uint32_t addr, uint32_t *base, uint32_t *size) {
+    for (int i = 0; i < g_nmod; i++) {
+        if (g_mod[i].system || !g_mod[i].base) continue;
+        ensure_rsrc(i);
+        uint32_t sz = g_mod[i].image_size;
+        if (sz && addr >= g_mod[i].base && addr - g_mod[i].base < sz) {
+            if (base) *base = g_mod[i].base;
+            if (size) *size = sz;
+            return 1;
+        }
+    }
+    return 0;
 }
 static uint32_t find_resource(int m, uint32_t name, uint32_t type) {
     ensure_rsrc(m);
@@ -340,12 +358,78 @@ static void k_SetCurrentDirectoryA(void) {
     hle_set_last_error(3u);                               /* ERROR_PATH_NOT_FOUND */
     RET(0, 1);
 }
+static void k_GetModuleFileNameW(void) {                 /* (hModule, wbuf, size) */
+    int i = find_mod(A32(0));
+    uint16_t *wbuf = (uint16_t *)APTR(1);
+    uint32_t size = A32(2);
+    char sys[300];
+    const char *p = i < 0 ? NULL : g_mod[i].system ? (snprintf(sys, sizeof sys, "C:\\WINDOWS\\SYSTEM32\\%s", g_mod[i].base_name), sys)
+                                                   : g_mod[i].guest;
+    if (!p) { hle_set_last_error(ERROR_MOD_NOT_FOUND); RET(0, 3); }
+    uint32_t n = (uint32_t)strlen(p);
+    if (!wbuf || !size) RET(0, 3);
+    if (n >= size) n = size - 1;
+    char tmp[1024];
+    if (n >= sizeof tmp) n = sizeof tmp - 1;
+    memcpy(tmp, p, n); tmp[n] = 0;
+    hle_ansi_to_wide(tmp, wbuf, size);
+    RET(n, 3);
+}
+static void k_GetModuleHandleExW(void) {                 /* (flags, lpModuleName, &hModule) */
+    uint32_t flags = A32(0), out = A32(2);
+    if (flags & 4u) {                                    /* GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS */
+        uint32_t addr = A32(1), h = g_main >= 0 ? g_mod[g_main].base : 0x00400000u;
+        (void)addr;
+        if (out) MEM32(out) = h;
+        RET(1, 3);
+    }
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (!w) {
+        if (out) MEM32(out) = g_main >= 0 ? g_mod[g_main].base : 0x00400000u;
+        RET(1, 3);
+    }
+    char name[512];
+    if (!hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_MOD_NOT_FOUND); if (out) MEM32(out) = 0; RET(0, 3); }
+    int i = find_by_name(name);
+    uint32_t h = i >= 0 ? g_mod[i].base : system_module(name);
+    if (out) MEM32(out) = h;
+    if (!h) hle_set_last_error(ERROR_MOD_NOT_FOUND);
+    RET(h ? 1u : 0u, 3);
+}
+static void k_LoadLibraryExW(void) {                     /* (nameW, hFile, flags) */
+    if (A32(1)) {
+        hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+        RET(0, 3);
+    }
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024];
+    if (!w || !hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_MOD_NOT_FOUND); RET(0, 3); }
+    RET(load_library(name), 3);
+}
+static void k_GetCurrentDirectoryW(void) {               /* (size, wbuf) */
+    char cwd[1024], g[1024];
+    if (!getcwd(cwd, sizeof cwd)) cwd[0] = 0;
+    hle_guest_path(cwd, g, sizeof g);
+    uint32_t n = (uint32_t)strlen(g), size = A32(0);
+    uint16_t *wbuf = (uint16_t *)APTR(1);
+    if (!wbuf || n + 1 > size) RET(n + 1, 2);
+    hle_ansi_to_wide(g, wbuf, size);
+    RET(n, 2);
+}
+static void k_SetCurrentDirectoryW(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024], host[1024];
+    if (w && hle_wide_to_ansi(w, name, sizeof name) && hle_host_path(name, host, sizeof host) && chdir(host) == 0) RET(1, 1);
+    hle_set_last_error(3u);
+    RET(0, 1);
+}
 
 const win32hle_shim win32hle_module[] = {
     { "GetModuleHandleA",     k_GetModuleHandleA }, { "GetModuleHandleW", k_GetModuleHandleW },
-    { "GetModuleFileNameA",   k_GetModuleFileNameA },
+    { "GetModuleHandleExW",   k_GetModuleHandleExW },
+    { "GetModuleFileNameA",   k_GetModuleFileNameA }, { "GetModuleFileNameW", k_GetModuleFileNameW },
     { "LoadLibraryA",         k_LoadLibraryA },
-    { "LoadLibraryExA",       k_LoadLibraryExA },
+    { "LoadLibraryExA",       k_LoadLibraryExA }, { "LoadLibraryExW", k_LoadLibraryExW },
     { "FreeLibrary",          k_FreeLibrary },
     { "GetProcAddress",       k_GetProcAddress },
     { "FindResourceA",        k_FindResourceA },
@@ -354,7 +438,7 @@ const win32hle_shim win32hle_module[] = {
     { "FreeResource",         k_FreeResource },
     { "SizeofResource",       k_SizeofResource },
     { "LoadStringA",          k_LoadStringA },
-    { "GetCurrentDirectoryA", k_GetCurrentDirectoryA },
-    { "SetCurrentDirectoryA", k_SetCurrentDirectoryA },
+    { "GetCurrentDirectoryA", k_GetCurrentDirectoryA }, { "GetCurrentDirectoryW", k_GetCurrentDirectoryW },
+    { "SetCurrentDirectoryA", k_SetCurrentDirectoryA }, { "SetCurrentDirectoryW", k_SetCurrentDirectoryW },
     { 0, 0 }
 };

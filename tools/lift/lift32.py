@@ -2336,21 +2336,22 @@ class Lifter:
         A `push` of an arbitrary function pointer (a callback, a vtable arm)
         matches neither, so the extra compare on `ret` stays out of the rest.
         """
+        ret_next = {i.address + i.size
+                    for block in func.blocks.values()
+                    for i in block.instructions
+                    if i.mnemonic in ('ret', 'retn')}
         for block in func.blocks.values():
-            insns = block.instructions
-            if not insns:
-                continue
-            ret_next = {i.address + i.size for i in insns
-                        if i.mnemonic in ('ret', 'retn')}
-            for i in insns:
+            for i in block.instructions:
                 if i.mnemonic != 'push' or len(i.operands) != 1:
                     continue
                 if i.operands[0].type != X86_OP_IMM:
                     continue
                 tgt = i.operands[0].imm & 0xFFFFFFFF
-                if tgt in ret_next:
-                    return True
                 if func.address <= tgt < func.end:
+                    return True
+                if any(r <= tgt <= r + 32 for r in ret_next):
+                    return True
+                if tgt in self.lifted and func.address <= tgt <= func.end + 128:
                     return True
         return False
 

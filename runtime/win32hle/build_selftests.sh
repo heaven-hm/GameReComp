@@ -42,12 +42,15 @@ for t in *_selftest.c; do
   if $CC $ARCH -O1 -Wall -Wno-unused-function -Wno-unused-but-set-variable -I../recomp32 -I. $CORE "$t" $LIBS -lpthread -lm -o "$exe"; then
     SDL_VIDEODRIVER=$VDRV SDL_AUDIODRIVER=dummy "$exe" > "$exe.out" 2>&1
     case $? in
-      0)  echo "ok    $t" ;;
-      77) echo "skip  $t (no OpenGL context)" ;;
+      0)  echo "ok    $t"; rm -f "$exe" "$exe.out" ;;
+      77) echo "skip  $t (no OpenGL context)"; rm -f "$exe" "$exe.out" ;;
       *)  echo "FAIL  $t"; tail -5 "$exe.out"; fail=1 ;;
     esac
   else
     echo "BUILD FAIL  $t"; fail=1
   fi
 done
+if [ "$fail" = 0 ] && [ "${HLE_BASED:-0}" = 1 -o "$(uname -s)" = Darwin ]; then
+  rmdir "$TMP" 2>/dev/null || rm -rf "$TMP"
+fi
 exit $fail

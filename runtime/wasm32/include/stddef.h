@@ -1,0 +1,15 @@
+#ifndef _WASM_STDDEF_H
+#define _WASM_STDDEF_H
+
+typedef unsigned long size_t;
+typedef long          ptrdiff_t;
+typedef int           wchar_t;
+typedef long long     max_align_t;
+
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
+
+#define offsetof(type, member) __builtin_offsetof(type, member)
+
+#endif

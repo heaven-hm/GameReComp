@@ -114,7 +114,7 @@ def signal_name(exit_code):
 UNRESOLVED_RE = re.compile(r"\[pe\] unresolved import (\S+)")
 
 
-def strict_measurement(binary, pe_path, timeout=10.0):
+def strict_measurement(binary, pe_path, timeout=10.0, cwd=None, embedded=False):
     """Boot the same binary *without* RECOMP_PERMISSIVE.
 
     The permissive loader line always reads "0 unresolved" because the stub
@@ -122,7 +122,8 @@ def strict_measurement(binary, pe_path, timeout=10.0):
     count comes from a strict launch. This is a second real launch, not a
     re-reading of the first one's output.
     """
-    run = run_permissive(binary, pe_path, timeout=timeout, permissive=False)
+    run = run_permissive(binary, pe_path, cwd=cwd, timeout=timeout,
+                         permissive=False, embedded=embedded)
     text = run["stdout"] + "\n" + run["stderr"]
     boot = parse_boot_line(text) or {}
     bound = parse_bound_line(text) or {}
@@ -168,7 +169,8 @@ def pinned_runtime(project_dir):
     }
 
 
-def trace_run(binary, pe_path, timeout=10.0, tail=12, top=12):
+def trace_run(binary, pe_path, timeout=10.0, tail=12, top=12, cwd=None,
+              embedded=False):
     """Relaunch with RECOMP_TRACE=1 and profile the imports the guest called.
 
     A crash inside lifted code leaves no clue in the normal log: no stub was
@@ -178,8 +180,8 @@ def trace_run(binary, pe_path, timeout=10.0, tail=12, top=12):
     present, a spin shows one call repeating.
     """
     from collections import Counter
-    run = run_permissive(binary, pe_path, timeout=timeout,
-                         env_extra={"RECOMP_TRACE": "1"})
+    run = run_permissive(binary, pe_path, cwd=cwd, timeout=timeout,
+                         env_extra={"RECOMP_TRACE": "1"}, embedded=embedded)
     text = run["stdout"] + "\n" + run["stderr"]
     names = TRACE_RE.findall(text)
     counts = Counter(names)
@@ -255,6 +257,15 @@ def compare_baseline(rows, baseline):
             "outcome": row["outcome"],
         })
     return out
+
+
+def _is_image_embedded(project_dir):
+    """True when project.json records an embedded PE image."""
+    try:
+        record = json.loads((Path(project_dir) / "project.json").read_text())
+    except (OSError, ValueError):
+        return False
+    return bool(record.get("image_embedded"))
 
 
 def project_pe_path(project_dir):
@@ -399,22 +410,24 @@ def _decode(raw):
 
 
 def run_permissive(binary, pe_path, cwd=None, timeout=15.0, env_extra=None,
-                   headless=True, permissive=True):
+                   headless=True, permissive=True, embedded=False):
     """Launch one rebuilt binary permissively; capture its real output.
 
-    The launch mirrors the pipeline's own run stage: the original PE is passed
-    as an absolute path, the working directory is the game's asset directory,
-    and the SDL drivers are the dummy ones so a diagnostic sweep cannot open a
-    window on the user's desktop.
+    When `embedded` is True, the binary carries its own PE image and runs with
+    no original executable argument; otherwise `pe_path` is passed as argv[1].
+    The working directory is the game's asset directory (or `cwd`), and the
+    SDL drivers are the dummy ones so a diagnostic sweep cannot open a window
+    on the user's desktop.
 
     Returns a dict of measured facts. Never raises for a bad launch: a failure
     to start is itself the result and is recorded verbatim.
     """
-    pe_abs = str(Path(pe_path).resolve())
+    pe_abs = str(Path(pe_path).resolve()) if pe_path else None
+    argv = [str(binary)] if (embedded or not pe_abs) else [str(binary), pe_abs]
     result = {
         "binary": str(binary),
         "pe": pe_abs,
-        "argv": [str(binary), pe_abs],
+        "argv": argv,
         "cwd": str(cwd) if cwd else None,
         "timeout_seconds": timeout,
         "exit_code": None,
@@ -437,12 +450,17 @@ def run_permissive(binary, pe_path, cwd=None, timeout=15.0, env_extra=None,
 
     # The game's own directory is the working directory: it opens its data
     # files by relative path, exactly as the pipeline's run stage does.
-    run_cwd = str(cwd or Path(pe_abs).parent)
+    if cwd and Path(cwd).is_dir():
+        run_cwd = str(cwd)
+    elif pe_abs and Path(pe_abs).parent.is_dir():
+        run_cwd = str(Path(pe_abs).parent)
+    else:
+        run_cwd = str(Path(binary).resolve().parent)
     result["cwd"] = run_cwd
     started = time.time()
     try:
         proc = subprocess.Popen(
-            [str(binary), pe_abs],
+            argv,
             cwd=run_cwd, env=env, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, stdin=subprocess.DEVNULL,
             start_new_session=True)
@@ -482,6 +500,7 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
     """
     project_dir = Path(project_dir)
     pe_path, name = project_pe_path(project_dir)
+    embedded = _is_image_embedded(project_dir)
     row = {
         "project": project_dir.name,
         "name": name,
@@ -507,12 +526,13 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
         "raw_error": None,
         "stderr_tail": "",
     }
-    if not pe_path:
-        row["raw_error"] = f"{project_dir}/project.json is missing or unreadable"
-        return row
-    if not Path(pe_path).exists():
-        row["raw_error"] = f"original PE not found at {pe_path}"
-        return row
+    if not embedded:
+        if not pe_path:
+            row["raw_error"] = f"{project_dir}/project.json is missing or unreadable"
+            return row
+        if not Path(pe_path).exists():
+            row["raw_error"] = f"original PE not found at {pe_path}"
+            return row
 
     binary = binary_path(project_dir, name)
     row["binary"] = str(binary)
@@ -521,9 +541,14 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
         return row
     row["binary_exists"] = True
 
-    strict = (strict_measurement(binary, pe_path, timeout=min(timeout, 10.0))
+    run_cwd = (Path(pe_path).parent
+               if (pe_path and Path(pe_path).parent.is_dir())
+               else project_dir)
+    strict = (strict_measurement(binary, pe_path, timeout=min(timeout, 10.0),
+                                 cwd=run_cwd, embedded=embedded)
               if strict_check else None)
-    run = run_permissive(binary, pe_path, timeout=timeout)
+    run = run_permissive(binary, pe_path, cwd=run_cwd, timeout=timeout,
+                         embedded=embedded)
     row["exit_code"] = run["exit_code"]
     row["timed_out"] = run["timed_out"]
     row["duration_seconds"] = run["duration_seconds"]
@@ -557,11 +582,13 @@ def measure_project(project_dir, timeout=15.0, strict_check=True,
         row["strict"] = strict
     if row["outcome"] == "crashed" and trace_crashes:
         row["crash_trace"] = trace_run(binary, pe_path,
-                                       timeout=min(timeout, 10.0))
+                                       timeout=min(timeout, 10.0),
+                                       cwd=run_cwd, embedded=embedded)
     if row["outcome"] == "timeout" and trace_crashes:
         # A run that reaches the deadline entered something; the dispatch
         # profile says whether that something is a game loop.
-        row["import_profile"] = trace_run(binary, pe_path, timeout=timeout)
+        row["import_profile"] = trace_run(binary, pe_path, timeout=timeout,
+                                          cwd=run_cwd, embedded=embedded)
     return row
 
 

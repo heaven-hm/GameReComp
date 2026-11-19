@@ -1,35 +1,30 @@
 # Desktop GUI
 
-**Status: not implemented, deliberately deferred.** The `autorecomp` CLI is the
-only interface today. The product decision (owner, 2026-10-29) is that the GUI
-comes after the CLI pipeline is demonstrated end to end — it is not built in
-this phase. When it is built it is a native **C++ / Qt 6 Widgets** application,
-not a Python or web front end. This page records the stack decision and the
-contract the GUI must keep when it is built, so that the GUI cannot drift into
-a second, differently-behaving pipeline.
+**Status: implemented in Rust + SDL2/SDL2_ttf (`src/gui.rs`).** Both the
+`./GameReComp` CLI and the desktop GUI compile into a single native Rust binary
+(`target/release/gamerecomp`, staged at `gui/build/gamerecomp` by
+`gui/CMakeLists.txt`), sharing `AppConfig`, `ProjectModel`, `pe::inspect_pe`,
+and `orchestrator` directly without Python/Qt/webview dependencies.
 
-The GUI is a front end over the same backend as the CLI. It does not lift,
-compile, run or verify anything itself: every action maps to an `autorecomp`
-invocation or to a file those invocations produced.
+The GUI is a native window over the same orchestration backend and `reports/`
+contract as the CLI: every run spawns `./GameReComp` / the `autorecomp`
+pipeline and reads produced `project.json` and `reports/*.json` files rather
+than maintaining a second interpretation of pipeline results.
 
 ## Stack decision
 
-**Qt 6 Widgets**, C++17, layered on the `autorecomp` command line.
+**Rust (`edition = "2021"`, zero third-party Cargo crates) + SDL2 / SDL2_ttf**
+(`build.rs` discovers `sdl2` and `SDL2_ttf` via `pkg-config`):
 
-- Licence: Qt 6 is available under LGPLv3 for dynamic linking — acceptable for
-  this MIT project as long as Qt itself is not vendored and remains
-  replaceable. This is recorded here so a later change to static linking or
-  commercial-only modules is a deliberate licensing decision, not an accident.
-- Widgets rather than QML: the application is form-and-table shaped (stage
-  graph, function list, log panes, evidence tables). Widgets give native
-  controls and accessibility without a separate UI runtime or GPU dependency.
-- No web service and no cloud dependency. Tauri was considered and not chosen:
-  it adds a webview runtime and a larger packaging surface for no benefit to a
-  desktop reconstruction tool.
-
-The GUI process must not require any proprietary network service. AI-assisted
-readability is configured through `REVENG_AI_CMD` (see
-[SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md)) and stays optional.
+- Matches the 3-tier architecture: Rust for GUI, CLI, orchestration, tasks,
+  configuration, logging, reporting, and agent integration (`src/*.rs`); Python
+  for PCRecomp reverse engineering (`tools/`); C/C++ for Win32 HLE and generated
+  code (`runtime/`, generated `src/recomp/gen/`).
+- No Python UI framework, Qt installation, web service, or browser webview is
+  required.
+- AI-assisted readability remains optional and goes through `REVENG_AI_CMD` via
+  `./GameReComp readability <project>` or `./GameReComp agent <project>`
+  (see `src/agent.rs` and [SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md)).
 
 ## Contract with the CLI
 
@@ -84,25 +79,22 @@ complete. No animated "processing" substitute for real progress.
 
 ## Packaging and tests
 
-- Desktop releases: Windows x64 and macOS ARM64, signed where practical.
-- GUI smoke tests run headless with Qt's offscreen platform, driven by a
-  synthetic fixture project (no game binary), asserting that the wizard
-  rejects a PE32+ input and that the dashboard shows the recorded status of a
-  fixture project.
-- CLI parity test: for a fixture, the GUI's displayed status, binary hash and
-  provenance totals equal those in `reports/`; the GUI may not hold a second
-  interpretation of the run.
+- Built cleanly offline with `cargo build --release` or staged into
+  `gui/build/gamerecomp` via `cmake -S gui -B gui/build && cmake --build gui/build`.
+- Headless verification runs without opening a window via:
+  - `gui/build/gamerecomp --selftest <project_dir> --repo .` (loads `project.json`
+    and `reports/` using `ProjectModel` and validates stage/provenance/build hashes)
+  - `gui/build/gamerecomp --selftest-pe <pe_file>` (validates PE32 vs PE32+
+    inspection using `src/pe.rs`, matching CLI fail-closed rules).
+- Interactive launch: `gui/build/gamerecomp [-o <project_dir>]` or
+  `./GameReComp --gui [-o <project_dir>]`.
 
 ## Implementation status
 
 | Piece | Status |
 |---|---|
-| Stack decision recorded (Qt 6 Widgets, LGPLv3 dynamic) | done — this page |
-| Scheduling | deferred; CLI pipeline and verification come first |
-| Project wizard | not implemented |
-| Run dashboard with real stage markers and cancel | not implemented |
-| Source explorer with provenance badges | not implemented |
-| Build & run screen with hashes | not implemented |
-| Verification dashboard | not implemented |
-| Project management | not implemented |
-| Headless GUI smoke tests and CLI parity tests | not implemented |
+| Rust + SDL2/SDL2_ttf stack (`src/gui.rs`, `build.rs`) | implemented |
+| Headless GUI & PE selftests (`--selftest`, `--selftest-pe`) | implemented (verified in `verify.sh`) |
+| Project model loader & provenance parity (`src/model.rs`, `src/json.rs`) | implemented |
+| Interactive PE selector, stage view, function explorer & live runner | implemented in `src/gui.rs` (`sdl_ui`) |
+| CLI parity / report consistency | shared `ProjectModel` & `pe::inspect_pe` |

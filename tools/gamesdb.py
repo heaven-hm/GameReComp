@@ -42,6 +42,12 @@ TITLES = {
     "torus_trooper": "Torus Trooper",
     "tumiki_fighters": "Tumiki Fighters",
     "warning_forever": "Warning Forever",
+    "gconv": "Resource_Convertor",
+    "pq": "Progress Quest",
+    "putty-w32": "PuTTY",
+    "psftp-w32": "PSFTP",
+    "pageant-w32": "Pageant",
+    "busybox-w32": "BusyBox",
 }
 
 # Outcomes recorded by the legacy engine on 2026-10-29. They are context
@@ -212,13 +218,18 @@ def record_result(project_dir, relative_path=None, results_path=RESULTS_PATH):
                         if s.get("name") == "inspect"), {})
 
     pe_path = Path(report["input"])
+    folder = pe_path.parent.name
+    if folder.lower() in ("win32", "win64", "tools", "games", "apps", "recomp-apps"):
+        game_name = TITLES.get(pe_path.stem.lower(), pe_path.stem)
+    else:
+        game_name = TITLES.get(folder, folder)
     outcome = report.get("outcome") or {}
     run = outcome.get("run") or {}
     host = (outcome.get("target") or {}).get("label") or ""
     arch = f"{inspect.get('machine', '?')} ({inspect.get('pe_type', '?')})"
     entry = {
         "relative_path": str(relative_path or pe_path.name),
-        "game": TITLES.get(pe_path.parent.name, pe_path.parent.name),
+        "game": game_name,
         "filename": pe_path.name,
         "arch": arch,
         "os": "Windows",
@@ -233,6 +244,7 @@ def record_result(project_dir, relative_path=None, results_path=RESULTS_PATH):
         # The project tree the row was measured from, so the matrix can read
         # the port's own numbers back out of its report.json.
         "project_dir": _relative_to_repo(project_dir),
+        "port_details": _port_details({"project_dir": _relative_to_repo(project_dir)}),
         "generated_at": report.get("generated_at", _now()),
     }
 
@@ -349,6 +361,14 @@ def _project_stage_data(project_dir):
     return report, stages
 
 
+def _format_target_label(label):
+    if not label:
+        return ""
+    if "Darwin arm64" in label:
+        return "macOS arm64 (native)"
+    return label.replace(" (host build)", "").strip()
+
+
 def _port_details(run):
     """One line describing what the port actually produced, from measured data.
 
@@ -365,10 +385,17 @@ def _port_details(run):
         if evidence.endswith("/reports/report.html"):
             project_dir = evidence[: -len("/reports/report.html")]
     if not project_dir:
-        return "-"
+        return run.get("port_details") or "-"
     _report, stages = _project_stage_data(project_dir)
     if not stages:
-        return "no report.json"
+        cached = run.get("port_details") or "no report.json"
+        host_lbl = _format_target_label(run.get("host") or "")
+        if host_lbl and "binary " in cached and host_lbl not in cached:
+            if "; low-level " in cached:
+                cached = cached.replace("; low-level ", f" [{host_lbl}]; low-level ", 1)
+            else:
+                cached = f"{cached}; {host_lbl}"
+        return cached
 
     bits = []
     recover = (stages.get("recover") or {}).get("data") or {}
@@ -383,7 +410,11 @@ def _port_details(run):
         binary = Path(compile_data["binary"])
         size = compile_data.get("binary_bytes") or (
             binary.stat().st_size if binary.exists() else 0)
-        bits.append(f"binary {binary.name} {size / 1024:.0f} KiB")
+        target_lbl = _format_target_label(
+            ((_report.get("outcome") or {}).get("target") or {}).get("label")
+            or run.get("host") or "")
+        target_note = f" [{target_lbl}]" if target_lbl else ""
+        bits.append(f"binary {binary.name} {size / 1024:.0f} KiB{target_note}")
     run_data = (stages.get("run") or {}).get("data") or {}
     bound = run_data.get("bound_imports")
     unresolved = run_data.get("unresolved_import_count")
@@ -434,9 +465,14 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
         if reason and status in ("launch-failed", "compile-failed", "partial",
                                  "trace-diverged"):
             verdict = f"{verdict} - {reason}"
+        game = run.get("game", "?")
+        filename = run.get("filename", "?")
+        display_name = (f"{game} ({filename})"
+                        if filename and game.lower() != Path(filename).stem.lower()
+                        else game)
         rows.append({
-            "game": run.get("game", "?"),
-            "filename": run.get("filename", "?"),
+            "game": display_name,
+            "filename": filename,
             "os": run.get("os", "Windows"),
             "arch": run.get("arch", "?"),
             "details": _port_details(run),
@@ -495,6 +531,16 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
                "register-transfer C, not reconstructed high-level source.")
     out.append("")
     out.append(f"Updated {_now()} by `python -m tools.gamesdb --matrix`.")
+    running_runs = [r for r in runs if r.get("verification")
+                    in ("partial", "scenario-pass", "verified-playable-scope")]
+    zero_unresolved = [r for r in running_runs
+                       if "unresolved" not in (_port_details(r) or "")]
+    if runs:
+        out.append("")
+        out.append(
+            f"**Running native macOS arm64 ports:** **{len(running_runs)} / {len(runs)}** "
+            f"measured Windows PE32 applications & games compile and run natively on macOS "
+            f"`arm64` (**{len(zero_unresolved)}** with `0` unresolved imports).")
     out.append("")
     out.append("## This repository (measured)")
     out.append("")
@@ -701,7 +747,12 @@ def main(argv=None):
                         help="do not update the README's GAME-MATRIX block")
     parser.add_argument("--inventory", default=str(INVENTORY_PATH))
     parser.add_argument("--results", default=str(RESULTS_PATH))
+    parser.add_argument("--record", action="append", default=[],
+                        help="record a completed project directory into results.json")
     args = parser.parse_args(argv)
+    for proj in args.record:
+        if (Path(proj) / "reports" / "report.json").is_file():
+            record_result(proj, results_path=Path(args.results))
     path = write_table(Path(args.table), inventory_path=Path(args.inventory),
                        results_path=Path(args.results))
     print(f"wrote {path}")

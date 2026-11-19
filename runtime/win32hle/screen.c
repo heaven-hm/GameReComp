@@ -847,6 +847,16 @@ void hle_screen_pump(void) {
             hle_input_mouse(m, gx, gy);
             break;
         }
+        case SDL_DROPFILE:
+            if (e.drop.file) {
+                char guest[1024];
+                hle_guest_path(e.drop.file, guest, sizeof guest);
+                hle_set_dropped_file(guest);
+                SDL_free(e.drop.file);
+                uint32_t h = hle_first_hwnd();
+                if (h) hle_post_message(h, 0x0233u /* WM_DROPFILES */, 0xD001u, 0);
+            }
+            break;
         case SDL_WINDOWEVENT:
             if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) g_menu_depth = 0;   /* placed for the old size */
             if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e.window.event == SDL_WINDOWEVENT_EXPOSED) g_shown_seq = ~0u;
@@ -908,6 +918,7 @@ int hle_screen_open(const char *title, int fullscreen, int headless) {
     if (!g_ren) g_ren = SDL_CreateRenderer(g_win, -1, SDL_RENDERER_SOFTWARE);
     if (!g_ren) { fprintf(stderr, "[screen] renderer: %s\n", SDL_GetError()); return -1; }
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+    SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     SDL_ShowCursor(SDL_DISABLE);                         /* the game draws its own */
     hle_cursor_hook = warp;
     SDL_RendererInfo ri;

@@ -28,6 +28,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
 #include <net/if.h>
@@ -355,12 +356,299 @@ static void w_EnumProtocolsA(void) {
     RET(1, 3);
 }
 
+static int win_af_to_host(int af) { return af == 23 ? AF_INET6 : af; }
+static int host_af_to_win(int af) { return af == AF_INET6 ? 23 : af; }
+
+static uint32_t g_ev_sock[64];
+static uint32_t g_ev_mask[64];
+static int g_ev_count;
+
+static void w_accept(void) {
+    int fd = fd_of(A32(0));
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(INVALID_SOCKET, 3); return; }
+    struct sockaddr_in sa;
+    socklen_t sal = sizeof sa;
+    int nfd = accept(fd, (struct sockaddr *)&sa, &sal);
+    if (nfd < 0) { g_wsa_error = wsa_errno(errno); RET(INVALID_SOCKET, 3); return; }
+    if (nfd >= 0x10000) { close(nfd); g_wsa_error = 10024u; RET(INVALID_SOCKET, 3); return; }
+    if (APTR(1) && A32(2) && MEM32(A32(2)) >= 16) {
+        to_guest(&sa, (uint8_t *)APTR(1));
+        MEM32(A32(2)) = 16;
+    }
+    RET(SOCK_BASE + (uint32_t)nfd, 3);
+}
+
+static void w_shutdown(void) {
+    int fd = fd_of(A32(0));
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 2); return; }
+    if (shutdown(fd, (int)A32(1)) != 0) FAIL(2);
+    RET(0, 2);
+}
+
+static void w_getpeername(void) {
+    int fd = fd_of(A32(0));
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); return; }
+    struct sockaddr_in sa;
+    socklen_t l = sizeof sa;
+    if (getpeername(fd, (struct sockaddr *)&sa, &l) != 0) FAIL(3);
+    if (APTR(1) && A32(2) && MEM32(A32(2)) >= 16) {
+        to_guest(&sa, (uint8_t *)APTR(1));
+        MEM32(A32(2)) = 16;
+    }
+    RET(0, 3);
+}
+
+static void w_select(void) {
+    uint32_t sets[3] = { A32(1), A32(2), A32(3) };
+    uint32_t tv_va = A32(4);
+    struct pollfd pfds[192];
+    nfds_t np = 0;
+    for (int s = 0; s < 3; s++) {
+        if (!sets[s]) continue;
+        uint32_t cnt = MEM32(sets[s]);
+        if (cnt > 64) cnt = 64;
+        short ev = (s == 0) ? POLLIN : (s == 1) ? POLLOUT : POLLPRI;
+        for (uint32_t i = 0; i < cnt; i++) {
+            int fd = fd_of(MEM32(sets[s] + 4u + 4u * i));
+            if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 5); return; }
+            nfds_t k = 0;
+            while (k < np && pfds[k].fd != fd) k++;
+            if (k == np && np < 192) { pfds[np].fd = fd; pfds[np].events = 0; pfds[np].revents = 0; np++; }
+            if (k < np) pfds[k].events |= ev;
+        }
+    }
+    int ms = -1;
+    if (tv_va) {
+        int32_t sec = (int32_t)MEM32(tv_va), usec = (int32_t)MEM32(tv_va + 4);
+        if (sec < 0 || usec < 0) ms = 0;
+        else if (sec > 2000000) ms = 2000000000;
+        else ms = sec * 1000 + (usec + 999) / 1000;
+    }
+    int rc = np > 0 ? poll(pfds, np, ms) : 0;
+    if (rc < 0) FAIL(5);
+    uint32_t total = 0;
+    for (int s = 0; s < 3; s++) {
+        if (!sets[s]) continue;
+        uint32_t cnt = MEM32(sets[s]);
+        if (cnt > 64) cnt = 64;
+        uint32_t out = 0;
+        short want = (s == 0) ? (POLLIN | POLLHUP | POLLERR) : (s == 1) ? (POLLOUT | POLLERR) : POLLPRI;
+        for (uint32_t i = 0; i < cnt; i++) {
+            uint32_t gsock = MEM32(sets[s] + 4u + 4u * i);
+            int fd = fd_of(gsock);
+            int hit = 0;
+            for (nfds_t k = 0; k < np; k++) {
+                if (pfds[k].fd == fd && (pfds[k].revents & want)) { hit = 1; break; }
+            }
+            if (hit) MEM32(sets[s] + 4u + 4u * out++) = gsock;
+        }
+        MEM32(sets[s]) = out;
+        total += out;
+    }
+    RET(total, 5);
+}
+
+static void w___WSAFDIsSet(void) {
+    uint32_t s = A32(0), set_va = A32(1);
+    if (!set_va) { RET(0, 2); return; }
+    uint32_t cnt = MEM32(set_va);
+    if (cnt > 64) cnt = 64;
+    for (uint32_t i = 0; i < cnt; i++) {
+        if (MEM32(set_va + 4u + 4u * i) == s) { RET(1, 2); return; }
+    }
+    RET(0, 2);
+}
+
+static void w_gethostbyaddr(void) {
+    typedef struct { uint32_t name, aliases; uint16_t type, len; uint32_t list; uint32_t lp[9]; uint32_t addr[8]; uint32_t none; char nm[256]; } guest_hostent;
+    static __thread guest_hostent *gh;
+    const void *addr = APTR(0);
+    int len = (int)A32(1), type = (int)A32(2);
+    if (!addr) { g_wsa_error = WSAEINVAL; RET(0, 3); return; }
+    struct hostent *h = gethostbyaddr(addr, (socklen_t)len, win_af_to_host(type));
+    if (!h) { g_wsa_error = WSAHOST_NOT_FOUND; RET(0, 3); return; }
+    if (!gh) gh = (guest_hostent *)hle_alloc(sizeof *gh);
+    if (!gh) { RET(0, 3); return; }
+    memset(gh, 0, sizeof *gh);
+    uint32_t b = hle_va(gh);
+    snprintf(gh->nm, sizeof gh->nm, "%s", h->h_name ? h->h_name : "");
+    gh->name = b + (uint32_t)offsetof(guest_hostent, nm);
+    gh->aliases = b + (uint32_t)offsetof(guest_hostent, none);
+    gh->type = (uint16_t)host_af_to_win(h->h_addrtype);
+    gh->len = (uint16_t)h->h_length;
+    gh->list = b + (uint32_t)offsetof(guest_hostent, lp);
+    int n = 0;
+    while (h->h_addr_list[n] && n < 8) {
+        memcpy(&gh->addr[n], h->h_addr_list[n], h->h_length <= 4 ? (size_t)h->h_length : 4);
+        gh->lp[n] = b + (uint32_t)offsetof(guest_hostent, addr[n]);
+        n++;
+    }
+    RET(b, 3);
+}
+
+static uint32_t sockaddr_to_guest_any(const struct sockaddr *sa, socklen_t len) {
+    if (!sa) return 0;
+    if (sa->sa_family == AF_INET && len >= sizeof(struct sockaddr_in)) {
+        uint32_t va = hle_va(hle_alloc(16));
+        if (va) to_guest((const struct sockaddr_in *)sa, (uint8_t *)hle_ptr(va));
+        return va;
+    }
+    if (sa->sa_family == AF_INET6 && len >= sizeof(struct sockaddr_in6)) {
+        const struct sockaddr_in6 *s6 = (const struct sockaddr_in6 *)sa;
+        uint32_t va = hle_va(hle_alloc(28));
+        if (!va) return 0;
+        memset(hle_ptr(va), 0, 28);
+        MEM16(va) = 23; /* AF_INET6 on Windows */
+        MEM16(va + 2) = s6->sin6_port;
+        MEM32(va + 4) = s6->sin6_flowinfo;
+        memcpy((uint8_t *)hle_ptr(va) + 8, &s6->sin6_addr, 16);
+        MEM32(va + 24) = s6->sin6_scope_id;
+        return va;
+    }
+    return 0;
+}
+
+static int sockaddr_to_host_any(uint32_t va, uint32_t glen, struct sockaddr_storage *ss, socklen_t *hlen) {
+    if (!va || glen < 4) return 0;
+    uint16_t fam = MEM16(va);
+    memset(ss, 0, sizeof *ss);
+    if (fam == 2 && glen >= 16) {
+        to_host((const uint8_t *)hle_ptr(va), (struct sockaddr_in *)ss);
+        *hlen = sizeof(struct sockaddr_in);
+        return 1;
+    }
+    if (fam == 23 && glen >= 28) {
+        struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)ss;
+        s6->sin6_len = sizeof *s6;
+        s6->sin6_family = AF_INET6;
+        s6->sin6_port = MEM16(va + 2);
+        s6->sin6_flowinfo = MEM32(va + 4);
+        memcpy(&s6->sin6_addr, (const uint8_t *)hle_ptr(va) + 8, 16);
+        s6->sin6_scope_id = MEM32(va + 24);
+        *hlen = sizeof(struct sockaddr_in6);
+        return 1;
+    }
+    return 0;
+}
+
+static void w_getaddrinfo(void) {
+    const char *node = ASTR(0), *serv = ASTR(1);
+    uint32_t hints_va = A32(2), out_va = A32(3);
+    if (!out_va) { RET(WSAEINVAL, 4); return; }
+    MEM32(out_va) = 0;
+    struct addrinfo hints, *hp = NULL, *res = NULL;
+    if (hints_va) {
+        memset(&hints, 0, sizeof hints);
+        hints.ai_flags = (int)(MEM32(hints_va) & 0x7u);
+        hints.ai_family = win_af_to_host((int)MEM32(hints_va + 4));
+        hints.ai_socktype = (int)MEM32(hints_va + 8);
+        hints.ai_protocol = (int)MEM32(hints_va + 12);
+        hp = &hints;
+    }
+    int rc = getaddrinfo(node, serv, hp, &res);
+    if (rc != 0) { g_wsa_error = WSAHOST_NOT_FOUND; RET(WSAHOST_NOT_FOUND, 4); return; }
+    uint32_t head = 0, tail = 0;
+    for (struct addrinfo *p = res; p; p = p->ai_next) {
+        uint32_t gsa = sockaddr_to_guest_any(p->ai_addr, p->ai_addrlen);
+        if (!gsa) continue;
+        uint32_t node_va = hle_va(hle_alloc(32));
+        if (!node_va) { hle_free(hle_ptr(gsa)); continue; }
+        uint32_t cn = p->ai_canonname ? hle_guest_strdup(p->ai_canonname) : 0;
+        MEM32(node_va + 0) = (uint32_t)p->ai_flags;
+        MEM32(node_va + 4) = (uint32_t)host_af_to_win(p->ai_family);
+        MEM32(node_va + 8) = (uint32_t)p->ai_socktype;
+        MEM32(node_va + 12) = (uint32_t)p->ai_protocol;
+        MEM32(node_va + 16) = (p->ai_family == AF_INET6) ? 28u : 16u;
+        MEM32(node_va + 20) = cn;
+        MEM32(node_va + 24) = gsa;
+        MEM32(node_va + 28) = 0;
+        if (!head) head = node_va;
+        else MEM32(tail + 28) = node_va;
+        tail = node_va;
+    }
+    freeaddrinfo(res);
+    MEM32(out_va) = head;
+    RET(head ? 0u : WSAHOST_NOT_FOUND, 4);
+}
+
+static void w_freeaddrinfo(void) {
+    uint32_t cur = A32(0);
+    while (cur) {
+        uint32_t next = MEM32(cur + 28);
+        uint32_t cn = MEM32(cur + 20), sa = MEM32(cur + 24);
+        if (cn) hle_free(hle_ptr(cn));
+        if (sa) hle_free(hle_ptr(sa));
+        hle_free(hle_ptr(cur));
+        cur = next;
+    }
+    RETV(1);
+}
+
+static void w_getnameinfo(void) {
+    struct sockaddr_storage ss;
+    socklen_t slen = 0;
+    if (!sockaddr_to_host_any(A32(0), A32(1), &ss, &slen)) {
+        g_wsa_error = WSAEINVAL;
+        RET(WSAEINVAL, 7);
+        return;
+    }
+    char *nbuf = (char *)APTR(2), *sbuf = (char *)APTR(4);
+    int rc = getnameinfo((const struct sockaddr *)&ss, slen, nbuf, (socklen_t)A32(3),
+                         sbuf, (socklen_t)A32(5), (int)A32(6));
+    if (rc != 0) { g_wsa_error = WSAHOST_NOT_FOUND; RET(WSAHOST_NOT_FOUND, 7); return; }
+    RET(0, 7);
+}
+
+static void w_WSASocketA(void) {
+    int af = win_af_to_host((int)A32(0)), type = (int)A32(1), proto = (int)A32(2);
+    int fd = socket(af, type, proto);
+    if (fd < 0) { g_wsa_error = wsa_errno(errno); RET(INVALID_SOCKET, 6); return; }
+    if (fd >= 0x10000) { close(fd); g_wsa_error = 10024u; RET(INVALID_SOCKET, 6); return; }
+    RET(SOCK_BASE + (uint32_t)fd, 6);
+}
+
+static void w_WSAEventSelect(void) {
+    uint32_t s = A32(0), mask = A32(2);
+    int fd = fd_of(s);
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); return; }
+    if (mask) {
+        int fl = fcntl(fd, F_GETFL, 0);
+        if (fl >= 0) fcntl(fd, F_SETFL, fl | O_NONBLOCK);
+    }
+    int idx = -1;
+    for (int i = 0; i < g_ev_count; i++) if (g_ev_sock[i] == s) { idx = i; break; }
+    if (idx < 0 && g_ev_count < 64) idx = g_ev_count++;
+    if (idx >= 0) { g_ev_sock[idx] = s; g_ev_mask[idx] = mask; }
+    RET(0, 3);
+}
+
+static void w_WSAEnumNetworkEvents(void) {
+    uint32_t s = A32(0), out_va = A32(2);
+    int fd = fd_of(s);
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); return; }
+    if (!out_va) { g_wsa_error = WSAEINVAL; RET(SOCKET_ERROR, 3); return; }
+    memset(hle_ptr(out_va), 0, 44);
+    uint32_t mask = 0x3Fu;
+    for (int i = 0; i < g_ev_count; i++) if (g_ev_sock[i] == s) { mask = g_ev_mask[i]; break; }
+    struct pollfd pfd = { fd, POLLIN | POLLOUT | POLLPRI, 0 };
+    uint32_t ev = 0;
+    if (poll(&pfd, 1, 0) > 0) {
+        if (pfd.revents & POLLIN) ev |= (mask & 0x08u /* FD_ACCEPT */) ? 0x08u : FD_READ;
+        if (pfd.revents & POLLOUT) ev |= (mask & 0x10u /* FD_CONNECT */) ? 0x10u : FD_WRITE;
+        if (pfd.revents & POLLHUP) ev |= 0x20u; /* FD_CLOSE */
+    }
+    MEM32(out_va) = ev & (mask ? mask : 0x3Fu);
+    RET(0, 3);
+}
+
 #define SHIM2(ord, name, fn) { "wsock32.dll#" #ord, fn }, { name, fn }
 const win32hle_shim win32hle_wsock32[] = {
+    SHIM2(1, "accept", w_accept),
     SHIM2(1111, "EnumProtocolsA", w_EnumProtocolsA),
     SHIM2(2, "bind", w_bind),
     SHIM2(3, "closesocket", w_closesocket),
     SHIM2(4, "connect", w_connect),
+    SHIM2(5, "getpeername", w_getpeername),
     SHIM2(6, "getsockname", w_getsockname),
     SHIM2(7, "getsockopt", w_getsockopt),
     SHIM2(8, "htonl", w_htonl),
@@ -373,10 +661,13 @@ const win32hle_shim win32hle_wsock32[] = {
     SHIM2(15, "ntohs", w_ntohs),
     SHIM2(16, "recv", w_recv),
     SHIM2(17, "recvfrom", w_recvfrom),
+    SHIM2(18, "select", w_select),
     SHIM2(19, "send", w_send),
     SHIM2(20, "sendto", w_sendto),
     SHIM2(21, "setsockopt", w_setsockopt),
+    SHIM2(22, "shutdown", w_shutdown),
     SHIM2(23, "socket", w_socket),
+    SHIM2(51, "gethostbyaddr", w_gethostbyaddr),
     SHIM2(52, "gethostbyname", w_gethostbyname),
     SHIM2(57, "gethostname", w_gethostname),
     SHIM2(101, "WSAAsyncSelect", w_WSAAsyncSelect),
@@ -385,5 +676,12 @@ const win32hle_shim win32hle_wsock32[] = {
     SHIM2(112, "WSASetLastError", w_WSASetLastError),
     SHIM2(115, "WSAStartup", w_WSAStartup),
     SHIM2(116, "WSACleanup", w_WSACleanup),
+    SHIM2(151, "__WSAFDIsSet", w___WSAFDIsSet),
+    { "getaddrinfo", w_getaddrinfo },
+    { "freeaddrinfo", w_freeaddrinfo },
+    { "getnameinfo", w_getnameinfo },
+    { "WSASocketA", w_WSASocketA },
+    { "WSAEventSelect", w_WSAEventSelect },
+    { "WSAEnumNetworkEvents", w_WSAEnumNetworkEvents },
     { 0, 0 }
 };

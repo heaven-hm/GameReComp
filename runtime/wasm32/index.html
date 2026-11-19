@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>@TITLE@ — GameReComp WebAssembly</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1117;
+      --panel: #171b24;
+      --border: #2a3142;
+      --text: #e6ebf5;
+      --muted: #98a2b3;
+      --accent: #4c8dff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.4 system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      align-items: center;
+      padding: 18px;
+      gap: 12px;
+    }
+    header {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .title { font-weight: 600; font-size: 15px; }
+    .meta { color: var(--muted); font-size: 12px; display: flex; gap: 12px; align-items: center; }
+    .badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #1d283d;
+      color: #8ab4ff;
+      font-weight: 500;
+    }
+    .stage {
+      background: #07080c;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      max-width: 960px;
+      width: 100%;
+    }
+    canvas {
+      border: 1px solid #30384a;
+      background: #d8d8dc;
+      image-rendering: pixelated;
+      cursor: default;
+      outline: none;
+      max-width: 100%;
+    }
+    .controls {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.secondary { background: #262e40; color: var(--text); }
+    pre#log {
+      width: 100%;
+      max-width: 960px;
+      height: 170px;
+      overflow: auto;
+      background: #0b0d12;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin: 0;
+      font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #c7d1e3;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="title" id="app-title">@TITLE@</div>
+      <div class="meta">
+        <span>Windows x86 PE32 &rarr; C &rarr; WebAssembly (wasm32)</span>
+        <span id="fb-info"></span>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="badge" id="status">Loading…</span>
+      <button class="secondary" id="restart-btn">Restart</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <canvas id="screen" width="640" height="480" tabindex="0"></canvas>
+    <div class="controls">
+      <span>Click menu bar items or canvas to interact; keyboard input supported when focused.</span>
+      <span id="frame-counter">Frames: 0</span>
+    </div>
+  </div>
+
+  <pre id="log"></pre>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const wasmFile = params.get("wasm") || "@WASM_FILE@";
+    const canvas = document.getElementById("screen");
+    const ctx = canvas.getContext("2d");
+    const logEl = document.getElementById("log");
+    const statusEl = document.getElementById("status");
+    const fbInfoEl = document.getElementById("fb-info");
+    const frameCounterEl = document.getElementById("frame-counter");
+    const titleEl = document.getElementById("app-title");
+
+    let frames = 0;
+    let worker = null;
+    let sab = null;
+    let sabView = null;
+
+    function appendLog(txt) {
+      logEl.textContent += txt;
+      if (logEl.textContent.length > 32768) {
+        logEl.textContent = logEl.textContent.slice(-16384);
+      }
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function sendEvent(type, x, y, p1, p2) {
+      if (sabView) {
+        // Slot offsets: [0]=seq, [1]=type, [2]=x, [3]=y, [4]=p1, [5]=p2, [6]=quitFlag
+        Atomics.store(sabView, 1, type);
+        Atomics.store(sabView, 2, x | 0);
+        Atomics.store(sabView, 3, y | 0);
+        Atomics.store(sabView, 4, p1 | 0);
+        Atomics.store(sabView, 5, p2 | 0);
+        Atomics.add(sabView, 0, 1);
+        Atomics.notify(sabView, 0, 1);
+      }
+    }
+
+    const workerCode = `
+      class WasmExit { constructor(c) { this.code = c; } }
+      self.onmessage = async (e) => {
+        const { wasmUrl, sab } = e.data;
+        const sabView = sab ? new Int32Array(sab) : null;
+        let seenSeq = sabView ? Atomics.load(sabView, 0) : 0;
+        let memory = null;
+        let stepCount = 0;
+        const t0 = performance.now();
+
+        function readCStr(ptr) {
+          if (!ptr || !memory) return "";
+          const m = new Uint8Array(memory.buffer);
+          let end = ptr;
+          while (end < m.length && m[end] !== 0) end++;
+          return new TextDecoder().decode(m.subarray(ptr, end));
+        }
+
+        const resp = await fetch(wasmUrl);
+        const bytes = await resp.arrayBuffer();
+        const imports = {
+          env: {
+            wasm_host_log(stream, ptr, len) {
+              if (!memory || len <= 0) return;
+              const txt = new TextDecoder().decode(new Uint8Array(memory.buffer, ptr, len));
+              self.postMessage({ type: "log", stream, text: txt });
+            },
+            wasm_host_now_ms() { return performance.now() - t0; },
+            wasm_host_exit(code) { throw new WasmExit(code | 0); },
+            wasm_host_present_fb(rgbaPtr, w, h, titlePtr) {
+              if (!memory || !rgbaPtr || w <= 0 || h <= 0) return;
+              const copy = new Uint8ClampedArray(w * h * 4);
+              copy.set(new Uint8ClampedArray(memory.buffer, rgbaPtr, w * h * 4));
+              const title = readCStr(titlePtr);
+              self.postMessage({ type: "frame", w, h, title, pixels: copy.buffer }, [copy.buffer]);
+            },
+            wasm_host_wait_event(timeoutMs, outEvPtr) {
+              const out = new Int32Array(memory.buffer, outEvPtr, 5);
+              if (sabView) {
+                const cur = Atomics.load(sabView, 0);
+                if (cur === seenSeq) {
+                  Atomics.wait(sabView, 0, cur, Math.max(8, timeoutMs | 0));
+                }
+                const nowSeq = Atomics.load(sabView, 0);
+                if (nowSeq !== seenSeq) {
+                  seenSeq = nowSeq;
+                  out[0] = Atomics.load(sabView, 1);
+                  out[1] = Atomics.load(sabView, 2);
+                  out[2] = Atomics.load(sabView, 3);
+                  out[3] = Atomics.load(sabView, 4);
+                  out[4] = Atomics.load(sabView, 5);
+                  return out[0] === -1 ? -1 : 1;
+                }
+                out[0] = 0;
+                return 0;
+              } else {
+                // Non-COOP/COEP fallback: render initial paint & timer frames cleanly
+                stepCount++;
+                out[0] = stepCount >= 4 ? -1 : 0;
+                return out[0] === -1 ? -1 : 0;
+              }
+            },
+            wasm_sin: Math.sin, wasm_cos: Math.cos, wasm_tan: Math.tan,
+            wasm_asin: Math.asin, wasm_acos: Math.acos, wasm_atan: Math.atan,
+            wasm_atan2: Math.atan2, wasm_pow: Math.pow, wasm_exp: Math.exp, wasm_log: Math.log,
+          },
+        };
+        const { instance } = await WebAssembly.instantiate(bytes, imports);
+        memory = instance.exports.memory;
+        self.postMessage({ type: "status", text: sabView ? "Running (interactive)" : "Rendered (snapshot)" });
+        try {
+          const code = instance.exports.wasm_init() | 0;
+          self.postMessage({ type: "status", text: "Exited (" + code + ")" });
+        } catch (err) {
+          if (err instanceof WasmExit) {
+            self.postMessage({ type: "status", text: "Exited cleanly (" + err.code + ")" });
+          } else {
+            self.postMessage({ type: "log", stream: 2, text: "[error] " + err + "\\n" });
+            self.postMessage({ type: "status", text: "Trapped" });
+          }
+        }
+      };
+    `;
+
+    function startApp() {
+      if (worker) worker.terminate();
+      frames = 0;
+      logEl.textContent = "";
+      statusEl.textContent = "Booting…";
+      sab = (typeof SharedArrayBuffer !== "undefined") ? new SharedArrayBuffer(64) : null;
+      sabView = sab ? new Int32Array(sab) : null;
+      const blobUrl = URL.createObjectURL(new Blob([workerCode], { type: "application/javascript" }));
+      worker = new Worker(blobUrl);
+      worker.onmessage = (e) => {
+        const msg = e.data;
+        if (msg.type === "log") {
+          appendLog(msg.text);
+        } else if (msg.type === "status") {
+          statusEl.textContent = msg.text;
+        } else if (msg.type === "frame") {
+          if (canvas.width !== msg.w || canvas.height !== msg.h) {
+            canvas.width = msg.w;
+            canvas.height = msg.h;
+          }
+          if (msg.title) titleEl.textContent = msg.title;
+          const img = new ImageData(new Uint8ClampedArray(msg.pixels), msg.w, msg.h);
+          ctx.putImageData(img, 0, 0);
+          frames++;
+          fbInfoEl.textContent = msg.w + "x" + msg.h;
+          frameCounterEl.textContent = "Frames: " + frames;
+        }
+      };
+      worker.postMessage({ wasmUrl: new URL(wasmFile, location.href).href, sab });
+    }
+
+    function canvasXY(ev) {
+      const r = canvas.getBoundingClientRect();
+      const x = Math.round((ev.clientX - r.left) * (canvas.width / r.width));
+      const y = Math.round((ev.clientY - r.top) * (canvas.height / r.height));
+      return [x, y];
+    }
+
+    canvas.addEventListener("mousemove", (ev) => {
+      const [x, y] = canvasXY(ev);
+      sendEvent(1, x, y, ev.buttons & 1 ? 0 : -1, 0);
+    });
+    canvas.addEventListener("mousedown", (ev) => {
+      canvas.focus();
+      const [x, y] = canvasXY(ev);
+      sendEvent(2, x, y, ev.button, 0);
+    });
+    canvas.addEventListener("mouseup", (ev) => {
+      const [x, y] = canvasXY(ev);
+      sendEvent(3, x, y, ev.button, 0);
+    });
+    canvas.addEventListener("contextmenu", (ev) => ev.preventDefault());
+    canvas.addEventListener("keydown", (ev) => {
+      ev.preventDefault();
+      const ch = ev.key.length === 1 ? ev.key.charCodeAt(0) : 0;
+      sendEvent(4, 0, 0, ev.keyCode, ch);
+    });
+    canvas.addEventListener("keyup", (ev) => {
+      sendEvent(5, 0, 0, ev.keyCode, 0);
+    });
+    document.getElementById("restart-btn").addEventListener("click", startApp);
+
+    startApp();
+  </script>
+</body>
+</html>

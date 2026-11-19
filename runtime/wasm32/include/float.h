@@ -1,0 +1,14 @@
+#ifndef _WASM_FLOAT_H
+#define _WASM_FLOAT_H
+
+#define FLT_RADIX      2
+#define FLT_MANT_DIG   24
+#define DBL_MANT_DIG   53
+#define FLT_MIN        1.17549435e-38F
+#define FLT_MAX        3.40282347e+38F
+#define FLT_EPSILON    1.19209290e-07F
+#define DBL_MIN        2.2250738585072014e-308
+#define DBL_MAX        1.7976931348623157e+308
+#define DBL_EPSILON    2.2204460492503131e-16
+
+#endif

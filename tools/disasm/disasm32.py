@@ -385,8 +385,16 @@ class Disassembler:
 
         size = min(window, sec_end - va)
         data = self.read_bytes(va, size)
-        if not data:
+        if not data or data[0] == 0:
             return False
+
+        # Borland Delphi places immortal string literals in .text with an
+        # 8-byte (refcount=-1, length) header right before the character bytes.
+        hdr = self.read_bytes(va - 8, 8)
+        if hdr and len(hdr) == 8 and hdr[:4] == b'\xff\xff\xff\xff':
+            slen = int.from_bytes(hdr[4:8], 'little')
+            if 0 < slen <= 4096 and self.read_bytes(va + slen, 1) == b'\x00':
+                return False
 
         end = va
         zeros = 0
@@ -1036,6 +1044,17 @@ class Disassembler:
                               queued.add(tgt)
                               weak.add(tgt)      # a pointer-shaped value, like the data scan's
                               queue.append(tgt)
+                              t5 = tgt + 5
+                              if (ins.mnemonic == 'push' and self.is_code_address(t5)
+                                      and t5 not in queued and t5 not in functions
+                                      and self.read_bytes(tgt, 1) == b'\xe9'
+                                      and self.read_bytes(t5, 1) in (b'\xeb', b'\xe9')
+                                      and self.probes_as_function_body(t5)):
+                                  if t5 in covered:
+                                      alias_entries.add(t5)
+                                  queued.add(t5)
+                                  weak.add(t5)
+                                  queue.append(t5)
 
               # Both harvests are done with these instructions. Each retained
               # operand list pins a whole capstone cs_detail struct, and holding

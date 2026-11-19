@@ -9,11 +9,13 @@
  * (hle_reg_load/hle_reg_save: one "key\name=type:value" per line).
  */
 #define _GNU_SOURCE
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <unistd.h>
 #include "win32hle.h"
 
 #define ERROR_SUCCESS        0u
@@ -318,22 +320,34 @@ static void s_CommandLineToArgvW(void) {                 /* (lpCmdLine, &argc) *
     RET(block, 2);
 }
 
-/* DragAcceptFiles registers a window as a drop target. There is no shell to
- * drag from on this host, so the call is accepted and no drop will ever
- * arrive: a program that only enables the feature loses nothing. */
+static char g_dropped_file[1024];
+
+void hle_set_dropped_file(const char *guest_path) {
+    snprintf(g_dropped_file, sizeof g_dropped_file, "%s", guest_path ? guest_path : "");
+}
+
+/* DragAcceptFiles registers a window as a drop target. */
 static void s_DragAcceptFiles(void) { RETV(2); }
 
-/* DragQueryFileA(hDrop, iFile, buf, size) is asked for the count (iFile ==
- * 0xFFFFFFFF) or for one dropped file's name. No drop can have happened, so
- * the true answers are 0 files and an empty string -- not a fabricated name. */
+/* DragQueryFileA(hDrop, iFile, buf, size) answers count (iFile == 0xFFFFFFFF)
+ * or copies the dropped guest file name dropped onto the SDL window. */
 static void s_DragQueryFileA(void) {
     uint32_t which = A32(1);
-    if (which == 0xFFFFFFFFu) RET(0, 4);
+    if (which == 0xFFFFFFFFu) RET(g_dropped_file[0] ? 1u : 0u, 4);
     char *buf = ASTR(2);
-    if (buf && A32(3)) buf[0] = 0;
-    RET(0, 4);
+    uint32_t cap = A32(3);
+    if (!g_dropped_file[0] || which > 0) {
+        if (buf && cap) buf[0] = 0;
+        RET(0, 4);
+    }
+    uint32_t len = (uint32_t)strlen(g_dropped_file);
+    if (!buf || !cap) RET(len, 4);
+    uint32_t cp = len < cap - 1 ? len : cap - 1;
+    memcpy(buf, g_dropped_file, cp);
+    buf[cp] = 0;
+    RET(cp, 4);
 }
-static void s_DragFinish(void) { RETV(1); }              /* nothing was allocated */
+static void s_DragFinish(void) { g_dropped_file[0] = 0; RETV(1); }
 
 /* ---- SHLWAPI ---- */
 /* PathRemoveFileSpecA(path): strip the last component, in place. Returns TRUE
@@ -352,23 +366,341 @@ static void s_PathRemoveFileSpecA(void) {
     RET(1, 1);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Security, SID, Token, Safer, Crypto RNG, Shell, ImageList shims            */
+/* -------------------------------------------------------------------------- */
+
+static uint32_t alloc_default_sid(uint32_t sub0, uint32_t sub1, int count) {
+    if (count < 1) count = 1;
+    if (count > 8) count = 8;
+    uint32_t va = hle_va(hle_alloc((uint32_t)(8 + 4 * count)));
+    if (!va) return 0;
+    uint8_t *p = (uint8_t *)hle_ptr(va);
+    memset(p, 0, (size_t)(8 + 4 * count));
+    p[0] = 1;                  /* Revision */
+    p[1] = (uint8_t)count;     /* SubAuthorityCount */
+    p[7] = 5;                  /* SECURITY_NT_AUTHORITY */
+    MEM32(va + 8) = sub0;
+    if (count > 1) MEM32(va + 12) = sub1;
+    return va;
+}
+
+static uint32_t sid_byte_len(const uint8_t *sid) {
+    if (!sid) return 0;
+    return (uint32_t)(8 + 4 * (sid[1] > 15 ? 15 : sid[1]));
+}
+
+static void fill_random_bytes(uint8_t *buf, uint32_t len) {
+    if (!buf || !len) return;
+    int fd = open("/dev/urandom", O_RDONLY);
+    uint32_t got = 0;
+    if (fd >= 0) {
+        while (got < len) {
+            ssize_t r = read(fd, buf + got, len - got);
+            if (r <= 0) break;
+            got += (uint32_t)r;
+        }
+        close(fd);
+    }
+    if (got < len) arc4random_buf(buf + got, len - got);
+}
+
+static void adv_RegFlushKey(void) { (void)A32(0); RET(0, 1); }
+
+static void adv_AllocateAndInitializeSid(void) {
+    uint32_t auth_va = A32(0), cnt = A32(1) & 0xffu, out_va = A32(10);
+    if (!out_va) { RET(0, 11); return; }
+    if (cnt > 8) cnt = 8;
+    uint32_t sid_va = hle_va(hle_alloc(8u + 4u * cnt));
+    if (!sid_va) { hle_set_last_error(8); RET(0, 11); return; }
+    uint8_t *sid = (uint8_t *)hle_ptr(sid_va);
+    sid[0] = 1;
+    sid[1] = (uint8_t)cnt;
+    if (auth_va) memcpy(sid + 2, hle_ptr(auth_va), 6);
+    for (uint32_t i = 0; i < cnt; i++) MEM32(sid_va + 8u + 4u * i) = A32(2 + (int)i);
+    MEM32(out_va) = sid_va;
+    RET(1, 11);
+}
+
+static void adv_GetLengthSid(void) {
+    uint8_t *sid = (uint8_t *)APTR(0);
+    RET(sid ? sid_byte_len(sid) : 8u, 1);
+}
+
+static void adv_CopySid(void) {
+    uint32_t dst_len = A32(0);
+    uint8_t *dst = (uint8_t *)APTR(1), *src = (uint8_t *)APTR(2);
+    if (!dst || !src) { RET(0, 3); return; }
+    uint32_t need = sid_byte_len(src);
+    if (dst_len < need) { hle_set_last_error(122); RET(0, 3); return; }
+    memcpy(dst, src, need);
+    RET(1, 3);
+}
+
+static void adv_EqualSid(void) {
+    uint8_t *s1 = (uint8_t *)APTR(0), *s2 = (uint8_t *)APTR(1);
+    if (!s1 || !s2) { RET(0, 2); return; }
+    uint32_t l1 = sid_byte_len(s1), l2 = sid_byte_len(s2);
+    RET(l1 == l2 && memcmp(s1, s2, l1) == 0 ? 1u : 0u, 2);
+}
+
+static void adv_InitializeSecurityDescriptor(void) {
+    uint8_t *sd = (uint8_t *)APTR(0);
+    uint32_t rev = A32(1);
+    if (!sd || rev != 1) { RET(0, 2); return; }
+    memset(sd, 0, 20);
+    sd[0] = 1;
+    RET(1, 2);
+}
+
+static void adv_SetSecurityDescriptorDacl(void) {
+    uint8_t *sd = (uint8_t *)APTR(0);
+    if (!sd) { RET(0, 4); return; }
+    if (A32(1)) MEM16(A32(0) + 2) |= 0x0004u; /* SE_DACL_PRESENT */
+    else        MEM16(A32(0) + 2) &= (uint16_t)~0x0004u;
+    MEM32(A32(0) + 16) = A32(2);
+    RET(1, 4);
+}
+
+static void adv_SetSecurityDescriptorOwner(void) {
+    if (!APTR(0)) { RET(0, 3); return; }
+    MEM32(A32(0) + 4) = A32(1);
+    RET(1, 3);
+}
+
+static void adv_OpenProcessToken(void) {
+    uint32_t out_va = A32(2);
+    if (!out_va) { RET(0, 3); return; }
+    MEM32(out_va) = 0xCAFE0001u;
+    RET(1, 3);
+}
+
+static void adv_GetTokenInformation(void) {
+    uint32_t cls = A32(1), buf_va = A32(2), buf_len = A32(3), ret_va = A32(4);
+    uint32_t need = 4;
+    if (cls == 1 /* TokenUser */ || cls == 5 /* TokenOwner */ || cls == 4 /* TokenPrimaryGroup */) need = (cls == 1) ? 24u : 20u;
+    else if (cls == 2 /* TokenGroups */) need = 16u;
+    else if (cls == 3 /* TokenPrivileges */) need = 4u;
+    if (ret_va) MEM32(ret_va) = need;
+    if (!buf_va || buf_len < need) { hle_set_last_error(122); RET(0, 5); return; }
+    memset(hle_ptr(buf_va), 0, buf_len);
+    if (cls == 1 /* TokenUser */) {
+        uint32_t sid_va = buf_va + 8;
+        uint8_t *sid = (uint8_t *)hle_ptr(sid_va);
+        sid[0] = 1; sid[1] = 2; sid[7] = 5;
+        MEM32(sid_va + 8) = 21; MEM32(sid_va + 12) = 1000;
+        MEM32(buf_va) = sid_va;
+        MEM32(buf_va + 4) = 0;
+    } else if (cls == 5 || cls == 4) {
+        uint32_t sid_va = buf_va + 4;
+        uint8_t *sid = (uint8_t *)hle_ptr(sid_va);
+        sid[0] = 1; sid[1] = 2; sid[7] = 5;
+        MEM32(sid_va + 8) = 21; MEM32(sid_va + 12) = (cls == 5) ? 1000u : 513u;
+        MEM32(buf_va) = sid_va;
+    } else if (cls == 18 /* TokenElevationType */) {
+        MEM32(buf_va) = 1; /* TokenElevationTypeDefault */
+    }
+    RET(1, 5);
+}
+
+static void adv_SetTokenInformation(void) { RET(1, 4); }
+
+static void adv_DuplicateToken(void) {
+    if (A32(2)) MEM32(A32(2)) = 0xCAFE0002u;
+    RET(A32(2) ? 1u : 0u, 3);
+}
+
+static void adv_CheckTokenMembership(void) {
+    if (!A32(2)) { RET(0, 3); return; }
+    MEM32(A32(2)) = 0; /* non-elevated user */
+    RET(1, 3);
+}
+
+static void adv_AccessCheck(void) {
+    uint32_t desired = A32(2), granted_va = A32(6), status_va = A32(7);
+    if (granted_va) MEM32(granted_va) = desired ? desired : 0x001F0FFFu;
+    if (status_va) MEM32(status_va) = 1;
+    RET(1, 8);
+}
+
+static void adv_GetSecurityInfo(void) {
+    uint32_t p_owner = A32(3), p_group = A32(4), p_dacl = A32(5), p_sacl = A32(6), p_sd = A32(7);
+    uint32_t sd_va = hle_va(hle_alloc(20));
+    if (sd_va) { memset(hle_ptr(sd_va), 0, 20); *(uint8_t *)hle_ptr(sd_va) = 1; }
+    if (p_owner) MEM32(p_owner) = alloc_default_sid(21, 1000, 2);
+    if (p_group) MEM32(p_group) = alloc_default_sid(21, 513, 2);
+    if (p_dacl)  MEM32(p_dacl)  = 0;
+    if (p_sacl)  MEM32(p_sacl)  = 0;
+    if (p_sd)    MEM32(p_sd)    = sd_va;
+    RET(0 /* ERROR_SUCCESS */, 8);
+}
+
+static void adv_SaferCreateLevel(void) {
+    if (A32(3)) MEM32(A32(3)) = 0xCAFE0010u;
+    RET(A32(3) ? 1u : 0u, 5);
+}
+
+static void adv_SaferComputeTokenFromLevel(void) {
+    if (A32(2)) MEM32(A32(2)) = 0xCAFE0011u;
+    RET(1, 5);
+}
+
+static void adv_CryptAcquireContextA(void) {
+    if (!A32(0)) { RET(0, 5); return; }
+    MEM32(A32(0)) = 0xC0DE0001u;
+    RET(1, 5);
+}
+
+static void adv_CryptGenRandom(void) {
+    uint32_t len = A32(1);
+    uint8_t *buf = (uint8_t *)APTR(2);
+    if (!buf && len) { RET(0, 3); return; }
+    fill_random_bytes(buf, len);
+    RET(1, 3);
+}
+
+static void adv_CryptReleaseContext(void) { RET(1, 2); }
+
+static void adv_SystemFunction036(void) {
+    uint8_t *buf = (uint8_t *)APTR(0);
+    uint32_t len = A32(1);
+    if (!buf && len) { RET(0, 2); return; }
+    fill_random_bytes(buf, len);
+    RET(1, 2);
+}
+
+static void s_Shell_NotifyIconA(void) { RET(1, 2); }
+static void s_SHChangeNotify(void) { RETV(4); }
+
+/* Minimal ImageList table so ComCtl32 list-views / tree-views behave cleanly. */
+#define MAX_IMAGELISTS 64
+typedef struct {
+    int used, cx, cy, count;
+    uint32_t bkcolor;
+} il_entry_t;
+static il_entry_t g_imagelists[MAX_IMAGELISTS];
+
+static il_entry_t *il_find(uint32_t h) {
+    if (h < 0x10000u || h >= 0x10000u + MAX_IMAGELISTS) return NULL;
+    il_entry_t *e = &g_imagelists[h - 0x10000u];
+    return e->used ? e : NULL;
+}
+
+static void il_Create(void) {
+    for (int i = 0; i < MAX_IMAGELISTS; i++) {
+        if (!g_imagelists[i].used) {
+            g_imagelists[i].used = 1;
+            g_imagelists[i].cx = (int)A32(0);
+            g_imagelists[i].cy = (int)A32(1);
+            g_imagelists[i].count = 0;
+            g_imagelists[i].bkcolor = 0xFFFFFFFFu; /* CLR_NONE */
+            RET(0x10000u + (uint32_t)i, 5);
+            return;
+        }
+    }
+    RET(0, 5);
+}
+static void il_Destroy(void) {
+    il_entry_t *e = il_find(A32(0));
+    if (e) e->used = 0;
+    RET(1, 1);
+}
+static void il_Add(void) {
+    il_entry_t *e = il_find(A32(0));
+    int idx = e ? e->count++ : 0;
+    RET((uint32_t)idx, 3);
+}
+static void il_ReplaceIcon(void) {
+    il_entry_t *e = il_find(A32(0));
+    int idx = (int)A32(1);
+    if (!e) { RET((uint32_t)-1, 3); return; }
+    if (idx < 0) idx = e->count++;
+    RET((uint32_t)idx, 3);
+}
+static void il_GetImageCount(void) {
+    il_entry_t *e = il_find(A32(0));
+    RET(e ? (uint32_t)e->count : 0u, 1);
+}
+static void il_GetIconSize(void) {
+    il_entry_t *e = il_find(A32(0));
+    if (!e) { RET(0, 3); return; }
+    if (A32(1)) MEM32(A32(1)) = (uint32_t)e->cx;
+    if (A32(2)) MEM32(A32(2)) = (uint32_t)e->cy;
+    RET(1, 3);
+}
+static void il_SetIconSize(void) {
+    il_entry_t *e = il_find(A32(0));
+    if (!e) { RET(0, 3); return; }
+    e->cx = (int)A32(1); e->cy = (int)A32(2); e->count = 0;
+    RET(1, 3);
+}
+static void il_GetBkColor(void) {
+    il_entry_t *e = il_find(A32(0));
+    RET(e ? e->bkcolor : 0xFFFFFFFFu, 1);
+}
+static void il_SetBkColor(void) {
+    il_entry_t *e = il_find(A32(0));
+    uint32_t prev = e ? e->bkcolor : 0xFFFFFFFFu;
+    if (e) e->bkcolor = A32(1);
+    RET(prev, 2);
+}
+static void il_Draw(void) { RET(1, 6); }
+static void il_DrawEx(void) { RET(1, 10); }
+static void il_Remove(void) {
+    il_entry_t *e = il_find(A32(0));
+    int idx = (int)A32(1);
+    if (e) {
+        if (idx < 0) e->count = 0;
+        else if (e->count > 0) e->count--;
+    }
+    RET(1, 2);
+}
+static void il_GetDragImage(void) {
+    if (A32(0)) { MEM32(A32(0)) = 0; MEM32(A32(0) + 4) = 0; }
+    if (A32(1)) { MEM32(A32(1)) = 0; MEM32(A32(1) + 4) = 0; }
+    RET(0, 2);
+}
+static void il_SetDragCursorImage(void) { RET(1, 4); }
+
 const win32hle_shim win32hle_advapi32[] = {
     { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
-    { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey },
+    { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey }, { "RegFlushKey", adv_RegFlushKey },
     { "RegQueryValueExA", r_RegQueryValueExA }, { "RegSetValueExA", r_RegSetValueExA },
     { "RegDeleteValueA", r_RegDeleteValueA }, { "RegDeleteKeyA", r_RegDeleteKeyA },
     { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
     { "GetUserNameA", r_GetUserNameA },
+    { "AllocateAndInitializeSid", adv_AllocateAndInitializeSid }, { "CopySid", adv_CopySid },
+    { "EqualSid", adv_EqualSid }, { "GetLengthSid", adv_GetLengthSid },
+    { "InitializeSecurityDescriptor", adv_InitializeSecurityDescriptor },
+    { "SetSecurityDescriptorDacl", adv_SetSecurityDescriptorDacl },
+    { "SetSecurityDescriptorOwner", adv_SetSecurityDescriptorOwner },
+    { "OpenProcessToken", adv_OpenProcessToken }, { "GetTokenInformation", adv_GetTokenInformation },
+    { "SetTokenInformation", adv_SetTokenInformation }, { "DuplicateToken", adv_DuplicateToken },
+    { "CheckTokenMembership", adv_CheckTokenMembership }, { "AccessCheck", adv_AccessCheck },
+    { "GetSecurityInfo", adv_GetSecurityInfo }, { "SaferCreateLevel", adv_SaferCreateLevel },
+    { "SaferComputeTokenFromLevel", adv_SaferComputeTokenFromLevel },
+    { "CryptAcquireContextA", adv_CryptAcquireContextA }, { "CryptGenRandom", adv_CryptGenRandom },
+    { "CryptReleaseContext", adv_CryptReleaseContext }, { "SystemFunction036", adv_SystemFunction036 },
     { "comctl32.dll#17", c_InitCommonControls }, { "InitCommonControls", c_InitCommonControls },
     { "InitCommonControlsEx", c_InitCommonControlsEx }, { "DllGetVersion", c_DllGetVersion },
-    { "ImageList_BeginDrag", c_ret0_4 }, { "ImageList_Destroy", c_ret0_1 }, { "ImageList_DragEnter", c_ret0_3 },
-    { "ImageList_DragMove", c_ret0_2 }, { "ImageList_DragShowNolock", c_ret0_1 }, { "ImageList_EndDrag", c_ret0_0 },
+    { "ImageList_Create", il_Create }, { "ImageList_Destroy", il_Destroy },
+    { "ImageList_Add", il_Add }, { "ImageList_ReplaceIcon", il_ReplaceIcon },
+    { "ImageList_GetImageCount", il_GetImageCount }, { "ImageList_GetIconSize", il_GetIconSize },
+    { "ImageList_SetIconSize", il_SetIconSize }, { "ImageList_GetBkColor", il_GetBkColor },
+    { "ImageList_SetBkColor", il_SetBkColor }, { "ImageList_Draw", il_Draw },
+    { "ImageList_DrawEx", il_DrawEx }, { "ImageList_Remove", il_Remove },
+    { "ImageList_BeginDrag", c_ret0_4 }, { "ImageList_DragEnter", c_ret0_3 },
+    { "ImageList_DragLeave", c_ret0_1 }, { "ImageList_DragMove", c_ret0_2 },
+    { "ImageList_DragShowNolock", c_ret0_1 }, { "ImageList_EndDrag", c_ret0_0 },
+    { "ImageList_GetDragImage", il_GetDragImage }, { "ImageList_SetDragCursorImage", il_SetDragCursorImage },
+    { "ImageList_Read", c_ret0_1 }, { "ImageList_Write", c_ret0_2 },
     { "GetFileVersionInfoSizeA", v_GetFileVersionInfoSizeA }, { "GetFileVersionInfoA", v_GetFileVersionInfoA },
     { "VerQueryValueA", v_VerQueryValueA },
     { "FindExecutableA", s_FindExecutableA }, { "ShellExecuteA", s_ShellExecuteA },
     { "CommandLineToArgvW", s_CommandLineToArgvW },
     { "DragAcceptFiles", s_DragAcceptFiles }, { "DragQueryFileA", s_DragQueryFileA },
     { "DragFinish", s_DragFinish },
+    { "Shell_NotifyIconA", s_Shell_NotifyIconA }, { "SHChangeNotify", s_SHChangeNotify },
     { "PathRemoveFileSpecA", s_PathRemoveFileSpecA },
     { 0, 0 }
 };

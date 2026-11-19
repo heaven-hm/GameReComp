@@ -5,6 +5,34 @@ All notable changes to this repository: the GameReComp PCRecomp-first product
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.0.1] - 2026-11-19
+
+First beta release of the Rust GameReComp CLI and orchestrator.
+
+### Added
+- Release builds for Linux x86_64, macOS arm64, and Windows x86_64 through
+  GitHub Actions. See `docs/RELEASE_0.0.1.md` for the asset names and
+  verification procedure.
+- `GameReComp batch` for repeatable multi-executable conversion and standalone
+  checks.
+- A measured Win32 corpus update covering all 15 executables in the supplied
+  corpus; results are recorded in `docs/GAME_MATRIX.md`, `table.md`, and
+  `reports/games/results.json`.
+
+### Verification notes
+- All 15 inputs completed inspect, recover, translate, project, compile, run,
+  verify, and report on the local macOS arm64 host.
+- Launch-level `PARTIAL` results are separate from boot failures; no gameplay
+  oracle was supplied, so none is labelled playable.
+- Temporary generated source, build directories, and rebuilt game binaries
+  were deleted after measurement and are not release assets.
+
+### Known limitations
+- The beta accepts PE32/i386 inputs; PE32+ remains fail-closed.
+- Cross-compiling a converted game is not implemented. Release binaries are
+  native CLI builds for their named host platforms.
+- Gameplay equivalence still requires an independent scenario oracle.
+
 ## [Unreleased]
 
 ### Added

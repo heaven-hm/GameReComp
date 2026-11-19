@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import sys
 import threading
 import time
@@ -66,6 +67,7 @@ SUPPORTED_TARGETS = {
     ("linux", "x86_64"), ("linux", "arm64"),
     ("macos", "x86_64"), ("macos", "arm64"),
     ("windows", "x86_64"), ("windows", "arm64"),
+    ("web", "wasm32"),
 }
 
 _HOST_OS_NAMES = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}
@@ -151,15 +153,19 @@ def _resolve_target(os_choice, arch_choice):
     Returns ((os, arch), None) when the target is buildable here, and
     (None, reason) when it is not, or the host itself is unknown.
     """
+    norm_os = "web" if os_choice == "wasm" else os_choice
+    if (norm_os == "web" and arch_choice in ("host", "wasm32", "wasm")) or (
+            arch_choice in ("wasm32", "wasm") and norm_os in ("host", "web")):
+        return ("web", "wasm32"), None
     host_os, host_arch = _host_pair()
     if host_os is None or host_arch not in _HOST_ARCHS:
         # The machine name is either unknown or not one we ever built on;
         # refuse rather than guess at its ABI.
         return None, (
             f"unsupported build host: {platform.system()}/{platform.machine()}")
-    if os_choice != "host" or arch_choice != "host":
+    if norm_os != "host" or arch_choice != "host":
         requested = (
-            host_os if os_choice == "host" else os_choice,
+            host_os if norm_os == "host" else norm_os,
             host_arch if arch_choice == "host" else arch_choice)
         if requested != (host_os, host_arch):
             return None, (
@@ -403,23 +409,17 @@ def build_parser():
                              "missing-identity warning")
     parser.add_argument("--target-os", "--output-os", "--out-os",
                         dest="target_os",
-                        choices=["host", "linux", "macos", "windows"],
+                        choices=["host", "linux", "macos", "windows", "web", "wasm"],
                         default=None,
-                        help="output platform (omit to assume 'host'; "
-                             "--output-os and --out-os are aliases). Anything "
-                             "other than the build host is refused: "
-                             "cross-compilation is not implemented, and a "
-                             "mislabeled host binary is worse than no binary. "
-                             "Defaults to host -- but pass it explicitly to "
-                             "silence the missing-identity warning")
+                        help="output platform (omit to assume 'host'; use 'web' "
+                             "for WebAssembly web apps; --output-os and --out-os "
+                             "are aliases). Foreign OSes are refused.")
     parser.add_argument("--target-arch", "--output-arch", "--out-arch",
                         dest="target_arch",
-                        choices=["host", "x86_64", "arm64"], default=None,
-                        help="output CPU architecture (omit to assume 'host'; "
-                             "--output-arch and --out-arch are aliases; see "
-                             "--target-os for the refusal rule). Defaults to "
-                             "host -- but pass it explicitly to silence the "
-                             "missing-identity warning")
+                        choices=["host", "x86_64", "arm64", "wasm32"], default=None,
+                        help="output CPU architecture (omit to assume 'host'; use "
+                             "'wasm32' for WebAssembly; --output-arch and "
+                             "--out-arch are aliases).")
     parser.add_argument("--timeout", type=float, default=30.0,
                         help="seconds to let the rebuilt binary run (default 30)")
     parser.add_argument("--interactive", action="store_true",
@@ -504,7 +504,8 @@ def _print_plan(args, pe_path, selected, target):
     print(f"  input os:    {in_os} ({in_os_decl})")
     print(f"  input arch:  {in_arch} ({in_arch_decl})")
     print(f"  name:        {pe_path.stem}")
-    print(f"  output:      {os_name}/{arch} native "
+    kind = "web" if os_name == "web" else "native"
+    print(f"  output:      {os_name}/{arch} {kind} "
           f"({out_os_decl}/{out_arch_decl})")
     print(f"  out-mode:    {args.out_mode or ('stages' if args.stages else 'both')}")
     print(f"  project dir: {project_dir}")
@@ -646,7 +647,7 @@ def main(argv=None):
         run_binary=allow_run and not args.no_run,
         reuse_build=args.reuse_build, fresh_build=args.fresh_build,
         import_trace=args.import_trace, highlevel_dir=args.highlevel,
-        on_event=on_event)
+        target=target, on_event=on_event)
     try:
         run_pipeline(pipeline, stages=selected)
     except KeyboardInterrupt:
@@ -693,6 +694,12 @@ def main(argv=None):
             gamesdb.record_result(pipeline.project_dir,
                                   relative_path=_database_path(pe_path))
             table = gamesdb.write_table()
+            gamesdb.write_matrix()
+            rendered = gamesdb.render_matrix()
+            m = re.search(r"## This repository \(measured\)\n\n(.*?)\n\n## This repository "
+                          r"\(not measured\)", rendered, re.S)
+            if m:
+                gamesdb.sync_readme(m.group(1).strip())
             print(f"database:     {table}", file=summary)
         except (OSError, ValueError) as exc:
             print(f"warning: could not update table.md: {exc}", file=sys.stderr)

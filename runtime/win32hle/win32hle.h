@@ -172,6 +172,8 @@ void     hle_post_message(uint32_t hwnd, uint32_t message, uint32_t wParam, uint
 int      hle_msg_pop(uint32_t *message, uint32_t *wParam, uint32_t *lParam);  /* 1 if one popped */
 uint32_t hle_first_hwnd(void);           /* the first created window, or 0 */
 void     hle_set_pump_hook(void (*fn)(void)); /* called when the queue is empty (present layer) */
+void     hle_user32_enable_desktop_window(int enable);
+void     hle_set_dropped_file(const char *guest_path);
 /* The window manager's host side (user32.c): the screen size (the display
  * mode), input as a mouse and keyboard would give it, and what is where. */
 void     hle_set_screen_size(int w, int h);
@@ -267,6 +269,7 @@ int   hle_exe_path(char *out, size_t n);           /* this program's own path (t
  * The host adds its main image (main_image 1); LoadLibraryA adds DLLs. A
  * NULL module is the main image. */
 int      hle_module_add(const char *guest_path, uint32_t base, uint32_t rsrc_rva, uint32_t rsrc_size, int main_image);
+int      hle_module_region(uint32_t addr, uint32_t *base, uint32_t *size);
 uint32_t hle_find_resource(uint32_t hmod, uint32_t name, uint32_t type);   /* HRSRC, or 0 */
 uint32_t hle_resource_data(uint32_t hmod, uint32_t hrsrc, uint32_t *size); /* its bytes' VA */
 int      hle_load_string(uint32_t hmod, uint32_t id, char *buf, int n);
@@ -335,10 +338,14 @@ uint32_t hle_gdi_surface_dc(uint8_t *px, int w, int h, int pitch, int bpp);   /*
  * into, at the display mode's size; screen.c shows them when there is no
  * DirectDraw primary. seq changes when they may have. */
 void     hle_gdi_window_surface(uint8_t *px, int w, int h, int pitch, int bpp);
+void     hle_gdi_window_yoffset(int yoff);
 uint32_t hle_gdi_window_dc(void);
 int      hle_gdi_window_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bpp, unsigned *seq);
 void     hle_gdi_window_touched(void);                /* drawn into directly (a movie): show it */
 extern void (*hle_gdi_window_hook)(void);              /* called after a blit to it: screen.c presents */
+void     hle_gdi_draw_rect(uint32_t hdc, int l, int t, int r, int b, uint32_t cr);
+void     hle_gdi_draw_text(uint32_t hdc, int x, int y, const char *s, uint32_t fg_cr, uint32_t bg_cr, int transparent);
+int      hle_gdi_measure_text(uint32_t hdc, const char *s, int *w, int *h);
 /* A DIB section's bitmap (gdi32.c's CreateDIBSection): bottom-up unless topdown. */
 uint32_t hle_gdi_dib_section(const uint8_t *bmi, uint32_t **bits);   /* CreateDIBSection from the host side */
 uint32_t hle_gdi_make_dib(int w, int h, int bpp, uint8_t *bits, int topdown, const uint32_t *ctab, int ncolors, int is555);
@@ -502,9 +509,11 @@ typedef struct { const char *name; uint32_t va; } recomp_export_t;
 typedef struct {
     const char *dll;             /* as imported: "bulletml.dll" */
     uint32_t base;               /* ImageBase the lifted code targets */
-    const char *load;            /* host path to map: the game's copy, or a
-                                  * rebased copy kept in the project (NULL ->
-                                  * resolve `dll` beside the game) */
+    const char *load;            /* host path to map: kept for a build that
+                                  * does not embed companions (NULL otherwise) */
+    const unsigned char *image;  /* the companion's bytes, embedded in this
+                                  * binary, so no DLL file is needed at run time */
+    uint32_t image_size;
     const recomp_export_t *exports;   /* name -> export VA (name == lifted VA) */
     uint32_t export_count;
 } recomp_companion_t;

@@ -260,8 +260,18 @@ static void k_VirtualFree(void) {                        /* (addr, size, type) *
 static void k_VirtualProtect(void) { if (A32(3)) MEM32(A32(3)) = 0x04u; RET(1, 4); }   /* PAGE_READWRITE before */
 static void k_VirtualQuery(void) {                       /* (addr, &MEMORY_BASIC_INFORMATION, len) */
     uint32_t a = A32(0), m = A32(1);
-    int i = region_of(a);
     if (!m || A32(2) < 28) RET(0, 3);
+    int i = region_of(a);
+    uint32_t mb = 0, ms = 0;
+    if (i < 0 && hle_module_region(a, &mb, &ms)) {
+        uint32_t page = a & ~0xFFFu;
+        MEM32(m) = page;
+        MEM32(m + 4) = mb;
+        MEM32(m + 8) = 0x20u;                            /* PAGE_EXECUTE_READ */
+        MEM32(m + 12) = mb + ms - page;
+        MEM32(m + 16) = MEM_COMMIT, MEM32(m + 20) = 0x20u, MEM32(m + 24) = 0x1000000u; /* MEM_IMAGE */
+        RET(28, 3);
+    }
     MEM32(m) = a & ~0xFFFu;
     MEM32(m + 4) = i >= 0 ? g_region[i].base : a & ~0xFFFFu;
     MEM32(m + 8) = 0x04u;
@@ -731,6 +741,86 @@ static void k_LockFile(void)          { RET(1, 5); }
  * to the translated process. Keep the API call ABI-safe and continue. */
 static void k_DebugBreak(void)         { RETV(0); }
 
+static void k_EncodePointer(void) { RET(A32(0), 1); }
+static void k_OutputDebugStringW(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    if (w) {
+        char buf[512];
+        if (hle_wide_to_ansi(w, buf, sizeof buf)) fprintf(stderr, "[OutputDebugStringW] %s\n", buf);
+    }
+    RETV(1);
+}
+static void k_AreFileApisANSI(void) { RET(1, 0); }
+static void k_Beep(void) { RET(1, 2); }
+static void k_GetConsoleCP(void) { RET(65001u, 0); }
+static void k_GetConsoleOutputCP(void) { RET(65001u, 0); }
+static void k_WriteConsoleW(void) {                      /* (hOut, wbuf, nChars, &written, reserved) */
+    int fd = hle_file_fd(A32(0));
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    uint32_t n = A32(2), *pw = (uint32_t *)APTR(3);
+    if (pw) *pw = 0;
+    if (fd < 0 || !w) { hle_set_last_error(6u); RET(0, 5); }
+    for (uint32_t i = 0; i < n; i++) {
+        uint8_t c = w[i] < 0x100 ? (uint8_t)w[i] : '?';
+        (void)write(fd, &c, 1);
+    }
+    if (pw) *pw = n;
+    RET(1, 5);
+}
+static void k_ReadConsoleW(void) {                       /* (hIn, wbuf, nChars, &read, pCtrl) */
+    int fd = hle_file_fd(A32(0));
+    uint16_t *w = (uint16_t *)APTR(1);
+    uint32_t n = A32(2), *pr = (uint32_t *)APTR(3), got = 0;
+    if (pr) *pr = 0;
+    if (fd < 0 || !w) { hle_set_last_error(6u); RET(0, 5); }
+    while (got < n) {
+        uint8_t b;
+        ssize_t r = read(fd, &b, 1);
+        if (r <= 0) break;
+        w[got++] = b;
+        if (b == '\n') break;
+    }
+    if (pr) *pr = got;
+    RET(1, 5);
+}
+static void k_GetConsoleScreenBufferInfo(void) {         /* (hOut, &info 22 bytes) */
+    uint32_t p = A32(1);
+    if (!p) RET(0, 2);
+    memset(hle_ptr(p), 0, 22);
+    MEM16(p + 0) = 80; MEM16(p + 2) = 25;                /* dwSize */
+    MEM16(p + 8) = 7;                                    /* wAttributes */
+    MEM16(p + 14) = 79; MEM16(p + 16) = 24;              /* srWindow */
+    MEM16(p + 18) = 80; MEM16(p + 20) = 25;              /* dwMaximumWindowSize */
+    RET(1, 2);
+}
+static void k_GetConsoleTitleA(void) {
+    char *b = ASTR(0); uint32_t sz = A32(1);
+    if (!b || !sz) RET(0, 2);
+    snprintf(b, sz, "GameReComp Console");
+    RET((uint32_t)strlen(b), 2);
+}
+static void k_GetConsoleWindow(void) { RET(0, 0); }
+static void k_CreateConsoleScreenBuffer(void) { hle_set_last_error(5u); RET(0xFFFFFFFFu, 5); }
+static void k_FillConsoleOutput(void) {
+    if (A32(4)) MEM32(A32(4)) = A32(2);
+    RET(1, 5);
+}
+static void k_GetProcessId(void) { RET((uint32_t)getpid(), 1); }
+static void k_GetTimes5(void) {
+    for (int i = 1; i < 5; i++) if (A32(i)) { MEM32(A32(i)) = 0; MEM32(A32(i) + 4) = 0; }
+    RET(1, 5);
+}
+static void k_IsWow64Process(void) {
+    if (A32(1)) MEM32(A32(1)) = 0;
+    RET(1, 2);
+}
+static void k_CreateProcessW(void) {
+    hle_set_last_error(2u);
+    RET(0, 10);
+}
+static void k_CreateRemoteThread(void) { hle_set_last_error(5u); RET(0, 7); }
+static void k_ReadProcessMemory(void) { hle_set_last_error(5u); RET(0, 5); }
+
 const win32hle_shim win32hle_kernel32[] = {
     { "GetProcessVersion",  k_GetProcessVersion },
     { "GlobalFlags",        k_GlobalFlags },
@@ -794,6 +884,19 @@ const win32hle_shim win32hle_kernel32[] = {
     { "GetLastError",       k_GetLastError },
     { "SetLastError",       k_SetLastError },
     { "OutputDebugStringA", k_OutputDebugStringA },
+    { "OutputDebugStringW", k_OutputDebugStringW },
+    { "EncodePointer",      k_EncodePointer },
+    { "DecodePointer",      k_EncodePointer },
+    { "AreFileApisANSI",    k_AreFileApisANSI },
+    { "Beep",               k_Beep },
+    { "GetProcessId",       k_GetProcessId },
+    { "GetProcessTimes",    k_GetTimes5 },
+    { "GetThreadTimes",     k_GetTimes5 },
+    { "IsWow64Process",     k_IsWow64Process },
+    { "CreateProcessW",     k_CreateProcessW },
+    { "CreateRemoteThread", k_CreateRemoteThread },
+    { "ReadProcessMemory",  k_ReadProcessMemory },
+    { "SetSystemTime",      k_ret1_1 },
     { "lstrlenA",           k_lstrlenA },
     { "lstrlenW",           k_lstrlenW },
     { "lstrcpyA",           k_lstrcpyA },
@@ -841,7 +944,27 @@ const win32hle_shim win32hle_kernel32[] = {
     { "GetNumberOfConsoleInputEvents", k_GetNumberOfConsoleInputEvents },
     { "PeekConsoleInputA",  k_fail_4 },
     { "ReadConsoleInputA",  k_fail_4 },
+    { "PeekConsoleInputW",  k_fail_4 },
+    { "ReadConsoleInputW",  k_fail_4 },
     { "WriteConsoleA",      k_WriteConsoleA },
+    { "WriteConsoleW",      k_WriteConsoleW },
+    { "ReadConsoleW",       k_ReadConsoleW },
+    { "GetConsoleCP",       k_GetConsoleCP },
+    { "GetConsoleOutputCP", k_GetConsoleOutputCP },
+    { "SetConsoleCP",       k_ret1_1 },
+    { "SetConsoleOutputCP", k_ret1_1 },
+    { "GetConsoleScreenBufferInfo", k_GetConsoleScreenBufferInfo },
+    { "SetConsoleTextAttribute",    k_ret1_2 },
+    { "SetConsoleCursorPosition",   k_ret1_2 },
+    { "SetConsoleTitleA",           k_ret1_1 },
+    { "GetConsoleTitleA",           k_GetConsoleTitleA },
+    { "GetConsoleWindow",           k_GetConsoleWindow },
+    { "CreateConsoleScreenBuffer",  k_CreateConsoleScreenBuffer },
+    { "SetConsoleActiveScreenBuffer", k_ret1_1 },
+    { "SetConsoleScreenBufferSize", k_ret1_2 },
+    { "FillConsoleOutputCharacterA", k_FillConsoleOutput },
+    { "FillConsoleOutputAttribute",  k_FillConsoleOutput },
+    { "GenerateConsoleCtrlEvent",   k_ret1_2 },
     { "SetupComm",          k_fail_3 },
     { "PurgeComm",          k_fail_2 },
     { "ClearCommBreak",     k_fail_1 },

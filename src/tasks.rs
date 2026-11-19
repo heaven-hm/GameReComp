@@ -1,0 +1,588 @@
+use std::fs;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
+
+use crate::config::AppConfig;
+use crate::json::JsonValue;
+use crate::logging::unix_timestamp_secs;
+use crate::model::ProjectModel;
+use crate::orchestrator::{default_project_dir, run_pipeline_cli, EXIT_OK, EXIT_UNVERIFIED};
+
+#[derive(Debug, Clone)]
+pub struct BatchTaskResult {
+    pub exe_name: String,
+    pub project_dir: PathBuf,
+    pub exit_code: i32,
+    pub build_passed: bool,
+    pub boot_passed: bool,
+    pub strict_boot_passed: bool,
+    pub unresolved_imports: i64,
+    pub unhandled_eips: i64,
+    pub crash_signal: Option<String>,
+    pub standalone_ok: bool,
+    pub standalone_note: String,
+    pub elapsed_secs: f64,
+}
+
+pub fn collect_exes(inputs: &[String]) -> Vec<PathBuf> {
+    let mut exes = Vec::new();
+    for raw in inputs {
+        let p = PathBuf::from(raw);
+        if p.is_file() {
+            if p.extension()
+                .and_then(|e| e.to_str())
+                .map(|s| s.eq_ignore_ascii_case("exe"))
+                .unwrap_or(false)
+            {
+                exes.push(p);
+            }
+        } else if p.is_dir() {
+            if let Ok(rd) = fs::read_dir(&p) {
+                let mut children: Vec<PathBuf> = rd
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|c| {
+                        c.is_file()
+                            && c.extension()
+                                .and_then(|e| e.to_str())
+                                .map(|s| s.eq_ignore_ascii_case("exe"))
+                                .unwrap_or(false)
+                    })
+                    .collect();
+                children.sort();
+                exes.extend(children);
+            }
+        }
+    }
+    exes
+}
+
+pub fn clean_cmake_objects(project_dir: &Path) -> std::io::Result<()> {
+    let obj_dir = project_dir.join("build").join("CMakeFiles");
+    if obj_dir.exists() {
+        fs::remove_dir_all(obj_dir)?;
+    }
+    let keep_sources = project_dir.file_name().and_then(|s| s.to_str()) == Some("cavestory-doukutsu");
+    if !keep_sources && project_dir.join("reports").join("report.json").is_file() {
+        let gen_dir = project_dir.join("src").join("recomp").join("gen");
+        if gen_dir.exists() {
+            fs::remove_dir_all(gen_dir)?;
+        }
+        let img_c = project_dir.join("src").join("image_data.c");
+        if img_c.is_file() {
+            fs::remove_file(img_c)?;
+        }
+        let runtime_dir = project_dir.join("src").join("runtime");
+        if runtime_dir.exists() {
+            fs::remove_dir_all(runtime_dir)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn available_disk_mb(path: &Path) -> Option<u64> {
+    let out = Command::new("df").args(["-m"]).arg(path).output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let txt = String::from_utf8_lossy(&out.stdout);
+    let line = txt.lines().nth(1)?;
+    let cols: Vec<&str> = line.split_whitespace().collect();
+    cols.get(3).and_then(|v| v.parse::<u64>().ok())
+}
+
+/// Executes a rebuilt binary standalone from /tmp with no arguments, verifying
+/// that it does not require the original .exe or companion .dlls on disk and
+/// either exits cleanly or stays running stably past `timeout_ms` (GUI apps).
+pub fn verify_standalone_binary(binary: &Path, timeout_ms: u64) -> Result<String, String> {
+    if !binary.is_file() {
+        return Err(format!("missing binary at {}", binary.display()));
+    }
+    let tmp = std::env::temp_dir();
+    let mut child = Command::new(binary)
+        .current_dir(&tmp)
+        .env("SDL_VIDEODRIVER", "dummy")
+        .env("SDL_AUDIODRIVER", "dummy")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("spawn failed: {e}"))?;
+
+    let start = Instant::now();
+    let deadline = Duration::from_millis(timeout_ms);
+    let mut exited = None;
+
+    while start.elapsed() < deadline {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                exited = Some(status);
+                break;
+            }
+            Ok(None) => thread::sleep(Duration::from_millis(25)),
+            Err(e) => return Err(format!("wait error: {e}")),
+        }
+    }
+
+    let survived_to_timeout = exited.is_none();
+    if survived_to_timeout {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    let mut stderr_buf = String::new();
+    if let Some(mut err) = child.stderr.take() {
+        let _ = err.read_to_string(&mut stderr_buf);
+    }
+
+    if stderr_buf.contains("UNRESOLVED") || stderr_buf.contains("boot-failed") {
+        let snippet: String = stderr_buf.lines().take(3).collect::<Vec<_>>().join(" | ");
+        return Err(format!("boot failure in standalone run: {snippet}"));
+    }
+    if stderr_buf.contains("hle_fatal") || stderr_buf.contains("unhandled EIP") {
+        let snippet: String = stderr_buf
+            .lines()
+            .filter(|l| l.contains("hle_fatal") || l.contains("unhandled"))
+            .take(2)
+            .collect::<Vec<_>>()
+            .join(" | ");
+        return Err(format!("runtime trap in standalone run: {snippet}"));
+    }
+
+    if let Some(status) = exited {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            if let Some(sig) = status.signal() {
+                return Err(format!("crashed with signal {sig}"));
+            }
+        }
+        let code = status.code().unwrap_or(-1);
+        if code == 2 {
+            let snippet: String = stderr_buf.lines().take(2).collect::<Vec<_>>().join(" | ");
+            return Err(format!("exited 2 (boot failure): {snippet}"));
+        }
+        return Ok(format!("exited {code} in {}ms", start.elapsed().as_millis()));
+    }
+
+    Ok(format!("ran cleanly for {timeout_ms}ms headless"))
+}
+
+pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
+    if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
+        println!(
+            "Usage: GameReComp batch <path_or_dir...> [--timeout N] [--clean-objects] [--verify-standalone] [--limit N] [--offset N] [--skip-existing]"
+        );
+        return if args.is_empty() { 2 } else { 0 };
+    }
+
+    let mut inputs = Vec::new();
+    let mut timeout = "10".to_string();
+    let mut clean_objects = false;
+    let mut verify_standalone = false;
+    let mut skip_existing = false;
+    let mut limit: Option<usize> = None;
+    let mut offset: usize = 0;
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--timeout" => {
+                if let Some(v) = args.get(i + 1) {
+                    timeout = v.clone();
+                    i += 2;
+                } else {
+                    eprintln!("error: --timeout requires a value");
+                    return 2;
+                }
+            }
+            "--clean-objects" => {
+                clean_objects = true;
+                i += 1;
+            }
+            "--verify-standalone" => {
+                verify_standalone = true;
+                i += 1;
+            }
+            "--skip-existing" => {
+                skip_existing = true;
+                i += 1;
+            }
+            "--limit" => {
+                if let Some(v) = args.get(i + 1).and_then(|x| x.parse::<usize>().ok()) {
+                    limit = Some(v);
+                    i += 2;
+                } else {
+                    eprintln!("error: --limit requires an integer");
+                    return 2;
+                }
+            }
+            "--offset" => {
+                if let Some(v) = args.get(i + 1).and_then(|x| x.parse::<usize>().ok()) {
+                    offset = v;
+                    i += 2;
+                } else {
+                    eprintln!("error: --offset requires an integer");
+                    return 2;
+                }
+            }
+            other => {
+                inputs.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+
+    let all_exes = collect_exes(&inputs);
+    if all_exes.is_empty() {
+        eprintln!("error: no .exe files found in inputs");
+        return 2;
+    }
+
+    let slice: Vec<PathBuf> = all_exes
+        .into_iter()
+        .skip(offset)
+        .take(limit.unwrap_or(usize::MAX))
+        .collect();
+
+    println!(
+        "batch: processing {} executable(s) (offset={offset}, clean_objects={clean_objects}, verify_standalone={verify_standalone})",
+        slice.len()
+    );
+
+    let mut results: Vec<BatchTaskResult> = Vec::with_capacity(slice.len());
+    for (idx, exe) in slice.iter().enumerate() {
+        let exe_name = exe
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown.exe")
+            .to_string();
+        let proj_dir = default_project_dir(&cfg.repo_root, exe);
+
+        if let Some(avail) = available_disk_mb(&cfg.repo_root) {
+            if avail < 1536 {
+                eprintln!(
+                    "STOP: available disk space ({avail} MiB) dropped below 1536 MiB threshold before {exe_name}"
+                );
+                return 2;
+            }
+        }
+
+        if skip_existing {
+            if let Ok(m) = ProjectModel::load(&proj_dir) {
+                if m.diag.build_passed
+                    && m.diag.strict_boot_passed
+                    && m.diag.unresolved_import_count == 0
+                    && m.built_binary_path().is_some()
+                {
+                    if clean_objects {
+                        let _ = clean_cmake_objects(&proj_dir);
+                    }
+                    println!("[{}/{}] SKIP (already passing): {exe_name}", idx + 1, slice.len());
+                    continue;
+                }
+            }
+        }
+
+        println!("[{}/{}] RUN {exe_name}", idx + 1, slice.len());
+        let t0 = Instant::now();
+        let mut run_args = vec![
+            exe.to_string_lossy().to_string(),
+            "--input-os".to_string(),
+            "windows".to_string(),
+            "--input-arch".to_string(),
+            "x86".to_string(),
+            "--target-os".to_string(),
+            "macos".to_string(),
+            "--target-arch".to_string(),
+            "arm64".to_string(),
+            "--timeout".to_string(),
+            timeout.clone(),
+            "--no-progress".to_string(),
+            "--no-table".to_string(),
+        ];
+        if clean_objects {
+            run_args.push("--clean-objects".to_string());
+        }
+
+        let code = run_pipeline_cli(cfg, &run_args);
+        if clean_objects {
+            let _ = clean_cmake_objects(&proj_dir);
+        }
+
+        let model = ProjectModel::load(&proj_dir).ok();
+        let (standalone_ok, standalone_note) = if verify_standalone {
+            match model.as_ref().and_then(|m| m.built_binary_path()) {
+                Some(bin) => match verify_standalone_binary(&bin, 600) {
+                    Ok(msg) => (true, msg),
+                    Err(err) => (false, err),
+                },
+                None => (false, "no built binary".to_string()),
+            }
+        } else {
+            (true, "not requested".to_string())
+        };
+
+        let diag = model.as_ref().map(|m| m.diag.clone()).unwrap_or_default();
+        let res = BatchTaskResult {
+            exe_name: exe_name.clone(),
+            project_dir: proj_dir,
+            exit_code: code,
+            build_passed: diag.build_passed,
+            boot_passed: diag.boot_passed,
+            strict_boot_passed: diag.strict_boot_passed,
+            unresolved_imports: diag.unresolved_import_count,
+            unhandled_eips: diag.unhandled_eip_count,
+            crash_signal: diag.crash_signal,
+            standalone_ok,
+            standalone_note: standalone_note.clone(),
+            elapsed_secs: t0.elapsed().as_secs_f64(),
+        };
+
+        let status_tag = if (res.exit_code == EXIT_OK || res.exit_code == EXIT_UNVERIFIED)
+            && res.build_passed
+            && res.strict_boot_passed
+            && res.unresolved_imports == 0
+            && res.unhandled_eips == 0
+            && res.crash_signal.is_none()
+            && res.standalone_ok
+        {
+            "PASS"
+        } else {
+            "FAIL"
+        };
+        println!(
+            "  => {status_tag} {exe_name}: rc={} build={} boot={} strict={} unresolved={} eip={} crash={:?} standalone={} ({}) [{:.1}s]",
+            res.exit_code,
+            res.build_passed,
+            res.boot_passed,
+            res.strict_boot_passed,
+            res.unresolved_imports,
+            res.unhandled_eips,
+            res.crash_signal,
+            res.standalone_ok,
+            res.standalone_note,
+            res.elapsed_secs
+        );
+        results.push(res);
+    }
+
+    // Record batch projects, sync matrix, and write structured Rust batch report
+    let mut gargs: Vec<String> = vec!["-m".into(), "tools.gamesdb".into(), "--matrix".into()];
+    for r in &results {
+        if r.project_dir.join("reports/report.json").is_file() {
+            gargs.push("--record".into());
+            gargs.push(r.project_dir.to_string_lossy().into());
+        }
+    }
+    let _ = Command::new("python3")
+        .current_dir(&cfg.repo_root)
+        .env("PYTHONPATH", &cfg.repo_root)
+        .args(&gargs)
+        .status();
+
+    let json_rows: Vec<JsonValue> = results
+        .iter()
+        .map(|r| {
+            JsonValue::Object(vec![
+                ("exe".into(), JsonValue::Str(r.exe_name.clone())),
+                ("project_dir".into(), JsonValue::Str(r.project_dir.to_string_lossy().into())),
+                ("exit_code".into(), JsonValue::Number(r.exit_code as f64)),
+                ("build_passed".into(), JsonValue::Bool(r.build_passed)),
+                ("boot_passed".into(), JsonValue::Bool(r.boot_passed)),
+                ("strict_boot_passed".into(), JsonValue::Bool(r.strict_boot_passed)),
+                ("unresolved_imports".into(), JsonValue::Number(r.unresolved_imports as f64)),
+                ("unhandled_eips".into(), JsonValue::Number(r.unhandled_eips as f64)),
+                ("standalone_ok".into(), JsonValue::Bool(r.standalone_ok)),
+                ("elapsed_secs".into(), JsonValue::Number(r.elapsed_secs)),
+            ])
+        })
+        .collect();
+    let report_obj = JsonValue::Object(vec![
+        ("timestamp".into(), JsonValue::Number(unix_timestamp_secs() as f64)),
+        ("total".into(), JsonValue::Number(results.len() as f64)),
+        ("results".into(), JsonValue::Array(json_rows)),
+    ]);
+    let report_dir = cfg.repo_root.join("reports");
+    let _ = fs::create_dir_all(&report_dir);
+    let _ = fs::write(report_dir.join("batch_last.json"), report_obj.to_json_string());
+
+    let failed = results
+        .iter()
+        .filter(|r| {
+            !(r.exit_code == EXIT_OK || r.exit_code == EXIT_UNVERIFIED)
+                || !r.build_passed
+                || !r.strict_boot_passed
+                || r.unresolved_imports > 0
+                || r.unhandled_eips > 0
+                || r.crash_signal.is_some()
+                || !r.standalone_ok
+        })
+        .collect::<Vec<_>>();
+
+    println!(
+        "\nbatch summary: {}/{} passed ({} failed)",
+        results.len() - failed.len(),
+        results.len(),
+        failed.len()
+    );
+    for f in &failed {
+        println!(
+            "  FAILED: {} -> build={} boot={} strict={} unresolved={} eip={} crash={:?} standalone={} ({})",
+            f.exe_name,
+            f.build_passed,
+            f.boot_passed,
+            f.strict_boot_passed,
+            f.unresolved_imports,
+            f.unhandled_eips,
+            f.crash_signal,
+            f.standalone_ok,
+            f.standalone_note
+        );
+    }
+
+    if failed.is_empty() { 0 } else { 2 }
+}
+
+pub fn run_serve_command(_cfg: &AppConfig, args: &[String]) -> i32 {
+    if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
+        println!("Usage: GameReComp serve <project_dir_or_build_dir> [--port 8080]");
+        return if args.is_empty() { 2 } else { 0 };
+    }
+    let mut dir: Option<PathBuf> = None;
+    let mut port = "8080".to_string();
+    let mut i = 0;
+    while i < args.len() {
+        if args[i] == "--port" || args[i] == "-p" {
+            if let Some(v) = args.get(i + 1) {
+                port = v.clone();
+                i += 2;
+            } else {
+                eprintln!("error: --port requires a value");
+                return 2;
+            }
+        } else if dir.is_none() {
+            dir = Some(PathBuf::from(&args[i]));
+            i += 1;
+        } else {
+            eprintln!("error: unexpected argument: {}", args[i]);
+            return 2;
+        }
+    }
+    let Some(base) = dir else {
+        eprintln!("error: project directory is required");
+        return 2;
+    };
+    let serve_dir = if base.join("index.html").is_file() {
+        base
+    } else if base.join("build").join("index.html").is_file() {
+        base.join("build")
+    } else {
+        eprintln!("error: no build/index.html found in {} (build with --target-os web --target-arch wasm32 first)", base.display());
+        return 2;
+    };
+    println!("Serving WebAssembly app at http://127.0.0.1:{port}/index.html (dir: {})", serve_dir.display());
+    println!("Press Ctrl+C to stop.");
+    let py = "import http.server, socketserver, functools, sys\n\
+class CoopHandler(http.server.SimpleHTTPRequestHandler):\n\
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.wasm': 'application/wasm'}\n\
+    def end_headers(self):\n\
+        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')\n\
+        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')\n\
+        self.send_header('Cache-Control', 'no-store')\n\
+        super().end_headers()\n\
+handler = functools.partial(CoopHandler, directory=sys.argv[1])\n\
+socketserver.TCPServer.allow_reuse_address = True\n\
+with socketserver.TCPServer(('127.0.0.1', int(sys.argv[2])), handler) as httpd:\n\
+    httpd.serve_forever()\n";
+    match Command::new("python3")
+        .arg("-c")
+        .arg(py)
+        .arg(&serve_dir)
+        .arg(&port)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+    {
+        Ok(st) => st.code().unwrap_or(0),
+        Err(e) => {
+            eprintln!("error: failed to start HTTP server: {e}");
+            1
+        }
+    }
+}
+
+pub fn run_tasks_command(cfg: &AppConfig, args: &[String]) -> i32 {
+    let mut projects_root = cfg.repo_root.join("projects");
+    let mut i = 0;
+    while i < args.len() {
+        if args[i] == "--project-root" && i + 1 < args.len() {
+            projects_root = PathBuf::from(&args[i + 1]);
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+
+    let Ok(rd) = fs::read_dir(&projects_root) else {
+        println!("no projects directory at {}", projects_root.display());
+        return 0;
+    };
+
+    let mut dirs: Vec<PathBuf> = rd
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .collect();
+    dirs.sort();
+
+    println!("{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} {}", "Project", "Score", "Outcome", "Build", "Strict", "Bin", "Source PE");
+    println!("{}", "-".repeat(90));
+    for d in dirs {
+        let name = d.file_name().and_then(|s| s.to_str()).unwrap_or("");
+        match ProjectModel::load(&d) {
+            Ok(m) => {
+                let bin_ok = if m.built_binary_path().is_some() { "yes" } else { "no" };
+                println!(
+                    "{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} {}",
+                    name,
+                    m.score,
+                    if m.verification.is_empty() { "-" } else { &m.verification },
+                    if m.diag.build_passed { "ok" } else { "fail" },
+                    if m.diag.strict_boot_passed { "ok" } else { "fail" },
+                    bin_ok,
+                    m.pe_path
+                );
+            }
+            Err(_) => {
+                println!("{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} -", name, "-", "unbuilt", "-", "-", "-");
+            }
+        }
+    }
+    0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn collects_and_sorts_exes_from_dir() {
+        let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let dir = std::env::temp_dir().join(format!("gamerecomp-tasks-{nanos}"));
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("b.exe"), b"MZ").unwrap();
+        fs::write(dir.join("a.EXE"), b"MZ").unwrap();
+        fs::write(dir.join("notes.txt"), b"hi").unwrap();
+        let found = collect_exes(&[dir.to_string_lossy().to_string()]);
+        assert_eq!(found.len(), 2);
+        assert!(found[0].ends_with("a.EXE"));
+        assert!(found[1].ends_with("b.exe"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+}

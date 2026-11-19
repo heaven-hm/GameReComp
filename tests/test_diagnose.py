@@ -459,5 +459,50 @@ class MainTemplateTest(unittest.TestCase):
                          "MAIN_C template does not compile against host.h")
 
 
+class EmbeddedStandaloneTest(unittest.TestCase):
+    """Embedded binaries run standalone with no original PE path on disk or argv."""
+
+    def test_is_image_embedded_reads_project_json(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            proj = Path(tmp)
+            self.assertFalse(diagnose._is_image_embedded(proj))
+            (proj / "project.json").write_text(json.dumps({"image_embedded": False}))
+            self.assertFalse(diagnose._is_image_embedded(proj))
+            (proj / "project.json").write_text(json.dumps({"image_embedded": True}))
+            self.assertTrue(diagnose._is_image_embedded(proj))
+
+    def test_measure_project_runs_embedded_without_pe_on_disk(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            proj = Path(tmp) / "demo"
+            build = proj / "build"
+            build.mkdir(parents=True)
+            exe = build / "demo"
+            exe.write_text("#!/bin/sh\necho argc=$# >&2\nexit 0\n")
+            exe.chmod(0o755)
+            missing_pe = "/nonexistent/path/demo.exe"
+
+            (proj / "project.json").write_text(json.dumps({
+                "name": "demo",
+                "image_embedded": False,
+                "pe": {"path": missing_pe, "pe_type": "PE32", "sha256": "00"},
+            }))
+            no_pe = diagnose.measure_project(proj, timeout=5.0, strict_check=False)
+            self.assertEqual(no_pe["outcome"], "no-binary")
+            self.assertIn("original PE not found", no_pe["raw_error"] or "")
+
+            (proj / "project.json").write_text(json.dumps({
+                "name": "demo",
+                "image_embedded": True,
+                "pe": {"path": missing_pe, "pe_type": "PE32", "sha256": "00"},
+            }))
+            row = diagnose.measure_project(proj, timeout=5.0, strict_check=False)
+            self.assertIsNone(row["raw_error"])
+            self.assertEqual(row["outcome"], "exited-clean")
+            self.assertEqual(row["exit_code"], 0)
+            self.assertIn("argc=0", row["stderr_tail"])
+
+
 if __name__ == "__main__":
     unittest.main()

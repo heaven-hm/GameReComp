@@ -324,7 +324,7 @@ recomp_func_t recomp_lookup_manual(uint32_t va) { (void)va; return NULL; }
  * Each shim gets a synthetic VA in a reserved range that no real image uses. */
 #define SHIM_BASE  0x7F000000u
 #define SHIM_STEP  16u
-#define MAX_SHIMS  2048
+#define MAX_SHIMS  4096
 static struct { const char *name; recomp_func_t fn; uint32_t va; } g_shim[MAX_SHIMS];
 static int g_shim_n;
 
@@ -471,8 +471,32 @@ uint32_t hle_call_guest(uint32_t va, int nargs, const uint32_t *args) {
     mach_enter();
     recomp_func_t f = recomp_lookup(va);       /* under the machine: shim_entry's index is shared */
     if (!f) f = recomp_lookup_import(va);
+    uint32_t thunk_ecx = 0;
+    int set_ecx = 0;
+    if (!f && va >= 0x10000u) {
+        /* Borland Delphi Classes.MakeObjectInstance thunk:
+         * slot: E8 <rel32 hdr>; dd Method.Code; dd Method.Data
+         * hdr:  59 (pop ecx); E9 <rel32 StdWndProc> */
+        const uint8_t *p = (const uint8_t *)hle_ptr(va);
+        if (p && p[0] == 0xE8u) {
+            int32_t rel1 = 0;
+            memcpy(&rel1, p + 1, 4);
+            uint32_t hdr = (uint32_t)((int32_t)(va + 5u) + rel1);
+            if (hdr >= 0x10000u) {
+                const uint8_t *hp = (const uint8_t *)hle_ptr(hdr);
+                if (hp && hp[0] == 0x59u && hp[1] == 0xE9u) {
+                    int32_t rel2 = 0;
+                    memcpy(&rel2, hp + 2, 4);
+                    uint32_t target = (uint32_t)((int32_t)(hdr + 6u) + rel2);
+                    f = recomp_lookup(target);
+                    if (f) { thunk_ecx = va + 5u; set_ecx = 1; }
+                }
+            }
+        }
+    }
     if (!f) hle_fatal("no lifted function at 0x%08X", va);
     regs_t saved; regs_save(&saved);
+    if (set_ecx) g_ecx = thunk_ecx;
     for (int i = nargs - 1; i >= 0; i--) PUSH32(g_esp, args[i]);
     PUSH32(g_esp, RECOMP_RETADDR);
     f();

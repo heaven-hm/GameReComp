@@ -282,9 +282,213 @@ static void o_CoCreateGuid(void) {
     RET(S_OK, 1);
 }
 
+static uint32_t ole_alloc_bstr(const uint16_t *src, uint32_t len) {
+    uint32_t bytes = (len + 1u) * 2u;
+    uint32_t base = hle_va(hle_alloc(bytes + 4u));
+    if (!base) return 0;
+    MEM32(base) = len * 2u;
+    uint32_t bstr = base + 4u;
+    uint8_t *dst = (uint8_t *)hle_ptr(bstr);
+    if (src && len) memcpy(dst, src, len * 2u);
+    else memset(dst, 0, len * 2u);
+    MEM16(bstr + len * 2u) = 0;
+    return bstr;
+}
+
+static void o_CoGetClassObject(void) {
+    if (A32(4)) MEM32(A32(4)) = 0;
+    RET(0x80040111u /* CLASS_E_CLASSNOTAVAILABLE */, 5);
+}
+static void o_CoTaskMemFree(void) { RETV(1); }
+static void o_CreateStreamOnHGlobal(void) {
+    if (A32(2)) MEM32(A32(2)) = 0;
+    RET(0x80004001u /* E_NOTIMPL */, 3);
+}
+static void o_IsAccelerator(void) { RET(0, 4); }
+static void o_IsEqualGUID(void) {
+    uint8_t *g1 = (uint8_t *)APTR(0), *g2 = (uint8_t *)APTR(1);
+    RET((g1 && g2 && memcmp(g1, g2, 16) == 0) ? 1u : 0u, 2);
+}
+static void o_OleDraw(void) { RET(0x80004001u /* E_NOTIMPL */, 4); }
+static void o_OleSetMenuDescriptor(void) { RET(S_OK, 5); }
+static void o_ProgIDFromCLSID(void) {
+    if (A32(1)) MEM32(A32(1)) = 0;
+    RET(0x80040154u /* REGDB_E_CLASSNOTREG */, 2);
+}
+
+static void a_SysAllocStringLen(void) {
+    const uint16_t *src = (const uint16_t *)APTR(0);
+    RET(ole_alloc_bstr(src, A32(1)), 2);
+}
+
+static void a_SysReAllocStringLen(void) {
+    uint32_t p_va = A32(0), str_va = A32(1), len = A32(2);
+    if (!p_va) { RET(0, 3); return; }
+    uint32_t old = MEM32(p_va);
+    const uint16_t *src = str_va ? (const uint16_t *)hle_ptr(str_va) : NULL;
+    uint32_t nb = ole_alloc_bstr(src, len);
+    if (!nb) { RET(0, 3); return; }
+    if (old > 4u) hle_free((uint8_t *)hle_ptr(old) - 4);
+    MEM32(p_va) = nb;
+    RET(1, 3);
+}
+
+static void a_VariantCopy(void) {
+    uint8_t *dst = (uint8_t *)APTR(0), *src = (uint8_t *)APTR(1);
+    if (!dst || !src) { RET(0x80070057u /* E_INVALIDARG */, 2); return; }
+    if (dst != src) memcpy(dst, src, 16);
+    RET(S_OK, 2);
+}
+
+static void a_VariantChangeTypeEx(void) {
+    uint32_t dst_va = A32(0), src_va = A32(1), vt = A32(4) & 0xffffu;
+    if (!dst_va || !src_va) { RET(0x80070057u, 5); return; }
+    if (dst_va != src_va) memcpy(hle_ptr(dst_va), hle_ptr(src_va), 16);
+    MEM16(dst_va) = (uint16_t)vt;
+    RET(S_OK, 5);
+}
+
+static uint32_t vt_elem_size(uint32_t vt) {
+    switch (vt & 0xfffu) {
+    case 16: case 17: case 11: return 1; /* I1, UI1 (2 for BOOL? wait VARIANT_BOOL=2; 1 is safe for UI1, BOOL=2) */
+    case 2: case 18: return 2;
+    case 3: case 4: case 19: case 22: case 23: case 8: case 9: case 13: return 4;
+    case 5: case 6: case 7: case 20: case 21: return 8;
+    case 12: case 14: return 16;
+    default: return 4;
+    }
+}
+
+static uint32_t safearray_offset(uint32_t psa_va, const int32_t *idx, int *ok) {
+    uint16_t dims = MEM16(psa_va);
+    uint32_t cb = MEM32(psa_va + 4);
+    if (dims == 0 || !idx) { *ok = 0; return 0; }
+    uint32_t stride = 1, linear = 0;
+    for (uint16_t d = 0; d < dims; d++) {
+        uint32_t b_va = psa_va + 16u + 8u * d;
+        uint32_t cnt = MEM32(b_va);
+        int32_t lb = (int32_t)MEM32(b_va + 4);
+        int32_t rel = idx[d] - lb;
+        if (rel < 0 || (uint32_t)rel >= cnt) { *ok = 0; return 0; }
+        linear += (uint32_t)rel * stride;
+        stride *= cnt;
+    }
+    *ok = 1;
+    return linear * cb;
+}
+
+static void a_SafeArrayCreate(void) {
+    uint32_t vt = A32(0) & 0xffffu, cdims = A32(1) & 0xffffu, bounds_va = A32(2);
+    if (cdims == 0 || cdims > 8 || !bounds_va) { RET(0, 3); return; }
+    uint32_t cb = ((vt & 0xfffu) == 11) ? 2u : vt_elem_size(vt);
+    uint32_t sa_va = hle_va(hle_alloc(16u + 8u * cdims));
+    if (!sa_va) { RET(0, 3); return; }
+    uint32_t total = 1;
+    for (uint32_t i = 0; i < cdims; i++) {
+        uint32_t ce = MEM32(bounds_va + 8u * i);
+        uint32_t lb = MEM32(bounds_va + 8u * i + 4u);
+        MEM32(sa_va + 16u + 8u * i) = ce;
+        MEM32(sa_va + 16u + 8u * i + 4u) = lb;
+        total *= ce ? ce : 1u;
+    }
+    uint32_t data_va = hle_va(hle_alloc(total * cb));
+    if (data_va) memset(hle_ptr(data_va), 0, total * cb);
+    MEM16(sa_va) = (uint16_t)cdims;
+    MEM16(sa_va + 2) = 0;
+    MEM32(sa_va + 4) = cb;
+    MEM32(sa_va + 8) = 0;
+    MEM32(sa_va + 12) = data_va;
+    RET(sa_va, 3);
+}
+
+static void a_SafeArrayRedim(void) {
+    uint32_t sa_va = A32(0), b_va = A32(1);
+    if (!sa_va || !b_va) { RET(0x80070057u, 2); return; }
+    uint16_t cdims = MEM16(sa_va);
+    if (cdims == 0) { RET(0x80070057u, 2); return; }
+    uint32_t cb = MEM32(sa_va + 4);
+    uint32_t old_last = MEM32(sa_va + 16u + 8u * (cdims - 1));
+    uint32_t new_last = MEM32(b_va);
+    MEM32(sa_va + 16u + 8u * (cdims - 1)) = new_last;
+    MEM32(sa_va + 16u + 8u * (cdims - 1) + 4u) = MEM32(b_va + 4u);
+    uint32_t new_total = 1, old_total = 1;
+    for (uint16_t d = 0; d < cdims; d++) {
+        uint32_t ce = MEM32(sa_va + 16u + 8u * d);
+        new_total *= ce;
+        old_total *= (d == cdims - 1) ? old_last : ce;
+    }
+    uint32_t ndata = hle_va(hle_alloc(new_total ? new_total * cb : cb));
+    uint32_t odata = MEM32(sa_va + 12);
+    if (ndata) {
+        memset(hle_ptr(ndata), 0, new_total ? new_total * cb : cb);
+        uint32_t cp = (old_total < new_total ? old_total : new_total) * cb;
+        if (odata && cp) memcpy(hle_ptr(ndata), hle_ptr(odata), cp);
+    }
+    if (odata) hle_free(hle_ptr(odata));
+    MEM32(sa_va + 12) = ndata;
+    RET(S_OK, 2);
+}
+
+static void a_SafeArrayGetLBound(void) {
+    uint32_t sa_va = A32(0), dim = A32(1), out_va = A32(2);
+    if (!sa_va || !out_va || dim < 1 || dim > MEM16(sa_va)) { RET(0x80070057u, 3); return; }
+    MEM32(out_va) = MEM32(sa_va + 16u + 8u * (dim - 1) + 4u);
+    RET(S_OK, 3);
+}
+
+static void a_SafeArrayGetUBound(void) {
+    uint32_t sa_va = A32(0), dim = A32(1), out_va = A32(2);
+    if (!sa_va || !out_va || dim < 1 || dim > MEM16(sa_va)) { RET(0x80070057u, 3); return; }
+    uint32_t cnt = MEM32(sa_va + 16u + 8u * (dim - 1));
+    int32_t lb = (int32_t)MEM32(sa_va + 16u + 8u * (dim - 1) + 4u);
+    MEM32(out_va) = (uint32_t)(lb + (int32_t)cnt - 1);
+    RET(S_OK, 3);
+}
+
+static void a_SafeArrayPtrOfIndex(void) {
+    uint32_t sa_va = A32(0), idx_va = A32(1), ppv_va = A32(2);
+    if (!sa_va || !ppv_va) { RET(0x80070057u, 3); return; }
+    int ok = 0;
+    uint32_t off = safearray_offset(sa_va, (const int32_t *)hle_ptr(idx_va), &ok);
+    uint32_t data = MEM32(sa_va + 12);
+    if (!ok || !data) { RET(0x8002000Bu /* DISP_E_BADINDEX */, 3); return; }
+    MEM32(ppv_va) = data + off;
+    RET(S_OK, 3);
+}
+
+static void a_SafeArrayGetElement(void) {
+    uint32_t sa_va = A32(0), idx_va = A32(1), pv_va = A32(2);
+    if (!sa_va || !pv_va) { RET(0x80070057u, 3); return; }
+    int ok = 0;
+    uint32_t off = safearray_offset(sa_va, (const int32_t *)hle_ptr(idx_va), &ok);
+    uint32_t data = MEM32(sa_va + 12), cb = MEM32(sa_va + 4);
+    if (!ok || !data) { RET(0x8002000Bu, 3); return; }
+    memcpy(hle_ptr(pv_va), (uint8_t *)hle_ptr(data) + off, cb);
+    RET(S_OK, 3);
+}
+
+static void a_SafeArrayPutElement(void) {
+    uint32_t sa_va = A32(0), idx_va = A32(1), pv_va = A32(2);
+    if (!sa_va || !pv_va) { RET(0x80070057u, 3); return; }
+    int ok = 0;
+    uint32_t off = safearray_offset(sa_va, (const int32_t *)hle_ptr(idx_va), &ok);
+    uint32_t data = MEM32(sa_va + 12), cb = MEM32(sa_va + 4);
+    if (!ok || !data) { RET(0x8002000Bu, 3); return; }
+    memcpy((uint8_t *)hle_ptr(data) + off, hle_ptr(pv_va), cb);
+    RET(S_OK, 3);
+}
+
+static void a_GetActiveObject(void) {
+    if (A32(2)) MEM32(A32(2)) = 0;
+    RET(0x800401E3u /* MK_E_UNAVAILABLE */, 3);
+}
+
 const win32hle_shim win32hle_ole32[] = {
     { "CoCreateGuid",          o_CoCreateGuid },
     { "CoCreateInstance",      o_CoCreateInstance },
+    { "CoGetClassObject",      o_CoGetClassObject },
+    { "CoTaskMemFree",         o_CoTaskMemFree },
+    { "CreateStreamOnHGlobal", o_CreateStreamOnHGlobal },
     { "OleInitialize",         o_OleInitialize },
     { "OleUninitialize",       o_OleUninitialize },
     { "CoInitialize",          o_CoInitialize },
@@ -294,15 +498,33 @@ const win32hle_shim win32hle_ole32[] = {
     { "CoDisconnectObject",    o_CoDisconnectObject },
     { "CoFileTimeNow",         o_CoFileTimeNow },
     { "CLSIDFromString",       o_CLSIDFromString },
+    { "ProgIDFromCLSID",       o_ProgIDFromCLSID },
     { "StringFromGUID2",       o_StringFromGUID2 },
     { "StringFromCLSID",       o_StringFromCLSID },
+    { "IsAccelerator",         o_IsAccelerator },
+    { "IsEqualGUID",           o_IsEqualGUID },
     { "OleRun",                o_OleRun },
+    { "OleDraw",               o_OleDraw },
+    { "OleSetMenuDescriptor",  o_OleSetMenuDescriptor },
 #define AUT(ord, name, fn) { "oleaut32.dll#" #ord, fn }, { name, fn }
     AUT(2, "SysAllocString",        a_SysAllocString),
+    AUT(4, "SysAllocStringLen",     a_SysAllocStringLen),
+    AUT(5, "SysReAllocStringLen",   a_SysReAllocStringLen),
     AUT(6, "SysFreeString",         a_SysFreeString),
     AUT(8, "VariantInit",           a_VariantInit),
     AUT(9, "VariantClear",          a_VariantClear),
+    AUT(10, "VariantCopy",          a_VariantCopy),
+    AUT(11, "VariantCopyInd",       a_VariantCopy),
     AUT(12, "VariantChangeType",    a_VariantChangeType),
+    AUT(147, "VariantChangeTypeEx", a_VariantChangeTypeEx),
+    AUT(15, "SafeArrayCreate",      a_SafeArrayCreate),
+    AUT(19, "SafeArrayGetLBound",   a_SafeArrayGetLBound),
+    AUT(20, "SafeArrayGetUBound",   a_SafeArrayGetUBound),
+    AUT(25, "SafeArrayGetElement",  a_SafeArrayGetElement),
+    AUT(26, "SafeArrayPutElement",  a_SafeArrayPutElement),
+    AUT(40, "SafeArrayRedim",       a_SafeArrayRedim),
+    AUT(148, "SafeArrayPtrOfIndex", a_SafeArrayPtrOfIndex),
+    AUT(35, "GetActiveObject",      a_GetActiveObject),
     AUT(200, "GetErrorInfo",        a_GetErrorInfo),
     AUT(201, "SetErrorInfo",        o_notimpl_2),
     AUT(202, "CreateErrorInfo",     o_notimpl_1),

@@ -178,6 +178,16 @@ extern ptrdiff_t g_mem_base;
 /* Guest VAs ARE host addresses (a 32-bit host mapping each module at its own
  * base): nothing to add, and no global to reload on every access. */
 #define ADDR(va)     ((uintptr_t)(uint32_t)(va))
+#elif defined(__wasm32__)
+/* On wasm32, guest VAs (e.g. 0x00400000, companion DLLs, guest stack) are
+ * translated via a 64 KiB page-directory table into linear memory blocks so
+ * arbitrary PE bases fit without reserving gigabytes of linear memory. */
+extern uint32_t g_wasm_seg_base[65536];
+static inline uintptr_t recomp_wasm_va(uint32_t va) {
+    uint32_t b = g_wasm_seg_base[va >> 16];
+    return (uintptr_t)(b ? (b + (va & 0xFFFFu)) : va);
+}
+#define ADDR(va)     recomp_wasm_va((uint32_t)(va))
 #elif defined(RECOMP_MEM_BASE)
 /* The guest's memory at a host address fixed when built (a 64-bit host; the
  * host maps it there and sets g_mem_base to match): a constant to add, where
@@ -1151,6 +1161,17 @@ recomp_func_t recomp_lookup_import(uint32_t va);    /* import bridges */
     g_cur_func = _caller;  /* the callee RECOMP_ENTER clobbered it */ \
 } while(0)
 
+#ifdef __wasm32__
+static inline int recomp_addr_readable(uint32_t va) {
+    return g_wasm_seg_base[va >> 16] != 0;
+}
+#else
+static inline int recomp_addr_readable(uint32_t va) {
+    (void)va;
+    return 1;
+}
+#endif
+
 /* Indirect call through dispatch */
 #define RECOMP_ICALL(target_va) do { \
     uint32_t _va = (uint32_t)(target_va); \
@@ -1161,6 +1182,14 @@ recomp_func_t recomp_lookup_import(uint32_t va);    /* import bridges */
     recomp_func_t _fn = recomp_lookup_manual(_va); \
     if (!_fn) _fn = recomp_lookup(_va); \
     if (!_fn) _fn = recomp_lookup_import(_va); \
+    if (!_fn && _va >= 0x00400000u && _va < 0x7E000000u && recomp_addr_readable(_va) && MEM8(_va) == 0xE8u) { \
+        uint32_t _hdr = _va + 5u + MEM32(_va + 1u); \
+        if (_hdr >= 0x00400000u && _hdr < 0x7E000000u && recomp_addr_readable(_hdr) && MEM8(_hdr) == 0x59u && MEM8(_hdr + 1u) == 0xE9u) { \
+            uint32_t _tgt = _hdr + 6u + MEM32(_hdr + 2u); \
+            _fn = recomp_lookup(_tgt); \
+            if (_fn) ecx = _va + 5u; \
+        } \
+    } \
     if (_fn) { \
         uint32_t _caller = g_cur_func; \
         PUSH32(esp, RECOMP_RETADDR); \

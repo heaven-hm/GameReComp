@@ -124,6 +124,8 @@ static void mem_init_once(void) {
     if (p == MAP_FAILED) hle_fatal("cannot reserve the guest's 4 GB");
 #endif
     g_mem_base = (ptrdiff_t)p;
+    if (mmap(p, GRAN, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) == p)
+        *(uint32_t *)p = 0xFFFFFFFFu;
 }
 void hle_mem_init(void) {
     static pthread_once_t once = PTHREAD_ONCE_INIT;

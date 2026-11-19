@@ -574,6 +574,80 @@ static void k_RaiseException(void) {
     hle_exit(3);
 }
 static void k_LoadModule(void)    { RET(2u, 2); }               /* file not found */
+static void k_GetEnvironmentVariableW(void) {        /* (nameW, bufW, nChars) */
+    const uint16_t *wn = (const uint16_t *)APTR(0);
+    uint16_t *wb = (uint16_t *)APTR(1);
+    uint32_t n = A32(2);
+    char name[256];
+    if (!wn || !hle_wide_to_ansi(wn, name, sizeof name)) { hle_set_last_error(203u); RET(0, 3); }
+    size_t nl = strlen(name);
+    for (const char *p = g_env; *p; p += strlen(p) + 1)
+        if (!strncasecmp(p, name, nl) && p[nl] == '=') {
+            const char *v = p + nl + 1;
+            uint32_t vl = (uint32_t)strlen(v);
+            if (n <= vl) RET(vl + 1, 3);
+            if (wb) hle_ansi_to_wide(v, wb, n);
+            RET(vl, 3);
+        }
+    hle_set_last_error(203u);
+    RET(0, 3);
+}
+static void k_SetEnvironmentVariableW(void) {        /* (nameW, valW) */
+    const uint16_t *wn = (const uint16_t *)APTR(0), *wv = (const uint16_t *)APTR(1);
+    char name[256], val[1024];
+    if (!wn || !hle_wide_to_ansi(wn, name, sizeof name)) RET(0, 2);
+    if (wv && !hle_wide_to_ansi(wv, val, sizeof val)) RET(0, 2);
+    char rebuilt[sizeof g_env];
+    size_t o = 0, nl = strlen(name);
+    for (const char *p = g_env; *p; p += strlen(p) + 1)
+        if (!(!strncasecmp(p, name, nl) && p[nl] == '=')) {
+            size_t len = strlen(p) + 1;
+            if (o + len + 2 < sizeof rebuilt) memcpy(rebuilt + o, p, len), o += len;
+        }
+    if (wv && o + nl + strlen(val) + 3 < sizeof rebuilt)
+        o += (size_t)sprintf(rebuilt + o, "%s=%s", name, val) + 1;
+    rebuilt[o] = 0;
+    memcpy(g_env, rebuilt, o + 1);
+    RET(1, 2);
+}
+static void k_EnumSystemLocalesW(void) {
+    static uint32_t loc_w;
+    if (!loc_w) {
+        uint16_t *w = (uint16_t *)hle_alloc(20);
+        hle_ansi_to_wide("00000409", w, 10);
+        loc_w = hle_va(w);
+    }
+    uint32_t a[1] = { loc_w };
+    if (A32(0)) hle_call_guest(A32(0), 1, a);
+    RET(1, 2);
+}
+static void k_EnumCalendarInfoA(void) { RET(1, 4); }
+static void date_or_time_w(int is_time) {
+    uint16_t now[8];
+    const uint16_t *st = (const uint16_t *)APTR(2);
+    if (!st) now_systemtime(now), st = now;
+    char fmt_buf[256];
+    const char *fmt = NULL;
+    if (A32(3) && hle_wide_to_ansi((const uint16_t *)APTR(3), fmt_buf, sizeof fmt_buf)) fmt = fmt_buf;
+    if (!fmt) fmt = is_time ? "h:mm:ss tt" : (A32(1) & 2u) ? "dddd, MMMM dd, yyyy" : "M/d/yyyy";
+    char out[256];
+    int len = fmt_picture(fmt, st, out, sizeof out);
+    int n = (int)A32(5);
+    if (!n) RET((uint32_t)len, 6);
+    if (n < len) { hle_set_last_error(ERROR_INSUFFICIENT_BUFFER); RET(0, 6); }
+    hle_ansi_to_wide(out, (uint16_t *)APTR(4), (size_t)n);
+    RET((uint32_t)len, 6);
+}
+static void k_GetDateFormatW(void) { date_or_time_w(0); }
+static void k_GetTimeFormatW(void) { date_or_time_w(1); }
+static void k_GetProfileStringA(void) {              /* (app, key, def, out, size) */
+    const char *def = ASTR(2);
+    char *out = ASTR(3);
+    uint32_t sz = A32(4);
+    if (!out || !sz) RET(0, 5);
+    snprintf(out, sz, "%s", def ? def : "");
+    RET((uint32_t)strlen(out), 5);
+}
 
 const win32hle_shim win32hle_kernel32_crt[] = {
     { "GetStdHandle",                 k_GetStdHandle },
@@ -602,15 +676,22 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "GetThreadLocale",              k_GetThreadLocale },
     { "IsValidLocale",                k_IsValidLocale },
     { "EnumSystemLocalesA",           k_EnumSystemLocalesA },
+    { "EnumSystemLocalesW",           k_EnumSystemLocalesW },
+    { "EnumCalendarInfoA",            k_EnumCalendarInfoA },
     { "GetDateFormatA",               k_GetDateFormatA },
+    { "GetDateFormatW",               k_GetDateFormatW },
     { "GetTimeFormatA",               k_GetTimeFormatA },
+    { "GetTimeFormatW",               k_GetTimeFormatW },
+    { "GetProfileStringA",            k_GetProfileStringA },
     { "GetEnvironmentStrings",        k_GetEnvironmentStrings },
     { "GetEnvironmentStringsA",       k_GetEnvironmentStrings },
     { "GetEnvironmentStringsW",       k_GetEnvironmentStringsW },
     { "FreeEnvironmentStringsA",      k_FreeEnvironmentStringsA },
     { "FreeEnvironmentStringsW",      k_FreeEnvironmentStringsW },
     { "GetEnvironmentVariableA",      k_GetEnvironmentVariableA },
+    { "GetEnvironmentVariableW",      k_GetEnvironmentVariableW },
     { "SetEnvironmentVariableA",      k_SetEnvironmentVariableA },
+    { "SetEnvironmentVariableW",      k_SetEnvironmentVariableW },
     { "MultiByteToWideChar",          k_MultiByteToWideChar },
     { "WideCharToMultiByte",          k_WideCharToMultiByte },
     { "GlobalMemoryStatus",           k_GlobalMemoryStatus },

@@ -50,6 +50,7 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <dirent.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -510,6 +511,15 @@ static void c_fgetc(void) {                          /* (stream) */
 }
 static void c_getc(void) { c_fgetc(); }              /* same contract */
 
+static void c_getchar(void) {                        /* () -> char or EOF from stdin */
+    ms_init();
+    ms_stream *s = &g_stream[0];
+    if (!s->fp) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    int c = fgetc(s->fp);
+    ms_note_state(s);
+    RETC((uint32_t)(int32_t)c);
+}
+
 static void c_fputc(void) {                          /* (c, stream) */
     ms_init();
     ms_stream *s = ms_slot_of_va(A32(1));
@@ -648,24 +658,52 @@ static void ms_store(uint32_t dst, uint64_t bits, int size) {
     }
 }
 
-static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
+static int ms_scan_step(const char *p, FILE *fp, const char *spec, void *a1, void *a2) {
+    if (fp) {
+        return a2 ? fscanf(fp, spec, a1, a2) : fscanf(fp, spec, a1);
+    }
+    return a2 ? sscanf(p, spec, a1, a2) : sscanf(p, spec, a1);
+}
+
+static int ms_vscanf_core(const char *s, FILE *fp, const char *f, uint32_t args_start) {
     uint32_t args = args_start;
     const char *p = s;
     int assigned = 0;
+    int total_read = 0;
     while (*f) {
         if (isspace((unsigned char)*f)) {            /* whitespace in the format: any run */
             while (isspace((unsigned char)*f)) f++;
-            while (isspace((unsigned char)*p)) p++;
+            if (fp) {
+                int c;
+                while ((c = fgetc(fp)) != EOF && isspace((unsigned char)c)) total_read++;
+                if (c != EOF) ungetc(c, fp);
+            } else {
+                while (isspace((unsigned char)*p)) p++;
+            }
             continue;
         }
         if (*f != '%') {
-            if (*p != *f) break;
-            p++, f++;
+            if (fp) {
+                int c = fgetc(fp);
+                if (c != (unsigned char)*f) { if (c != EOF) ungetc(c, fp); break; }
+                total_read++;
+            } else {
+                if (*p != *f) break;
+                p++;
+            }
+            f++;
             continue;
         }
         if (f[1] == '%') {
-            if (*p != '%') break;
-            p++, f += 2;
+            if (fp) {
+                int c = fgetc(fp);
+                if (c != '%') { if (c != EOF) ungetc(c, fp); break; }
+                total_read++;
+            } else {
+                if (*p != '%') break;
+                p++;
+            }
+            f += 2;
             continue;
         }
         char w[16] = "";                             /* the width, as written */
@@ -676,9 +714,10 @@ static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
         while (*f >= '0' && *f <= '9' && wi < 12) w[wi++] = *f++;
         w[wi] = 0;
         int size = 4;                                /* the guest store's width */
+        int is_long = 0;
         if (f[0] == 'h') { f++; if (*f == 'h') f++, size = 1; else size = 2; }
-        else if (f[0] == 'l') { f++; if (*f == 'l') f++; }
-        else if (f[0] == 'L') f++;
+        else if (f[0] == 'l') { f++; if (*f == 'l') f++, size = 8; else is_long = 1; }
+        else if (f[0] == 'L') { f++; is_long = 1; }
         else if (f[0] == 'I' && f[1] == '6' && f[2] == '4') f += 3, size = 8;
         else if (f[0] == 'I' && f[1] == '3' && f[2] == '2') f += 3;
         char conv = *f ? *f++ : 0;
@@ -691,8 +730,8 @@ static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
             snprintf(spec, sizeof spec, "%%%s%sll%c%%n", suppress ? "*" : "", w, c2);
             long long sv = 0;
             unsigned long long uv = 0;
-            if (uns) { if (suppress) sscanf(p, spec, &n); else sscanf(p, spec, &uv, &n); }
-            else     { if (suppress) sscanf(p, spec, &n); else sscanf(p, spec, &sv, &n); }
+            if (uns) { if (suppress) ms_scan_step(p, fp, spec, &n, NULL); else ms_scan_step(p, fp, spec, &uv, &n); }
+            else     { if (suppress) ms_scan_step(p, fp, spec, &n, NULL); else ms_scan_step(p, fp, spec, &sv, &n); }
             if (n >= 0 && !suppress) {
                 uint32_t dst = MEM32(args);
                 args += 4;
@@ -702,24 +741,38 @@ static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
             break;
         }
         case 'e': case 'E': case 'f': case 'F': case 'g': case 'G': {
-            double d = 0;
-            snprintf(spec, sizeof spec, "%%%s%sl%c%%n", suppress ? "*" : "", w, conv);
-            if (suppress) sscanf(p, spec, &n); else sscanf(p, spec, &d, &n);
-            if (n >= 0 && !suppress) {
-                uint32_t dst = MEM32(args);
-                args += 4;
-                uint64_t bits;
-                memcpy(&bits, &d, 8);
-                ms_store(dst, bits, 8);
-                assigned++;
+            if (is_long) {
+                double d = 0;
+                snprintf(spec, sizeof spec, "%%%s%sl%c%%n", suppress ? "*" : "", w, conv);
+                if (suppress) ms_scan_step(p, fp, spec, &n, NULL); else ms_scan_step(p, fp, spec, &d, &n);
+                if (n >= 0 && !suppress) {
+                    uint32_t dst = MEM32(args);
+                    args += 4;
+                    uint64_t bits;
+                    memcpy(&bits, &d, 8);
+                    ms_store(dst, bits, 8);
+                    assigned++;
+                }
+            } else {
+                float fl = 0;
+                snprintf(spec, sizeof spec, "%%%s%s%c%%n", suppress ? "*" : "", w, conv);
+                if (suppress) ms_scan_step(p, fp, spec, &n, NULL); else ms_scan_step(p, fp, spec, &fl, &n);
+                if (n >= 0 && !suppress) {
+                    uint32_t dst = MEM32(args);
+                    args += 4;
+                    uint32_t bits;
+                    memcpy(&bits, &fl, 4);
+                    ms_store(dst, bits, 4);
+                    assigned++;
+                }
             }
             break;
         }
         case 's': {
             char tmp[1024];
             snprintf(spec, sizeof spec, "%%%s%ss%%n", suppress ? "*" : "", w);
-            if (suppress) sscanf(p, spec, &n);
-            else if (sscanf(p, spec, tmp, &n) == 1) {
+            if (suppress) ms_scan_step(p, fp, spec, &n, NULL);
+            else if (ms_scan_step(p, fp, spec, tmp, &n) == 1) {
                 uint32_t dst = MEM32(args);
                 args += 4;
                 memcpy(hle_ptr(dst), tmp, strlen(tmp) + 1);
@@ -732,9 +785,9 @@ static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
             int cw = w[0] ? atoi(w) : 1;
             if (cw > (int)sizeof tmp) cw = (int)sizeof tmp;
             snprintf(spec, sizeof spec, "%%%s%sc%%n", suppress ? "*" : "", w);
-            if (suppress) sscanf(p, spec, &n);
+            if (suppress) ms_scan_step(p, fp, spec, &n, NULL);
             else {
-                sscanf(p, spec, tmp, &n);
+                ms_scan_step(p, fp, spec, tmp, &n);
                 if (n >= 0) {
                     uint32_t dst = MEM32(args);
                     args += 4;
@@ -754,8 +807,8 @@ static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
             if (*f == ']') f++;
             char tmp[1024];
             snprintf(spec, sizeof spec, "%%%s%s[%s]%%n", suppress ? "*" : "", w, scanset);
-            if (suppress) sscanf(p, spec, &n);
-            else if (sscanf(p, spec, tmp, &n) == 1) {
+            if (suppress) ms_scan_step(p, fp, spec, &n, NULL);
+            else if (ms_scan_step(p, fp, spec, tmp, &n) == 1) {
                 uint32_t dst = MEM32(args);
                 args += 4;
                 memcpy(hle_ptr(dst), tmp, strlen(tmp) + 1);
@@ -764,7 +817,7 @@ static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
             break;
         }
         case 'n':
-            MEM32(MEM32(args)) = (uint32_t)(p - s);
+            MEM32(MEM32(args)) = fp ? (uint32_t)total_read : (uint32_t)(p - s);
             args += 4;
             n = 0;                                   /* %n reads nothing: keep going */
             break;
@@ -775,10 +828,20 @@ static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
             return assigned ? assigned : -1;
         }
         if (n < 0) break;                            /* the input did not match here */
-        p += n;
+        if (fp) total_read += n; else p += n;
     }
-    if (assigned == 0 && *p == 0) return -1;         /* input ran out before the first conversion */
+    if (assigned == 0) {
+        if (fp ? feof(fp) : (*p == 0)) return -1;    /* input ran out before the first conversion */
+    }
     return assigned;
+}
+
+static int ms_vsscanf(const char *s, const char *f, uint32_t args_start) {
+    return ms_vscanf_core(s, NULL, f, args_start);
+}
+
+static int ms_vfscanf(FILE *fp, const char *f, uint32_t args_start) {
+    return ms_vscanf_core(NULL, fp, f, args_start);
 }
 
 static void c_sscanf(void) {                         /* (src, fmt, ...) */
@@ -825,7 +888,7 @@ static void c_setmode(void) {                        /* (fd, mode) */
 static void c_write(void) {                          /* (fd, buf, count) */
     ms_init();
     int fd = (int)A32(0);
-    if (fd < 0 || fd >= MS_MAXSTREAM || !g_stream[fd].fp) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    if (fd < 0 || fd >= MS_MAXSTREAM || (!g_stream[fd].fp && g_stream[fd].fd < 0)) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
     ms_stream *s = &g_stream[fd];
     if (s->fp) fflush(s->fp);                        /* the raw write must land after anything buffered */
     ssize_t w = write(s->fd, APTR(1), (size_t)A32(2));
@@ -1035,23 +1098,24 @@ static void c_strdup(void) {                         /* (s) */
 /* ===================================================== string and memory
  * Straight forwards to the host: the guest's strings are host memory in the
  * guest block, so the host's own routines read and write them in place. */
-static void c_memcpy(void)  { memcpy(APTR(0), APTR(1), A32(2)); RETC(A32(0)); }
-static void c_memmove(void) { memmove(APTR(0), APTR(1), A32(2)); RETC(A32(0)); }
-static void c_memset(void)  { memset(APTR(0), (int)A32(1), A32(2)); RETC(A32(0)); }
-static void c_memchr(void)  { void *p = memchr(APTR(0), (int)A32(1), A32(2)); RETC(p ? hle_va(p) : 0u); }
-static void c_memcmp(void)  { RETC((uint32_t)(int32_t)memcmp(APTR(0), APTR(1), A32(2))); }
-static void c_strlen(void)  { RETC((uint32_t)strlen(ASTR(0))); }
-static void c_strcpy(void)  { RETC(hle_va(strcpy(ASTR(0), ASTR(1)))); }
-static void c_strncpy(void) { RETC(hle_va(strncpy(ASTR(0), ASTR(1), A32(2)))); }
-static void c_strcat(void)  { RETC(hle_va(strcat(ASTR(0), ASTR(1)))); }
-static void c_strncat(void) { RETC(hle_va(strncat(ASTR(0), ASTR(1), A32(2)))); }
-static void c_strcmp(void)  { RETC((uint32_t)(int32_t)strcmp(ASTR(0), ASTR(1))); }
-static void c_strncmp(void) { RETC((uint32_t)(int32_t)strncmp(ASTR(0), ASTR(1), A32(2))); }
-static void c_stricmp(void) { RETC((uint32_t)(int32_t)strcasecmp(ASTR(0), ASTR(1))); }
-static void c_strnicmp(void){ RETC((uint32_t)(int32_t)strncasecmp(ASTR(0), ASTR(1), A32(2))); }
-static void c_strchr(void)  { RETC(hle_va(strchr(ASTR(0), (int)A32(1)))); }
-static void c_strrchr(void) { char *p = strrchr(ASTR(0), (int)A32(1)); RETC(p ? hle_va(p) : 0u); }
-static void c_strstr(void)  { char *p = strstr(ASTR(0), ASTR(1)); RETC(p ? hle_va(p) : 0u); }
+static void c_memcpy(void)  { void *d = APTR(0); const void *s = APTR(1); size_t n = A32(2); if (n && d && s) memmove(d, s, n); RETC(A32(0)); }
+static void c_memmove(void) { void *d = APTR(0); const void *s = APTR(1); size_t n = A32(2); if (n && d && s) memmove(d, s, n); RETC(A32(0)); }
+static void c_memset(void)  { void *d = APTR(0); size_t n = A32(2); if (n && d) memset(d, (int)A32(1), n); RETC(A32(0)); }
+static void c_memchr(void)  { const void *s = APTR(0); size_t n = A32(2); const void *p = (n && s) ? memchr(s, (int)A32(1), n) : NULL; RETC(p ? hle_va(p) : 0u); }
+static void c_memcmp(void)  { const void *a = APTR(0), *b = APTR(1); size_t n = A32(2); RETC((!n || a == b) ? 0u : (!a || !b) ? (uint32_t)(int32_t)(a ? 1 : -1) : (uint32_t)(int32_t)memcmp(a, b, n)); }
+static int null_safe_cmp(const char *a, const char *b) { return a == b ? 0 : (a ? 1 : -1); }
+static void c_strlen(void)  { const char *s = ASTR(0); RETC(s ? (uint32_t)strlen(s) : 0u); }
+static void c_strcpy(void)  { char *d = ASTR(0); const char *s = ASTR(1); RETC(d ? hle_va(strcpy(d, s ? s : "")) : 0u); }
+static void c_strncpy(void) { char *d = ASTR(0); const char *s = ASTR(1); RETC(d ? hle_va(strncpy(d, s ? s : "", A32(2))) : 0u); }
+static void c_strcat(void)  { char *d = ASTR(0); const char *s = ASTR(1); RETC(d ? hle_va(strcat(d, s ? s : "")) : 0u); }
+static void c_strncat(void) { char *d = ASTR(0); const char *s = ASTR(1); RETC(d ? hle_va(strncat(d, s ? s : "", A32(2))) : 0u); }
+static void c_strcmp(void)  { const char *a = ASTR(0), *b = ASTR(1); RETC((uint32_t)(int32_t)((!a || !b) ? null_safe_cmp(a, b) : strcmp(a, b))); }
+static void c_strncmp(void) { const char *a = ASTR(0), *b = ASTR(1); RETC((uint32_t)(int32_t)((!a || !b) ? null_safe_cmp(a, b) : strncmp(a, b, A32(2)))); }
+static void c_stricmp(void) { const char *a = ASTR(0), *b = ASTR(1); RETC((uint32_t)(int32_t)((!a || !b) ? null_safe_cmp(a, b) : strcasecmp(a, b))); }
+static void c_strnicmp(void){ const char *a = ASTR(0), *b = ASTR(1); RETC((uint32_t)(int32_t)((!a || !b) ? null_safe_cmp(a, b) : strncasecmp(a, b, A32(2)))); }
+static void c_strchr(void)  { const char *s = ASTR(0); char *p = s ? strchr(s, (int)A32(1)) : NULL; RETC(p ? hle_va(p) : 0u); }
+static void c_strrchr(void) { const char *s = ASTR(0); char *p = s ? strrchr(s, (int)A32(1)) : NULL; RETC(p ? hle_va(p) : 0u); }
+static void c_strstr(void)  { const char *a = ASTR(0), *b = ASTR(1); char *p = (a && b) ? strstr(a, b) : NULL; RETC(p ? hle_va(p) : 0u); }
 static void c_strcoll(void) { RETC((uint32_t)(int32_t)strcoll(ASTR(0), ASTR(1))); }
 static void c_strxfrm(void) { RETC((uint32_t)strxfrm(ASTR(0), ASTR(1), A32(2))); }
 static void c_tolower(void) { RETC((uint32_t)(int32_t)tolower((int)A32(0))); }
@@ -1448,6 +1512,18 @@ static void u_stdio_common_vsscanf(void) {
     if (!buf || !fmt) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
     RETC((uint32_t)ms_vsscanf(buf, fmt, args));
 }
+/* __stdio_common_vfscanf(options, stream, format, locale, argptr). */
+static void u_stdio_common_vfscanf(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(2));
+    const char *fmt = (const char *)hle_ptr(A32(3));
+    uint32_t args = A32(5);
+    if (!s) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    if (!fmt) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int r = ms_vfscanf(s->fp, fmt, args);
+    ms_note_state(s);
+    RETC((uint32_t)r);
+}
 /* getenv(name): the guest's environment block, the same one __getmainargs and
  * __p__environ expose. A Windows program has no claim on the host's variables,
  * so this searches the Windows-like block, not the host's environ. */
@@ -1789,6 +1865,580 @@ static void c_signal(void) {                         /* (sig, handler) -> the pr
     RETC(old);                                       /* 0 is SIG_DFL, 1 SIG_IGN */
 }
 
+/* ================================================= additional CRT shims */
+static void c_putchar(void) {
+    ms_init();
+    FILE *out = ms_stdout();
+    if (!out) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    int c = fputc((int)(unsigned char)A32(0), out);
+    RETC((uint32_t)(int32_t)c);
+}
+static void c_rewind(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(0));
+    if (s && s->fp) { rewind(s->fp); ms_note_state(s); }
+    RETCV();
+}
+static void c_feof(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(0));
+    RETC(s && s->fp && feof(s->fp) ? 1u : 0u);
+}
+static void c_ferror(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(0));
+    RETC(s && s->fp && ferror(s->fp) ? 1u : 0u);
+}
+static void c_clearerr(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(0));
+    if (s && s->fp) { clearerr(s->fp); ms_note_state(s); }
+    RETCV();
+}
+static void c_vfprintf(void) {                       /* (stream, fmt, argptr) */
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(0));
+    const char *fmt = ASTR(1);
+    uint32_t args = A32(2);
+    if (!s || !s->fp) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    if (!fmt) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, args);
+    size_t w = fwrite(t_fmt, 1, (size_t)n, s->fp);
+    RETC(w == (size_t)n ? (uint32_t)n : 0xFFFFFFFFu);
+}
+static void c_vsnprintf(void) {                      /* (buf, count, fmt, argptr) */
+    ms_init();
+    char *buf = ASTR(0);
+    uint32_t count = A32(1);
+    const char *fmt = ASTR(2);
+    uint32_t args = A32(3);
+    if (!fmt) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, args);
+    if (!buf || count == 0) RETC((uint32_t)n);
+    if ((uint32_t)n < count) {
+        memcpy(buf, t_fmt, (size_t)n + 1);
+        RETC((uint32_t)n);
+    }
+    memcpy(buf, t_fmt, count);
+    if ((uint32_t)n == count) RETC((uint32_t)n);
+    RETC(0xFFFFFFFFu);
+}
+
+/* math additions */
+static void c_ceil(void)   { ms_init(); fp_push_impl(g_st, &g_fp_top, ceil(ms_argd(0))); RETC(0); }
+static void c_roundf(void) {
+    ms_init();
+    uint32_t bits = A32(0);
+    float f;
+    memcpy(&f, &bits, 4);
+    fp_push_impl(g_st, &g_fp_top, (double)roundf(f));
+    RETC(0);
+}
+static void c_ldexp(void) {
+    ms_init();
+    fp_push_impl(g_st, &g_fp_top, ldexp(ms_argd(0), (int)A32(2)));
+    RETC(0);
+}
+
+/* ctype additions */
+#define CTYPE_PRED(fn, mask) static void c_##fn(void) { \
+    ms_init(); int c = (int)A32(0); \
+    if (c < -1 || c > 255) RETC(0); \
+    RETC((uint32_t)(((const uint16_t *)hle_ptr(g_ctype_va))[c + 1] & (mask))); \
+}
+CTYPE_PRED(isalpha, CT_ALPHA)
+CTYPE_PRED(isupper, CT_UPPER)
+CTYPE_PRED(islower, CT_LOWER)
+CTYPE_PRED(isalnum, CT_ALPHA | CT_DIGIT)
+CTYPE_PRED(iscntrl, CT_CONTROL)
+CTYPE_PRED(ispunct, CT_PUNCT)
+CTYPE_PRED(isxdigit, CT_HEX)
+static void c_isprint(void) {
+    ms_init();
+    int c = (int)A32(0);
+    if (c < -1 || c > 255) RETC(0);
+    uint16_t f = ((const uint16_t *)hle_ptr(g_ctype_va))[c + 1];
+    RETC((uint32_t)((f & (CT_UPPER | CT_LOWER | CT_DIGIT | CT_PUNCT)) || c == ' '));
+}
+static void c_isgraph(void) {
+    ms_init();
+    int c = (int)A32(0);
+    if (c < -1 || c > 255) RETC(0);
+    uint16_t f = ((const uint16_t *)hle_ptr(g_ctype_va))[c + 1];
+    RETC((uint32_t)(f & (CT_UPPER | CT_LOWER | CT_DIGIT | CT_PUNCT)));
+}
+
+/* qsort / bsearch calling back into lifted code */
+static void ms_qsort_rec(uint32_t base, size_t lo, size_t hi, size_t sz, uint32_t cmp, uint8_t *tmp) {
+    while (lo < hi) {
+        size_t i = lo, j = hi;
+        size_t mid = lo + (hi - lo) / 2;
+        uint32_t pivot_va = base + (uint32_t)(mid * sz);
+        uint8_t *pivot = (uint8_t *)malloc(sz);
+        if (!pivot) return;
+        memcpy(pivot, hle_ptr(pivot_va), sz);
+        uint32_t pbuf_va = hle_va(hle_alloc((uint32_t)sz));
+        if (!pbuf_va) { free(pivot); return; }
+        memcpy(hle_ptr(pbuf_va), pivot, sz);
+        free(pivot);
+        while (i <= j) {
+            while (1) {
+                uint32_t a[2] = { base + (uint32_t)(i * sz), pbuf_va };
+                if ((int32_t)hle_call_guest(cmp, 2, a) < 0) i++;
+                else break;
+            }
+            while (1) {
+                uint32_t a[2] = { base + (uint32_t)(j * sz), pbuf_va };
+                if ((int32_t)hle_call_guest(cmp, 2, a) > 0) {
+                    if (j == 0) break;
+                    j--;
+                } else break;
+            }
+            if (i <= j) {
+                if (i != j) {
+                    uint8_t *pa = (uint8_t *)hle_ptr(base + (uint32_t)(i * sz));
+                    uint8_t *pb = (uint8_t *)hle_ptr(base + (uint32_t)(j * sz));
+                    memcpy(tmp, pa, sz);
+                    memcpy(pa, pb, sz);
+                    memcpy(pb, tmp, sz);
+                }
+                i++;
+                if (j == 0) break;
+                j--;
+            }
+        }
+        hle_free(hle_ptr(pbuf_va));
+        if (j > lo && (j - lo) < (hi - i)) {
+            if (lo < j) ms_qsort_rec(base, lo, j, sz, cmp, tmp);
+            lo = i;
+        } else {
+            if (i < hi) ms_qsort_rec(base, i, hi, sz, cmp, tmp);
+            hi = j;
+        }
+    }
+}
+static void c_qsort(void) {                          /* (base, nmemb, size, cmp) */
+    ms_init();
+    uint32_t base = A32(0), nmemb = A32(1), sz = A32(2), cmp = A32(3);
+    if (!base || nmemb <= 1 || sz == 0 || !cmp) RETCV();
+    uint8_t *tmp = (uint8_t *)malloc(sz);
+    if (!tmp) RETCV();
+    ms_qsort_rec(base, 0, (size_t)nmemb - 1, sz, cmp, tmp);
+    free(tmp);
+    RETCV();
+}
+static void c_bsearch(void) {                        /* (key, base, nmemb, size, cmp) */
+    ms_init();
+    uint32_t key = A32(0), base = A32(1), nmemb = A32(2), sz = A32(3), cmp = A32(4);
+    if (!key || !base || nmemb == 0 || sz == 0 || !cmp) RETC(0);
+    size_t lo = 0, hi = nmemb;
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        uint32_t elem = base + (uint32_t)(mid * sz);
+        uint32_t a[2] = { key, elem };
+        int32_t r = (int32_t)hle_call_guest(cmp, 2, a);
+        if (r == 0) RETC(elem);
+        if (r < 0) hi = mid;
+        else lo = mid + 1;
+    }
+    RETC(0);
+}
+
+/* strings / locale / time / POSIX CRT additions */
+static void c_strpbrk(void) {
+    const char *s = ASTR(0), *accept = ASTR(1);
+    if (!s || !accept) RETC(0);
+    const char *r = strpbrk(s, accept);
+    RETC(r ? hle_va(r) : 0u);
+}
+static __thread uint32_t t_strtok_next;
+static void c_strtok(void) {
+    char *s = ASTR(0);
+    const char *delim = ASTR(1);
+    if (!delim) RETC(0);
+    if (!s) s = (char *)hle_ptr(t_strtok_next);
+    if (!s) RETC(0);
+    s += strspn(s, delim);
+    if (!*s) { t_strtok_next = 0; RETC(0); }
+    char *tok = s;
+    s = strpbrk(tok, delim);
+    if (s) { *s = 0; t_strtok_next = hle_va(s + 1); }
+    else { t_strtok_next = 0; }
+    RETC(hle_va(tok));
+}
+static uint32_t g_strerror_buf;
+static void c_strerror(void) {
+    ms_init();
+    if (!g_strerror_buf) g_strerror_buf = hle_va(hle_alloc(256));
+    const char *msg = strerror((int)A32(0));
+    snprintf((char *)hle_ptr(g_strerror_buf), 256, "%s", msg ? msg : "Unknown error");
+    RETC(g_strerror_buf);
+}
+static void c_wcscpy(void) {
+    uint16_t *dst = (uint16_t *)APTR(0);
+    const uint16_t *src = (const uint16_t *)APTR(1);
+    if (!dst || !src) RETC(A32(0));
+    size_t i = 0;
+    while ((dst[i] = src[i]) != 0) i++;
+    RETC(A32(0));
+}
+static void c_wcsncmp(void) {
+    const uint16_t *a = (const uint16_t *)APTR(0), *b = (const uint16_t *)APTR(1);
+    uint32_t n = A32(2);
+    if (!a || !b) RETC(0);
+    for (uint32_t i = 0; i < n; i++) {
+        if (a[i] != b[i]) RETC(a[i] < b[i] ? 0xFFFFFFFFu : 1u);
+        if (!a[i]) break;
+    }
+    RETC(0);
+}
+static void c_wcsnicmp(void) {
+    const uint16_t *a = (const uint16_t *)APTR(0), *b = (const uint16_t *)APTR(1);
+    uint32_t n = A32(2);
+    if (!a || !b) RETC(0);
+    for (uint32_t i = 0; i < n; i++) {
+        uint16_t ca = (a[i] >= 'A' && a[i] <= 'Z') ? (uint16_t)(a[i] + 32) : a[i];
+        uint16_t cb = (b[i] >= 'A' && b[i] <= 'Z') ? (uint16_t)(b[i] + 32) : b[i];
+        if (ca != cb) RETC(ca < cb ? 0xFFFFFFFFu : 1u);
+        if (!a[i]) break;
+    }
+    RETC(0);
+}
+static uint32_t g_lconv_va;
+static void c_localeconv(void) {
+    ms_init();
+    if (!g_lconv_va) {
+        /* MSVC struct lconv: 10 char* + 8 char */
+        uint32_t *lc = (uint32_t *)hle_alloc(64);
+        uint32_t dot = hle_guest_strdup(".");
+        uint32_t emp = hle_guest_strdup("");
+        for (int i = 0; i < 10; i++) lc[i] = emp;
+        lc[0] = dot; /* decimal_point */
+        uint8_t *ch = (uint8_t *)(lc + 10);
+        for (int i = 0; i < 8; i++) ch[i] = 127; /* CHAR_MAX */
+        g_lconv_va = hle_va(lc);
+    }
+    RETC(g_lconv_va);
+}
+static void c_clock(void) { RETC(hle_clock_ms()); }
+static void c_rename(void) {
+    ms_init();
+    const char *o = ASTR(0), *n = ASTR(1);
+    if (!o || !n) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    char ha[1024], hb[1024];
+    hle_host_path(o, ha, sizeof ha);
+    hle_host_path_for_write(n, hb, sizeof hb, 0);
+    if (rename(ha, hb) == 0) RETC(0);
+    ms_seterrno(errno);
+    RETC(0xFFFFFFFFu);
+}
+
+static int ms_flags_to_posix(int f) {
+    int r = (f & 3);
+    if (f & 0x0100) r |= O_CREAT;
+    if (f & 0x0200) r |= O_TRUNC;
+    if (f & 0x0400) r |= O_EXCL;
+    if (f & 0x0008) r |= O_APPEND;
+    return r;
+}
+static void c_open_crt(void) {                       /* (path, oflag, [pmode]) */
+    ms_init();
+    const char *path = ASTR(0);
+    int oflag = (int)A32(1);
+    int mode = (oflag & 0x0100) ? (int)(A32(2) & 0777u) : 0644;
+    if (!path) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    char host[1024];
+    if ((oflag & 3) || (oflag & 0x0300)) hle_host_path_for_write(path, host, sizeof host, !(oflag & 0x0200));
+    else hle_host_path(path, host, sizeof host);
+    int fd = open(host, ms_flags_to_posix(oflag), mode ? mode : 0644);
+    if (fd < 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    const char *fm = (oflag & 3) == 0 ? "rb" : ((oflag & 3) == 1 ? "wb" : "r+b");
+    FILE *fp = fdopen(fd, fm);
+    int slot = ms_slot_alloc(fp, fd, fp != NULL);
+    if (slot < 0) { if (fp) fclose(fp); else close(fd); ms_seterrno(EMFILE); RETC(0xFFFFFFFFu); }
+    g_stream[slot].mode = (oflag & O_BINARY) ? O_BINARY : O_TEXT;
+    RETC((uint32_t)slot);
+}
+static void c_creat(void) {                          /* (path, pmode) */
+    ms_init();
+    const char *path = ASTR(0);
+    if (!path) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    char host[1024];
+    hle_host_path_for_write(path, host, sizeof host, 0);
+    int fd = open(host, O_RDWR | O_CREAT | O_TRUNC, (int)(A32(1) & 0777u) ? (int)(A32(1) & 0777u) : 0644);
+    if (fd < 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    FILE *fp = fdopen(fd, "w+b");
+    int slot = ms_slot_alloc(fp, fd, fp != NULL);
+    if (slot < 0) { if (fp) fclose(fp); else close(fd); ms_seterrno(EMFILE); RETC(0xFFFFFFFFu); }
+    RETC((uint32_t)slot);
+}
+static void c_close_crt(void) {
+    ms_init();
+    int fd = (int)A32(0);
+    if (fd < 0 || fd >= MS_MAXSTREAM || (!g_stream[fd].fp && g_stream[fd].fd < 0)) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    ms_stream *s = &g_stream[fd];
+    int r = 0;
+    if (s->own && s->fp) r = fclose(s->fp);
+    else if (fd > 2 && s->fd >= 0) r = close(s->fd);
+    if (r != 0) ms_seterrno(errno);
+    ms_slot_free(s);
+    RETC(r == 0 ? 0u : 0xFFFFFFFFu);
+}
+static void c_read_crt(void) {                       /* (fd, buf, count) */
+    ms_init();
+    int fd = (int)A32(0);
+    if (fd < 0 || fd >= MS_MAXSTREAM || (!g_stream[fd].fp && g_stream[fd].fd < 0)) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    ms_stream *s = &g_stream[fd];
+    if (s->fp) fflush(s->fp);
+    ssize_t r = read(s->fd, APTR(1), (size_t)A32(2));
+    if (r < 0) ms_seterrno(errno);
+    RETC((uint32_t)(int32_t)r);
+}
+static void c_dup(void) {
+    ms_init();
+    int fd = (int)A32(0);
+    if (fd < 0 || fd >= MS_MAXSTREAM || g_stream[fd].fd < 0) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    int nfd = dup(g_stream[fd].fd);
+    if (nfd < 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    FILE *fp = fdopen(nfd, "r+b");
+    if (!fp) fp = fdopen(nfd, "rb");
+    if (!fp) fp = fdopen(nfd, "wb");
+    int slot = ms_slot_alloc(fp, nfd, fp != NULL);
+    if (slot < 0) { if (fp) fclose(fp); else close(nfd); ms_seterrno(EMFILE); RETC(0xFFFFFFFFu); }
+    RETC((uint32_t)slot);
+}
+static void c_dup2(void) {
+    ms_init();
+    int oldfd = (int)A32(0), newfd = (int)A32(1);
+    if (oldfd < 0 || oldfd >= MS_MAXSTREAM || g_stream[oldfd].fd < 0 || newfd < 0 || newfd >= MS_MAXSTREAM) {
+        ms_seterrno(EBADF); RETC(0xFFFFFFFFu);
+    }
+    if (oldfd == newfd) RETC(0);
+    int target = newfd <= 2 ? newfd : dup(g_stream[oldfd].fd);
+    if (newfd <= 2 && dup2(g_stream[oldfd].fd, newfd) < 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    if (target < 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    if (newfd > 2) {
+        if (g_stream[newfd].own && g_stream[newfd].fp) fclose(g_stream[newfd].fp);
+        else if (g_stream[newfd].fd > 2) close(g_stream[newfd].fd);
+        g_stream[newfd].fd = target;
+        g_stream[newfd].fp = fdopen(target, "r+b");
+        if (!g_stream[newfd].fp) g_stream[newfd].fp = fdopen(target, "rb");
+        if (!g_stream[newfd].fp) g_stream[newfd].fp = fdopen(target, "wb");
+        g_stream[newfd].own = g_stream[newfd].fp != NULL;
+    }
+    RETC(0);
+}
+static void c_lseeki64(void) {                       /* (fd, off64, origin) -> off64 in edx:eax */
+    ms_init();
+    int fd = (int)A32(0);
+    if (fd < 0 || fd >= MS_MAXSTREAM || g_stream[fd].fd < 0) {
+        ms_seterrno(EBADF); g_eax = 0xFFFFFFFFu; g_edx = 0xFFFFFFFFu; g_esp += 4u; return;
+    }
+    int64_t off = (int64_t)((uint64_t)A32(1) | ((uint64_t)A32(2) << 32));
+    off_t r = lseek(g_stream[fd].fd, (off_t)off, (int)A32(3));
+    if (r < 0) {
+        ms_seterrno(errno); g_eax = 0xFFFFFFFFu; g_edx = 0xFFFFFFFFu; g_esp += 4u; return;
+    }
+    int64_t res = (int64_t)r;
+    g_eax = (uint32_t)res;
+    g_edx = (uint32_t)((uint64_t)res >> 32);
+    g_esp += 4u;
+}
+static void c_telli64(void) {
+    ms_init();
+    int fd = (int)A32(0);
+    if (fd < 0 || fd >= MS_MAXSTREAM || g_stream[fd].fd < 0) {
+        ms_seterrno(EBADF); g_eax = 0xFFFFFFFFu; g_edx = 0xFFFFFFFFu; g_esp += 4u; return;
+    }
+    off_t r = lseek(g_stream[fd].fd, 0, SEEK_CUR);
+    int64_t res = r < 0 ? -1 : (int64_t)r;
+    if (r < 0) ms_seterrno(errno);
+    g_eax = (uint32_t)res;
+    g_edx = (uint32_t)((uint64_t)res >> 32);
+    g_esp += 4u;
+}
+static void c_fstat(void) {                          /* (fd, struct _stat *) */
+    ms_init();
+    int fd = (int)A32(0);
+    uint32_t out = A32(1);
+    if (fd < 0 || fd >= MS_MAXSTREAM || g_stream[fd].fd < 0 || !out) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    struct stat st;
+    if (fstat(g_stream[fd].fd, &st) != 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    memset(hle_ptr(out), 0, 36);
+    MEM32(out + 0) = (uint32_t)st.st_dev;
+    MEM16(out + 4) = (uint16_t)st.st_ino;
+    MEM16(out + 6) = (uint16_t)st.st_mode;
+    MEM16(out + 8) = (uint16_t)st.st_nlink;
+    MEM32(out + 20) = (uint32_t)st.st_size;
+    MEM32(out + 24) = (uint32_t)st.st_atim.tv_sec;
+    MEM32(out + 28) = (uint32_t)st.st_mtim.tv_sec;
+    MEM32(out + 32) = (uint32_t)st.st_ctime;
+    RETC(0);
+}
+static void c_access(void) {
+    ms_init();
+    const char *p = ASTR(0);
+    if (!p) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    char host[1024];
+    if (!hle_host_path(p, host, sizeof host)) { ms_seterrno(ENOENT); RETC(0xFFFFFFFFu); }
+    int r = access(host, (int)A32(1) & 7);
+    if (r != 0) ms_seterrno(errno);
+    RETC(r == 0 ? 0u : 0xFFFFFFFFu);
+}
+static void c_chmod(void) {
+    ms_init();
+    const char *p = ASTR(0);
+    if (!p) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    char host[1024];
+    if (!hle_host_path(p, host, sizeof host)) { ms_seterrno(ENOENT); RETC(0xFFFFFFFFu); }
+    int r = chmod(host, (mode_t)A32(1));
+    if (r != 0) ms_seterrno(errno);
+    RETC(r == 0 ? 0u : 0xFFFFFFFFu);
+}
+static void c_umask(void) { RETC((uint32_t)umask((mode_t)A32(0))); }
+static void c_getcwd(void) {                         /* (buf, maxlen) */
+    ms_init();
+    char cwd[1024], g[1024];
+    if (!getcwd(cwd, sizeof cwd)) { ms_seterrno(errno); RETC(0); }
+    hle_guest_path(cwd, g, sizeof g);
+    size_t len = strlen(g) + 1;
+    char *buf = ASTR(0);
+    if (!buf) {
+        char *p = (char *)hle_heap_alloc((uint32_t)len, 0);
+        if (!p) { ms_seterrno(ENOMEM); RETC(0); }
+        memcpy(p, g, len);
+        RETC(hle_va(p));
+    }
+    if (len > A32(1)) { ms_seterrno(ERANGE); RETC(0); }
+    memcpy(buf, g, len);
+    RETC(A32(0));
+}
+static void c_rmdir(void) {
+    ms_init();
+    const char *p = ASTR(0);
+    if (!p) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    char host[1024];
+    if (!hle_host_path(p, host, sizeof host)) { ms_seterrno(ENOENT); RETC(0xFFFFFFFFu); }
+    int r = rmdir(host);
+    if (r != 0) ms_seterrno(errno);
+    RETC(r == 0 ? 0u : 0xFFFFFFFFu);
+}
+static void c_isatty(void) {
+    ms_init();
+    int fd = (int)A32(0);
+    if (fd < 0 || fd >= MS_MAXSTREAM || g_stream[fd].fd < 0) RETC(0);
+    RETC((uint32_t)isatty(g_stream[fd].fd));
+}
+static void c_getpid(void) { RETC((uint32_t)getpid()); }
+static void c_get_osfhandle(void) {
+    ms_init();
+    int fd = (int)A32(0);
+    if (fd < 0 || fd >= MS_MAXSTREAM || g_stream[fd].fd < 0) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    if (fd == 0) RETC(0x11u);
+    if (fd == 1) RETC(0x12u);
+    if (fd == 2) RETC(0x13u);
+    RETC(0x100u + (uint32_t)fd);
+}
+static void c_pipe(void) {                           /* (int pfds[2], psize, textmode) */
+    ms_init();
+    uint32_t pfds = A32(0);
+    if (!pfds) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int fds[2];
+    if (pipe(fds) != 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    FILE *fr = fdopen(fds[0], "rb"), *fw = fdopen(fds[1], "wb");
+    int s0 = ms_slot_alloc(fr, fds[0], fr != NULL);
+    int s1 = s0 >= 0 ? ms_slot_alloc(fw, fds[1], fw != NULL) : -1;
+    if (s0 < 0 || s1 < 0) {
+        if (s0 >= 0) ms_slot_free(&g_stream[s0]);
+        if (fr) fclose(fr); else close(fds[0]);
+        if (fw) fclose(fw); else close(fds[1]);
+        ms_seterrno(EMFILE); RETC(0xFFFFFFFFu);
+    }
+    MEM32(pfds) = (uint32_t)s0;
+    MEM32(pfds + 4) = (uint32_t)s1;
+    RETC(0);
+}
+static void c_putenv(void) { RETC(0); }
+static void c_mktemp(void) {
+    char *s = ASTR(0);
+    if (!s) RETC(0);
+    size_t n = strlen(s);
+    for (size_t i = n; i > 0 && s[i - 1] == 'X'; i--) s[i - 1] = '0' + (char)((i + (size_t)getpid()) % 10);
+    RETC(A32(0));
+}
+static uint32_t g_tm_va, g_ctime_va, g_tz_va;
+static int64_t rd_time64(uint32_t p) {
+    return (int64_t)((uint64_t)MEM32(p) | ((uint64_t)MEM32(p + 4) << 32));
+}
+static void c_ctime64(void) {
+    ms_init();
+    if (!g_ctime_va) g_ctime_va = hle_va(hle_alloc(32));
+    time_t t = A32(0) ? (time_t)rd_time64(A32(0)) : 0;
+    const char *s = ctime(&t);
+    snprintf((char *)hle_ptr(g_ctime_va), 32, "%s", s ? s : "");
+    RETC(g_ctime_va);
+}
+static uint32_t fill_guest_tm(const struct tm *t) {
+    if (!g_tm_va) g_tm_va = hle_va(hle_alloc(36));
+    if (!t) return 0;
+    memcpy(hle_ptr(g_tm_va), t, 36);
+    return g_tm_va;
+}
+static void c_gmtime64(void) {
+    ms_init();
+    time_t t = A32(0) ? (time_t)rd_time64(A32(0)) : 0;
+    RETC(fill_guest_tm(gmtime(&t)));
+}
+static void c_localtime64(void) {
+    ms_init();
+    time_t t = A32(0) ? (time_t)rd_time64(A32(0)) : 0;
+    RETC(fill_guest_tm(localtime(&t)));
+}
+static void c_mktime64(void) {
+    ms_init();
+    struct tm t;
+    if (!A32(0)) { g_eax = 0xFFFFFFFFu; g_edx = 0xFFFFFFFFu; g_esp += 4u; return; }
+    memcpy(&t, APTR(0), 36);
+    int64_t r = (int64_t)mktime(&t);
+    memcpy(APTR(0), &t, 36);
+    g_eax = (uint32_t)r;
+    g_edx = (uint32_t)((uint64_t)r >> 32);
+    g_esp += 4u;
+}
+static void c_tzset(void) { tzset(); RETCV(); }
+static void c_p_initenv(void) { ms_init(); RETC(g_environ_va); }
+static void c_p_timezone(void) {
+    ms_init();
+    if (!g_tz_va) { g_tz_va = hle_va(hle_alloc(4)); MEM32(g_tz_va) = (uint32_t)(int32_t)timezone; }
+    RETC(g_tz_va);
+}
+static void c_amsg_exit(void) {
+    fprintf(stderr, "[msvcrt] _amsg_exit(%u)\n", A32(0));
+    hle_exit(255);
+}
+static void c_getch(void) {
+    ms_init();
+    int c = fgetc(stdin);
+    RETC((uint32_t)(c == EOF ? 0 : c));
+}
+static void c_spawnve(void) { ms_seterrno(ENOENT); RETC(0xFFFFFFFFu); }
+static void c_setjmp3(void) {
+    uint32_t jb = A32(0);
+    if (jb) {
+        MEM32(jb + 0) = g_ebp;
+        MEM32(jb + 4) = g_ebx;
+        MEM32(jb + 8) = g_edi;
+        MEM32(jb + 12) = g_esi;
+        MEM32(jb + 16) = g_esp + 4u;
+        MEM32(jb + 20) = MEM32(g_esp);
+    }
+    RETC(0);
+}
+static void c_longjmp(void) {
+    fprintf(stderr, "[msvcrt] longjmp(0x%08X, %d): non-local guest jump not supported in HLE\n", A32(0), (int)A32(1));
+    hle_exit(3);
+}
+
 /* ======================================================= data exports
  * The loader writes this address into the IAT slot for a data import, so the
  * guest reads the object itself and not a shim's code. */
@@ -1835,6 +2485,7 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "__stdio_common_vsprintf",      u_stdio_common_vsprintf },
     { "__stdio_common_vfprintf",      u_stdio_common_vfprintf },
     { "__stdio_common_vsscanf",       u_stdio_common_vsscanf },
+    { "__stdio_common_vfscanf",       u_stdio_common_vfscanf },
     { "getenv",                       u_getenv },
     { "__p__acmdln",                  u_p_acmdln },
     { "_set_invalid_parameter_handler", u_set_invalid_parameter_handler },
@@ -1890,6 +2541,7 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "fgetc",                        c_fgetc },
     { "fputc",                        c_fputc },
     { "getc",                         c_getc },
+    { "getchar",                      c_getchar },
     { "ungetc",                       c_ungetc },
     { "fgets",                        c_fgets },
     { "fputs",                        c_fputs },
@@ -1901,14 +2553,57 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "fprintf",                      c_fprintf },
     { "sprintf",                      c_sprintf },
     { "puts",                         c_puts },
+    { "putchar",                      c_putchar },
+    { "putc",                         c_fputc },
+    { "rewind",                       c_rewind },
+    { "feof",                         c_feof },
+    { "ferror",                       c_ferror },
+    { "clearerr",                     c_clearerr },
+    { "_filbuf",                      c_fgetc },
+    { "vfprintf",                     c_vfprintf },
+    { "_vsnprintf",                   c_vsnprintf },
     { "sscanf",                       c_sscanf },
     { "_fileno",                      c_fileno },
     { "_fdopen",                      c_fdopen },
     { "_setmode",                     c_setmode },
     { "_write",                       c_write },
+    { "_open",                        c_open_crt },
+    { "_creat",                       c_creat },
+    { "_close",                       c_close_crt },
+    { "_read",                        c_read_crt },
+    { "_dup",                         c_dup },
+    { "_dup2",                        c_dup2 },
+    { "_lseeki64",                    c_lseeki64 },
+    { "_telli64",                     c_telli64 },
+    { "_fstat",                       c_fstat },
+    { "_access",                      c_access },
+    { "_chmod",                       c_chmod },
+    { "_umask",                       c_umask },
+    { "_getcwd",                      c_getcwd },
+    { "_rmdir",                       c_rmdir },
+    { "_isatty",                      c_isatty },
+    { "_getpid",                      c_getpid },
+    { "_get_osfhandle",               c_get_osfhandle },
+    { "_pipe",                        c_pipe },
+    { "_putenv",                      c_putenv },
+    { "_mktemp",                      c_mktemp },
+    { "_ctime64",                     c_ctime64 },
+    { "_gmtime64",                    c_gmtime64 },
+    { "_localtime64",                 c_localtime64 },
+    { "_mktime64",                    c_mktime64 },
+    { "_tzset",                       c_tzset },
+    { "__p___initenv",                c_p_initenv },
+    { "__p__timezone",                c_p_timezone },
+    { "_amsg_exit",                   c_amsg_exit },
+    { "_getch",                       c_getch },
+    { "_getche",                      c_getch },
+    { "_spawnve",                     c_spawnve },
+    { "_setjmp3",                     c_setjmp3 },
+    { "longjmp",                      c_longjmp },
     { "_getw",                        c_getw },
     { "_putw",                        c_putw },
     { "remove",                       c_remove },
+    { "rename",                       c_rename },
     { "_fullpath",                    c_fullpath },
     /* directory search */
     { "_findfirst",                   c_findfirst },
@@ -1939,6 +2634,12 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "strchr",                       c_strchr },
     { "strrchr",                      c_strrchr },
     { "strstr",                       c_strstr },
+    { "strpbrk",                      c_strpbrk },
+    { "strtok",                       c_strtok },
+    { "strerror",                     c_strerror },
+    { "wcscpy",                       c_wcscpy },
+    { "wcsncmp",                      c_wcsncmp },
+    { "_wcsnicmp",                    c_wcsnicmp },
     { "strcoll",                      c_strcoll },
     { "strxfrm",                      c_strxfrm },
     { "tolower",                      c_tolower },
@@ -1947,12 +2648,24 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "_isctype",                     c_isctype },
     { "isspace",                      c_isspace },
     { "isdigit",                      c_isdigit },
-    /* conversions */
+    { "isalpha",                      c_isalpha },
+    { "isupper",                      c_isupper },
+    { "islower",                      c_islower },
+    { "isprint",                      c_isprint },
+    { "isalnum",                      c_isalnum },
+    { "iscntrl",                      c_iscntrl },
+    { "isgraph",                      c_isgraph },
+    { "ispunct",                      c_ispunct },
+    { "isxdigit",                     c_isxdigit },
+    /* conversions & sort/search */
     { "atoi",                         c_atoi },
+    { "atol",                         c_atoi },
     { "abs",                          c_abs },
     { "strtol",                       c_strtol },
     { "strtoul",                      c_strtoul },
     { "strtod",                       c_strtod },
+    { "qsort",                        c_qsort },
+    { "bsearch",                      c_bsearch },
     /* rand */
     { "rand",                         c_rand },
     { "srand",                        c_srand },
@@ -1962,13 +2675,19 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "sqrt",                         c_sqrt },
     { "fabs",                         c_fabs },
     { "floor",                        c_floor },
+    { "ceil",                         c_ceil },
+    { "atan",                         u_libm_atan },
+    { "roundf",                       c_roundf },
+    { "ldexp",                        c_ldexp },
     { "pow",                          c_pow },
     { "atan2",                        c_atan2 },
     { "_finite",                      c_finite },
     /* time and locale */
     { "time",                         c_time },
+    { "clock",                        c_clock },
     { "strftime",                     c_strftime },
     { "setlocale",                    c_setlocale },
+    { "localeconv",                   c_localeconv },
     /* exit */
     { "exit",                         c_exit },
     { "_exit",                        c_uexit },
