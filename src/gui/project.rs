@@ -422,9 +422,98 @@ fn render_overview_tab(
     if app.running_kind.is_some() {
         col = col.child(
             style::panel_box(t)
-                .border_color(rgb(t.hl))
+                .border_color(if t.dark { rgb(t.hl) } else { rgb(t.btn) })
                 .p(px(16.0))
                 .child(render_live_stage_stepper(app, t, cx)),
+        );
+    } else if app.last_finished_project.as_deref() == Some(model.dir.as_path()) {
+        // Post-decompile ready-to-play action banner!
+        let bin_opt = model.built_binary_path();
+        let has_wasm = model.has_wasm_build;
+        let proj_dir_wasm = model.dir.clone();
+        let proj_dir_open = model.dir.clone();
+        let mut actions = div().flex().flex_wrap().items_center().gap(px(8.0));
+        if let Some(bin) = bin_opt {
+            actions = actions.child(
+                style::primary_btn("post_launch_game_btn", t, "▶  Launch Game Now", true)
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.launch_rebuilt_binary(&bin);
+                        cx.notify();
+                    })),
+            );
+        }
+        if has_wasm {
+            actions = actions.child(
+                style::primary_btn("post_launch_wasm_btn", t, "🌐  Play in Browser (WASM)", true)
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.launch_or_open_wasm(&proj_dir_wasm);
+                        cx.notify();
+                    })),
+            );
+        }
+        actions = actions
+            .child(
+                style::ghost_btn("post_open_dir_btn", t, "Open Output Folder").on_click(
+                    cx.listener(move |_, _, _, _| {
+                        let _ = open::that(&proj_dir_open);
+                    }),
+                ),
+            )
+            .child(
+                style::ghost_btn("post_dismiss_btn", t, "Dismiss").on_click(cx.listener(
+                    |this, _, _, cx| {
+                        this.last_finished_project = None;
+                        cx.notify();
+                    },
+                )),
+            );
+
+        col = col.child(
+            div()
+                .w_full()
+                .p(px(16.0))
+                .rounded(px(4.0))
+                .bg(rgb(t.match_bg))
+                .border_1()
+                .border_color(rgb(t.match_fill))
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .justify_between()
+                .gap(px(12.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(3.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(style::status_badge("✓ READY TO PLAY", t.match_fill, t.bg))
+                                .child(
+                                    div()
+                                        .font_family(FONT_SANS)
+                                        .font_weight(FontWeight::EXTRA_BOLD)
+                                        .text_size(px(15.5))
+                                        .text_color(rgb(t.match_ink))
+                                        .child("Decompilation & build finished!"),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .font_family(FONT_SANS)
+                                .text_size(px(12.5))
+                                .text_color(rgb(t.ink_2))
+                                .child(format!(
+                                    "{} file(s) processed · score {}/100 · click Launch to run your rebuilt game.",
+                                    app.processed_files.len(),
+                                    model.score
+                                )),
+                        ),
+                )
+                .child(actions),
         );
     }
 
@@ -2100,16 +2189,21 @@ fn render_project_settings_tab(
                     div()
                         .flex()
                         .flex_wrap()
+                        .items_center()
                         .gap(px(6.0))
                         .child(
                             style::option_pill(
-                                "ps_tgt_native",
+                                "ps_tgt_auto",
                                 t,
-                                "Native host",
-                                !opts.is_wasm_target(),
+                                format!(
+                                    "✦ Auto (Detect: {}/{})",
+                                    crate::pipeline_opts::detected_host_os(),
+                                    crate::pipeline_opts::detected_host_arch()
+                                ),
+                                opts.is_auto_target(),
                             )
                             .on_click(cx.listener(|this, _, _, cx| {
-                                this.opts.set_target_native_host();
+                                this.opts.set_target_auto();
                                 cx.notify();
                             })),
                         )
@@ -2125,6 +2219,19 @@ fn render_project_settings_tab(
                                 cx.notify();
                             })),
                         ),
+                )
+                .child(
+                    style::toggle_checkbox(
+                        "ps_auto_launch_game",
+                        t,
+                        opts.auto_launch_after_build,
+                        "▶  Run game automatically right after decompiling finishes",
+                        Some("Starts the rebuilt game executable or opens the WebAssembly player automatically when the build completes."),
+                    )
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.opts.auto_launch_after_build = !this.opts.auto_launch_after_build;
+                        cx.notify();
+                    })),
                 )
                 .child(render_advanced_cli_options(app, t, cx))
                 .child(

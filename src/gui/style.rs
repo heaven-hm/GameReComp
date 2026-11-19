@@ -263,6 +263,7 @@ pub fn option_pill(
     selected: bool,
 ) -> Stateful<Div> {
     let hover_bg = t.bg_alt;
+    let hover_border = t.ink;
     let base = div()
         .id(id)
         .px(px(10.0))
@@ -282,13 +283,13 @@ pub fn option_pill(
         base.bg(rgb(t.hl))
             .text_color(rgb(t.hl_ink))
             .border_1()
-            .border_color(rgb(t.hl))
+            .border_color(if t.dark { rgb(t.hl) } else { rgb(t.ink) })
     } else {
-        base.bg(rgb(t.bg_alt))
+        base.bg(rgb(t.panel))
             .text_color(rgb(t.ink_2))
             .border_1()
             .border_color(rgb(t.line))
-            .hover(move |s| s.bg(rgb(hover_bg)).border_color(rgb(0x8A887D)))
+            .hover(move |s| s.bg(rgb(hover_bg)).border_color(rgb(hover_border)))
     }
 }
 
@@ -349,7 +350,11 @@ pub fn toggle_checkbox(
         .bg(rgb(t.bg_alt))
         .border_1()
         .border_color(if checked {
-            ca(t.hl, 0.55)
+            if t.dark {
+                ca(t.hl, 0.55)
+            } else {
+                ca(t.ink, 0.45)
+            }
         } else {
             c(t.line_soft)
         })
@@ -407,7 +412,7 @@ pub fn animated_pulse_dot(id: impl Into<gpui::ElementId>, color_hex: u32, size_p
 
 /// Smooth GPUI animated sliding workbar (exact decompdecomp `.workbar` animation!).
 pub fn animated_workbar(id: impl Into<gpui::ElementId>, t: &ThemeTokens, height_px: f32) -> AnyElement {
-    let bar_col = rgb(t.hl);
+    let bar_col = if t.dark { rgb(t.hl) } else { rgb(t.btn) };
     let track_col = rgb(t.open_cell);
     div()
         .w_full()
@@ -479,7 +484,15 @@ pub fn text_input_box(
         .rounded(px(3.0))
         .bg(rgb(t.code_bg))
         .border_1()
-        .border_color(if focused { rgb(t.hl) } else { rgb(t.line) })
+        .border_color(if focused {
+            if t.dark {
+                rgb(t.hl)
+            } else {
+                rgb(t.btn)
+            }
+        } else {
+            rgb(t.line)
+        })
         .font_family(if mono { FONT_MONO } else { FONT_SANS })
         .text_size(px(12.5))
         .text_color(fg)
@@ -503,7 +516,11 @@ pub fn c_line_color(line: &str, t: &ThemeTokens) -> Hsla {
     if tr.starts_with("//") || tr.starts_with("/*") || tr.starts_with('*') {
         c(t.muted)
     } else if tr.starts_with('#') {
-        c(t.hl)
+        if t.dark {
+            c(t.hl)
+        } else {
+            c(t.info)
+        }
     } else if tr.starts_with("void ")
         || tr.starts_with("int ")
         || tr.starts_with("uint")

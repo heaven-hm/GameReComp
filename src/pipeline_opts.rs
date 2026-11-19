@@ -130,6 +130,34 @@ pub struct PipelineOptions {
     pub clean_objects: bool,
     pub verify_standalone: bool,
     pub capture_screenshots: bool,
+    pub auto_launch_after_build: bool,
+}
+
+/// Automatically detected output OS for the current machine (WASM-safe).
+pub fn detected_host_os() -> &'static str {
+    match std::env::consts::OS {
+        "macos" => "macos",
+        "linux" => "linux",
+        "windows" => "windows",
+        _ => {
+            if cfg!(target_arch = "wasm32") {
+                "web"
+            } else {
+                "host"
+            }
+        }
+    }
+}
+
+/// Automatically detected output CPU architecture for the current machine (WASM-safe).
+pub fn detected_host_arch() -> &'static str {
+    match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        "x86_64" => "x86_64",
+        "x86" => "x86",
+        "wasm32" => "wasm32",
+        _ => "host",
+    }
 }
 
 impl Default for PipelineOptions {
@@ -143,8 +171,8 @@ impl Default for PipelineOptions {
             app_profile: AppProfile::Game,
             input_os: "auto".to_string(),
             input_arch: "auto".to_string(),
-            target_os: "host".to_string(),
-            target_arch: "host".to_string(),
+            target_os: "auto".to_string(),
+            target_arch: "auto".to_string(),
             out_mode: OutMode::Full,
             selected_stages: [true; 8],
             timeout_secs: "12".to_string(),
@@ -167,6 +195,7 @@ impl Default for PipelineOptions {
             clean_objects: false,
             verify_standalone: true,
             capture_screenshots: false,
+            auto_launch_after_build: false,
         }
     }
 }
@@ -199,6 +228,50 @@ impl PipelineOptions {
             || self.target_os == "wasm"
             || self.target_arch == "wasm32"
             || self.target_arch == "wasm"
+    }
+
+    pub fn is_auto_target(&self) -> bool {
+        (self.target_os == "auto" || self.target_os == "host")
+            && (self.target_arch == "auto" || self.target_arch == "host")
+    }
+
+    pub fn resolved_target_os(&self) -> String {
+        match self.target_os.as_str() {
+            "auto" | "host" => detected_host_os().to_string(),
+            "wasm" => "web".to_string(),
+            other => other.to_string(),
+        }
+    }
+
+    pub fn resolved_target_arch(&self) -> String {
+        match self.target_arch.as_str() {
+            "auto" | "host" => {
+                if self.target_os == "web" || self.target_os == "wasm" {
+                    "wasm32".to_string()
+                } else {
+                    detected_host_arch().to_string()
+                }
+            }
+            "wasm" => "wasm32".to_string(),
+            other => other.to_string(),
+        }
+    }
+
+    pub fn resolved_target_summary(&self) -> String {
+        let os = self.resolved_target_os();
+        let arch = self.resolved_target_arch();
+        if self.is_auto_target() {
+            format!("Auto -> {os}/{arch} (detected host)")
+        } else if self.is_wasm_target() {
+            "web/wasm32 (browser WebAssembly)".to_string()
+        } else {
+            format!("{os}/{arch}")
+        }
+    }
+
+    pub fn set_target_auto(&mut self) {
+        self.target_os = "auto".to_string();
+        self.target_arch = "auto".to_string();
     }
 
     pub fn set_target_native_host(&mut self) {
@@ -261,15 +334,25 @@ impl PipelineOptions {
             args.push(self.oracle_path.trim().to_string());
         }
 
-        // Input / Output identity
+        // Input / Output identity ("auto" resolves to "host" for the Python backend)
+        let backend_target_os = if self.target_os == "auto" {
+            "host".to_string()
+        } else {
+            self.target_os.clone()
+        };
+        let backend_target_arch = if self.target_arch == "auto" {
+            "host".to_string()
+        } else {
+            self.target_arch.clone()
+        };
         args.push("--input-os".to_string());
         args.push(self.input_os.clone());
         args.push("--input-arch".to_string());
         args.push(self.input_arch.clone());
         args.push("--target-os".to_string());
-        args.push(self.target_os.clone());
+        args.push(backend_target_os);
         args.push("--target-arch".to_string());
-        args.push(self.target_arch.clone());
+        args.push(backend_target_arch);
 
         // Output mode or explicit stage list
         match self.out_mode {
@@ -405,5 +488,16 @@ mod tests {
         opts.selected_stages = [true, true, false, false, false, false, false, false];
         let st = opts.effective_stages();
         assert_eq!(st, vec!["inspect", "recover", "report"]);
+    }
+
+    #[test]
+    fn auto_detects_target_machine_by_default() {
+        let def = PipelineOptions::default();
+        assert!(def.is_auto_target());
+        assert_eq!(def.target_os, "auto");
+        assert_eq!(def.target_arch, "auto");
+        assert!(def.resolved_target_summary().contains("Auto ->"));
+        let args = def.to_backend_args();
+        assert!(args.contains(&"host".to_string()));
     }
 }

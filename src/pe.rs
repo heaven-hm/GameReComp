@@ -216,14 +216,22 @@ pub fn host_identity() -> Result<(String, String), String> {
 
 pub fn resolve_target(target_os: &str, target_arch: &str) -> Result<(String, String), String> {
     let (host_os, host_arch) = host_identity()?;
-    let norm_os = if target_os == "wasm" { "web" } else { target_os };
-    if (norm_os == "web" && (target_arch == "host" || target_arch == "wasm32" || target_arch == "wasm"))
-        || ((target_arch == "wasm32" || target_arch == "wasm") && (norm_os == "host" || norm_os == "web"))
+    let norm_os = match target_os {
+        "wasm" => "web",
+        "auto" => "host",
+        other => other,
+    };
+    let norm_arch = match target_arch {
+        "auto" => "host",
+        other => other,
+    };
+    if (norm_os == "web" && (norm_arch == "host" || norm_arch == "wasm32" || norm_arch == "wasm"))
+        || ((norm_arch == "wasm32" || norm_arch == "wasm") && (norm_os == "host" || norm_os == "web"))
     {
         return Ok(("web".to_string(), "wasm32".to_string()));
     }
     let want_os = if norm_os == "host" { &host_os } else { norm_os };
-    let want_arch = if target_arch == "host" { &host_arch } else { target_arch };
+    let want_arch = if norm_arch == "host" { &host_arch } else { norm_arch };
     if want_os != host_os || want_arch != host_arch {
         return Err(format!(
             "cross-target builds are not supported ({want_os}/{want_arch} requested on {host_os}/{host_arch} host)"
@@ -277,6 +285,11 @@ mod tests {
         assert_eq!(
             resolve_target("wasm", "host").unwrap(),
             ("web".to_string(), "wasm32".to_string())
+        );
+        let (host_os, host_arch) = host_identity().unwrap();
+        assert_eq!(
+            resolve_target("auto", "auto").unwrap(),
+            (host_os, host_arch)
         );
     }
 }

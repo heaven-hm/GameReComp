@@ -140,10 +140,25 @@ pub struct LiveStageRow {
     pub detail: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct ProcessedFileItem {
+    pub action: &'static str,
+    pub path: String,
+    pub detail: String,
+    pub timestamp: String,
+    pub stage: String,
+}
+
 pub enum WorkerMsg {
     Line(String),
     StageStart(String),
     StageEnd(String, String, f32, String),
+    FileEvent {
+        action: &'static str,
+        path: String,
+        detail: String,
+        compile_pct: Option<f32>,
+    },
     Finished {
         kind: WorkerKind,
         code: i32,
@@ -186,6 +201,9 @@ pub struct GameReCompApp {
     pub cfg: AppConfig,
     pub settings: UserSettings,
     pub theme: ThemeMode,
+    pub last_dark_theme: ThemeMode,
+    pub last_light_theme: ThemeMode,
+    pub show_theme_menu: bool,
     pub route: Route,
 
     pub projects: Vec<ProjectSummary>,
@@ -204,10 +222,17 @@ pub struct GameReCompApp {
     pub picked_pe_info: PeInfo,
     pub picked_owned_checked: bool,
 
-    // Running background worker & live animated stage tracker
+    // Running background worker & live animated stage + file telemetry tracker
     pub running_kind: Option<WorkerKind>,
     pub running_stage: String,
     pub running_started: Option<Instant>,
+    pub running_project_dir: Option<PathBuf>,
+    pub anim_frame: usize,
+    pub current_file: String,
+    pub current_task_detail: String,
+    pub compile_pct: Option<f32>,
+    pub processed_files: Vec<ProcessedFileItem>,
+    pub last_finished_project: Option<PathBuf>,
     pub live_stages: Vec<LiveStageRow>,
     pub running_child: Arc<Mutex<Option<Child>>>,
     pub worker_rx: Option<Receiver<WorkerMsg>>,
@@ -271,12 +296,26 @@ impl GameReCompApp {
         let mut opts = PipelineOptions::default();
         opts.timeout_secs = settings.default_timeout_secs.max(5).to_string();
 
+        let last_dark_theme = if theme.is_dark() {
+            theme
+        } else {
+            ThemeMode::Dark
+        };
+        let last_light_theme = if !theme.is_dark() {
+            theme
+        } else {
+            ThemeMode::Light
+        };
+
         let mut app = Self {
             focus_handle: cx.focus_handle(),
             focused_input: None,
             cfg,
             settings,
             theme,
+            last_dark_theme,
+            last_light_theme,
+            show_theme_menu: false,
             route: Route::Home,
             projects: Vec::new(),
             active_project_dir: None,
@@ -292,6 +331,13 @@ impl GameReCompApp {
             running_kind: None,
             running_stage: "starting".to_string(),
             running_started: None,
+            running_project_dir: None,
+            anim_frame: 0,
+            current_file: String::new(),
+            current_task_detail: String::new(),
+            compile_pct: None,
+            processed_files: Vec::new(),
+            last_finished_project: None,
             live_stages: fresh_live_stages(),
             running_child: Arc::new(Mutex::new(None)),
             worker_rx: None,
@@ -391,12 +437,20 @@ impl GameReCompApp {
     }
 
     pub fn toggle_theme(&mut self, cx: &mut Context<Self>) {
-        let next = self.theme.toggle();
+        let next = self
+            .theme
+            .toggle_dark_light(self.last_dark_theme, self.last_light_theme);
         self.set_theme(next, cx);
     }
 
     pub fn set_theme(&mut self, mode: ThemeMode, cx: &mut Context<Self>) {
         self.theme = mode;
+        if mode.is_dark() {
+            self.last_dark_theme = mode;
+        } else {
+            self.last_light_theme = mode;
+        }
+        self.show_theme_menu = false;
         self.settings.theme = mode.as_str().to_string();
         let _ = self.settings.save();
         cx.notify();
@@ -652,6 +706,26 @@ impl GameReCompApp {
         self.running_kind = Some(WorkerKind::Pipeline);
         self.running_stage = "inspect".to_string();
         self.running_started = Some(Instant::now());
+        self.running_project_dir = Some(project_dir.clone());
+        self.anim_frame = 0;
+        self.current_file = Path::new(&opts.pe_file)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(&opts.pe_file)
+            .to_string();
+        self.current_task_detail = format!(
+            "Inspecting PE32 headers & targeting {}",
+            opts.resolved_target_summary()
+        );
+        self.compile_pct = None;
+        self.processed_files.clear();
+        self.processed_files.push(ProcessedFileItem {
+            action: "PE",
+            path: self.current_file.clone(),
+            detail: format!("Input binary -> {}", opts.resolved_target_summary()),
+            timestamp: now_hms(),
+            stage: "inspect".to_string(),
+        });
         self.live_stages = fresh_live_stages();
         if let Some(first) = self.live_stages.first_mut() {
             first.state = StageExecState::Running(Instant::now());
@@ -978,6 +1052,14 @@ impl GameReCompApp {
 
     fn poll_worker_and_timers(&mut self) -> bool {
         let mut changed = false;
+        if self.running_kind.is_some() {
+            self.anim_frame = self.anim_frame.wrapping_add(1);
+            // Periodically discover newly generated C/report files in the live output directory
+            if self.anim_frame % 6 == 0 {
+                self.scan_live_generated_files();
+            }
+            changed = true;
+        }
         let prev_toasts = self.toasts.len();
         self.toasts
             .retain(|t| t.created.elapsed() < Duration::from_secs(6));
@@ -999,6 +1081,14 @@ impl GameReCompApp {
             match msg {
                 WorkerMsg::StageStart(st) => {
                     self.running_stage = st.clone();
+                    if st == "compile" {
+                        self.compile_pct = Some(0.0);
+                    }
+                    self.current_task_detail = crate::pipeline_opts::STAGE_DESCRIPTIONS
+                        .iter()
+                        .find(|(name, _)| *name == st.as_str())
+                        .map(|(_, d)| (*d).to_string())
+                        .unwrap_or_else(|| format!("Running stage {st}"));
                     self.push_feed("stage", &format!("==> {st}"), false);
                     for row in &mut self.live_stages {
                         if row.name == st {
@@ -1007,6 +1097,7 @@ impl GameReCompApp {
                             row.state = StageExecState::Done(started.elapsed().as_secs_f32());
                         }
                     }
+                    self.scan_live_generated_files();
                 }
                 WorkerMsg::StageEnd(st, status, secs, detail) => {
                     for row in &mut self.live_stages {
@@ -1019,13 +1110,53 @@ impl GameReCompApp {
                             };
                         }
                     }
+                    if st == "compile" && status == "ok" {
+                        self.compile_pct = Some(1.0);
+                    }
+                    self.current_task_detail = format!("{st}: {status} ({secs:.1}s) {detail}");
                     self.push_feed(
                         &st,
                         &format!("{status} ({secs:.1}s) {detail}"),
                         status == "ok",
                     );
+                    self.scan_live_generated_files();
+                }
+                WorkerMsg::FileEvent {
+                    action,
+                    path,
+                    detail,
+                    compile_pct,
+                } => {
+                    self.current_file = path.clone();
+                    self.current_task_detail = detail.clone();
+                    if let Some(pct) = compile_pct {
+                        self.compile_pct = Some(pct);
+                    }
+                    let dup = self
+                        .processed_files
+                        .last()
+                        .map(|last| last.path == path && last.action == action)
+                        .unwrap_or(false);
+                    if !dup {
+                        self.processed_files.push(ProcessedFileItem {
+                            action,
+                            path,
+                            detail,
+                            timestamp: now_hms(),
+                            stage: self.running_stage.clone(),
+                        });
+                        if self.processed_files.len() > 240 {
+                            self.processed_files.remove(0);
+                        }
+                    }
                 }
                 WorkerMsg::Line(l) => {
+                    let tr = l.trim();
+                    if !tr.is_empty() && !tr.starts_with("$ ") {
+                        if tr.len() <= 140 {
+                            self.current_task_detail = tr.to_string();
+                        }
+                    }
                     if self.live_logs.len() > 2500 {
                         self.live_logs.remove(0);
                     }
@@ -1037,8 +1168,10 @@ impl GameReCompApp {
                     project_dir,
                     summary,
                 } => {
+                    self.scan_live_generated_files();
                     self.running_kind = None;
                     self.running_started = None;
+                    self.running_project_dir = None;
                     self.worker_rx = None;
                     self.live_logs.push(format!("[exit {code}] {summary}"));
 
@@ -1072,7 +1205,12 @@ impl GameReCompApp {
                             if let Some(dir) = project_dir {
                                 if dir.join("reports").join("report.json").is_file() {
                                     self.drop_state = DropState::Idle;
-                                    self.open_project_dir(dir, ProjectTab::Overview);
+                                    self.last_finished_project = Some(dir.clone());
+                                    self.open_project_dir(dir.clone(), ProjectTab::Overview);
+                                    if ok && !self.opts.dry_run && self.opts.auto_launch_after_build
+                                    {
+                                        self.launch_active_project_after_build();
+                                    }
                                 } else if !ok {
                                     self.drop_state = DropState::Error(summary);
                                 } else {
@@ -1095,6 +1233,75 @@ impl GameReCompApp {
             }
         }
         changed
+    }
+
+    fn launch_active_project_after_build(&mut self) {
+        let Some(ref model) = self.active_project else {
+            return;
+        };
+        let dir = model.dir.clone();
+        if model.has_wasm_build {
+            self.launch_or_open_wasm(&dir);
+        } else if let Some(bin) = model.built_binary_path() {
+            self.launch_rebuilt_binary(&bin);
+        }
+    }
+
+    /// Scans the live output directory for newly generated C sources, headers, reports, and
+    /// compiled artifacts so the GUI shows each individual file in real time during decompilation.
+    fn scan_live_generated_files(&mut self) {
+        let Some(proj_dir) = self.running_project_dir.clone() else {
+            return;
+        };
+        let watch_dirs: &[(&str, &str, &str)] = &[
+            ("src/recomp/gen", "GEN", "Generated lifted C unit"),
+            ("src/highlevel", "HL", "High-level typed C module"),
+            ("reports", "REPORT", "Pipeline telemetry & report"),
+            ("screenshots", "FRAME", "Captured framebuffer frame"),
+        ];
+        for (rel_sub, action, desc) in watch_dirs {
+            let full = proj_dir.join(rel_sub);
+            let Ok(rd) = fs::read_dir(&full) else {
+                continue;
+            };
+            let mut entries: Vec<PathBuf> = rd.flatten().map(|e| e.path()).collect();
+            entries.sort();
+            for path in entries {
+                if !path.is_file() {
+                    continue;
+                }
+                let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                    continue;
+                };
+                let rel_display = format!("{rel_sub}/{name}");
+                if self
+                    .processed_files
+                    .iter()
+                    .any(|item| item.path == rel_display)
+                {
+                    continue;
+                }
+                let size_str = fs::metadata(&path)
+                    .map(|m| crate::cli::format_bytes(m.len()))
+                    .unwrap_or_default();
+                let detail = if size_str.is_empty() {
+                    (*desc).to_string()
+                } else {
+                    format!("{desc} ({size_str})")
+                };
+                self.current_file = rel_display.clone();
+                self.processed_files.push(ProcessedFileItem {
+                    action,
+                    path: rel_display,
+                    detail,
+                    timestamp: now_hms(),
+                    stage: self.running_stage.clone(),
+                });
+                if self.processed_files.len() > 240 {
+                    self.processed_files.remove(0);
+                }
+            }
+        }
     }
 
     fn active_input_mut(&mut self) -> Option<&mut String> {
@@ -1130,6 +1337,8 @@ impl GameReCompApp {
                 self.inspector_open = false;
             } else if self.show_notif_panel {
                 self.show_notif_panel = false;
+            } else if self.show_theme_menu {
+                self.show_theme_menu = false;
             } else if self.show_new_menu {
                 self.show_new_menu = false;
             }
@@ -1592,7 +1801,95 @@ fn emit_parsed_line(tx: &mpsc::Sender<WorkerMsg>, line: String) {
     } else if let Some((st, status, secs, detail)) = parse_stage_end(&line) {
         let _ = tx.send(WorkerMsg::StageEnd(st, status, secs, detail));
     }
+    if let Some((action, path, detail, compile_pct)) = parse_file_event(&line) {
+        let _ = tx.send(WorkerMsg::FileEvent {
+            action,
+            path,
+            detail,
+            compile_pct,
+        });
+    }
     let _ = tx.send(WorkerMsg::Line(line));
+}
+
+/// Extracts per-file compilation, linking, and generation events from pipeline & CMake output.
+pub fn parse_file_event(line: &str) -> Option<(&'static str, String, String, Option<f32>)> {
+    let tr = line.trim();
+    if tr.is_empty() {
+        return None;
+    }
+
+    // Parse optional leading CMake percentage: `[ 42%] ...`
+    let mut pct: Option<f32> = None;
+    let mut body = tr;
+    if let Some(rest) = tr.strip_prefix('[') {
+        if let Some((num_part, after)) = rest.split_once("%]") {
+            if let Ok(n) = num_part.trim().parse::<f32>() {
+                pct = Some((n / 100.0).clamp(0.0, 1.0));
+                body = after.trim();
+            }
+        }
+    }
+
+    if let Some(obj) = body.strip_prefix("Building C object ") {
+        let file = obj
+            .trim()
+            .rsplit('/')
+            .next()
+            .unwrap_or(obj.trim())
+            .trim_end_matches(".o")
+            .trim_end_matches(".obj")
+            .to_string();
+        let pct_str = pct
+            .map(|p| format!(" ({:.0}%)", p * 100.0))
+            .unwrap_or_default();
+        return Some(("CC", file, format!("Compiling C translation unit{pct_str}"), pct));
+    }
+    if let Some(target) = body.strip_prefix("Linking C executable ") {
+        let name = target.trim().to_string();
+        return Some(("LINK", name, "Linking standalone executable".to_string(), pct.or(Some(1.0))));
+    }
+    if let Some(target) = body.strip_prefix("Linking C static library ") {
+        let name = target.trim().to_string();
+        return Some(("LINK", name, "Archiving runtime library".to_string(), pct));
+    }
+
+    // Scan tokens for recognizable generated/processed file paths
+    for tok in body.split_whitespace() {
+        let clean = tok.trim_matches(|c: char| matches!(c, '\'' | '"' | ',' | ';' | ':' | '(' | ')'));
+        if clean.len() < 4 {
+            continue;
+        }
+        let lower = clean.to_ascii_lowercase();
+        let action = if lower.ends_with(".wasm") {
+            Some("WASM")
+        } else if lower.ends_with(".c") || lower.ends_with(".h") {
+            Some("GEN")
+        } else if lower.ends_with("cmakelists.txt") {
+            Some("CMAKE")
+        } else if lower.ends_with(".json") || lower.ends_with(".html") {
+            Some("REPORT")
+        } else if lower.ends_with(".png") || lower.ends_with(".bmp") {
+            Some("FRAME")
+        } else if lower.ends_with(".exe") {
+            Some("PE")
+        } else {
+            None
+        };
+        if let Some(act) = action {
+            let short = clean
+                .rsplit('/')
+                .take(2)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect::<Vec<_>>()
+                .join("/");
+            return Some((act, short, body.chars().take(110).collect(), pct));
+        }
+    }
+
+    None
 }
 
 pub fn parse_stage_start(line: &str) -> Option<String> {
@@ -1709,5 +2006,27 @@ mod tests {
                 "link error".to_string()
             ))
         );
+    }
+
+    #[test]
+    fn parses_per_file_compile_and_generation_events() {
+        let (act, path, detail, pct) =
+            parse_file_event("[ 42%] Building C object CMakeFiles/game.dir/src/recomp/gen/recomp_001.c.o")
+                .unwrap();
+        assert_eq!(act, "CC");
+        assert_eq!(path, "recomp_001.c");
+        assert!(detail.contains("42%"));
+        assert!((pct.unwrap() - 0.42).abs() < 0.01);
+
+        let (act2, path2, _, pct2) =
+            parse_file_event("[100%] Linking C executable pe32_minimal").unwrap();
+        assert_eq!(act2, "LINK");
+        assert_eq!(path2, "pe32_minimal");
+        assert_eq!(pct2, Some(1.0));
+
+        let (act3, path3, _, _) =
+            parse_file_event("wrote src/recomp/gen/recomp_000.c (148 functions)").unwrap();
+        assert_eq!(act3, "GEN");
+        assert_eq!(path3, "gen/recomp_000.c");
     }
 }

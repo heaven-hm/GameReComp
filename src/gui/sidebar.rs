@@ -365,7 +365,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
     nav = nav.child(proj_list);
 
     // Bottom utility nav (nav-foot)
-    let foot = div()
+    let mut foot = div()
         .flex()
         .flex_col()
         .gap(px(2.0))
@@ -431,21 +431,226 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     this.report_problem(cx);
                 },
             )),
+        );
+
+    // Inline 6-theme switcher drawer above the footer when opened
+    if app.show_theme_menu {
+        let mut picker = div()
+            .mt(px(4.0))
+            .mb(px(4.0))
+            .p(px(6.0))
+            .bg(rgb(t.overlay))
+            .border_1()
+            .border_color(rgb(t.line))
+            .rounded(px(4.0))
+            .flex()
+            .flex_col()
+            .gap(px(3.0))
+            .child(
+                div()
+                    .px(px(6.0))
+                    .py(px(3.0))
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .child(style::eyebrow(t, "THEMES (6)"))
+                    .child(
+                        div()
+                            .id("theme_menu_close")
+                            .px(px(4.0))
+                            .font_family(FONT_MONO)
+                            .text_size(px(11.0))
+                            .text_color(rgb(t.muted))
+                            .cursor_pointer()
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.show_theme_menu = false;
+                                cx.notify();
+                            }))
+                            .child("✕"),
+                    ),
+            );
+
+        for (idx, &mode) in ThemeMode::ALL.iter().enumerate() {
+            let preview = ThemeTokens::for_mode(mode);
+            let active = app.theme == mode;
+            let bg_alt = t.bg_alt;
+            let row = div()
+                .id(("sidebar_theme_opt", idx))
+                .px(px(7.0))
+                .py(px(6.0))
+                .rounded(px(3.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(6.0))
+                .cursor_pointer()
+                .when(active, |el| {
+                    el.bg(rgb(t.hl))
+                        .text_color(rgb(t.hl_ink))
+                        .font_weight(FontWeight::BOLD)
+                })
+                .when(!active, |el| {
+                    el.text_color(rgb(t.ink_2))
+                        .hover(move |s| s.bg(rgb(bg_alt)))
+                })
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.set_theme(mode, cx);
+                }))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(7.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(2.0))
+                                .child(
+                                    div()
+                                        .w(px(9.0))
+                                        .h(px(9.0))
+                                        .rounded(px(2.0))
+                                        .bg(rgb(preview.bg))
+                                        .border_1()
+                                        .border_color(rgb(preview.line)),
+                                )
+                                .child(
+                                    div()
+                                        .w(px(9.0))
+                                        .h(px(9.0))
+                                        .rounded(px(2.0))
+                                        .bg(rgb(preview.hl)),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .font_family(FONT_SANS)
+                                .text_size(px(12.0))
+                                .child(mode.label()),
+                        ),
+                )
+                .child(
+                    div()
+                        .font_family(FONT_MONO)
+                        .text_size(px(9.5))
+                        .text_color(if active {
+                            rgb(t.hl_ink)
+                        } else {
+                            rgb(t.muted)
+                        })
+                        .child(if active {
+                            "✓"
+                        } else if mode.is_dark() {
+                            "DARK"
+                        } else {
+                            "LIGHT"
+                        }),
+                );
+            picker = picker.child(row);
+        }
+        foot = foot.child(picker);
+    }
+
+    // Dedicated Dark / Light quick toggle button + 6-Theme Picker button
+    let dark_light_label = if app.theme.is_dark() {
+        "☀ Light"
+    } else {
+        "☾ Dark"
+    };
+    let toggle_bg = t.panel;
+    let toggle_hover = t.bg_alt;
+    let toggle_ink = t.ink;
+
+    foot = foot
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(5.0))
+                .px(px(4.0))
+                .pt(px(6.0))
+                .child(
+                    div()
+                        .id("nav_dark_light_switch")
+                        .flex_1()
+                        .h(px(28.0))
+                        .px(px(8.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .gap(px(5.0))
+                        .rounded(px(3.0))
+                        .bg(rgb(toggle_bg))
+                        .border_1()
+                        .border_color(rgb(t.line))
+                        .font_family(FONT_MONO)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(px(11.0))
+                        .text_color(rgb(t.ink))
+                        .cursor_pointer()
+                        .hover(move |s| s.bg(rgb(toggle_hover)).border_color(rgb(toggle_ink)))
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.toggle_theme(cx);
+                        }))
+                        .child(dark_light_label),
+                )
+                .child(
+                    div()
+                        .id("nav_themes_picker_btn")
+                        .h(px(28.0))
+                        .px(px(8.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .gap(px(4.0))
+                        .rounded(px(3.0))
+                        .bg(if app.show_theme_menu {
+                            rgb(t.hl)
+                        } else {
+                            rgb(toggle_bg)
+                        })
+                        .border_1()
+                        .border_color(if app.show_theme_menu {
+                            if t.dark {
+                                rgb(t.hl)
+                            } else {
+                                rgb(t.ink)
+                            }
+                        } else {
+                            rgb(t.line)
+                        })
+                        .font_family(FONT_MONO)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(px(11.0))
+                        .text_color(if app.show_theme_menu {
+                            rgb(t.hl_ink)
+                        } else {
+                            rgb(t.ink_2)
+                        })
+                        .cursor_pointer()
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.show_theme_menu = !this.show_theme_menu;
+                            this.show_new_menu = false;
+                            cx.notify();
+                        }))
+                        .child("◈ Themes"),
+                ),
         )
         .child(
-            // Bottom meta row: version + refresh + theme toggle + quit
+            // Bottom meta row: version + active theme + refresh + quit
             div()
                 .flex()
                 .items_center()
                 .justify_between()
                 .px(px(6.0))
-                .pt(px(6.0))
+                .pt(px(5.0))
                 .child(
                     div()
                         .font_family(FONT_MONO)
-                        .text_size(px(11.0))
+                        .text_size(px(10.5))
                         .text_color(rgb(t.muted))
-                        .child(format!("v{}", crate::cli::VERSION)),
+                        .child(format!("v{} · {}", crate::cli::VERSION, app.theme.label())),
                 )
                 .child(
                     div()
@@ -459,19 +664,6 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                                     cx.notify();
                                 },
                             )),
-                        )
-                        .child(
-                            small_icon_btn(
-                                "nav_theme_btn",
-                                t,
-                                match app.theme {
-                                    ThemeMode::Dark => "◐",
-                                    ThemeMode::Light => "◑",
-                                },
-                            )
-                            .on_click(cx.listener(|this, _, _, cx| {
-                                this.toggle_theme(cx);
-                            })),
                         )
                         .child(
                             small_icon_btn("nav_quit_btn", t, "⏻").on_click(cx.listener(
@@ -492,8 +684,7 @@ fn menu_item(
     title: &'static str,
     sub: &'static str,
 ) -> gpui::Stateful<Div> {
-    let hl = t.hl;
-    let hl_ink = t.hl_ink;
+    let hover_bg = t.bg_alt;
     div()
         .id(id)
         .flex()
@@ -503,7 +694,7 @@ fn menu_item(
         .py(px(7.0))
         .rounded(px(3.0))
         .cursor_pointer()
-        .hover(move |s| s.bg(rgb(hl)).text_color(rgb(hl_ink)))
+        .hover(move |s| s.bg(rgb(hover_bg)))
         .child(
             div()
                 .font_family(FONT_SANS)

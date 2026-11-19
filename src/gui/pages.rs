@@ -298,40 +298,130 @@ pub fn render_settings_page(
                 .flex()
                 .flex_col()
                 .gap(px(14.0))
-                .child(
+                .child({
+                    let mut grid = div().flex().flex_wrap().gap(px(8.0));
+                    for (idx, &mode) in ThemeMode::ALL.iter().enumerate() {
+                        let p = ThemeTokens::for_mode(mode);
+                        let active = app.theme == mode;
+                        let hover_bg = t.bg_alt;
+                        let hover_border = t.ink;
+                        grid = grid.child(
+                            div()
+                                .id(("settings_theme_card", idx))
+                                .w(px(176.0))
+                                .p(px(10.0))
+                                .rounded(px(4.0))
+                                .bg(if active {
+                                    rgb(t.hl_soft)
+                                } else {
+                                    rgb(t.code_bg)
+                                })
+                                .border_1()
+                                .border_color(if active {
+                                    if t.dark {
+                                        rgb(t.hl)
+                                    } else {
+                                        rgb(t.ink)
+                                    }
+                                } else {
+                                    rgb(t.line)
+                                })
+                                .cursor_pointer()
+                                .hover(move |s| {
+                                    s.bg(rgb(hover_bg)).border_color(rgb(hover_border))
+                                })
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.set_theme(mode, cx);
+                                }))
+                                .flex()
+                                .flex_col()
+                                .gap(px(6.0))
+                                // Mini palette stripe (bg, nav, panel, hl, match_fill)
+                                .child(
+                                    div()
+                                        .w_full()
+                                        .h(px(14.0))
+                                        .rounded(px(2.5))
+                                        .overflow_hidden()
+                                        .border_1()
+                                        .border_color(rgb(p.line))
+                                        .flex()
+                                        .child(div().flex_1().h_full().bg(rgb(p.nav)))
+                                        .child(div().flex_1().h_full().bg(rgb(p.bg)))
+                                        .child(div().flex_1().h_full().bg(rgb(p.panel)))
+                                        .child(div().flex_1().h_full().bg(rgb(p.hl)))
+                                        .child(div().flex_1().h_full().bg(rgb(p.match_fill))),
+                                )
+                                .child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .justify_between()
+                                        .gap(px(4.0))
+                                        .child(
+                                            div()
+                                                .font_family(FONT_SANS)
+                                                .font_weight(FontWeight::BOLD)
+                                                .text_size(px(12.5))
+                                                .text_color(rgb(t.ink))
+                                                .child(mode.label()),
+                                        )
+                                        .child(
+                                            div()
+                                                .font_family(FONT_MONO)
+                                                .font_weight(FontWeight::BOLD)
+                                                .text_size(px(9.5))
+                                                .text_color(if active {
+                                                    rgb(t.match_ink)
+                                                } else {
+                                                    rgb(t.muted)
+                                                })
+                                                .child(if active {
+                                                    "✓ ACTIVE"
+                                                } else if mode.is_dark() {
+                                                    "DARK"
+                                                } else {
+                                                    "LIGHT"
+                                                }),
+                                        ),
+                                )
+                                .child(
+                                    div()
+                                        .font_family(FONT_SANS)
+                                        .text_size(px(11.0))
+                                        .text_color(rgb(t.muted))
+                                        .child(mode.subtitle()),
+                                ),
+                        );
+                    }
+
                     div()
                         .flex()
                         .flex_col()
-                        .gap(px(6.0))
-                        .child(style::eyebrow(t, "THEME"))
+                        .gap(px(8.0))
                         .child(
                             div()
                                 .flex()
-                                .gap(px(8.0))
+                                .items_center()
+                                .justify_between()
+                                .child(style::eyebrow(t, "THEME (6 HIGH-CONTRAST PALETTES)"))
                                 .child(
-                                    style::option_pill(
-                                        "set_theme_dark",
+                                    style::ghost_btn(
+                                        "set_quick_dark_light",
                                         t,
-                                        "Dark (Marked Listing)",
-                                        app.theme == ThemeMode::Dark,
+                                        if app.theme.is_dark() {
+                                            "☀ Switch to Light"
+                                        } else {
+                                            "☾ Switch to Dark"
+                                        },
                                     )
                                     .on_click(cx.listener(|this, _, _, cx| {
-                                        this.set_theme(ThemeMode::Dark, cx);
-                                    })),
-                                )
-                                .child(
-                                    style::option_pill(
-                                        "set_theme_light",
-                                        t,
-                                        "Light (Paper)",
-                                        app.theme == ThemeMode::Light,
-                                    )
-                                    .on_click(cx.listener(|this, _, _, cx| {
-                                        this.set_theme(ThemeMode::Light, cx);
+                                        this.toggle_theme(cx);
                                     })),
                                 ),
-                        ),
-                )
+                        )
+                        .child(grid)
+                })
                 .child(
                     div()
                         .flex()

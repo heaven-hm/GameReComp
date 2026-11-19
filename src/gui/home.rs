@@ -668,13 +668,27 @@ fn render_drop_picked(
             ),
     );
 
-    // 2. Output Machine & Target OS / Arch
+    // 2. Output Machine & Target OS / Arch (with Auto Detect!)
+    let detected_summary = opts.resolved_target_summary();
     box_div = box_div.child(
         div()
             .flex()
             .flex_col()
             .gap(px(6.0))
-            .child(style::eyebrow(t, "OUTPUT MACHINE & TARGET"))
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(6.0))
+                    .child(style::eyebrow(t, "OUTPUT MACHINE & TARGET"))
+                    .child(style::status_badge(
+                        detected_summary,
+                        t.info_bg,
+                        t.info,
+                    )),
+            )
             .child(
                 div()
                     .flex()
@@ -682,13 +696,17 @@ fn render_drop_picked(
                     .gap(px(6.0))
                     .child(
                         style::option_pill(
-                            "tgt_native",
+                            "tgt_auto",
                             t,
-                            format!("Native Host ({}/{})", std::env::consts::OS, std::env::consts::ARCH),
-                            !opts.is_wasm_target() && opts.target_os == "host",
+                            format!(
+                                "✦ Auto (Detect: {}/{})",
+                                crate::pipeline_opts::detected_host_os(),
+                                crate::pipeline_opts::detected_host_arch()
+                            ),
+                            opts.is_auto_target(),
                         )
                         .on_click(cx.listener(|this, _, _, cx| {
-                            this.opts.set_target_native_host();
+                            this.opts.set_target_auto();
                             cx.notify();
                         })),
                     )
@@ -719,7 +737,7 @@ fn render_drop_picked(
                             .child("Output OS:"),
                     )
                     .children(
-                        ["host", "macos", "linux", "windows", "web"]
+                        ["auto", "host", "macos", "linux", "windows", "web"]
                             .into_iter()
                             .enumerate()
                             .map(|(idx, os_val)| {
@@ -729,6 +747,8 @@ fn render_drop_picked(
                                         this.opts.target_os = os_val.to_string();
                                         if os_val == "web" {
                                             this.opts.target_arch = "wasm32".to_string();
+                                        } else if os_val == "auto" && this.opts.target_arch == "wasm32" {
+                                            this.opts.target_arch = "auto".to_string();
                                         }
                                         cx.notify();
                                     }),
@@ -750,7 +770,7 @@ fn render_drop_picked(
                             .child("Output Arch:"),
                     )
                     .children(
-                        ["host", "arm64", "x86_64", "wasm32"]
+                        ["auto", "host", "arm64", "x86_64", "wasm32"]
                             .into_iter()
                             .enumerate()
                             .map(|(idx, arch_val)| {
@@ -760,6 +780,8 @@ fn render_drop_picked(
                                         this.opts.target_arch = arch_val.to_string();
                                         if arch_val == "wasm32" {
                                             this.opts.target_os = "web".to_string();
+                                        } else if arch_val == "auto" && this.opts.target_os == "web" {
+                                            this.opts.target_os = "auto".to_string();
                                         }
                                         cx.notify();
                                     }))
@@ -932,6 +954,21 @@ fn render_drop_picked(
                         )),
                     ),
             ),
+    );
+
+    // Post-Decompile Launch Option
+    box_div = box_div.child(
+        style::toggle_checkbox(
+            "opt_auto_launch_game",
+            t,
+            opts.auto_launch_after_build,
+            "▶  Run game automatically right after decompiling finishes",
+            Some("Launches the rebuilt native executable immediately (or opens the local WebAssembly player in your browser for web/wasm32)."),
+        )
+        .on_click(cx.listener(|this, _, _, cx| {
+            this.opts.auto_launch_after_build = !this.opts.auto_launch_after_build;
+            cx.notify();
+        })),
     );
 
     // Ownership Confirmation Checkbox
@@ -1283,12 +1320,15 @@ pub fn render_advanced_cli_options(
         )
 }
 
-/// Animated live pipeline stepper showing EVERY stage & active task in real time!
+/// Animated live pipeline stepper + active file spotlight + per-file telemetry stream!
 pub fn render_live_stage_stepper(
     app: &GameReCompApp,
     t: &ThemeTokens,
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
+    const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    let spin_glyph = SPINNER[app.anim_frame % SPINNER.len()];
+
     let elapsed_total = app
         .running_started
         .map(|st| format!("{:.1}s", st.elapsed().as_secs_f32()))
@@ -1299,7 +1339,119 @@ pub fn render_live_stage_stepper(
         .iter()
         .filter(|s| matches!(s.state, StageExecState::Done(_)))
         .count();
-    let frac = (done_count as f32) / (ALL_STAGES.len() as f32);
+    let in_stage_bonus = app.compile_pct.unwrap_or(0.35).clamp(0.0, 0.95);
+    let frac = ((done_count as f32 + in_stage_bonus) / (ALL_STAGES.len() as f32)).clamp(0.02, 1.0);
+    let pct_int = (frac * 100.0).round() as usize;
+
+    // Animated 6-bar equalizer activity indicator driven by anim_frame
+    let eq_heights = [
+        [6.0, 12.0, 18.0, 10.0, 15.0, 8.0],
+        [10.0, 18.0, 11.0, 16.0, 9.0, 14.0],
+        [16.0, 11.0, 7.0, 18.0, 13.0, 10.0],
+        [11.0, 7.0, 15.0, 12.0, 18.0, 16.0],
+        [7.0, 14.0, 18.0, 8.0, 11.0, 12.0],
+        [14.0, 16.0, 9.0, 14.0, 7.0, 18.0],
+    ];
+    let bars = eq_heights[(app.anim_frame / 2) % eq_heights.len()];
+    let mut eq = div().flex().items_end().gap(px(2.5)).h(px(18.0));
+    for (b_idx, h_val) in bars.into_iter().enumerate() {
+        let col = if b_idx % 2 == 0 {
+            if t.dark { t.hl } else { t.btn }
+        } else {
+            t.match_fill
+        };
+        eq = eq.child(
+            div()
+                .w(px(3.0))
+                .h(px(h_val))
+                .rounded(px(1.5))
+                .bg(rgb(col)),
+        );
+    }
+
+    // Active File Spotlight Card (shows exact file + live sub-step being processed!)
+    let active_file_name = if app.current_file.is_empty() {
+        format!("stage: {}", app.running_stage)
+    } else {
+        app.current_file.clone()
+    };
+    let active_detail = if app.current_task_detail.is_empty() {
+        "Preparing decompilation task...".to_string()
+    } else {
+        app.current_task_detail.clone()
+    };
+    let active_spotlight = div()
+        .w_full()
+        .px(px(12.0))
+        .py(px(10.0))
+        .rounded(px(4.0))
+        .bg(rgb(t.code_bg))
+        .border_1()
+        .border_color(if t.dark { rgb(t.hl) } else { rgb(t.btn) })
+        .flex()
+        .flex_col()
+        .gap(px(5.0))
+        .child(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .justify_between()
+                .gap(px(8.0))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(style::animated_pulse_dot("active_file_dot", t.match_fill, 8.0))
+                        .child(style::status_badge("ACTIVE FILE", t.hl, t.hl_ink))
+                        .child(
+                            div()
+                                .font_family(FONT_MONO)
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(12.5))
+                                .text_color(rgb(t.ink))
+                                .child(active_file_name),
+                        ),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(style::chip_outlined(
+                            t,
+                            format!("{} file(s) touched", app.processed_files.len()),
+                            Some(t.info),
+                        ))
+                        .child(style::chip_outlined(
+                            t,
+                            format!("{pct_int}%"),
+                            Some(t.match_ink),
+                        )),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(
+                    div()
+                        .font_family(FONT_MONO)
+                        .font_weight(FontWeight::BOLD)
+                        .text_size(px(12.0))
+                        .text_color(if t.dark { rgb(t.hl) } else { rgb(t.info) })
+                        .child(spin_glyph),
+                )
+                .child(
+                    div()
+                        .font_family(FONT_MONO)
+                        .text_size(px(11.5))
+                        .text_color(rgb(t.ink_2))
+                        .child(active_detail),
+                ),
+        );
 
     let mut rows = div().flex().flex_col().gap(px(5.0)).w_full();
     for (i, (stage_name, desc)) in STAGE_DESCRIPTIONS.iter().enumerate() {
@@ -1326,19 +1478,24 @@ pub fn render_live_stage_stepper(
                     .into_any_element(),
             ),
             StageExecState::Running(started) => (
-                rgb(t.hl),
+                if t.dark { rgb(t.hl) } else { rgb(t.btn) },
                 rgb(t.hl_soft),
                 div()
                     .flex()
                     .items_center()
                     .gap(px(6.0))
-                    .child(style::animated_pulse_dot(("stage_pulse", i), t.hl, 8.0))
-                    .child(style::status_badge("RUNNING", t.hl, t.hl_ink))
+                    .child(style::animated_pulse_dot(("stage_pulse", i), t.match_fill, 8.0))
+                    .child(style::status_badge(
+                        format!("{spin_glyph} RUNNING"),
+                        t.hl,
+                        t.hl_ink,
+                    ))
                     .child(
                         div()
                             .font_family(FONT_MONO)
+                            .font_weight(FontWeight::BOLD)
                             .text_size(px(10.5))
-                            .text_color(rgb(t.hl))
+                            .text_color(rgb(t.ink))
                             .child(format!("{:.1}s", started.elapsed().as_secs_f32())),
                     )
                     .into_any_element(),
@@ -1362,6 +1519,8 @@ pub fn render_live_stage_stepper(
 
         let sub_text = if !detail.is_empty() {
             detail.to_string()
+        } else if matches!(state, StageExecState::Running(_)) && !app.current_file.is_empty() {
+            format!("{}  ·  {}", desc, app.current_file)
         } else {
             (*desc).to_string()
         };
@@ -1385,7 +1544,7 @@ pub fn render_live_stage_stepper(
                         .gap(px(10.0))
                         .child(
                             div()
-                                .w(px(76.0))
+                                .w(px(78.0))
                                 .font_family(FONT_MONO)
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(12.0))
@@ -1404,6 +1563,99 @@ pub fn render_live_stage_stepper(
         );
     }
 
+    // Per-file live activity stream showing every generated/compiled/verified file
+    let mut files_box = div()
+        .w_full()
+        .p(px(10.0))
+        .rounded(px(4.0))
+        .bg(rgb(t.code_bg))
+        .border_1()
+        .border_color(rgb(t.line_soft))
+        .flex()
+        .flex_col()
+        .gap(px(5.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(style::eyebrow(
+                    t,
+                    format!("LIVE FILE TELEMETRY ({} FILES)", app.processed_files.len()),
+                ))
+                .child(
+                    div()
+                        .font_family(FONT_MONO)
+                        .text_size(px(10.5))
+                        .text_color(rgb(t.muted))
+                        .child("newest first"),
+                ),
+        );
+
+    if app.processed_files.is_empty() {
+        files_box = files_box.child(
+            div()
+                .font_family(FONT_MONO)
+                .text_size(px(11.0))
+                .text_color(rgb(t.muted))
+                .child("Waiting for first generated / compiled file event…"),
+        );
+    } else {
+        for (idx, item) in app.processed_files.iter().rev().take(8).enumerate() {
+            let (badge_bg, badge_fg) = match item.action {
+                "CC" | "LINK" => (t.info_bg, t.info),
+                "GEN" | "HL" => (t.match_bg, t.match_ink),
+                "WASM" => (t.hl_soft, t.ink),
+                "FRAME" | "REPORT" => (t.work_bg, t.work),
+                _ => (t.bg_alt, t.ink_2),
+            };
+            files_box = files_box.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(8.0))
+                    .px(px(8.0))
+                    .py(px(4.0))
+                    .rounded(px(3.0))
+                    .when(idx == 0, |el| el.bg(rgb(t.hl_soft)))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(8.0))
+                            .child(style::status_badge(item.action, badge_bg, badge_fg))
+                            .child(
+                                div()
+                                    .font_family(FONT_MONO)
+                                    .font_weight(if idx == 0 {
+                                        FontWeight::BOLD
+                                    } else {
+                                        FontWeight::MEDIUM
+                                    })
+                                    .text_size(px(11.5))
+                                    .text_color(rgb(t.ink))
+                                    .child(item.path.clone()),
+                            )
+                            .child(
+                                div()
+                                    .font_family(FONT_SANS)
+                                    .text_size(px(11.0))
+                                    .text_color(rgb(t.muted))
+                                    .child(item.detail.clone()),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .font_family(FONT_MONO)
+                            .text_size(px(10.0))
+                            .text_color(rgb(t.muted))
+                            .child(item.timestamp.clone()),
+                    ),
+            );
+        }
+    }
+
     div()
         .w_full()
         .flex()
@@ -1418,8 +1670,8 @@ pub fn render_live_stage_stepper(
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(8.0))
-                        .child(style::animated_pulse_dot("busy_hdr_pulse", t.hl, 10.0))
+                        .gap(px(10.0))
+                        .child(eq)
                         .child(
                             div()
                                 .font_family(FONT_SANS)
@@ -1427,7 +1679,7 @@ pub fn render_live_stage_stepper(
                                 .text_size(px(18.0))
                                 .text_color(rgb(t.ink))
                                 .child(format!(
-                                    "{} in progress · {}",
+                                    "{spin_glyph}  {} in progress · {}",
                                     app.running_kind.map(|k| k.label()).unwrap_or("Pipeline"),
                                     app.running_stage
                                 )),
@@ -1441,8 +1693,9 @@ pub fn render_live_stage_stepper(
                         .child(
                             div()
                                 .font_family(FONT_MONO)
+                                .font_weight(FontWeight::BOLD)
                                 .text_size(px(12.0))
-                                .text_color(rgb(t.hl))
+                                .text_color(rgb(t.ink))
                                 .child(elapsed_total),
                         )
                         .child(
@@ -1455,9 +1708,11 @@ pub fn render_live_stage_stepper(
                         ),
                 ),
         )
-        .child(style::progress_meter(t, px(6.0), frac, t.match_fill))
+        .child(style::progress_meter(t, px(7.0), frac, t.match_fill))
         .child(style::animated_workbar("busy_shimmer_bar", t, 4.0))
+        .child(active_spotlight)
         .child(rows)
+        .child(files_box)
 }
 
 fn render_drop_busy(
