@@ -1,23 +1,25 @@
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use clap::{Parser, Subcommand};
 use owo_colors::OwoColorize;
 
 use crate::agent;
 use crate::config::{AppConfig, ToolchainStatus, UserSettings};
-use crate::gui;
-use crate::model::{discover_projects, ProjectModel, run_selftest};
+pub use crate::model::run_selftest;
+use crate::model::{discover_projects, ProjectModel};
 use crate::orchestrator;
-use crate::pe::{inspect_pe, run_selftest_pe};
+use crate::pe::inspect_pe;
+pub use crate::pe::run_selftest_pe;
 use crate::tasks;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "GameReComp",
+    name = "game-recomp-cli",
     version = VERSION,
-    about = "GameReComp — PE32 static recompilation, verification & AI-assisted recovery (Rust CLI + Desktop GUI)",
+    about = "GameReComp CLI — PE32 static recompilation, verification & AI-assisted recovery",
     long_about = "GameReComp turns Windows PE32 x86 games you own into standalone native C or WebAssembly builds with provenance tracking, verification, and optional AI readability agents.",
     disable_help_subcommand = false,
     args_conflicts_with_subcommands = true
@@ -163,14 +165,9 @@ fn is_known_subcommand(s: &str) -> bool {
     )
 }
 
-pub fn dispatch(raw_args: &[String], invoked_path: &str) -> i32 {
-    let invoked_name = Path::new(invoked_path)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
-
-    // Fast-path compatibility for legacy direct invocations:
-    //   GameReComp <pe_file> [pipeline flags...]
+pub fn dispatch(raw_args: &[String]) -> i32 {
+    // Fast-path compatibility for direct pipeline invocations:
+    //   game-recomp-cli <pe_file> [pipeline flags...]
     if let Some(first) = raw_args.first() {
         let is_legacy_flag = matches!(
             first.as_str(),
@@ -187,7 +184,7 @@ pub fn dispatch(raw_args: &[String], invoked_path: &str) -> i32 {
                 | "--list-stages"
         );
         if !is_known_subcommand(first) && !is_legacy_flag {
-            // Direct pipeline invocation: GameReComp <pe_file> [options]
+            // Direct pipeline invocation: game-recomp-cli <pe_file> [options]
             let explicit_repo = flag_value(raw_args, &["--repo"]).map(PathBuf::from);
             let cfg = AppConfig::load(explicit_repo.as_deref());
             let filtered: Vec<String> = strip_repo_flag(raw_args);
@@ -197,25 +194,19 @@ pub fn dispatch(raw_args: &[String], invoked_path: &str) -> i32 {
 
     // Support `-v` in addition to clap's `-V` / `--version`.
     if raw_args.len() == 1 && raw_args[0] == "-v" {
-        println!("GameReComp {VERSION}");
+        println!("game-recomp-cli {VERSION}");
         return 0;
     }
 
-    // Zero arguments: `gamerecomp` launches the native desktop GUI (like `decomp`),
-    // while `./GameReComp` (CLI wrapper) prints the styled CLI overview with a `--gui` hint.
+    // Zero arguments on `game-recomp-cli` prints the crisp CLI overview.
     if raw_args.is_empty() {
         let cfg = AppConfig::load(None);
-        let from_cli_wrapper = std::env::var("GAMERECOMP_CLI").is_ok()
-            || invoked_path.ends_with("GameReComp");
-        if !from_cli_wrapper && invoked_name.eq_ignore_ascii_case("gamerecomp") {
-            return gui::launch_gui(cfg, None);
-        }
         print_styled_overview(&cfg);
         return 0;
     }
 
     let mut argv = Vec::with_capacity(raw_args.len() + 1);
-    argv.push("GameReComp".to_string());
+    argv.push("game-recomp-cli".to_string());
     argv.extend_from_slice(raw_args);
 
     let cli = match Cli::try_parse_from(&argv) {
@@ -241,12 +232,12 @@ pub fn dispatch(raw_args: &[String], invoked_path: &str) -> i32 {
         return 0;
     }
     if cli.gui || cli.open.is_some() {
-        return gui::launch_gui(cfg, cli.open.as_deref());
+        return launch_gui_binary(&cfg, cli.open.as_deref());
     }
 
     match cli.command {
-        Some(Commands::Gui { project_dir }) => gui::launch_gui(cfg, project_dir.as_deref()),
-        Some(Commands::Open { project_dir }) => gui::launch_gui(cfg, Some(&project_dir)),
+        Some(Commands::Gui { project_dir }) => launch_gui_binary(&cfg, project_dir.as_deref()),
+        Some(Commands::Open { project_dir }) => launch_gui_binary(&cfg, Some(&project_dir)),
         Some(Commands::Inspect { pe_file, json }) => run_inspect_cmd(&pe_file, json),
         Some(Commands::Status { project_dir }) => run_status_cmd(&cfg, project_dir.as_deref()),
         Some(Commands::Setup) => run_setup_cmd(&cfg),
@@ -280,6 +271,48 @@ fn strip_repo_flag(args: &[String]) -> Vec<String> {
     out
 }
 
+fn launch_gui_binary(cfg: &AppConfig, open_dir: Option<&Path>) -> i32 {
+    let gui_name = if cfg!(windows) {
+        "game-recomp-gui.exe"
+    } else {
+        "game-recomp-gui"
+    };
+
+    let mut candidates = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join(gui_name));
+        }
+    }
+    candidates.push(cfg.repo_root.join("target").join("release").join(gui_name));
+    candidates.push(cfg.repo_root.join("target").join("debug").join(gui_name));
+    candidates.push(PathBuf::from(gui_name));
+
+    for bin in candidates {
+        if bin.is_file() || bin == Path::new(gui_name) {
+            let mut cmd = Command::new(&bin);
+            cmd.arg("--repo").arg(&cfg.repo_root);
+            if let Some(dir) = open_dir {
+                cmd.arg("--open").arg(dir);
+            }
+            if let Ok(status) = cmd.status() {
+                return status.code().unwrap_or(0);
+            }
+        }
+    }
+
+    #[cfg(feature = "gui")]
+    {
+        return crate::gui::launch_gui(cfg.clone(), open_dir);
+    }
+
+    #[cfg(not(feature = "gui"))]
+    {
+        eprintln!("error: `game-recomp-gui` binary not found. Build it with `cargo build --release --bin game-recomp-gui`.");
+        1
+    }
+}
+
 fn print_styled_overview(cfg: &AppConfig) {
     println!();
     println!("  {}", brand_banner());
@@ -290,27 +323,27 @@ fn print_styled_overview(cfg: &AppConfig) {
     println!();
     println!("  {}", "COMMANDS".bright_yellow().bold());
     let rows = [
-        ("GameReComp gui [project_dir]", "Open the native Rust desktop GUI"),
-        ("GameReComp <game.exe> [opts]", "Recompile a PE32 executable to native or wasm32"),
-        ("GameReComp inspect <game.exe>", "Inspect PE headers and verify PE32 x86 support"),
-        ("GameReComp status [project]", "Show project scores, stages, and build health"),
-        ("GameReComp setup", "Check compilers, SDL2, wasm32 tools, and AI agents"),
-        ("GameReComp about", "Show architecture, WASM readiness & license info"),
-        ("GameReComp serve <project>", "Serve a built WebAssembly app over local HTTP"),
-        ("GameReComp batch <paths...>", "Batch recompile & verify standalone binaries"),
-        ("GameReComp tasks", "List all reconstructed project statuses"),
-        ("GameReComp readability <dir>", "Run source readability & provenance harness"),
-        ("GameReComp agent <dir>", "Drive AI-assisted recovery via REVENG_AI_CMD"),
+        ("game-recomp-gui [project_dir]", "Open the native Rust GPUI desktop GUI"),
+        ("game-recomp-cli <game.exe> [opts]", "Recompile a PE32 executable to native or wasm32"),
+        ("game-recomp-cli inspect <game.exe>", "Inspect PE headers and verify PE32 x86 support"),
+        ("game-recomp-cli status [project]", "Show project scores, stages, and build health"),
+        ("game-recomp-cli setup", "Check compilers, SDL2, wasm32 tools, and AI agents"),
+        ("game-recomp-cli about", "Show architecture, WASM readiness & license info"),
+        ("game-recomp-cli serve <project>", "Serve a built WebAssembly app over local HTTP"),
+        ("game-recomp-cli batch <paths...>", "Batch recompile & verify standalone binaries"),
+        ("game-recomp-cli tasks", "List all reconstructed project statuses"),
+        ("game-recomp-cli readability <dir>", "Run source readability & provenance harness"),
+        ("game-recomp-cli agent <dir>", "Drive AI-assisted recovery via REVENG_AI_CMD"),
     ];
     for (cmd, desc) in rows {
-        println!("    {:<32} {}", cmd.bold(), desc.dimmed());
+        println!("    {:<36} {}", cmd.bold(), desc.dimmed());
     }
     println!();
     println!(
         "  {} {}   {}",
         "Workspace:".dimmed(),
         cfg.repo_root.display(),
-        "Run `GameReComp --help` for all options.".dimmed()
+        "Run `game-recomp-cli --help` for all options.".dimmed()
     );
     println!();
 }
@@ -419,7 +452,8 @@ pub fn run_status_cmd(cfg: &AppConfig, project_dir: Option<&Path>) -> i32 {
     if summaries.is_empty() {
         println!(
             "  {}",
-            "No projects yet. Run `GameReComp <game.exe>` or `GameReComp gui` to start.".dimmed()
+            "No projects yet. Run `game-recomp-cli <game.exe>` or `game-recomp-gui` to start."
+                .dimmed()
         );
         println!();
         return 0;
@@ -664,8 +698,13 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     );
     println!(
         "  {:<18} {}",
+        "Binaries".dimmed(),
+        "game-recomp-cli (CLI) · game-recomp-gui (GPUI Desktop)"
+    );
+    println!(
+        "  {:<18} {}",
         "WASM Core".dimmed(),
-        "gamerecomp_core (wasm32-unknown-unknown compatible)".green()
+        "game_recomp (wasm32-unknown-unknown compatible)".green()
     );
     println!(
         "  {:<18} {}",

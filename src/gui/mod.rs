@@ -777,11 +777,36 @@ impl GameReCompApp {
         });
     }
 
+    fn cli_binary_path(&self) -> PathBuf {
+        let cli_name = if cfg!(windows) {
+            "game-recomp-cli.exe"
+        } else {
+            "game-recomp-cli"
+        };
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                let sibling = dir.join(cli_name);
+                if sibling.is_file() {
+                    return sibling;
+                }
+            }
+        }
+        let release = self.cfg.repo_root.join("target").join("release").join(cli_name);
+        if release.is_file() {
+            return release;
+        }
+        let debug = self.cfg.repo_root.join("target").join("debug").join(cli_name);
+        if debug.is_file() {
+            return debug;
+        }
+        PathBuf::from(cli_name)
+    }
+
     pub fn start_batch_worker(&mut self, folder: PathBuf, cx: &mut Context<Self>) {
         if self.running_kind.is_some() {
             return;
         }
-        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("gamerecomp"));
+        let exe = self.cli_binary_path();
         let child_slot = Arc::clone(&self.running_child);
 
         self.running_kind = Some(WorkerKind::Batch);
@@ -792,7 +817,7 @@ impl GameReCompApp {
         self.route = Route::Home;
         self.live_logs.clear();
         self.live_logs.push(format!(
-            "$ GameReComp batch {} --verify-standalone",
+            "$ game-recomp-cli batch {} --verify-standalone",
             folder.display()
         ));
         self.push_feed("batch", &format!("scanning {}", folder.display()), false);
@@ -855,7 +880,7 @@ impl GameReCompApp {
             let _ = open::that(url);
             return;
         }
-        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("gamerecomp"));
+        let exe = self.cli_binary_path();
         let port = 8087u16;
         match Command::new(exe)
             .args([

@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-BIN="$ROOT/target/release/gamerecomp"
+BIN="$ROOT/target/release/game-recomp-cli"
 if [ ! -x "$BIN" ]; then
     cargo build --release --manifest-path "$ROOT/Cargo.toml" >&2
 fi
-exec env GAMERECOMP_CLI=1 "$BIN" "$@"
+exec "$BIN" "$@"

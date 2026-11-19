@@ -565,7 +565,7 @@ pub fn render_about_page(
                         .font_family(FONT_SANS)
                         .text_size(px(13.0))
                         .text_color(rgb(t.ink_2))
-                        .child("Self-contained C Win32 HLE runtime (SDL2 native + wasm32 browser canvas) plus WASM-compatible gamerecomp_core Rust library."),
+                        .child("Self-contained C Win32 HLE runtime (SDL2 native + wasm32 browser canvas) plus WASM-compatible game_recomp Rust core library."),
                 ),
         );
 
@@ -620,7 +620,8 @@ pub fn render_about_page(
                 .gap(px(8.0))
                 .child(info_kv(t, "Version", &format!("GameReComp v{}", crate::cli::VERSION)))
                 .child(info_kv(t, "GUI Framework", "GPUI 0.2.2 (Zed GPU-accelerated Rust UI)"))
-                .child(info_kv(t, "WASM Core", "gamerecomp_core verified on wasm32-unknown-unknown"))
+                .child(info_kv(t, "Binaries", "game-recomp-cli (CLI) & game-recomp-gui (GPUI)"))
+                .child(info_kv(t, "WASM Core", "game_recomp verified on wasm32-unknown-unknown"))
                 .child(info_kv(t, "Typography", "Archivo (OFL-1.1) & IBM Plex Mono (OFL-1.1)"))
                 .child(info_kv(t, "Host", &format!("{} / {}", std::env::consts::OS, std::env::consts::ARCH)))
                 .child(info_kv(t, "Projects Loaded", &format!("{} project(s)", app.projects.len())))

@@ -1,50 +1,41 @@
-# Desktop GUI & Rust CLI
+# Desktop GUI (`game-recomp-gui`) & Rust CLI (`game-recomp-cli`)
 
-**Status: implemented in Rust + GPUI (`src/gui/`) and clap v4 (`src/cli.rs`), with a WASM-ready shared core (`gamerecomp_core` in `src/lib.rs`).** Both the `./GameReComp` CLI and the GPU-accelerated desktop GUI compile into a single native Rust binary (`target/release/gamerecomp`, staged at `gui/build/gamerecomp` by `gui/CMakeLists.txt`), sharing `pe`, `pipeline_opts`, `theme_tokens`, `AppConfig`, `ProjectModel`, and `orchestrator` directly with zero Python UI/Qt/WebView dependencies.
+**Status: implemented in Rust with two clean binaries — `game-recomp-cli` (clap v4 CLI) and `game-recomp-gui` (GPUI desktop GUI) — backed by the WASM-ready `game_recomp` core library (`src/lib.rs`).**
 
-## Architecture & Stack
+## Binaries & Stack
 
-- **Desktop GUI**: **GPUI (`gpui 0.2.2`, `runtime_shaders`)** — Zed's GPU-accelerated Rust UI framework (Metal on macOS, Vulkan/Blade on Linux, DirectX on Windows) styled with the **"Marked Listing"** dark/light design system (embedded OFL `Archivo` and `IBM Plex Mono` fonts).
-- **Rust CLI**: **`clap` v4 + `owo-colors` + `indicatif`** — structured subcommands (`gui`, `open`, `inspect`, `status`, `setup`, `about`, `run`, `batch`, `serve`, `tasks`, `readability`, `agent`) plus 100% backward-compatible direct invocation (`./GameReComp <game.exe> [options]`).
-- **WASM-ready shared core (`gamerecomp_core`)**: `src/lib.rs` (`pe`, `pipeline_opts`, `theme_tokens`) compiles cleanly to `wasm32-unknown-unknown` (`cargo check --target wasm32-unknown-unknown --lib --no-default-features`) so the exact PE32 byte inspector, CLI option builder, and theme tokens can be reused directly in future WebAssembly web ports.
+- **`game-recomp-gui`** (`src/bin/game-recomp-gui.rs`, `src/gui/`): **GPUI (`gpui 0.2.2`, `runtime_shaders`)** — Zed's GPU-accelerated Rust UI framework (Metal on macOS, Vulkan/Blade on Linux, DirectX on Windows) styled with the **"Marked Listing"** dark/light design system (embedded OFL `Archivo` and `IBM Plex Mono` fonts).
+- **`game-recomp-cli`** (`src/bin/game-recomp-cli.rs`, `src/cli.rs`): **`clap` v4 + `owo-colors` + `indicatif`** — structured subcommands (`gui`, `open`, `inspect`, `status`, `setup`, `about`, `run`, `batch`, `serve`, `tasks`, `readability`, `agent`) plus direct invocation (`game-recomp-cli <game.exe> [options]`). Can also be built standalone without GPUI (`--no-default-features --features cli`).
+- **WASM-ready core (`game_recomp`)**: `src/lib.rs` (`pe`, `pipeline_opts`, `theme_tokens`) compiles cleanly to `wasm32-unknown-unknown` (`cargo check --target wasm32-unknown-unknown --lib --no-default-features`).
 
-## Views & Capabilities
+## GUI Views & Capabilities
 
 1. **Sidebar (248px)** — `[GR] GameReComp` brand mark, notification center bell with unread badge, full-width `+ New project` action menu, filterable `PROJECTS` list with colored swatches, animated pulsing working dots and progress meters, plus navigation to `Agents & models`, `Compilers & tools`, `Settings`, `About GameReComp`, `Report a problem`, light/dark theme switcher, and quit.
-2. **Home / New Project** — Hero overview, native drag-and-drop PE32 dropzone (`ExternalPaths`) & file browser (`rfd`), fail-closed PE32 inspection card, and complete **GameReComp CLI Parameter Configurator**:
-   - Application profile (`Game`, `Desktop App`, `Console App`)
-   - Input OS/Arch (`auto`, `windows`, `x86`) and Output OS/Arch/Machine (`host`, `macos`, `linux`, `windows`, `web/wasm32`)
-   - Output mode (`Full`, `Binary only`, `Source only`, `Custom stages` with all 8 stage pills)
-   - Output folder (`--project-dir`), Assets dir (`--assets-dir`), Highlevel dir (`--highlevel`), Oracle JSON (`--oracle`)
-   - Logging & output controls (`--verbose`, `--quiet`, `--no-progress`, `--json`, `--no-table`, `--dry-run`)
-   - Build & runtime knobs (`--timeout`, `--build-timeout`, `--jobs`, `--split`, `--interactive`, `--fresh-build`, `--reuse-build`, `--import-trace`, `--clean-objects`, `--verify-standalone`, `RECOMP_SCREENSHOT`)
-   - Live copyable `./GameReComp ...` command preview bar.
+2. **Home / New Project** — Hero overview, native drag-and-drop PE32 dropzone (`ExternalPaths`) & file browser (`rfd`), fail-closed PE32 inspection card, and complete **GameReComp CLI Parameter Configurator** (App/Game/Console profile, Input/Output OS & Arch/Machine including `web/wasm32`, output modes & custom 8-stage toggles, project/assets/highlevel/oracle dirs, timeouts/jobs/split, all logging & build flags, and live copyable `game-recomp-cli ...` preview).
 3. **Animated Live Stage Stepper** — Real-time GPUI animations (`with_animation`, pulsing dots, sliding workbar) showing all 8 stages (`inspect → recover → translate → project → compile → run → verify → report`), active step elapsed time, completion badges, and trailing logs.
-4. **Project Workspace** — Sticky header with chips, yellow-highlighted uppercase project title + inline rename, Launch / Serve WASM / Report HTML / Run pipeline actions, progress meter, and 6 tabs:
-   - **Overview**: Interactive color-coded Function Map with live hover readout & click-to-inspect, 4 ruled KPI columns, Next-step callout, Runtime summary, and bottom panels.
-   - **Functions**: Searchable (`/`), filterable, sortable table of all recovered & high-level functions with starring (`★`).
-   - **Stages & Build**: Stage breakdown, manifest SHA-256 verification, and live colorized console.
-   - **Agents**: Readability & provenance worker (`REVENG_AI_CMD`), timestamped activity feed, and certified verdicts.
-   - **Frames**: Native GPUI image viewer for captured PNG/BMP screenshots.
-   - **Settings**: Full project CLI options editor + project metadata.
-5. **Slide-over Function Inspector Drawer** — Right-aligned expandable drawer (`Esc` closes, `J`/`K` steps next/prev) with syntax-colored C source, provenance evidence, copy/open actions, and persistent per-function notes.
-6. **Global Pages** — `Agents & models`, `Compilers & tools`, `Settings`, and `About GameReComp` (architecture, WASM readiness, keyboard shortcuts, licenses, and diagnostics).
+4. **Project Workspace** — Sticky header with inline rename, Launch / Serve WASM / Report HTML / Run / Folder actions, progress meter, and 6 tabs (`Overview` with interactive Function Map, `Functions`, `Stages & Build`, `Agents`, `Frames`, `Settings`).
+5. **Slide-over Function Inspector Drawer** — Right-aligned expandable drawer (`Esc`, `J`/`K`) with syntax-colored C source, provenance evidence, copy/open actions, and persistent per-function notes.
+6. **Global Pages** — `Agents & models`, `Compilers & tools`, `Settings`, and `About GameReComp`.
 
-## Building & Verification
+## Building & Running
 
 ```sh
 # 1. Verify WASM-compatible core library
 cargo check --target wasm32-unknown-unknown --lib --no-default-features
 
-# 2. Run Rust unit tests (core + CLI + GPUI helpers)
-cargo test --release
+# 2. Run Rust unit tests
+cargo test
 
-# 3. Build release binary and stage gui/build/gamerecomp
+# 3. Build both binaries (`target/release/game-recomp-cli` & `target/release/game-recomp-gui`)
+cargo build --release
+
+# Or build CLI only (without GPUI):
+cargo build --release --bin game-recomp-cli --no-default-features --features cli
+
+# Or build & stage via CMake (`gui/build/game-recomp-gui`, `gui/build/game-recomp-cli`, `gui/build/gamerecomp`):
 cmake -S gui -B gui/build && cmake --build gui/build
 
-# 4. Run full verification gate
-sh verify.sh --fast
-
-# 5. Launch native GPUI desktop GUI
-./GameReComp gui
+# 4. Run
+./target/release/game-recomp-gui
+./target/release/game-recomp-cli --help
 ```

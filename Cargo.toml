@@ -1,27 +1,35 @@
 [package]
-name = "gamerecomp"
+name = "game-recomp"
 version = "0.0.1"
 edition = "2021"
-description = "GameReComp native Rust CLI and GPUI desktop GUI (with WASM-ready core) for PE32 static recompilation"
+description = "GameReComp Rust CLI (game-recomp-cli) and GPUI desktop GUI (game-recomp-gui) with WASM-ready core"
 
 [lib]
-name = "gamerecomp_core"
+name = "game_recomp"
 path = "src/lib.rs"
 
 [[bin]]
-name = "gamerecomp"
-path = "src/main.rs"
-required-features = ["native"]
+name = "game-recomp-cli"
+path = "src/bin/game-recomp-cli.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "game-recomp-gui"
+path = "src/bin/game-recomp-gui.rs"
+required-features = ["gui"]
 
 [features]
-default = ["native"]
-native = [
+default = ["cli", "gui"]
+cli = [
     "dep:clap",
     "dep:chrono",
-    "dep:gpui",
     "dep:indicatif",
     "dep:open",
     "dep:owo-colors",
+]
+gui = [
+    "cli",
+    "dep:gpui",
     "dep:rfd",
 ]
 
@@ -29,13 +37,15 @@ native = [
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# Native desktop + CLI dependencies (excluded on wasm32-unknown-unknown lib builds)
+# CLI dependencies (excluded on wasm32-unknown-unknown --lib --no-default-features)
 chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }
 clap = { version = "4.6", features = ["derive", "color", "wrap_help"], optional = true }
-gpui = { version = "0.2.2", features = ["runtime_shaders"], optional = true }
 indicatif = { version = "0.18", optional = true }
 open = { version = "5", optional = true }
 owo-colors = { version = "4", optional = true }
+
+# GPUI desktop GUI dependencies
+gpui = { version = "0.2.2", features = ["runtime_shaders"], optional = true }
 rfd = { version = "0.18", optional = true }
 
 [profile.release]

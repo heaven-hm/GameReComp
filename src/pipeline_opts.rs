@@ -353,7 +353,7 @@ impl PipelineOptions {
         if self.capture_screenshots {
             parts.push("RECOMP_SCREENSHOT=<proj>/screenshots".to_string());
         }
-        parts.push("./GameReComp".to_string());
+        parts.push("game-recomp-cli".to_string());
         for a in self.to_backend_args() {
             if a.contains(' ') {
                 parts.push(format!("\"{a}\""));
@@ -393,7 +393,7 @@ mod tests {
         assert!(args.contains(&"--import-trace".to_string()));
 
         let preview = opts.format_command_preview();
-        assert!(preview.contains("./GameReComp"));
+        assert!(preview.contains("game-recomp-cli"));
         assert!(preview.contains("--verify-standalone"));
         assert!(preview.contains("RECOMP_SCREENSHOT="));
     }
