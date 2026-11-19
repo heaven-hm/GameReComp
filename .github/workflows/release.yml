@@ -20,10 +20,10 @@ jobs:
             runner: ubuntu-latest
             binary: gamerecomp
             archive: GameReComp-${{ github.ref_name }}-linux-x86_64.tar.gz
-          - name: macos-arm64
-            runner: macos-14
+          - name: macos-x86_64
+            runner: macos-13
             binary: gamerecomp
-            archive: GameReComp-${{ github.ref_name }}-macos-arm64.tar.gz
+            archive: GameReComp-${{ github.ref_name }}-macos-x86_64.tar.gz
           - name: windows-x86_64
             runner: windows-latest
             binary: gamerecomp.exe
