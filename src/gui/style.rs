@@ -6,8 +6,55 @@ use gpui::{
     SharedString, Stateful, Styled, bounce, div, ease_in_out, prelude::*, pulsating_between, px,
     relative, rgb, rgba,
 };
+use gpui::component::{
+    Disableable as _, Sizable as _, Theme as KitTheme, ThemeMode as KitThemeMode,
+    button::{Button, ButtonVariants as _},
+    spinner::Spinner,
+};
 
 use crate::theme_tokens::ThemeTokens;
+
+/// Synchronizes GPUI Kit's global theme (`gpui_component::Theme`) with GameReComp's active
+/// high-contrast editorial palette and selected typography.
+pub fn sync_gpui_kit_theme(t: &ThemeTokens, cx: &mut App) {
+    let mode = if t.dark {
+        KitThemeMode::Dark
+    } else {
+        KitThemeMode::Light
+    };
+    KitTheme::change(mode, None, cx);
+    KitTheme::update(cx, |theme| {
+        theme.font_family = t.ui_font.into();
+        theme.mono_font_family = t.mono_font.into();
+        theme.radius = px(4.0);
+        theme.radius_lg = px(6.0);
+        theme.colors.background = c(t.bg);
+        theme.colors.foreground = c(t.ink);
+        theme.colors.border = c(t.line);
+        theme.colors.muted = c(t.bg_alt);
+        theme.colors.muted_foreground = c(t.muted);
+        theme.colors.primary = c(t.btn);
+        theme.colors.primary_hover = c(t.btn_hover);
+        theme.colors.primary_active = c(t.btn_hover);
+        theme.colors.primary_foreground = c(t.btn_ink);
+        theme.colors.secondary = c(t.panel);
+        theme.colors.secondary_hover = c(t.bg_alt);
+        theme.colors.secondary_active = c(t.bg_alt);
+        theme.colors.secondary_foreground = c(t.ink);
+        theme.colors.accent = c(t.hl);
+        theme.colors.accent_foreground = c(t.hl_ink);
+        theme.colors.popover = c(t.overlay);
+        theme.colors.popover_foreground = c(t.ink);
+        theme.colors.danger = c(t.miss);
+        theme.colors.danger_hover = c(t.not_c);
+        theme.colors.danger_active = c(t.not_c);
+        theme.colors.danger_foreground = c(0xFFFFFF);
+    });
+}
+
+pub fn loading_spinner(t: &ThemeTokens) -> Spinner {
+    Spinner::new().small().color(c(t.accent_fg()))
+}
 
 #[allow(dead_code)]
 pub const FONT_SANS: &str = "Archivo";
@@ -108,7 +155,7 @@ pub fn yellow_project_title(t: &ThemeTokens, title: &str) -> Div {
         .font_family(t.ui_font)
         .font_weight(FontWeight::EXTRA_BOLD)
         .text_size(px(t.ui_px(24.0)))
-        .line_height(px(28.0))
+        .line_height(px(t.ui_px(28.0)))
         .child(title.to_uppercase())
 }
 
@@ -126,89 +173,37 @@ pub fn primary_btn(
     t: &ThemeTokens,
     label: impl Into<SharedString>,
     enabled: bool,
-) -> Stateful<Div> {
-    let base = div()
-        .id(id)
-        .flex()
-        .items_center()
-        .justify_center()
-        .gap(px(7.0))
-        .h(px(34.0))
-        .px(px(14.0))
-        .rounded(px(3.0))
+) -> Button {
+    Button::new(id)
+        .primary()
+        .small()
+        .disabled(!enabled)
         .font_family(t.ui_font)
-        .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(t.ui_px(13.0)))
-        .child(label.into());
-
-    if enabled {
-        base.bg(rgb(t.btn))
-            .text_color(rgb(t.btn_ink))
-            .cursor_pointer()
-            .hover({
-                let hover = t.btn_hover;
-                move |s| s.bg(rgb(hover))
-            })
-    } else {
-        base.bg(ca(t.btn, 0.38))
-            .text_color(ca(t.btn_ink, 0.65))
-    }
+        .label(label)
 }
 
 pub fn ghost_btn(
     id: impl Into<gpui::ElementId>,
     t: &ThemeTokens,
     label: impl Into<SharedString>,
-) -> Stateful<Div> {
-    let bg_alt = t.bg_alt;
-    let ink = t.ink;
-    div()
-        .id(id)
-        .flex()
-        .items_center()
-        .justify_center()
-        .gap(px(6.0))
-        .h(px(32.0))
-        .px(px(12.0))
-        .rounded(px(3.0))
-        .bg(rgb(t.panel))
-        .border_1()
-        .border_color(rgb(t.faint))
-        .text_color(rgb(t.ink))
+) -> Button {
+    Button::new(id)
+        .outline()
+        .small()
         .font_family(t.ui_font)
-        .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(t.ui_px(12.5)))
-        .cursor_pointer()
-        .hover(move |s| s.bg(rgb(bg_alt)).border_color(rgb(ink)))
-        .child(label.into())
+        .label(label)
 }
 
 pub fn danger_btn(
     id: impl Into<gpui::ElementId>,
     t: &ThemeTokens,
     label: impl Into<SharedString>,
-) -> Stateful<Div> {
-    let miss_bg = t.miss_bg;
-    let miss = t.miss;
-    div()
-        .id(id)
-        .flex()
-        .items_center()
-        .justify_center()
-        .gap(px(6.0))
-        .h(px(32.0))
-        .px(px(12.0))
-        .rounded(px(3.0))
-        .bg(rgb(t.panel))
-        .border_1()
-        .border_color(ca(t.miss, 0.6))
-        .text_color(rgb(t.miss))
+) -> Button {
+    Button::new(id)
+        .danger()
+        .small()
         .font_family(t.ui_font)
-        .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(t.ui_px(12.5)))
-        .cursor_pointer()
-        .hover(move |s| s.bg(rgb(miss_bg)).border_color(rgb(miss)))
-        .child(label.into())
+        .label(label)
 }
 
 pub fn chip_inverted(t: &ThemeTokens, text: impl Into<SharedString>) -> Div {
@@ -367,12 +362,14 @@ pub fn toggle_checkbox(
 /// Hairline bordered panel matching `.panel`.
 pub fn panel_box(t: &ThemeTokens) -> Div {
     div()
+        .min_w_0()
+        .overflow_hidden()
         .flex()
         .flex_col()
         .bg(rgb(t.panel))
         .border_1()
         .border_color(rgb(t.line))
-        .rounded(px(4.0))
+        .rounded(px(6.0))
 }
 
 /// Horizontal green progress bar matching `.meter`.
@@ -476,13 +473,14 @@ pub fn text_input_box(
     };
     div()
         .id(id)
+        .w_full()
+        .min_w_0()
+        .flex_shrink_0()
         .flex()
         .items_center()
-        .flex_1()
-        .min_w(px(80.0))
         .h(px(32.0))
         .px(px(10.0))
-        .rounded(px(3.0))
+        .rounded(px(4.0))
         .bg(rgb(t.code_bg))
         .border_1()
         .border_color(if focused {
@@ -498,6 +496,7 @@ pub fn text_input_box(
         .text_size(px(t.ui_px(12.5)))
         .text_color(fg)
         .overflow_hidden()
+        .whitespace_nowrap()
         .cursor_text()
         .child(display)
 }

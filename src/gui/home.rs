@@ -1,56 +1,61 @@
 use gpui::{
-    ClipboardItem, Context, Div, ExternalPaths, FontWeight, Stateful, Styled, div, prelude::*, px,
-    rgb,
+    ClipboardItem, Context, Div, ExternalPaths, FontWeight, MouseButton, MouseDownEvent, Stateful,
+    Styled, div, prelude::*, px, rgb,
 };
 
 use super::style;
 use super::{ActiveJob, DropState, FocusInput, GameReCompApp, JobStatus, ProjectTab, StageExecState};
-use crate::model::ProjectModel;
 use crate::pipeline_opts::{ALL_STAGES, AppProfile, OutMode, STAGE_DESCRIPTIONS};
 use crate::theme_tokens::ThemeTokens;
 
 pub fn render_home(
     app: &GameReCompApp,
     t: &ThemeTokens,
+    viewport_w: f32,
     cx: &mut Context<GameReCompApp>,
 ) -> Stateful<Div> {
+    let compact = viewport_w < 1080.0;
+    let pad_x = if viewport_w < 1020.0 { 18.0 } else { 36.0 };
+
     let mut content = div()
         .id("home_scroll_view")
         .flex_1()
+        .min_w_0()
         .h_full()
         .overflow_y_scroll()
-        .px(px(36.0))
+        .px(px(pad_x))
         .pt(px(28.0))
         .pb(px(56.0))
         .flex()
         .flex_col()
         .gap(px(22.0));
 
-    // ------------------------------------------------------------------ Hero 2-column row
+    // ------------------------------------------------------------------ Hero row (2-col on wide, stacked below 1080px)
     let hero = div()
         .w_full()
         .max_w(px(1340.0))
+        .flex_shrink_0()
         .flex()
-        .flex_row()
-        .flex_wrap()
-        .items_start()
-        .gap(px(36.0))
-        .child(render_hero_copy(t))
-        .child(render_dropzone_card(app, t, cx));
+        .when(compact, |el| el.flex_col().gap(px(20.0)))
+        .when(!compact, |el| el.flex_row().items_start().gap(px(28.0)))
+        .child(render_hero_copy(t, compact))
+        .child(render_dropzone_card(app, t, compact, cx));
 
     content = content.child(hero);
 
     // ------------------------------------------------------------------ Multi-Game Concurrent Queue Panel
     if !app.jobs.is_empty() || !app.queued_pipelines.is_empty() {
-        content = content.child(render_active_jobs_panel(app, t, cx));
+        content = content.child(render_active_jobs_panel(app, t, cx).flex_shrink_0());
     }
 
     // ------------------------------------------------------------------ Privacy shield notice
     content = content.child(
         div()
+            .w_full()
             .max_w(px(1340.0))
+            .flex_shrink_0()
             .flex()
-            .items_center()
+            .items_start()
             .gap(px(9.0))
             .child(
                 div()
@@ -62,6 +67,8 @@ pub fn render_home(
             )
             .child(
                 div()
+                    .flex_1()
+                    .min_w_0()
                     .font_family(t.ui_font)
                     .text_size(px(t.ui_px(13.0)))
                     .text_color(rgb(t.muted))
@@ -89,6 +96,7 @@ pub fn render_home(
     let starts = div()
         .w_full()
         .max_w(px(1340.0))
+        .flex_shrink_0()
         .flex()
         .flex_row()
         .flex_wrap()
@@ -101,8 +109,8 @@ pub fn render_home(
                 "Batch recompile a folder",
                 "Scan a folder of Windows PE32 games or apps, recompile each, and verify standalone runs.",
             )
-            .on_click(cx.listener(|this, _, _, cx| {
-                this.browse_for_batch_folder(cx);
+            .on_click(cx.listener(|this, _, window, cx| {
+                this.browse_for_batch_folder(window, cx);
             })),
         )
         .child(
@@ -113,15 +121,15 @@ pub fn render_home(
                 "Open a saved project",
                 "Load an existing GameReComp directory with project.json, reports, functions, and frames.",
             )
-            .on_click(cx.listener(|this, _, _, cx| {
-                this.browse_for_project_folder(cx);
+            .on_click(cx.listener(|this, _, window, cx| {
+                this.browse_for_project_folder(window, cx);
             })),
         )
         .child(
             start_card("start_sample", t, false, sample_title, &sample_desc).on_click(cx.listener(
-                |this, _, _, cx| {
+                |this, _, window, cx| {
                     if let Some(first) = this.projects.first().cloned() {
-                        this.open_project_dir(first.dir, ProjectTab::Overview);
+                        this.open_project_dir_async(first.dir, ProjectTab::Overview, window, cx);
                     } else {
                         let fixture = this
                             .cfg
@@ -138,8 +146,23 @@ pub fn render_home(
 
     content = content.child(starts);
 
-    // ------------------------------------------------------------------ Your Projects Grid
-    if !app.projects.is_empty() {
+    // ------------------------------------------------------------------ Your Projects Grid (Full CRUD + Right-Click Context Menu)
+    if app.projects_loading && app.projects.is_empty() {
+        content = content.child(
+            style::panel_box(t)
+                .flex_shrink_0()
+                .w_full()
+                .max_w(px(1340.0))
+                .p(px(18.0))
+                .child(
+                    div()
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(12.5)))
+                        .text_color(rgb(t.muted))
+                        .child("Scanning saved projects in the background…"),
+                ),
+        );
+    } else {
         let mut grid = div()
             .w_full()
             .flex()
@@ -149,6 +172,13 @@ pub fn render_home(
 
         for (idx, proj) in app.projects.iter().enumerate() {
             let dir = proj.dir.clone();
+            let dir_ctx = proj.dir.clone();
+            let dir_menu = proj.dir.clone();
+            let name_ctx = proj.name.clone();
+            let name_menu = proj.name.clone();
+            let dir_run = proj.dir.clone();
+            let name_run = proj.name.clone();
+            let runnable = proj.has_binary || proj.has_wasm;
             let sw_hex = t.project_swatches[proj.color_idx % t.project_swatches.len()];
             let pct = (proj.score.clamp(0, 100) as f32) / 100.0;
             let meta = if proj.load_ok {
@@ -169,7 +199,8 @@ pub fn render_home(
             let card = div()
                 .id(("home_proj_card", idx))
                 .w(px(300.0))
-                .flex_grow()
+                .min_w(px(250.0))
+                .flex_grow(1.0)
                 .flex()
                 .flex_col()
                 .gap(px(10.0))
@@ -183,23 +214,79 @@ pub fn render_home(
                     let ink = t.ink;
                     move |s| s.border_color(rgb(ink))
                 })
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    this.open_project_dir(dir.clone(), ProjectTab::Overview);
-                    cx.notify();
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    this.open_project_dir_async(dir.clone(), ProjectTab::Overview, window, cx);
                 }))
+                .on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                        this.open_project_context_menu(
+                            dir_ctx.clone(),
+                            name_ctx.clone(),
+                            ev.position,
+                            cx,
+                        );
+                    }),
+                )
                 .child(
                     div()
                         .flex()
                         .items_center()
+                        .justify_between()
                         .gap(px(8.0))
-                        .child(div().w(px(9.0)).h(px(9.0)).rounded(px(2.0)).bg(rgb(sw_hex)))
                         .child(
                             div()
-                                .font_family(t.ui_font)
+                                .flex_1()
+                                .min_w_0()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(
+                                    div()
+                                        .w(px(9.0))
+                                        .h(px(9.0))
+                                        .flex_shrink_0()
+                                        .rounded(px(2.0))
+                                        .bg(rgb(sw_hex)),
+                                )
+                                .child(
+                                    div()
+                                        .font_family(t.ui_font)
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_size(px(t.ui_px(15.5)))
+                                        .text_color(rgb(t.ink))
+                                        .child(proj.name.clone()),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .id(("home_proj_menu", idx))
+                                .px(px(6.0))
+                                .py(px(2.0))
+                                .rounded(px(3.0))
+                                .font_family(t.mono_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(t.ui_px(15.5)))
-                                .text_color(rgb(t.ink))
-                                .child(proj.name.clone()),
+                                .text_size(px(t.ui_px(12.0)))
+                                .text_color(rgb(t.muted))
+                                .cursor_pointer()
+                                .hover({
+                                    let bg = t.bg_alt;
+                                    let ink = t.ink;
+                                    move |s| s.bg(rgb(bg)).text_color(rgb(ink))
+                                })
+                                .on_mouse_down(
+                                    MouseButton::Left,
+                                    cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                                        cx.stop_propagation();
+                                        this.open_project_context_menu(
+                                            dir_menu.clone(),
+                                            name_menu.clone(),
+                                            ev.position,
+                                            cx,
+                                        );
+                                    }),
+                                )
+                                .child("⋯"),
                         ),
                 )
                 .child(
@@ -217,14 +304,41 @@ pub fn render_home(
                 ))
                 .child(
                     div()
-                        .font_family(t.mono_font)
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(t.ui_px(11.5)))
-                        .text_color(rgb(t.ink_2))
-                        .child(if proj.load_ok {
-                            format!("{} / 100 score", proj.score)
-                        } else {
-                            "unbuilt".to_string()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .gap(px(8.0))
+                        .child(
+                            div()
+                                .font_family(t.mono_font)
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .text_size(px(t.ui_px(11.5)))
+                                .text_color(rgb(t.ink_2))
+                                .child(if proj.load_ok {
+                                    format!("{} / 100 score", proj.score)
+                                } else {
+                                    "unbuilt".to_string()
+                                }),
+                        )
+                        .when(runnable, |el| {
+                            el.child(
+                                style::ghost_btn(("home_proj_run", idx), t, "▶ Run")
+                                    .on_mouse_down(
+                                        MouseButton::Left,
+                                        cx.listener(|_, _, _, cx| {
+                                            cx.stop_propagation();
+                                        }),
+                                    )
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        cx.stop_propagation();
+                                        this.open_run_game_modal(
+                                            dir_run.clone(),
+                                            name_run.clone(),
+                                            false,
+                                            cx,
+                                        );
+                                    })),
+                            )
                         }),
                 );
             grid = grid.child(card);
@@ -233,6 +347,7 @@ pub fn render_home(
         let recent_section = div()
             .w_full()
             .max_w(px(1340.0))
+            .flex_shrink_0()
             .mt(px(14.0))
             .pt(px(22.0))
             .border_t_3()
@@ -242,13 +357,69 @@ pub fn render_home(
             .gap(px(14.0))
             .child(
                 div()
-                    .font_family(t.ui_font)
-                    .font_weight(FontWeight::EXTRA_BOLD)
-                    .text_size(px(t.ui_px(26.0)))
-                    .text_color(rgb(t.ink))
-                    .child("Your projects"),
+                    .flex()
+                    .flex_wrap()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(10.0))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(10.0))
+                            .child(
+                                div()
+                                    .font_family(t.ui_font)
+                                    .font_weight(FontWeight::EXTRA_BOLD)
+                                    .text_size(px(t.ui_px(26.0)))
+                                    .text_color(rgb(t.ink))
+                                    .child("Your projects"),
+                            )
+                            .child(style::chip_outlined(
+                                t,
+                                format!("{} total", app.projects.len()),
+                                None,
+                            )),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_wrap()
+                            .items_center()
+                            .gap(px(8.0))
+                            .child(
+                                div()
+                                    .font_family(t.ui_font)
+                                    .text_size(px(t.ui_px(11.5)))
+                                    .text_color(rgb(t.muted))
+                                    .child("Right-click card for Run, Rename, Pause/Resume, or Delete"),
+                            )
+                            .child(
+                                style::ghost_btn("home_add_game_btn", t, "+ Add Game (.exe)")
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.browse_for_pe(window, cx);
+                                    })),
+                            )
+                            .child(
+                                style::ghost_btn("home_import_proj_btn", t, "📂 Import Project")
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.browse_for_project_folder(window, cx);
+                                    })),
+                            ),
+                    ),
             )
-            .child(grid);
+            .when(app.projects.is_empty(), |el| {
+                el.child(
+                    style::panel_box(t).p(px(18.0)).child(
+                        div()
+                            .font_family(t.ui_font)
+                            .text_size(px(t.ui_px(13.0)))
+                            .text_color(rgb(t.muted))
+                            .child("No projects yet. Drop a 32-bit Windows .exe above or import an existing GameReComp directory."),
+                    ),
+                )
+            })
+            .when(!app.projects.is_empty(), |el| el.child(grid));
 
         content = content.child(recent_section);
     }
@@ -256,7 +427,7 @@ pub fn render_home(
     content
 }
 
-fn render_hero_copy(t: &ThemeTokens) -> Div {
+fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
     let steps = [
         (
             "1",
@@ -279,6 +450,7 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
     for (num, title, desc) in steps {
         step_list = step_list.child(
             div()
+                .flex_shrink_0()
                 .flex()
                 .items_start()
                 .gap(px(12.0))
@@ -300,6 +472,8 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
                 )
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .flex()
                         .flex_col()
                         .gap(px(1.0))
@@ -324,8 +498,9 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
 
     div()
         .flex_1()
-        .min_w(px(360.0))
-        .max_w(px(560.0))
+        .min_w_0()
+        .when(!compact, |el| el.min_w(px(340.0)).max_w(px(520.0)))
+        .flex_shrink_0()
         .flex()
         .flex_col()
         .gap(px(12.0))
@@ -336,7 +511,7 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
                 .font_family(t.ui_font)
                 .font_weight(FontWeight::EXTRA_BOLD)
                 .text_size(px(t.ui_px(44.0)))
-                .line_height(px(46.0))
+                .line_height(px(t.ui_px(46.0)))
                 .text_color(rgb(t.ink))
                 .child("Pick your game\nand turn it to\nnative port."),
         )
@@ -344,7 +519,7 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
             div()
                 .font_family(t.ui_font)
                 .text_size(px(t.ui_px(15.0)))
-                .line_height(px(23.0))
+                .line_height(px(t.ui_px(23.0)))
                 .text_color(rgb(t.ink_2))
                 .child("Turn 32-bit Windows games and apps into standalone native ports for macOS, Linux, Windows, or WebAssembly — with automatic machine detection, live per-file animations, and one-click game launch."),
         )
@@ -354,13 +529,15 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
 fn render_dropzone_card(
     app: &GameReCompApp,
     t: &ThemeTokens,
+    compact: bool,
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
     let mut card = div()
         .id("pe_dropzone")
-        .flex_1()
-        .min_w(px(440.0))
-        .min_h(px(360.0))
+        .w_full()
+        .min_w_0()
+        .when(!compact, |el| el.min_w(px(400.0)))
+        .min_h(px(340.0))
         .p(px(24.0))
         .rounded(px(4.0))
         .bg(rgb(t.panel))
@@ -370,7 +547,7 @@ fn render_dropzone_card(
         .flex()
         .flex_col()
         .justify_center()
-        .on_drop::<ExternalPaths>(cx.listener(|this, paths: &ExternalPaths, _, cx| {
+        .on_drop::<ExternalPaths>(cx.listener(|this, paths: &ExternalPaths, window, cx| {
             let dropped = paths.paths();
             if dropped.len() > 1 {
                 let files: Vec<std::path::PathBuf> =
@@ -386,7 +563,7 @@ fn render_dropzone_card(
                     if first.join("project.json").is_file()
                         || first.join("reports").join("report.json").is_file()
                     {
-                        this.open_project_dir(first, ProjectTab::Overview);
+                        this.open_project_dir_async(first, ProjectTab::Overview, window, cx);
                     } else {
                         this.start_batch_worker(first, cx);
                     }
@@ -398,16 +575,24 @@ fn render_dropzone_card(
         }));
 
     card = match &app.drop_state {
-        DropState::Idle => card.child(render_drop_idle(t, cx)),
+        DropState::Idle => card.child(render_drop_idle(app, t, cx)),
         DropState::Picked => card.child(render_drop_picked(app, t, cx)),
         DropState::Busy => card.child(render_drop_busy(app, t, cx)),
         DropState::Error(err) => card.child(render_drop_error(app, t, err, cx)),
     };
 
-    div().flex_1().min_w(px(440.0)).child(card)
+    div()
+        .flex_1()
+        .min_w_0()
+        .when(!compact, |el| el.min_w(px(400.0)))
+        .child(card)
 }
 
-fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
+fn render_drop_idle(
+    app: &GameReCompApp,
+    t: &ThemeTokens,
+    cx: &mut Context<GameReCompApp>,
+) -> Div {
     let cart = div()
         .w(px(92.0))
         .h(px(68.0))
@@ -450,6 +635,7 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
         .child(plat_chip(t, "Windows", false))
         .child(plat_chip(t, "WebAssembly", false));
 
+    let active_slots = app.active_slot_count();
     div()
         .w_full()
         .flex()
@@ -457,6 +643,25 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
         .items_center()
         .gap(px(10.0))
         .py(px(18.0))
+        .when(app.has_active_jobs(), |el| {
+            el.child(
+                div()
+                    .w_full()
+                    .px(px(12.0))
+                    .py(px(8.0))
+                    .rounded(px(4.0))
+                    .bg(rgb(t.hl_soft))
+                    .border_1()
+                    .border_color(if t.dark { rgb(t.hl) } else { rgb(t.btn) })
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(11.5)))
+                    .text_color(rgb(t.ink))
+                    .child(format!(
+                        "⚡ {active_slots} game(s) currently active · Drop or choose another .exe to launch on a parallel thread (limit: {})",
+                        app.max_concurrent_label()
+                    )),
+            )
+        })
         .child(cart)
         .child(
             div()
@@ -481,12 +686,12 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
                 .child(
                     div()
                         .id("drop_choose_file_link")
-                        .text_color(if t.dark { rgb(t.hl) } else { rgb(t.info) })
+                        .text_color(rgb(t.accent_fg()))
                         .font_weight(FontWeight::SEMIBOLD)
                         .underline()
                         .cursor_pointer()
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.browse_for_pe(cx);
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.browse_for_pe(window, cx);
                         }))
                         .child("choose a file"),
                 )
@@ -505,8 +710,8 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
                         .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.ink))
                         .cursor_pointer()
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.browse_for_multiple_pes(cx);
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.browse_for_multiple_pes(window, cx);
                         }))
                         .child("+ Select multiple games…"),
                 ),
@@ -543,11 +748,11 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
                 .font_family(t.ui_font)
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(t.ui_px(12.0)))
-                .text_color(rgb(t.hl))
+                .text_color(rgb(t.accent_fg()))
                 .underline()
                 .cursor_pointer()
-                .on_click(cx.listener(|this, _, _, cx| {
-                    this.browse_for_project_folder(cx);
+                .on_click(cx.listener(|this, _, window, cx| {
+                    this.browse_for_project_folder(window, cx);
                 }))
                 .child("Already have a project folder? Open an existing directory"),
         )
@@ -625,8 +830,8 @@ fn render_drop_picked(
                 )
                 .child(
                     style::ghost_btn("change_pe_btn", t, "Change file…").on_click(cx.listener(
-                        |this, _, _, cx| {
-                            this.browse_for_pe(cx);
+                        |this, _, window, cx| {
+                            this.browse_for_pe(window, cx);
                         },
                     )),
                 ),
@@ -648,10 +853,28 @@ fn render_drop_picked(
                 .bg(rgb(t.bg_alt))
                 .border_1()
                 .border_color(rgb(status_border))
-                .font_family(t.ui_font)
-                .text_size(px(t.ui_px(12.5)))
-                .text_color(rgb(status_fg))
-                .child(status_txt),
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .justify_between()
+                .gap(px(8.0))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.5)))
+                        .text_color(rgb(status_fg))
+                        .child(status_txt),
+                )
+                .when(!info.ok || !info.pe32_x86, |el| {
+                    el.child(
+                        style::ghost_btn("picked_pe_issue_btn", t, "🐛 Create Support Issue")
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.open_issue_for_picked_pe(cx);
+                            })),
+                    )
+                }),
         );
 
     // 1. Profile selector: Select Game vs Desktop App vs Console App
@@ -851,21 +1074,27 @@ fn render_drop_picked(
                             "opts_proj_dir",
                             t,
                             &opts.project_dir,
-                            "projects/<game_name>",
+                            "~/GameReComp/projects/<game_name>",
                             app.focused_input == Some(FocusInput::OptProjectDir),
                             true,
                         )
+                        .flex_1()
+                        .min_w_0()
                         .on_click(cx.listener(|this, _, window, cx| {
                             this.set_focus_input(Some(FocusInput::OptProjectDir), window, cx);
                         })),
                     )
                     .child(
                         style::ghost_btn("browse_proj_dir_btn", t, "Choose…").on_click(
-                            cx.listener(|this, _, _, cx| {
-                                if let Some(d) = rfd::FileDialog::new().pick_folder() {
-                                    this.opts.project_dir = d.display().to_string();
-                                    cx.notify();
-                                }
+                            cx.listener(|this, _, window, cx| {
+                                this.pick_folder_async(
+                                    "Choose output project folder",
+                                    window,
+                                    cx,
+                                    |this, d, _, _| {
+                                        this.opts.project_dir = d.display().to_string();
+                                    },
+                                );
                             }),
                         ),
                     ),
@@ -940,7 +1169,7 @@ fn render_drop_picked(
             .font_family(t.mono_font)
             .font_weight(FontWeight::SEMIBOLD)
             .text_size(px(t.ui_px(11.5)))
-            .text_color(rgb(t.hl))
+            .text_color(rgb(t.accent_fg()))
             .cursor_pointer()
             .on_click(cx.listener(|this, _, _, cx| {
                 this.show_advanced_opts = !this.show_advanced_opts;
@@ -958,29 +1187,18 @@ fn render_drop_picked(
     let cmd_for_copy = cmd_preview.clone();
     box_div = box_div.child(
         div()
+            .w_full()
+            .min_w_0()
             .flex()
             .flex_col()
             .gap(px(4.0))
-            .child(style::eyebrow(t, "EQUIVALENT CLI COMMAND"))
             .child(
                 div()
                     .flex()
                     .items_center()
+                    .justify_between()
                     .gap(px(8.0))
-                    .px(px(10.0))
-                    .py(px(8.0))
-                    .rounded(px(3.0))
-                    .bg(rgb(t.code_bg))
-                    .border_1()
-                    .border_color(rgb(t.line_soft))
-                    .child(
-                        div()
-                            .flex_1()
-                            .font_family(t.mono_font)
-                            .text_size(px(t.ui_px(11.0)))
-                            .text_color(rgb(t.ink_2))
-                            .child(cmd_preview),
-                    )
+                    .child(style::eyebrow(t, "EQUIVALENT CLI COMMAND"))
                     .child(
                         style::ghost_btn("copy_cli_preview", t, "Copy").on_click(cx.listener(
                             move |this, _, _, cx| {
@@ -997,6 +1215,24 @@ fn render_drop_picked(
                             },
                         )),
                     ),
+            )
+            .child(
+                div()
+                    .id("cli_preview_scroll")
+                    .w_full()
+                    .min_w_0()
+                    .overflow_x_scroll()
+                    .px(px(10.0))
+                    .py(px(8.0))
+                    .rounded(px(3.0))
+                    .bg(rgb(t.code_bg))
+                    .border_1()
+                    .border_color(rgb(t.line_soft))
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(11.0)))
+                    .text_color(rgb(t.ink_2))
+                    .whitespace_nowrap()
+                    .child(cmd_preview),
             ),
     );
 
@@ -1015,8 +1251,10 @@ fn render_drop_picked(
         })),
     );
 
-    // Parallel concurrency selector
-    let active_now = app.active_running_count();
+    // Parallel concurrency selector (Auto RAM/CPU or manual 1..=8)
+    let active_now = app.active_slot_count();
+    let eff_limit = app.effective_max_concurrent_jobs();
+    let auto_lbl = format!("Auto ({})", app.sys_resources.recommended_parallel_games);
     let mut par_row = div()
         .flex()
         .flex_wrap()
@@ -1024,8 +1262,14 @@ fn render_drop_picked(
         .gap(px(6.0))
         .child(style::eyebrow(
             t,
-            format!("PARALLEL GAMES ({active_now}/{} ACTIVE)", app.max_concurrent_jobs),
-        ));
+            format!("PARALLEL GAMES ({active_now}/{eff_limit} ACTIVE)"),
+        ))
+        .child(
+            style::option_pill(("pick_parallel", 0usize), t, auto_lbl, app.max_concurrent_jobs == 0)
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.set_max_concurrent_jobs(0, cx);
+                })),
+        );
     for n in [1usize, 2, 3, 4, 6, 8] {
         par_row = par_row.child(
             style::option_pill(
@@ -1039,7 +1283,20 @@ fn render_drop_picked(
             })),
         );
     }
-    box_div = box_div.child(par_row);
+    box_div = box_div.child(
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(4.0))
+            .child(par_row)
+            .child(
+                div()
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(10.5)))
+                    .text_color(rgb(t.muted))
+                    .child(app.sys_resources.summary()),
+            ),
+    );
 
     // Ownership Confirmation Checkbox
     box_div = box_div.child(
@@ -1058,7 +1315,7 @@ fn render_drop_picked(
 
     let start_label = if active_now == 0 {
         "▶  Start recompiling"
-    } else if active_now < app.max_concurrent_jobs {
+    } else if active_now < eff_limit {
         "▶  Start in parallel"
     } else {
         "+  Add to parallel queue"
@@ -1085,8 +1342,8 @@ fn render_drop_picked(
             )
             .child(
                 style::ghost_btn("add_more_games_pick_btn", t, "+ Add multiple games…")
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.browse_for_multiple_pes(cx);
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        this.browse_for_multiple_pes(window, cx);
                     })),
             )
             .child(
@@ -1222,11 +1479,15 @@ pub fn render_advanced_cli_options(
                     cx.listener(|this, _, window, cx| {
                         this.set_focus_input(Some(FocusInput::OptAssetsDir), window, cx);
                     }),
-                    cx.listener(|this, _, _, cx| {
-                        if let Some(d) = rfd::FileDialog::new().pick_folder() {
-                            this.opts.assets_dir = d.display().to_string();
-                            cx.notify();
-                        }
+                    cx.listener(|this, _, window, cx| {
+                        this.pick_folder_async(
+                            "Choose game assets folder",
+                            window,
+                            cx,
+                            |this, d, _, _| {
+                                this.opts.assets_dir = d.display().to_string();
+                            },
+                        );
                     }),
                 ))
                 .child(path_row(
@@ -1239,11 +1500,15 @@ pub fn render_advanced_cli_options(
                     cx.listener(|this, _, window, cx| {
                         this.set_focus_input(Some(FocusInput::OptHighlevelDir), window, cx);
                     }),
-                    cx.listener(|this, _, _, cx| {
-                        if let Some(d) = rfd::FileDialog::new().pick_folder() {
-                            this.opts.highlevel_dir = d.display().to_string();
-                            cx.notify();
-                        }
+                    cx.listener(|this, _, window, cx| {
+                        this.pick_folder_async(
+                            "Choose highlevel C folder",
+                            window,
+                            cx,
+                            |this, d, _, _| {
+                                this.opts.highlevel_dir = d.display().to_string();
+                            },
+                        );
                     }),
                 ))
                 .child(path_row(
@@ -1256,14 +1521,15 @@ pub fn render_advanced_cli_options(
                     cx.listener(|this, _, window, cx| {
                         this.set_focus_input(Some(FocusInput::OptOraclePath), window, cx);
                     }),
-                    cx.listener(|this, _, _, cx| {
-                        if let Some(f) = rfd::FileDialog::new()
-                            .add_filter("JSON", &["json"])
-                            .pick_file()
-                        {
-                            this.opts.oracle_path = f.display().to_string();
-                            cx.notify();
-                        }
+                    cx.listener(|this, _, window, cx| {
+                        this.pick_file_async(
+                            "Choose optional oracle.json",
+                            window,
+                            cx,
+                            |this, f, _, _| {
+                                this.opts.oracle_path = f.display().to_string();
+                            },
+                        );
                     }),
                 )),
         )
@@ -1413,19 +1679,33 @@ pub fn render_active_jobs_panel(
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
     let running_count = app.active_running_count();
+    let paused_count = app.active_paused_count();
+    let slot_count = app.active_slot_count();
     let queued_count = app.queued_pipelines.len();
-    let done_count = app.jobs.len().saturating_sub(running_count);
+    let done_count = app.jobs.len().saturating_sub(slot_count);
     const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     let spin_glyph = SPINNER[app.anim_frame % SPINNER.len()];
 
-    // Concurrency selector row
-    let mut par_pills = div().flex().items_center().gap(px(4.0)).child(
-        div()
-            .font_family(t.mono_font)
-            .text_size(px(t.ui_px(10.5)))
-            .text_color(rgb(t.muted))
-            .child("Max parallel:"),
-    );
+    // Concurrency selector row (Auto RAM/CPU + manual 1..=8)
+    let auto_lbl = format!("Auto ({})", app.sys_resources.recommended_parallel_games);
+    let mut par_pills = div()
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap(px(4.0))
+        .child(
+            div()
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(10.5)))
+                .text_color(rgb(t.muted))
+                .child("Max parallel:"),
+        )
+        .child(
+            style::option_pill(("queue_parallel", 0usize), t, auto_lbl, app.max_concurrent_jobs == 0)
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.set_max_concurrent_jobs(0, cx);
+                })),
+        );
     for n in [1usize, 2, 3, 4, 6, 8] {
         par_pills = par_pills.child(
             style::option_pill(
@@ -1447,12 +1727,40 @@ pub fn render_active_jobs_panel(
         .gap(px(8.0))
         .child(par_pills)
         .child(
+            style::ghost_btn("queue_add_one_btn", t, "+ Add Another Game").on_click(cx.listener(
+                |this, _, window, cx| {
+                    this.browse_for_pe(window, cx);
+                },
+            )),
+        )
+        .child(
             style::ghost_btn("queue_add_games_btn", t, "+ Add More Games…").on_click(
-                cx.listener(|this, _, _, cx| {
-                    this.browse_for_multiple_pes(cx);
+                cx.listener(|this, _, window, cx| {
+                    this.browse_for_multiple_pes(window, cx);
                 }),
             ),
         );
+
+    if running_count > 0 {
+        hdr_actions = hdr_actions.child(
+            style::ghost_btn("queue_pause_all_btn", t, "⏸ Pause All").on_click(cx.listener(
+                |this, _, _, cx| {
+                    this.pause_all_jobs();
+                    cx.notify();
+                },
+            )),
+        );
+    }
+    if paused_count > 0 || app.queue_paused {
+        hdr_actions = hdr_actions.child(
+            style::primary_btn("queue_resume_all_btn", t, "▶ Resume All", true).on_click(
+                cx.listener(|this, _, _, cx| {
+                    this.resume_all_jobs();
+                    cx.notify();
+                }),
+            ),
+        );
+    }
 
     if done_count > 0 {
         hdr_actions = hdr_actions.child(
@@ -1464,7 +1772,7 @@ pub fn render_active_jobs_panel(
             )),
         );
     }
-    if running_count > 0 || queued_count > 0 {
+    if slot_count > 0 || queued_count > 0 {
         hdr_actions = hdr_actions.child(
             style::danger_btn("queue_stop_all_btn", t, "■ Stop All").on_click(cx.listener(
                 |this, _, _, cx| {
@@ -1503,6 +1811,10 @@ pub fn render_active_jobs_panel(
                     .into_any_element(),
                 t.hl,
             ),
+            JobStatus::Paused => (
+                style::status_badge("⏸ PAUSED", t.work_bg, t.work).into_any_element(),
+                t.work,
+            ),
             JobStatus::Done(_) => (
                 style::status_badge("✓ DONE", t.match_bg, t.match_ink).into_any_element(),
                 t.match_fill,
@@ -1517,53 +1829,126 @@ pub fn render_active_jobs_panel(
             ),
         };
 
-        let mut quick_actions = div().flex().items_center().gap(px(6.0));
+        let mut quick_actions = div().flex().flex_wrap().items_center().gap(px(6.0));
         if job.is_running() {
-            quick_actions = quick_actions.child(
-                style::danger_btn(("job_stop", job_id as usize), t, "■ Stop").on_click(
-                    cx.listener(move |this, _, _, cx| {
-                        this.stop_job(job_id);
-                        cx.notify();
-                    }),
-                ),
-            );
-        } else if let Some(ref pdir) = job.project_dir {
-            if let Ok(m) = ProjectModel::load(pdir) {
-                let pdir_open = pdir.clone();
-                if m.has_wasm_build {
-                    let pdir_w = pdir.clone();
-                    quick_actions = quick_actions.child(
-                        style::primary_btn(("job_wasm", job_id as usize), t, "🌐 Play WASM", true)
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                this.launch_or_open_wasm(&pdir_w);
-                                cx.notify();
-                            })),
-                    );
-                } else if let Some(bin) = m.built_binary_path() {
-                    quick_actions = quick_actions.child(
-                        style::primary_btn(("job_launch", job_id as usize), t, "▶ Launch Game", true)
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                this.launch_rebuilt_binary(&bin);
-                                cx.notify();
-                            })),
-                    );
-                }
-                quick_actions = quick_actions.child(
-                    style::ghost_btn(("job_open", job_id as usize), t, "Inspect").on_click(
+            quick_actions = quick_actions
+                .child(
+                    style::ghost_btn(("job_pause", job_id as usize), t, "⏸ Pause").on_click(
                         cx.listener(move |this, _, _, cx| {
-                            this.open_project_dir(pdir_open.clone(), ProjectTab::Overview);
+                            cx.stop_propagation();
+                            this.pause_job(job_id);
+                            cx.notify();
+                        }),
+                    ),
+                )
+                .child(
+                    style::danger_btn(("job_stop", job_id as usize), t, "■ Stop").on_click(
+                        cx.listener(move |this, _, _, cx| {
+                            cx.stop_propagation();
+                            this.stop_job(job_id);
                             cx.notify();
                         }),
                     ),
                 );
+        } else if job.is_paused() {
+            quick_actions = quick_actions
+                .child(
+                    style::primary_btn(("job_resume", job_id as usize), t, "▶ Resume", true)
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            cx.stop_propagation();
+                            this.resume_job(job_id);
+                            cx.notify();
+                        })),
+                )
+                .child(
+                    style::danger_btn(("job_stop", job_id as usize), t, "■ Stop").on_click(
+                        cx.listener(move |this, _, _, cx| {
+                            cx.stop_propagation();
+                            this.stop_job(job_id);
+                            cx.notify();
+                        }),
+                    ),
+                );
+        } else if matches!(job.status, JobStatus::Failed(_)) {
+            quick_actions = quick_actions.child(
+                style::ghost_btn(("job_issue", job_id as usize), t, "🐛 Create Issue")
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        cx.stop_propagation();
+                        this.open_issue_for_job(job_id, cx);
+                    })),
+            );
+            if let Some(ref pdir) = job.project_dir {
+                let pdir_open = pdir.clone();
+                quick_actions = quick_actions.child(
+                    style::ghost_btn(("job_open", job_id as usize), t, "Inspect").on_click(
+                        cx.listener(move |this, _, window, cx| {
+                            cx.stop_propagation();
+                            this.open_project_dir_async(
+                                pdir_open.clone(),
+                                ProjectTab::Overview,
+                                window,
+                                cx,
+                            );
+                        }),
+                    ),
+                );
             }
+        } else if let Some(ref pdir) = job.project_dir {
+            if job.has_wasm {
+                let pdir_w = pdir.clone();
+                quick_actions = quick_actions.child(
+                    style::primary_btn(("job_wasm", job_id as usize), t, "🌐 Play WASM", true)
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            cx.stop_propagation();
+                            this.launch_or_open_wasm(&pdir_w);
+                            cx.notify();
+                        })),
+                );
+            } else if job.built_binary.is_some() {
+                let pdir_run = pdir.clone();
+                let pdir_opt = pdir.clone();
+                let jname = job.name.clone();
+                quick_actions = quick_actions
+                    .child(
+                        style::primary_btn(("job_launch", job_id as usize), t, "▶ Launch", true)
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                cx.stop_propagation();
+                                this.launch_project_dir_smart(&pdir_run, false);
+                                cx.notify();
+                            })),
+                    )
+                    .child(
+                        style::ghost_btn(("job_run_opts", job_id as usize), t, "⚙ Run Options…")
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                cx.stop_propagation();
+                                this.open_run_game_modal(pdir_opt.clone(), jname.clone(), false, cx);
+                            })),
+                    );
+            }
+            let pdir_open = pdir.clone();
+            quick_actions = quick_actions.child(
+                style::ghost_btn(("job_open", job_id as usize), t, "Inspect").on_click(
+                    cx.listener(move |this, _, window, cx| {
+                        cx.stop_propagation();
+                        this.open_project_dir_async(
+                            pdir_open.clone(),
+                            ProjectTab::Overview,
+                            window,
+                            cx,
+                        );
+                    }),
+                ),
+            );
         }
 
+        let ctx_dir = job.project_dir.clone();
+        let ctx_name = job.name.clone();
         let hover_bg = t.bg_alt;
         let card = div()
             .id(("job_card", job_id as usize))
             .w(px(300.0))
-            .flex_grow()
+            .min_w(px(250.0))
+            .flex_grow(1.0)
             .p(px(12.0))
             .rounded(px(4.0))
             .bg(if is_selected { rgb(t.bg_alt) } else { rgb(t.panel) })
@@ -1579,6 +1964,19 @@ pub fn render_active_jobs_panel(
                 this.selected_job_id = Some(job_id);
                 cx.notify();
             }))
+            .when_some(ctx_dir, |el, pdir| {
+                el.on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                        this.open_project_context_menu(
+                            pdir.clone(),
+                            ctx_name.clone(),
+                            ev.position,
+                            cx,
+                        );
+                    }),
+                )
+            })
             .flex()
             .flex_col()
             .gap(px(7.0))
@@ -1590,6 +1988,8 @@ pub fn render_active_jobs_panel(
                     .gap(px(6.0))
                     .child(
                         div()
+                            .flex_1()
+                            .min_w_0()
                             .font_family(t.ui_font)
                             .font_weight(FontWeight::EXTRA_BOLD)
                             .text_size(px(t.ui_px(14.0)))
@@ -1635,7 +2035,7 @@ pub fn render_active_jobs_panel(
             div()
                 .id(("queued_card", q_id as usize))
                 .w(px(260.0))
-                .flex_grow()
+                .flex_grow(1.0)
                 .p(px(12.0))
                 .rounded(px(4.0))
                 .bg(rgb(t.code_bg))
@@ -1677,11 +2077,19 @@ pub fn render_active_jobs_panel(
         );
     }
 
+    let summary_txt = if paused_count > 0 {
+        format!("{running_count} running · {paused_count} paused · {queued_count} queued · {done_count} finished")
+    } else {
+        format!("{running_count} running · {queued_count} queued · {done_count} finished")
+    };
+
     let mut panel = style::panel_box(t)
         .w_full()
         .max_w(px(1340.0))
         .border_color(if running_count > 0 {
             if t.dark { rgb(t.hl) } else { rgb(t.btn) }
+        } else if paused_count > 0 {
+            rgb(t.work)
         } else {
             rgb(t.line)
         })
@@ -1699,6 +2107,7 @@ pub fn render_active_jobs_panel(
                 .child(
                     div()
                         .flex()
+                        .flex_wrap()
                         .items_center()
                         .gap(px(8.0))
                         .when(running_count > 0, |el| {
@@ -1706,10 +2115,17 @@ pub fn render_active_jobs_panel(
                         })
                         .child(style::eyebrow(t, "MULTI-GAME DECOMPILATION QUEUE"))
                         .child(style::status_badge(
-                            format!("{running_count} running · {queued_count} queued · {done_count} finished"),
+                            summary_txt,
                             if running_count > 0 { t.hl_soft } else { t.bg_alt },
                             if running_count > 0 { t.ink } else { t.muted },
-                        )),
+                        ))
+                        .child(
+                            div()
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(10.5)))
+                                .text_color(rgb(t.muted))
+                                .child(app.sys_resources.summary()),
+                        ),
                 )
                 .child(hdr_actions),
         )
@@ -1720,8 +2136,10 @@ pub fn render_active_jobs_panel(
         let mut log_box = div()
             .id(("focused_job_logs", focused.id as usize))
             .w_full()
+            .min_w_0()
             .max_h(px(130.0))
             .overflow_y_scroll()
+            .overflow_x_hidden()
             .p(px(10.0))
             .rounded(px(3.0))
             .bg(rgb(t.code_bg))
@@ -1736,7 +2154,7 @@ pub fn render_active_jobs_panel(
                     .font_family(t.mono_font)
                     .text_size(px(t.code_px(11.0)))
                     .text_color(if line.starts_with("==>") {
-                        rgb(t.hl)
+                        rgb(t.accent_fg())
                     } else {
                         rgb(t.muted)
                     })
@@ -1746,6 +2164,8 @@ pub fn render_active_jobs_panel(
 
         panel = panel.child(
             div()
+                .w_full()
+                .min_w_0()
                 .pt(px(10.0))
                 .border_t_1()
                 .border_color(rgb(t.line_soft))
@@ -1770,6 +2190,8 @@ pub fn render_live_stage_stepper(
     const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     let spin_glyph = if job.is_running() {
         SPINNER[anim_frame % SPINNER.len()]
+    } else if job.is_paused() {
+        "⏸"
     } else if matches!(job.status, JobStatus::Done(_)) {
         "✓"
     } else {
@@ -1824,6 +2246,7 @@ pub fn render_live_stage_stepper(
     };
     let active_spotlight = div()
         .w_full()
+        .min_w_0()
         .px(px(12.0))
         .py(px(10.0))
         .rounded(px(4.0))
@@ -1842,6 +2265,8 @@ pub fn render_live_stage_stepper(
                 .gap(px(8.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .flex()
                         .items_center()
                         .gap(px(8.0))
@@ -1855,6 +2280,8 @@ pub fn render_live_stage_stepper(
                         .child(style::status_badge("ACTIVE FILE", t.hl, t.hl_ink))
                         .child(
                             div()
+                                .flex_1()
+                                .min_w_0()
                                 .font_family(t.mono_font)
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(t.ui_px(12.5)))
@@ -1889,11 +2316,13 @@ pub fn render_live_stage_stepper(
                         .font_family(t.mono_font)
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(t.ui_px(12.0)))
-                        .text_color(if t.dark { rgb(t.hl) } else { rgb(t.info) })
+                        .text_color(rgb(t.accent_fg()))
                         .child(spin_glyph),
                 )
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .font_family(t.mono_font)
                         .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.ink_2))
@@ -2110,24 +2539,34 @@ pub fn render_live_stage_stepper(
 
     let job_id_stop = job.id;
     let is_running = job.is_running();
+    let is_paused = job.is_paused();
+    let is_active = job.is_active();
+    let is_failed = matches!(job.status, JobStatus::Failed(_));
     div()
         .w_full()
+        .min_w_0()
         .flex()
         .flex_col()
         .gap(px(10.0))
         .child(
             div()
                 .flex()
+                .flex_wrap()
                 .items_center()
                 .justify_between()
+                .gap(px(8.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .flex()
                         .items_center()
                         .gap(px(10.0))
                         .child(eq)
                         .child(
                             div()
+                                .flex_1()
+                                .min_w_0()
                                 .font_family(t.ui_font)
                                 .font_weight(FontWeight::EXTRA_BOLD)
                                 .text_size(px(t.ui_px(17.5)))
@@ -2155,12 +2594,47 @@ pub fn render_live_stage_stepper(
                         )
                         .when(is_running, |el| {
                             el.child(
+                                style::ghost_btn(("pause_stepper_btn", jid), t, "⏸ Pause")
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.pause_job(job_id_stop);
+                                        cx.notify();
+                                    })),
+                            )
+                        })
+                        .when(is_paused, |el| {
+                            el.child(
+                                style::primary_btn(
+                                    ("resume_stepper_btn", jid),
+                                    t,
+                                    "▶ Resume",
+                                    true,
+                                )
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.resume_job(job_id_stop);
+                                    cx.notify();
+                                })),
+                            )
+                        })
+                        .when(is_active, |el| {
+                            el.child(
                                 style::danger_btn(("stop_stepper_btn", jid), t, "■ Stop").on_click(
                                     cx.listener(move |this, _, _, cx| {
                                         this.stop_job(job_id_stop);
                                         cx.notify();
                                     }),
                                 ),
+                            )
+                        })
+                        .when(is_failed, |el| {
+                            el.child(
+                                style::ghost_btn(
+                                    ("issue_stepper_btn", jid),
+                                    t,
+                                    "🐛 Create Issue",
+                                )
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.open_issue_for_job(job_id_stop, cx);
+                                })),
                             )
                         }),
                 ),
@@ -2200,6 +2674,7 @@ fn render_drop_error(
     err: &str,
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
+    let focused_id = app.focused_job().map(|j| j.id);
     let logs_joined = app
         .focused_job()
         .map(|j| j.live_logs.join("\n"))
@@ -2227,12 +2702,24 @@ fn render_drop_error(
         .child(
             div()
                 .flex()
+                .flex_wrap()
                 .gap(px(8.0))
                 .child(
                     style::primary_btn("err_try_again", t, "Try another file", true).on_click(
                         cx.listener(|this, _, _, cx| {
                             this.reset_dropzone();
                             cx.notify();
+                        }),
+                    ),
+                )
+                .child(
+                    style::ghost_btn("err_create_issue", t, "🐛 Create Support Issue").on_click(
+                        cx.listener(move |this, _, _, cx| {
+                            if let Some(id) = focused_id {
+                                this.open_issue_for_job(id, cx);
+                            } else {
+                                this.open_issue_for_picked_pe(cx);
+                            }
                         }),
                     ),
                 )
@@ -2289,7 +2776,7 @@ fn start_card(
             div()
                 .font_family(t.ui_font)
                 .text_size(px(t.ui_px(12.5)))
-                .line_height(px(18.0))
+                .line_height(px(t.ui_px(18.0)))
                 .text_color(rgb(t.muted))
                 .child(desc.to_string()),
         )
@@ -2353,7 +2840,12 @@ fn path_row(
                 .text_color(rgb(t.muted))
                 .child(label),
         )
-        .child(style::text_input_box(id, t, val, hint, focused, true).on_click(on_focus))
+        .child(
+            style::text_input_box(id, t, val, hint, focused, true)
+                .flex_1()
+                .min_w_0()
+                .on_click(on_focus),
+        )
         .child(style::ghost_btn((id, 1usize), t, "…").on_click(on_browse))
 }
 

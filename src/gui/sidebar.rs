@@ -1,13 +1,27 @@
-use gpui::{Context, Div, FontWeight, Styled, div, prelude::*, px, rgb};
+use gpui::{
+    Context, Div, FontWeight, MouseButton, MouseDownEvent, Styled, div, prelude::*, px, rgb,
+};
 
 use super::style;
 use super::{FocusInput, GameReCompApp, ProjectTab, Route};
 use crate::theme_tokens::{ThemeMode, ThemeTokens};
 
-pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
+pub fn render_sidebar(
+    app: &GameReCompApp,
+    t: &ThemeTokens,
+    viewport_w: f32,
+    cx: &mut Context<GameReCompApp>,
+) -> Div {
+    let collapsed = app.sidebar_collapsed || viewport_w < 920.0;
+    if collapsed {
+        return render_collapsed_sidebar(app, t, cx);
+    }
+    let sidebar_w = if viewport_w < 1140.0 { 212.0 } else { 248.0 };
+
     let mut nav = div()
-        .w(px(248.0))
-        .min_w(px(248.0))
+        .w(px(sidebar_w))
+        .min_w(px(sidebar_w))
+        .flex_shrink_0()
         .h_full()
         .flex()
         .flex_col()
@@ -80,7 +94,15 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
             )
         });
 
+    let collapse_btn = small_icon_btn("nav_collapse_btn", t, "◧").on_click(cx.listener(
+        |this, _, _, cx| {
+            this.sidebar_collapsed = !this.sidebar_collapsed;
+            cx.notify();
+        },
+    ));
+
     let top_row = div()
+        .flex_shrink_0()
         .flex()
         .items_center()
         .justify_between()
@@ -97,13 +119,21 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                 }))
                 .child(style::brand_mark(t)),
         )
-        .child(bell_btn);
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(2.0))
+                .child(bell_btn)
+                .child(collapse_btn),
+        );
 
     nav = nav.child(top_row);
 
     // Full-width bright yellow "+ New project" CTA button
     let new_btn = div()
         .id("nav_new_project_btn")
+        .flex_shrink_0()
         .w_full()
         .h(px(38.0))
         .px(px(12.0))
@@ -133,6 +163,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
     // Inline dropdown menu for "+ New project"
     if app.show_new_menu {
         let menu = div()
+            .flex_shrink_0()
             .flex()
             .flex_col()
             .gap(px(2.0))
@@ -148,10 +179,10 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     "Select multiple games…",
                     "decompile several .exe files at once",
                 )
-                .on_click(cx.listener(|this, _, _, cx| {
+                .on_click(cx.listener(|this, _, window, cx| {
                     this.show_new_menu = false;
                     this.route = Route::Home;
-                    this.browse_for_multiple_pes(cx);
+                    this.browse_for_multiple_pes(window, cx);
                 })),
             )
             .child(
@@ -161,10 +192,10 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     "Open a game or app (.exe)",
                     "32-bit Windows PE executable you own",
                 )
-                .on_click(cx.listener(|this, _, _, cx| {
+                .on_click(cx.listener(|this, _, window, cx| {
                     this.show_new_menu = false;
                     this.route = Route::Home;
-                    this.browse_for_pe(cx);
+                    this.browse_for_pe(window, cx);
                 })),
             )
             .child(
@@ -174,9 +205,9 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     "Open a saved project",
                     "existing folder with project.json",
                 )
-                .on_click(cx.listener(|this, _, _, cx| {
+                .on_click(cx.listener(|this, _, window, cx| {
                     this.show_new_menu = false;
-                    this.browse_for_project_folder(cx);
+                    this.browse_for_project_folder(window, cx);
                 })),
             )
             .child(
@@ -186,9 +217,9 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     "Batch recompile folder",
                     "scan a folder of .exe games or apps",
                 )
-                .on_click(cx.listener(|this, _, _, cx| {
+                .on_click(cx.listener(|this, _, window, cx| {
                     this.show_new_menu = false;
-                    this.browse_for_batch_folder(cx);
+                    this.browse_for_batch_folder(window, cx);
                 })),
             )
             .child(
@@ -208,9 +239,10 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
         nav = nav.child(menu);
     }
 
-    // PROJECTS section header (with clickable active parallel jobs badge!)
+    // PROJECTS section header (with running & paused badges!)
     let running_now = app.active_running_count();
-    let mut proj_hdr_right = div().flex().items_center().gap(px(6.0));
+    let paused_now = app.active_paused_count();
+    let mut proj_hdr_right = div().flex().items_center().gap(px(4.0));
     if running_now > 0 {
         proj_hdr_right = proj_hdr_right.child(
             div()
@@ -232,7 +264,27 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     cx.notify();
                 }))
                 .child(style::animated_pulse_dot("nav_hdr_run_dot", t.hl_ink, 6.0))
-                .child(format!("{running_now} RUNNING")),
+                .child(format!("{running_now} RUN")),
+        );
+    }
+    if paused_now > 0 {
+        proj_hdr_right = proj_hdr_right.child(
+            div()
+                .id("nav_paused_jobs_pill")
+                .px(px(5.0))
+                .py(px(1.5))
+                .rounded(px(2.5))
+                .bg(rgb(t.work_bg))
+                .text_color(rgb(t.work))
+                .font_family(t.mono_font)
+                .font_weight(FontWeight::BOLD)
+                .text_size(px(t.ui_px(9.5)))
+                .cursor_pointer()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.route = Route::Home;
+                    cx.notify();
+                }))
+                .child(format!("{paused_now} PAUSED")),
         );
     }
     proj_hdr_right = proj_hdr_right.child(
@@ -245,6 +297,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
 
     nav = nav.child(
         div()
+            .flex_shrink_0()
             .flex()
             .items_center()
             .justify_between()
@@ -254,7 +307,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
             .child(proj_hdr_right),
     );
 
-    // Optional project filter box
+    // Optional project filter box (fixed 32px height, flex_shrink_0)
     if app.projects.len() >= 5 {
         let focused = app.focused_input == Some(FocusInput::SidebarFilter);
         nav = nav.child(
@@ -266,6 +319,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                 focused,
                 false,
             )
+            .flex_shrink_0()
             .on_click(cx.listener(|this, _, window, cx| {
                 this.set_focus_input(Some(FocusInput::SidebarFilter), window, cx);
             })),
@@ -295,7 +349,17 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
         .cloned()
         .collect();
 
-    if app.projects.is_empty() {
+    if app.projects_loading && app.projects.is_empty() {
+        proj_list = proj_list.child(
+            div()
+                .px(px(8.0))
+                .py(px(6.0))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.5)))
+                .text_color(rgb(t.muted))
+                .child("Scanning projects…"),
+        );
+    } else if app.projects.is_empty() {
         proj_list = proj_list.child(
             div()
                 .px(px(8.0))
@@ -319,13 +383,20 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
         for (i, proj) in filtered.into_iter().enumerate() {
             let is_active = matches!(app.route, Route::Project(_))
                 && app.active_project_dir.as_ref() == Some(&proj.dir);
-            let is_running = app.is_project_running(&proj.dir);
+            let job_opt = app.job_for_project(&proj.dir);
+            let is_running = job_opt.map(|j| j.is_running()).unwrap_or(false);
+            let is_paused = job_opt.map(|j| j.is_paused()).unwrap_or(false);
             let sw_hex = t.project_swatches[proj.color_idx % t.project_swatches.len()];
             let pct = (proj.score.clamp(0, 100) as f32) / 100.0;
             let proj_dir = proj.dir.clone();
+            let dir_ctx = proj.dir.clone();
+            let dir_menu = proj.dir.clone();
+            let name_ctx = proj.name.clone();
+            let name_menu = proj.name.clone();
 
             let card = div()
                 .id(("nav_proj_card", i))
+                .flex_shrink_0()
                 .flex()
                 .flex_col()
                 .gap(px(5.0))
@@ -348,29 +419,69 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     let bg_alt = t.bg_alt;
                     move |s| s.bg(rgb(bg_alt))
                 })
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    this.open_project_dir(proj_dir.clone(), ProjectTab::Overview);
-                    cx.notify();
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    this.open_project_dir_async(proj_dir.clone(), ProjectTab::Overview, window, cx);
                 }))
+                .on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                        this.open_project_context_menu(
+                            dir_ctx.clone(),
+                            name_ctx.clone(),
+                            ev.position,
+                            cx,
+                        );
+                    }),
+                )
                 .child(
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(7.0))
-                        .child(div().w(px(8.0)).h(px(8.0)).rounded(px(2.0)).bg(rgb(sw_hex)))
+                        .gap(px(6.0))
+                        .child(div().w(px(8.0)).h(px(8.0)).flex_shrink_0().rounded(px(2.0)).bg(rgb(sw_hex)))
                         .child(
                             div()
                                 .flex_1()
+                                .min_w_0()
                                 .overflow_hidden()
                                 .font_family(t.ui_font)
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .text_size(px(t.ui_px(13.0)))
                                 .text_color(rgb(t.ink))
-                                .child(truncate(&proj.name, 20)),
+                                .child(truncate(&proj.name, 18)),
                         )
                         .when(is_running, |el| {
                             el.child(style::animated_pulse_dot(("nav_run_dot", i), t.hl, 8.0))
-                        }),
+                        })
+                        .when(!is_running && is_paused, |el| {
+                            el.child(div().w(px(7.0)).h(px(7.0)).rounded_full().bg(rgb(t.work)))
+                        })
+                        .child(
+                            div()
+                                .id(("nav_proj_more", i))
+                                .px(px(4.0))
+                                .rounded(px(2.0))
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(11.0)))
+                                .text_color(rgb(t.muted))
+                                .hover({
+                                    let ink = t.ink;
+                                    move |s| s.text_color(rgb(ink))
+                                })
+                                .on_mouse_down(
+                                    MouseButton::Left,
+                                    cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                                        cx.stop_propagation();
+                                        this.open_project_context_menu(
+                                            dir_menu.clone(),
+                                            name_menu.clone(),
+                                            ev.position,
+                                            cx,
+                                        );
+                                    }),
+                                )
+                                .child("⋯"),
+                        ),
                 )
                 .child(
                     div()
@@ -395,7 +506,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     t,
                     px(3.0),
                     if proj.load_ok { pct } else { 0.0 },
-                    t.match_fill,
+                    if is_paused { t.work } else { t.match_fill },
                 ));
 
             proj_list = proj_list.child(card);
@@ -406,6 +517,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
 
     // Bottom utility nav (nav-foot)
     let mut foot = div()
+        .flex_shrink_0()
         .flex()
         .flex_col()
         .gap(px(2.0))
@@ -433,8 +545,8 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                 "⚙",
                 matches!(app.route, Route::Tools),
             )
-            .on_click(cx.listener(|this, _, _, cx| {
-                this.toolchain = crate::config::ToolchainStatus::detect();
+            .on_click(cx.listener(|this, _, window, cx| {
+                this.refresh_toolchain_async(window, cx);
                 this.route = Route::Tools;
                 cx.notify();
             })),
@@ -777,9 +889,8 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                         .gap(px(4.0))
                         .child(
                             small_icon_btn("nav_refresh_btn", t, "↻").on_click(cx.listener(
-                                |this, _, _, cx| {
-                                    this.refresh_projects();
-                                    cx.notify();
+                                |this, _, window, cx| {
+                                    this.refresh_projects_async(window, cx);
                                 },
                             )),
                         )
@@ -794,6 +905,168 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
         );
 
     nav.child(foot)
+}
+
+fn render_collapsed_sidebar(
+    app: &GameReCompApp,
+    t: &ThemeTokens,
+    cx: &mut Context<GameReCompApp>,
+) -> Div {
+    let mut rail = div()
+        .w(px(52.0))
+        .min_w(px(52.0))
+        .flex_shrink_0()
+        .h_full()
+        .flex()
+        .flex_col()
+        .items_center()
+        .bg(rgb(t.nav))
+        .border_r_1()
+        .border_color(rgb(t.line_soft))
+        .py(px(12.0))
+        .gap(px(8.0))
+        .child(
+            small_icon_btn("rail_expand_btn", t, "☰").on_click(cx.listener(|this, _, _, cx| {
+                this.sidebar_collapsed = false;
+                cx.notify();
+            })),
+        )
+        .child(
+            div()
+                .id("rail_new_btn")
+                .w(px(34.0))
+                .h(px(34.0))
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(px(4.0))
+                .bg(rgb(t.btn))
+                .text_color(rgb(t.btn_ink))
+                .font_family(t.mono_font)
+                .font_weight(FontWeight::BOLD)
+                .text_size(px(t.ui_px(16.0)))
+                .cursor_pointer()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.reset_dropzone();
+                    this.route = Route::Home;
+                    cx.notify();
+                }))
+                .child("+"),
+        );
+
+    let mut proj_dots = div()
+        .id("rail_projects_scroll")
+        .flex_1()
+        .min_h(px(40.0))
+        .overflow_y_scroll()
+        .flex()
+        .flex_col()
+        .items_center()
+        .gap(px(6.0))
+        .py(px(4.0));
+    for (i, proj) in app.projects.iter().enumerate() {
+        let is_active = matches!(app.route, Route::Project(_))
+            && app.active_project_dir.as_ref() == Some(&proj.dir);
+        let sw_hex = t.project_swatches[proj.color_idx % t.project_swatches.len()];
+        let dir_click = proj.dir.clone();
+        let dir_ctx = proj.dir.clone();
+        let name_ctx = proj.name.clone();
+        let ch = proj
+            .name
+            .chars()
+            .next()
+            .unwrap_or('G')
+            .to_ascii_uppercase()
+            .to_string();
+        proj_dots = proj_dots.child(
+            div()
+                .id(("rail_proj", i))
+                .w(px(32.0))
+                .h(px(32.0))
+                .flex_shrink_0()
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(px(4.0))
+                .bg(if is_active { rgb(t.panel) } else { rgb(t.bg_alt) })
+                .border_1()
+                .border_color(rgb(sw_hex))
+                .font_family(t.mono_font)
+                .font_weight(FontWeight::BOLD)
+                .text_size(px(t.ui_px(12.0)))
+                .text_color(rgb(t.ink))
+                .cursor_pointer()
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    this.open_project_dir_async(
+                        dir_click.clone(),
+                        ProjectTab::Overview,
+                        window,
+                        cx,
+                    );
+                }))
+                .on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                        this.open_project_context_menu(
+                            dir_ctx.clone(),
+                            name_ctx.clone(),
+                            ev.position,
+                            cx,
+                        );
+                    }),
+                )
+                .child(ch),
+        );
+    }
+    rail = rail.child(proj_dots);
+
+    rail.child(
+        div()
+            .flex_shrink_0()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(4.0))
+            .pt(px(6.0))
+            .border_t_1()
+            .border_color(rgb(t.line_soft))
+            .child(
+                small_icon_btn("rail_agents", t, "◈").on_click(cx.listener(|this, _, _, cx| {
+                    this.route = Route::Agents;
+                    cx.notify();
+                })),
+            )
+            .child(
+                small_icon_btn("rail_tools", t, "⚙").on_click(cx.listener(
+                    |this, _, window, cx| {
+                        this.refresh_toolchain_async(window, cx);
+                        this.route = Route::Tools;
+                        cx.notify();
+                    },
+                )),
+            )
+            .child(
+                small_icon_btn("rail_settings", t, "☰").on_click(cx.listener(
+                    |this, _, _, cx| {
+                        this.route = Route::Settings;
+                        cx.notify();
+                    },
+                )),
+            )
+            .child(
+                small_icon_btn("rail_about", t, "ⓘ").on_click(cx.listener(|this, _, _, cx| {
+                    this.route = Route::About;
+                    cx.notify();
+                })),
+            )
+            .child(
+                small_icon_btn("rail_theme", t, if t.dark { "☀" } else { "☾" }).on_click(
+                    cx.listener(|this, _, _, cx| {
+                        this.toggle_theme(cx);
+                    }),
+                ),
+            ),
+    )
 }
 
 fn menu_item(

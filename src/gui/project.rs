@@ -1,12 +1,16 @@
 use std::collections::HashMap;
 
 use gpui::{
-    ClipboardItem, Context, Div, FontWeight, Styled, div, img, prelude::*, px, relative, rgb,
+    ClipboardItem, Context, Div, FontWeight, MouseButton, MouseDownEvent, Styled, div, img,
+    prelude::*, px, relative, rgb,
 };
 
 use super::home::{render_advanced_cli_options, render_live_stage_stepper};
 use super::style;
-use super::{FnFilter, FnSort, FocusInput, GameReCompApp, MapColorMode, ProjectTab, Route, WorkerKind};
+use super::{
+    FnFilter, FnSort, FocusInput, GameReCompApp, JobStatus, MapColorMode, ProjectTab, Route,
+    WorkerKind,
+};
 use crate::model::{FunctionRow, ProjectModel};
 use crate::pipeline_opts::AppProfile;
 use crate::theme_tokens::ThemeTokens;
@@ -15,13 +19,17 @@ pub fn render_project(
     app: &GameReCompApp,
     t: &ThemeTokens,
     tab: ProjectTab,
+    viewport_w: f32,
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
+    let pad_x = if viewport_w < 1020.0 { 16.0 } else { 32.0 };
     let Some(model) = app.active_project.as_ref() else {
+        let is_loading = app.load_error.trim().is_empty() && app.active_project_dir.is_some();
         return div()
             .flex_1()
+            .min_w_0()
             .h_full()
-            .p(px(36.0))
+            .p(px(pad_x))
             .flex()
             .flex_col()
             .gap(px(12.0))
@@ -31,8 +39,21 @@ pub fn render_project(
                     .font_weight(FontWeight::EXTRA_BOLD)
                     .text_size(px(t.ui_px(24.0)))
                     .text_color(rgb(t.ink))
-                    .child("No project loaded"),
+                    .child(if is_loading {
+                        "Loading project…"
+                    } else {
+                        "No project loaded"
+                    }),
             )
+            .when(is_loading, |el| {
+                el.child(
+                    div()
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(12.5)))
+                        .text_color(rgb(t.muted))
+                        .child("Reading recovered functions, verification reports, and build manifest…"),
+                )
+            })
             .when(!app.load_error.is_empty(), |el| {
                 el.child(
                     div()
@@ -43,14 +64,25 @@ pub fn render_project(
                 )
             })
             .child(
-                div().child(
-                    style::primary_btn("back_home_empty", t, "Back to New Project", true).on_click(
-                        cx.listener(|this, _, _, cx| {
-                            this.route = Route::Home;
-                            cx.notify();
-                        }),
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .gap(px(8.0))
+                    .when(!app.load_error.is_empty(), |el| {
+                        el.child(
+                            style::ghost_btn("proj_load_issue_btn", t, "🐛 Create Support Issue")
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.open_issue_for_project(cx);
+                                })),
+                        )
+                    })
+                    .child(
+                        style::primary_btn("back_home_empty", t, "Back to New Project", true)
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.route = Route::Home;
+                                cx.notify();
+                            })),
                     ),
-                ),
             );
     };
 
@@ -65,6 +97,7 @@ pub fn render_project(
 
     div()
         .flex_1()
+        .min_w_0()
         .h_full()
         .flex()
         .flex_col()
@@ -74,11 +107,12 @@ pub fn render_project(
             div()
                 .id(("project_tab_scroll", tab as usize))
                 .flex_1()
+                .min_w_0()
                 .overflow_y_scroll()
-                .px(px(32.0))
+                .px(px(pad_x))
                 .pt(px(20.0))
                 .pb(px(56.0))
-                .child(div().w_full().max_w(px(1420.0)).child(body)),
+                .child(div().w_full().min_w_0().max_w(px(1420.0)).child(body)),
         )
 }
 
@@ -201,16 +235,16 @@ fn render_project_header(
     // Right actions row
     let mut actions = div().flex().flex_wrap().items_center().gap(px(8.0));
     let proj_job = app.job_for_project(&model.dir);
-    let proj_running = proj_job.filter(|j| j.is_running());
-    let total_running = app.active_running_count();
-    let other_running = total_running.saturating_sub(if proj_running.is_some() { 1 } else { 0 });
+    let proj_active = proj_job.filter(|j| j.is_active());
+    let total_active = app.active_slot_count();
+    let other_active = total_active.saturating_sub(if proj_active.is_some() { 1 } else { 0 });
 
-    if other_running > 0 {
+    if other_active > 0 {
         actions = actions.child(
             style::ghost_btn(
                 "hdr_other_jobs_btn",
                 t,
-                format!("+{other_running} other running"),
+                format!("+{other_active} other active"),
             )
             .on_click(cx.listener(|this, _, _, cx| {
                 this.route = Route::Home;
@@ -219,33 +253,58 @@ fn render_project_header(
         );
     }
 
-    if let Some(job) = proj_running {
+    if let Some(job) = proj_active {
         let jid = job.id;
-        actions = actions
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(7.0))
-                    .h(px(32.0))
-                    .px(px(12.0))
-                    .rounded(px(3.0))
-                    .bg(rgb(t.hl))
-                    .text_color(rgb(t.hl_ink))
-                    .font_family(t.mono_font)
-                    .font_weight(FontWeight::BOLD)
-                    .text_size(px(t.ui_px(12.0)))
-                    .child(style::animated_pulse_dot("hdr_working_dot", t.hl_ink, 7.0))
-                    .child(format!("{}: {}", job.kind.label(), job.stage)),
-            )
-            .child(
-                style::danger_btn("hdr_stop_btn", t, "■ Stop").on_click(cx.listener(
-                    move |this, _, _, cx| {
-                        this.stop_job(jid);
-                        cx.notify();
-                    },
-                )),
-            );
+        if job.is_running() {
+            actions = actions
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(7.0))
+                        .h(px(32.0))
+                        .px(px(12.0))
+                        .rounded(px(3.0))
+                        .bg(rgb(t.hl))
+                        .text_color(rgb(t.hl_ink))
+                        .font_family(t.mono_font)
+                        .font_weight(FontWeight::BOLD)
+                        .text_size(px(t.ui_px(12.0)))
+                        .child(style::animated_pulse_dot("hdr_working_dot", t.hl_ink, 7.0))
+                        .child(format!("{}: {}", job.kind.label(), job.stage)),
+                )
+                .child(
+                    style::ghost_btn("hdr_pause_btn", t, "⏸ Pause").on_click(cx.listener(
+                        move |this, _, _, cx| {
+                            this.pause_job(jid);
+                            cx.notify();
+                        },
+                    )),
+                );
+        } else {
+            actions = actions
+                .child(style::status_badge(
+                    format!("⏸ PAUSED: {}", job.stage),
+                    t.work_bg,
+                    t.work,
+                ))
+                .child(
+                    style::primary_btn("hdr_resume_btn", t, "▶ Resume", true).on_click(
+                        cx.listener(move |this, _, _, cx| {
+                            this.resume_job(jid);
+                            cx.notify();
+                        }),
+                    ),
+                );
+        }
+        actions = actions.child(
+            style::danger_btn("hdr_stop_btn", t, "■ Stop").on_click(cx.listener(
+                move |this, _, _, cx| {
+                    this.stop_job(jid);
+                    cx.notify();
+                },
+            )),
+        );
     } else {
         if model.has_wasm_build {
             let dir = model.dir.clone();
@@ -260,13 +319,47 @@ fn render_project_header(
                     cx.notify();
                 }),
             ));
-        } else if let Some(bin) = model.built_binary_path() {
-            actions = actions.child(style::ghost_btn("hdr_launch_btn", t, "▶ Launch").on_click(
-                cx.listener(move |this, _, _, cx| {
-                    this.launch_rebuilt_binary(&bin);
-                    cx.notify();
-                }),
-            ));
+        } else if model.built_binary_path().is_some() {
+            let dir_run = model.dir.clone();
+            let dir_opts = model.dir.clone();
+            let title_opts = model.display_title().to_string();
+            actions = actions
+                .child(
+                    style::ghost_btn("hdr_launch_btn", t, "▶ Launch").on_click(cx.listener(
+                        move |this, _, _, cx| {
+                            this.launch_project_dir_smart(&dir_run, false);
+                            cx.notify();
+                        },
+                    )),
+                )
+                .child(
+                    style::ghost_btn("hdr_run_opts_btn", t, "⚙ Run Options…").on_click(
+                        cx.listener(move |this, _, _, cx| {
+                            this.open_run_game_modal(
+                                dir_opts.clone(),
+                                title_opts.clone(),
+                                false,
+                                cx,
+                            );
+                        }),
+                    ),
+                );
+        }
+
+        let needs_issue = !model.diag.build_passed
+            || !model.diag.boot_passed
+            || model.score < 50
+            || proj_job
+                .map(|j| matches!(j.status, JobStatus::Failed(_)))
+                .unwrap_or(false);
+        if needs_issue {
+            actions = actions.child(
+                style::ghost_btn("hdr_issue_btn", t, "🐛 Create Issue").on_click(cx.listener(
+                    |this, _, _, cx| {
+                        this.open_issue_for_project(cx);
+                    },
+                )),
+            );
         }
 
         if model.has_html_report {
@@ -288,11 +381,28 @@ fn render_project_header(
     }
 
     let proj_dir = model.dir.clone();
-    actions = actions.child(style::ghost_btn("hdr_dir_btn", t, "📁").on_click(cx.listener(
-        move |_, _, _, _| {
-            let _ = open::that(&proj_dir);
-        },
-    )));
+    let menu_dir = model.dir.clone();
+    let menu_title = model.display_title().to_string();
+    actions = actions
+        .child(style::ghost_btn("hdr_dir_btn", t, "📁").on_click(cx.listener(
+            move |_, _, _, _| {
+                let _ = open::that(&proj_dir);
+            },
+        )))
+        .child(
+            style::ghost_btn("hdr_more_crud_btn", t, "⋯").on_mouse_down(
+                MouseButton::Left,
+                cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                    cx.stop_propagation();
+                    this.open_project_context_menu(
+                        menu_dir.clone(),
+                        menu_title.clone(),
+                        ev.position,
+                        cx,
+                    );
+                }),
+            ),
+        );
 
     // Progress meter row
     let pct = (model.score.clamp(0, 100) as f32) / 100.0;
@@ -437,12 +547,18 @@ fn render_overview_tab(
 ) -> Div {
     let mut col = div().flex().flex_col().gap(px(22.0));
 
-    // When a pipeline/agent job is actively running for this project, display the animated live stage stepper prominently!
+    // When a pipeline/agent job is actively running or paused for this project, display the animated live stage stepper prominently!
     let proj_job = app.job_for_project(&model.dir);
-    if let Some(job) = proj_job.filter(|j| j.is_running()) {
+    if let Some(job) = proj_job.filter(|j| j.is_active()) {
         col = col.child(
             style::panel_box(t)
-                .border_color(if t.dark { rgb(t.hl) } else { rgb(t.btn) })
+                .border_color(if job.is_paused() {
+                    rgb(t.work)
+                } else if t.dark {
+                    rgb(t.hl)
+                } else {
+                    rgb(t.btn)
+                })
                 .p(px(16.0))
                 .child(render_live_stage_stepper(job, app.anim_frame, t, cx)),
         );
@@ -452,16 +568,34 @@ fn render_overview_tab(
         let bin_opt = model.built_binary_path();
         let has_wasm = model.has_wasm_build;
         let proj_dir_wasm = model.dir.clone();
+        let proj_dir_data = model.dir.clone();
+        let proj_title_data = model.display_title().to_string();
         let proj_dir_open = model.dir.clone();
         let mut actions = div().flex().flex_wrap().items_center().gap(px(8.0));
         if let Some(bin) = bin_opt {
-            actions = actions.child(
-                style::primary_btn("post_launch_game_btn", t, "▶  Launch Game Now", true)
+            actions = actions
+                .child(
+                    style::primary_btn("post_launch_game_btn", t, "▶  Launch Standalone", true)
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.launch_rebuilt_binary_with_data(&bin, None);
+                            cx.notify();
+                        })),
+                )
+                .child(
+                    style::ghost_btn(
+                        "post_launch_data_btn",
+                        t,
+                        "📁 Run with Game Data Folder…",
+                    )
                     .on_click(cx.listener(move |this, _, _, cx| {
-                        this.launch_rebuilt_binary(&bin);
-                        cx.notify();
+                        this.open_run_game_modal(
+                            proj_dir_data.clone(),
+                            proj_title_data.clone(),
+                            true,
+                            cx,
+                        );
                     })),
-            );
+                );
         }
         if has_wasm {
             actions = actions.child(
@@ -604,9 +738,8 @@ fn render_overview_tab(
                 .child(legend_swatch(t, t.not_c, "unresolved"))
                 .child(
                     style::ghost_btn("map_reload_btn", t, "↻ Reload").on_click(cx.listener(
-                        |this, _, _, cx| {
-                            this.reload_active_project();
-                            cx.notify();
+                        |this, _, window, cx| {
+                            this.reload_active_project_async(window, cx);
                         },
                     )),
                 ),
@@ -955,7 +1088,7 @@ fn render_overview_tab(
                     .font_family(t.ui_font)
                     .font_weight(FontWeight::SEMIBOLD)
                     .text_size(px(t.ui_px(12.5)))
-                    .text_color(rgb(t.hl))
+                    .text_color(rgb(t.accent_fg()))
                     .underline()
                     .cursor_pointer()
                     .on_click(cx.listener(|this, _, _, cx| {
@@ -1105,7 +1238,7 @@ fn render_overview_tab(
                                 .font_family(t.ui_font)
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .text_size(px(t.ui_px(12.0)))
-                                .text_color(rgb(t.hl))
+                                .text_color(rgb(t.accent_fg()))
                                 .underline()
                                 .cursor_pointer()
                                 .on_click(cx.listener(|this, _, _, cx| {
@@ -1144,7 +1277,7 @@ fn render_overview_tab(
                                 .font_family(t.ui_font)
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .text_size(px(t.ui_px(12.0)))
-                                .text_color(rgb(t.hl))
+                                .text_color(rgb(t.accent_fg()))
                                 .underline()
                                 .cursor_pointer()
                                 .on_click(cx.listener(|this, _, _, cx| {
@@ -1249,7 +1382,7 @@ fn render_function_map_squares(
                     .font_family(t.mono_font)
                     .font_weight(FontWeight::BOLD)
                     .text_size(px(t.ui_px(12.0)))
-                    .text_color(rgb(t.hl))
+                    .text_color(rgb(t.accent_fg()))
                     .child(hi.symbol.clone()),
             )
             .child(
@@ -1556,10 +1689,16 @@ fn render_stages_build_tab(
         .job_for_project(&model.dir)
         .or_else(|| app.focused_job());
 
-    if let Some(job) = proj_job.filter(|j| j.is_running()) {
+    if let Some(job) = proj_job.filter(|j| j.is_active()) {
         wrap = wrap.child(
             style::panel_box(t)
-                .border_color(if t.dark { rgb(t.hl) } else { rgb(t.btn) })
+                .border_color(if job.is_paused() {
+                    rgb(t.work)
+                } else if t.dark {
+                    rgb(t.hl)
+                } else {
+                    rgb(t.btn)
+                })
                 .p(px(16.0))
                 .child(render_live_stage_stepper(job, app.anim_frame, t, cx)),
         );
@@ -1704,7 +1843,7 @@ fn render_stages_build_tab(
     } else {
         for line in logs_slice.iter().rev().take(200).rev() {
             let col = if line.starts_with("==>") || line.starts_with("$ ") {
-                rgb(t.hl)
+                rgb(t.accent_fg())
             } else if line.contains("error") || line.contains("FAIL") {
                 rgb(t.miss)
             } else if line.contains("PASS") || line.contains("verified") {
@@ -1902,6 +2041,8 @@ fn render_agents_tab(
                                 app.focused_input == Some(FocusInput::AgentTargetFn),
                                 true,
                             )
+                            .flex_1()
+                            .min_w_0()
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.set_focus_input(Some(FocusInput::AgentTargetFn), window, cx);
                             })),
@@ -2150,7 +2291,7 @@ fn render_project_settings_tab(
 
     let left = style::panel_box(t)
         .flex_1()
-        .min_w(px(440.0))
+        .min_w(px(300.0))
         .child(panel_hdr(t, "Recompilation & CLI parameters", None))
         .child(
             div()
@@ -2177,6 +2318,8 @@ fn render_project_settings_tab(
                                         app.focused_input == Some(FocusInput::OptPeFile),
                                         true,
                                     )
+                                    .flex_1()
+                                    .min_w_0()
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.set_focus_input(
                                             Some(FocusInput::OptPeFile),
@@ -2187,14 +2330,15 @@ fn render_project_settings_tab(
                                 )
                                 .child(
                                     style::ghost_btn("proj_pe_browse", t, "Browse…").on_click(
-                                        cx.listener(|this, _, _, cx| {
-                                            if let Some(f) = rfd::FileDialog::new()
-                                                .add_filter("Windows PE", &["exe", "EXE"])
-                                                .pick_file()
-                                            {
-                                                this.opts.pe_file = f.display().to_string();
-                                                cx.notify();
-                                            }
+                                        cx.listener(|this, _, window, cx| {
+                                            this.pick_file_async(
+                                                "Choose a 32-bit Windows PE executable (.exe)",
+                                                window,
+                                                cx,
+                                                |this, f, _, _| {
+                                                    this.opts.pe_file = f.display().to_string();
+                                                },
+                                            );
                                         }),
                                     ),
                                 ),
@@ -2278,37 +2422,51 @@ fn render_project_settings_tab(
                 .child(render_advanced_cli_options(app, t, cx))
                 .child(
                     div()
+                        .w_full()
+                        .min_w_0()
                         .flex()
-                        .items_center()
-                        .gap(px(8.0))
-                        .p(px(10.0))
-                        .rounded(px(3.0))
-                        .bg(rgb(t.code_bg))
-                        .border_1()
-                        .border_color(rgb(t.line_soft))
+                        .flex_col()
+                        .gap(px(4.0))
                         .child(
                             div()
-                                .flex_1()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .gap(px(8.0))
+                                .child(style::eyebrow(t, "EQUIVALENT CLI COMMAND"))
+                                .child(
+                                    style::ghost_btn("ps_copy_cmd", t, "Copy CLI").on_click(
+                                        cx.listener(move |this, _, _, cx| {
+                                            cx.write_to_clipboard(ClipboardItem::new_string(
+                                                cmd_copy.clone(),
+                                            ));
+                                            this.push_toast(
+                                                "CLI command copied",
+                                                "Copied equivalent game-recomp-cli command.",
+                                                this.tokens().info,
+                                                false,
+                                            );
+                                            cx.notify();
+                                        }),
+                                    ),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .id("ps_cli_preview_scroll")
+                                .w_full()
+                                .min_w_0()
+                                .overflow_x_scroll()
+                                .p(px(10.0))
+                                .rounded(px(3.0))
+                                .bg(rgb(t.code_bg))
+                                .border_1()
+                                .border_color(rgb(t.line_soft))
                                 .font_family(t.mono_font)
                                 .text_size(px(t.ui_px(11.0)))
                                 .text_color(rgb(t.ink_2))
+                                .whitespace_nowrap()
                                 .child(cmd_preview),
-                        )
-                        .child(
-                            style::ghost_btn("ps_copy_cmd", t, "Copy CLI").on_click(cx.listener(
-                                move |this, _, _, cx| {
-                                    cx.write_to_clipboard(ClipboardItem::new_string(
-                                        cmd_copy.clone(),
-                                    ));
-                                    this.push_toast(
-                                        "CLI command copied",
-                                        "Copied equivalent ./GameReComp command.",
-                                        this.tokens().info,
-                                        false,
-                                    );
-                                    cx.notify();
-                                },
-                            )),
                         ),
                 )
                 .child(
@@ -2319,10 +2477,169 @@ fn render_project_settings_tab(
                 ),
         );
 
-    let right = style::panel_box(t)
-        .flex_1()
-        .min_w(px(340.0))
-        .child(panel_hdr(t, "About this project", None))
+    let dir_rename = model.dir.clone();
+    let title_rename = model.display_title().to_string();
+    let dir_del = model.dir.clone();
+    let title_del = model.display_title().to_string();
+    let dir_launch_now = model.dir.clone();
+    let dir_modal = model.dir.clone();
+    let title_modal = model.display_title().to_string();
+    let has_runnable = model.built_binary_path().is_some() || model.has_wasm_build;
+    let use_data_dir = model.ui_meta.launch_with_data_dir;
+    let data_dir_display = if model.ui_meta.game_data_dir.trim().is_empty() {
+        "<not set — click Choose Folder…>".to_string()
+    } else {
+        model.ui_meta.game_data_dir.clone()
+    };
+
+    let run_options_card = style::panel_box(t)
+        .w_full()
+        .child(panel_hdr(
+            t,
+            "Run Game Options",
+            Some((
+                if use_data_dir { "DATA FOLDER" } else { "STANDALONE" },
+                if use_data_dir { t.info_bg } else { t.match_bg },
+                if use_data_dir { t.info } else { t.match_ink },
+            )),
+        ))
+        .child(
+            div()
+                .p(px(16.0))
+                .flex()
+                .flex_col()
+                .gap(px(10.0))
+                .child(
+                    div()
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.5)))
+                        .text_color(rgb(t.muted))
+                        .child("Choose whether this game runs directly from its embedded PE image or loads external game data/assets from a folder."),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_wrap()
+                        .gap(px(6.0))
+                        .child(
+                            style::option_pill(
+                                "ps_run_standalone_pill",
+                                t,
+                                "⚡ Run Standalone (Direct)",
+                                !use_data_dir,
+                            )
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                if let Some(ref mut m) = this.active_project {
+                                    m.ui_meta.launch_with_data_dir = false;
+                                    let _ = m.save_ui_meta();
+                                }
+                                cx.notify();
+                            })),
+                        )
+                        .child(
+                            style::option_pill(
+                                "ps_run_data_pill",
+                                t,
+                                "📁 Run with Game Data Folder",
+                                use_data_dir,
+                            )
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                if let Some(ref mut m) = this.active_project {
+                                    m.ui_meta.launch_with_data_dir = true;
+                                    let _ = m.save_ui_meta();
+                                }
+                                cx.notify();
+                            })),
+                        ),
+                )
+                .child(
+                    div()
+                        .p(px(10.0))
+                        .rounded(px(4.0))
+                        .bg(rgb(t.code_bg))
+                        .border_1()
+                        .border_color(rgb(t.line_soft))
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(style::eyebrow(t, "GAME DATA / ASSETS FOLDER (CWD + RECOMP_ASSETS_DIR)"))
+                        .child(
+                            div()
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(11.5)))
+                                .text_color(if model.ui_meta.game_data_dir.trim().is_empty() {
+                                    rgb(t.muted)
+                                } else {
+                                    rgb(t.ink)
+                                })
+                                .child(data_dir_display),
+                        ),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_wrap()
+                        .gap(px(8.0))
+                        .child(
+                            style::ghost_btn("ps_pick_data_dir", t, "Choose Folder…").on_click(
+                                cx.listener(|this, _, window, cx| {
+                                    this.pick_folder_async(
+                                        "Select game data / assets folder",
+                                        window,
+                                        cx,
+                                        |this, d, _, _| {
+                                            if let Some(ref mut m) = this.active_project {
+                                                m.ui_meta.game_data_dir =
+                                                    d.display().to_string();
+                                                m.ui_meta.launch_with_data_dir = true;
+                                                let _ = m.save_ui_meta();
+                                            }
+                                        },
+                                    );
+                                }),
+                            ),
+                        )
+                        .when(!model.ui_meta.game_data_dir.trim().is_empty(), |el| {
+                            el.child(
+                                style::ghost_btn("ps_clear_data_dir", t, "Clear").on_click(
+                                    cx.listener(|this, _, _, cx| {
+                                        if let Some(ref mut m) = this.active_project {
+                                            m.ui_meta.game_data_dir.clear();
+                                            m.ui_meta.launch_with_data_dir = false;
+                                            let _ = m.save_ui_meta();
+                                        }
+                                        cx.notify();
+                                    }),
+                                ),
+                            )
+                        })
+                        .when(has_runnable, |el| {
+                            el.child(
+                                style::primary_btn("ps_launch_smart_now", t, "▶ Launch Game Now", true)
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.launch_project_dir_smart(&dir_launch_now, false);
+                                        cx.notify();
+                                    })),
+                            )
+                        })
+                        .child(
+                            style::ghost_btn("ps_full_run_modal", t, "⚙ Full Run Options…").on_click(
+                                cx.listener(move |this, _, _, cx| {
+                                    this.open_run_game_modal(
+                                        dir_modal.clone(),
+                                        title_modal.clone(),
+                                        false,
+                                        cx,
+                                    );
+                                }),
+                            ),
+                        ),
+                ),
+        );
+
+    let about_card = style::panel_box(t)
+        .w_full()
+        .child(panel_hdr(t, "About & Manage Project (CRUD)", None))
         .child(
             div()
                 .p(px(16.0))
@@ -2338,6 +2655,7 @@ fn render_project_settings_tab(
                     div()
                         .pt(px(10.0))
                         .flex()
+                        .flex_wrap()
                         .gap(px(8.0))
                         .child(
                             style::ghost_btn("ps_open_dir", t, "Open folder").on_click(
@@ -2348,24 +2666,56 @@ fn render_project_settings_tab(
                         )
                         .child(
                             style::ghost_btn("ps_reload", t, "Reload from disk").on_click(
-                                cx.listener(|this, _, _, cx| {
-                                    this.reload_active_project();
-                                    cx.notify();
+                                cx.listener(|this, _, window, cx| {
+                                    this.reload_active_project_async(window, cx);
+                                }),
+                            ),
+                        )
+                        .child(
+                            style::ghost_btn("ps_rename_proj", t, "✎ Rename…").on_click(
+                                cx.listener(move |this, _, window, cx| {
+                                    this.open_rename_project_modal(
+                                        dir_rename.clone(),
+                                        title_rename.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }),
+                            ),
+                        )
+                        .child(
+                            style::danger_btn("ps_delete_proj", t, "🗑 Remove / Delete…").on_click(
+                                cx.listener(move |this, _, _, cx| {
+                                    this.open_delete_project_modal(
+                                        dir_del.clone(),
+                                        title_del.clone(),
+                                        cx,
+                                    );
                                 }),
                             ),
                         ),
                 ),
         );
 
+    let right_col = div()
+        .flex_1()
+        .min_w(px(300.0))
+        .flex()
+        .flex_col()
+        .gap(px(16.0))
+        .child(run_options_card)
+        .child(about_card);
+
     div()
         .w_full()
+        .min_w_0()
         .flex()
         .flex_row()
         .flex_wrap()
         .items_start()
         .gap(px(16.0))
         .child(left)
-        .child(right)
+        .child(right_col)
 }
 
 // ============================================================================

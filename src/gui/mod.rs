@@ -7,6 +7,8 @@ pub mod style;
 
 use std::fs;
 use std::io::{BufRead, BufReader};
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self, Receiver};
@@ -16,13 +18,18 @@ use std::time::{Duration, Instant};
 
 use chrono::Local;
 use gpui::{
-    App, Application, Bounds, ClipboardItem, Context, Div, FocusHandle, Focusable, FontWeight,
-    IntoElement, KeyDownEvent, Render, Styled, Task, TitlebarOptions, Window, WindowBounds,
-    WindowOptions, div, prelude::*, px, rgb, size,
+    App, Bounds, ClipboardItem, Context, Div, FocusHandle, Focusable, FontWeight, IntoElement,
+    KeyDownEvent, PathPromptOptions, Pixels, Point, Render, Styled, Task, TitlebarOptions, Window,
+    WindowBounds, WindowOptions, div, prelude::*, px, rgb, size,
 };
 
-use crate::config::{AppConfig, ToolchainStatus, UserSettings};
-use crate::model::{ProjectModel, ProjectSummary, UserNote, discover_projects};
+use crate::config::{
+    AppConfig, SystemResources, ToolchainStatus, UserSettings, default_user_projects_dir,
+};
+use crate::model::{
+    ProjectModel, ProjectSummary, UserNote, discover_projects, find_project_binary, load_ui_meta,
+    project_has_wasm, read_project_pe_path, save_ui_meta_at,
+};
 use crate::orchestrator::default_project_dir;
 use crate::pe::{PeInfo, inspect_pe};
 use crate::pipeline_opts::{ALL_STAGES, PipelineOptions};
@@ -123,6 +130,43 @@ pub enum FocusInput {
     InspectorNote,
     SettingsProjectsRoot,
     SettingsRomLib,
+    IssueTitle,
+    IssueNotes,
+    RunGameDataDir,
+    QuickRenameProject,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectContextMenu {
+    pub dir: PathBuf,
+    pub name: String,
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConfirmDeleteProject {
+    pub dir: PathBuf,
+    pub name: String,
+    pub delete_from_disk: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct RenameProjectModal {
+    pub dir: PathBuf,
+    pub name_buf: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct RunGameModal {
+    pub project_dir: PathBuf,
+    pub project_name: String,
+    pub binary_path: Option<PathBuf>,
+    pub has_wasm: bool,
+    pub use_data_dir: bool,
+    pub data_dir: String,
+    pub suggested_pe_dir: String,
+    pub save_as_default: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -143,6 +187,7 @@ pub struct LiveStageRow {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JobStatus {
     Running,
+    Paused,
     Done(i32),
     Failed(i32),
     Stopped,
@@ -162,13 +207,19 @@ pub struct ActiveJob {
     pub kind: WorkerKind,
     pub name: String,
     pub pe_path: String,
+    pub pe_summary: String,
     pub target_label: String,
     pub project_dir: Option<PathBuf>,
+    pub built_binary: Option<PathBuf>,
+    pub has_wasm: bool,
+    pub failure_summary: String,
     pub auto_launch_after_build: bool,
     pub is_dry_run: bool,
     pub status: JobStatus,
     pub stage: String,
     pub started: Instant,
+    pub paused_at: Option<Instant>,
+    pub paused_total: Duration,
     pub finished_secs: Option<f32>,
     pub current_file: String,
     pub current_task_detail: String,
@@ -177,17 +228,33 @@ pub struct ActiveJob {
     pub live_stages: Vec<LiveStageRow>,
     pub live_logs: Vec<String>,
     pub child: Arc<Mutex<Option<Child>>>,
+    pub pgid: Arc<Mutex<Option<u32>>>,
     pub rx: Option<Receiver<WorkerMsg>>,
 }
 
 impl ActiveJob {
+    pub fn is_active(&self) -> bool {
+        matches!(self.status, JobStatus::Running | JobStatus::Paused)
+    }
+
     pub fn is_running(&self) -> bool {
         self.status == JobStatus::Running
     }
 
+    pub fn is_paused(&self) -> bool {
+        self.status == JobStatus::Paused
+    }
+
     pub fn elapsed_secs(&self) -> f32 {
-        self.finished_secs
-            .unwrap_or_else(|| self.started.elapsed().as_secs_f32())
+        if let Some(done) = self.finished_secs {
+            return done;
+        }
+        let extra_pause = self.paused_at.map(|p| p.elapsed()).unwrap_or(Duration::ZERO);
+        let active_dur = self
+            .started
+            .elapsed()
+            .saturating_sub(self.paused_total + extra_pause);
+        active_dur.as_secs_f32()
     }
 
     pub fn progress_fraction(&self) -> f32 {
@@ -202,6 +269,19 @@ impl ActiveJob {
         let bonus = self.compile_pct.unwrap_or(0.35).clamp(0.0, 0.95);
         ((done_count as f32 + bonus) / (ALL_STAGES.len() as f32)).clamp(0.02, 1.0)
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct IssueDraft {
+    pub game_name: String,
+    pub title: String,
+    pub pe_summary: String,
+    pub target_summary: String,
+    pub failed_stage: String,
+    pub exit_code: Option<i32>,
+    pub error_summary: String,
+    pub log_tail: String,
+    pub user_notes: String,
 }
 
 #[derive(Debug, Clone)]
@@ -227,6 +307,8 @@ pub enum WorkerMsg {
         kind: WorkerKind,
         code: i32,
         project_dir: Option<PathBuf>,
+        built_binary: Option<PathBuf>,
+        has_wasm: bool,
         summary: String,
     },
 }
@@ -275,10 +357,13 @@ pub struct GameReCompApp {
     pub route: Route,
 
     pub projects: Vec<ProjectSummary>,
+    pub projects_loading: bool,
     pub active_project_dir: Option<PathBuf>,
     pub active_project: Option<ProjectModel>,
     pub load_error: String,
     pub toolchain: ToolchainStatus,
+    pub toolchain_loading: bool,
+    pub sys_resources: SystemResources,
 
     // Unified GameReComp CLI options (ALL input/output/stage/log/build flags!)
     pub opts: PipelineOptions,
@@ -295,16 +380,25 @@ pub struct GameReCompApp {
     pub queued_pipelines: Vec<QueuedJob>,
     pub selected_job_id: Option<u64>,
     pub next_job_id: u64,
+    /// `0` = Auto (system RAM/CPU resources), `1..=8` = manual override.
     pub max_concurrent_jobs: usize,
+    pub queue_paused: bool,
     pub anim_frame: usize,
     pub last_finished_project: Option<PathBuf>,
     pub _poll_task: Option<Task<()>>,
     pub feed: Vec<FeedItem>,
 
-    // Sidebar / popovers / notifications
+    // Sidebar / popovers / notifications / modals
     pub sidebar_filter: String,
+    pub sidebar_collapsed: bool,
     pub show_new_menu: bool,
     pub show_notif_panel: bool,
+    pub show_issue_modal: bool,
+    pub issue_draft: IssueDraft,
+    pub context_menu: Option<ProjectContextMenu>,
+    pub confirm_delete: Option<ConfirmDeleteProject>,
+    pub rename_modal: Option<RenameProjectModal>,
+    pub run_game_modal: Option<RunGameModal>,
     pub toasts: Vec<ToastItem>,
     pub notifications: Vec<NotifItem>,
     pub unread_notifs: usize,
@@ -352,7 +446,7 @@ impl GameReCompApp {
         let mono_font = MonoFont::from_str(&settings.mono_font);
         let font_scale = clamp_font_scale(settings.font_scale);
         let code_font_scale = clamp_font_scale(settings.code_font_scale);
-        let toolchain = ToolchainStatus::detect();
+        let sys_resources = SystemResources::detect();
         let agent_cmd_buf = cfg
             .reveng_ai_cmd
             .clone()
@@ -372,7 +466,11 @@ impl GameReCompApp {
             ThemeMode::Light
         };
 
-        let max_concurrent_jobs = settings.max_concurrent_jobs.clamp(1, 8);
+        let max_concurrent_jobs = if settings.max_concurrent_jobs == 0 {
+            0
+        } else {
+            settings.max_concurrent_jobs.clamp(1, 8)
+        };
         let mut app = Self {
             focus_handle: cx.focus_handle(),
             focused_input: None,
@@ -388,10 +486,13 @@ impl GameReCompApp {
             show_theme_menu: false,
             route: Route::Home,
             projects: Vec::new(),
+            projects_loading: true,
             active_project_dir: None,
             active_project: None,
             load_error: String::new(),
-            toolchain,
+            toolchain: ToolchainStatus::default(),
+            toolchain_loading: true,
+            sys_resources,
             opts,
             show_advanced_opts: false,
             drop_state: DropState::Idle,
@@ -403,13 +504,21 @@ impl GameReCompApp {
             selected_job_id: None,
             next_job_id: 1,
             max_concurrent_jobs,
+            queue_paused: false,
             anim_frame: 0,
             last_finished_project: None,
             _poll_task: None,
             feed: Vec::new(),
             sidebar_filter: String::new(),
+            sidebar_collapsed: false,
             show_new_menu: false,
             show_notif_panel: false,
+            show_issue_modal: false,
+            issue_draft: IssueDraft::default(),
+            context_menu: None,
+            confirm_delete: None,
+            rename_modal: None,
+            run_game_modal: None,
             toasts: Vec::new(),
             notifications: Vec::new(),
             unread_notifs: 0,
@@ -436,7 +545,10 @@ impl GameReCompApp {
             wasm_server_child: Arc::new(Mutex::new(None)),
         };
 
-        app.refresh_projects();
+        // Sync GPUI Kit theme and launch non-blocking background scans
+        style::sync_gpui_kit_theme(&app.tokens(), cx);
+        app.refresh_projects_async(window, cx);
+        app.refresh_toolchain_async(window, cx);
         if let Some(dir) = initial_project {
             app.open_project_dir(dir.to_path_buf(), ProjectTab::Overview);
         }
@@ -452,10 +564,14 @@ impl GameReCompApp {
                 if weak.upgrade().is_none() {
                     break;
                 }
-                let _ = weak.update(cx, |this, cx| {
-                    let changed = this.poll_worker_and_timers();
-                    if changed || this.has_running_jobs() {
-                        cx.notify();
+                let _ = cx.update(|window, app| {
+                    if let Some(ent) = weak.upgrade() {
+                        ent.update(app, |this, cx| {
+                            let changed = this.poll_worker_and_timers(window, cx);
+                            if changed || this.has_running_jobs() {
+                                cx.notify();
+                            }
+                        });
                     }
                 });
             }
@@ -530,14 +646,42 @@ impl GameReCompApp {
         self.jobs.iter().filter(|j| j.is_running()).count()
     }
 
+    pub fn active_paused_count(&self) -> usize {
+        self.jobs.iter().filter(|j| j.is_paused()).count()
+    }
+
+    pub fn active_slot_count(&self) -> usize {
+        self.jobs.iter().filter(|j| j.is_active()).count()
+    }
+
+    pub fn effective_max_concurrent_jobs(&self) -> usize {
+        if self.max_concurrent_jobs == 0 {
+            self.sys_resources.recommended_parallel_games.clamp(1, 8)
+        } else {
+            self.max_concurrent_jobs.clamp(1, 8)
+        }
+    }
+
+    pub fn max_concurrent_label(&self) -> String {
+        if self.max_concurrent_jobs == 0 {
+            format!("Auto ({})", self.effective_max_concurrent_jobs())
+        } else {
+            format!("{}", self.max_concurrent_jobs)
+        }
+    }
+
     pub fn has_running_jobs(&self) -> bool {
         self.jobs.iter().any(|j| j.is_running())
+    }
+
+    pub fn has_active_jobs(&self) -> bool {
+        self.jobs.iter().any(|j| j.is_active())
     }
 
     pub fn is_project_running(&self, dir: &Path) -> bool {
         self.jobs
             .iter()
-            .any(|j| j.is_running() && j.project_dir.as_deref() == Some(dir))
+            .any(|j| j.is_active() && j.project_dir.as_deref() == Some(dir))
     }
 
     pub fn focused_job(&self) -> Option<&ActiveJob> {
@@ -549,6 +693,7 @@ impl GameReCompApp {
         self.jobs
             .iter()
             .find(|j| j.is_running())
+            .or_else(|| self.jobs.iter().find(|j| j.is_paused()))
             .or_else(|| self.jobs.last())
     }
 
@@ -560,28 +705,46 @@ impl GameReCompApp {
     }
 
     pub fn set_max_concurrent_jobs(&mut self, n: usize, cx: &mut Context<Self>) {
-        self.max_concurrent_jobs = n.clamp(1, 8);
+        self.max_concurrent_jobs = if n == 0 { 0 } else { n.clamp(1, 8) };
         self.settings.max_concurrent_jobs = self.max_concurrent_jobs;
         let _ = self.settings.save();
         self.drain_queued_pipelines();
         cx.notify();
     }
 
-    pub fn browse_for_multiple_pes(&mut self, cx: &mut Context<Self>) {
-        let mut dlg = rfd::FileDialog::new()
-            .set_title("Select one or more 32-bit Windows PE executables")
-            .add_filter("Windows PE Executable", &["exe", "EXE"]);
-        if !self.settings.rom_library_dir.trim().is_empty() {
-            dlg = dlg.set_directory(&self.settings.rom_library_dir);
-        }
-        if let Some(files) = dlg.pick_files() {
-            if files.len() == 1 && !self.has_running_jobs() && self.jobs.is_empty() {
-                self.pick_pe_path(files[0].clone());
-            } else {
-                self.enqueue_multiple_pes(files);
-            }
-            cx.notify();
-        }
+    pub fn browse_for_multiple_pes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let rx = cx.prompt_for_paths(PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: true,
+            prompt: Some("Select one or more 32-bit Windows PE executables (.exe)".into()),
+        });
+        let weak = cx.entity().downgrade();
+        window
+            .spawn(cx, async move |cx| {
+                if let Ok(Ok(Some(files))) = rx.await {
+                    let exes: Vec<PathBuf> = files.into_iter().filter(|p| p.is_file()).collect();
+                    if !exes.is_empty() {
+                        let _ = weak.update(cx, |this, cx| {
+                            if exes.len() == 1 && !this.has_active_jobs() && this.jobs.is_empty() {
+                                this.pick_pe_path(exes[0].clone());
+                            } else {
+                                this.enqueue_multiple_pes(exes);
+                            }
+                            cx.notify();
+                        });
+                    }
+                }
+            })
+            .detach();
+    }
+
+    pub fn default_project_dir_for(&self, pe: &Path) -> PathBuf {
+        let slug = default_project_dir(&self.cfg.repo_root, pe)
+            .file_name()
+            .map(|n| n.to_os_string())
+            .unwrap_or_else(|| std::ffi::OsString::from("game"));
+        self.projects_root().join(slug)
     }
 
     pub fn enqueue_multiple_pes(&mut self, paths: Vec<PathBuf>) {
@@ -603,9 +766,7 @@ impl GameReCompApp {
             }
             let mut opts = self.opts.clone();
             opts.pe_file = path.display().to_string();
-            opts.project_dir = default_project_dir(&self.cfg.repo_root, &path)
-                .display()
-                .to_string();
+            opts.project_dir = self.default_project_dir_for(&path).display().to_string();
             opts.dry_run = false;
             if self.enqueue_or_start_pipeline_inner(opts) {
                 added += 1;
@@ -616,7 +777,7 @@ impl GameReCompApp {
             let msg = format!(
                 "Added {added} game(s) · running {}/{}",
                 self.active_running_count(),
-                self.max_concurrent_jobs
+                self.effective_max_concurrent_jobs()
             );
             let ok_col = self.tokens().match_fill;
             self.push_toast("Multi-game queue updated", &msg, ok_col, false);
@@ -639,7 +800,7 @@ impl GameReCompApp {
         cx: &mut Context<Self>,
     ) {
         self.focused_input = field;
-        window.focus(&self.focus_handle);
+        window.focus(&self.focus_handle, cx);
         cx.notify();
     }
 
@@ -647,7 +808,50 @@ impl GameReCompApp {
         if !self.settings.projects_root.trim().is_empty() {
             PathBuf::from(self.settings.projects_root.trim())
         } else {
-            self.cfg.repo_root.join("projects")
+            let repo_projects = self.cfg.repo_root.join("projects");
+            if repo_projects.is_dir() {
+                repo_projects
+            } else {
+                default_user_projects_dir()
+            }
+        }
+    }
+
+    fn filter_hidden_projects(
+        items: Vec<ProjectSummary>,
+        hidden: &[String],
+    ) -> Vec<ProjectSummary> {
+        if hidden.is_empty() {
+            return items;
+        }
+        let hidden_canon: Vec<PathBuf> = hidden
+            .iter()
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| {
+                let p = PathBuf::from(s.trim());
+                fs::canonicalize(&p).unwrap_or(p)
+            })
+            .collect();
+        items
+            .into_iter()
+            .filter(|proj| {
+                let c = fs::canonicalize(&proj.dir).unwrap_or_else(|_| proj.dir.clone());
+                let raw = proj.dir.display().to_string();
+                !hidden.iter().any(|h| h == &raw) && !hidden_canon.iter().any(|hc| hc == &c)
+            })
+            .collect()
+    }
+
+    pub fn unhide_project_dir(&mut self, dir: &Path) {
+        let dir_str = dir.display().to_string();
+        let canon = fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+        let before = self.settings.hidden_projects.len();
+        self.settings.hidden_projects.retain(|h| {
+            let hp = PathBuf::from(h);
+            h != &dir_str && fs::canonicalize(&hp).unwrap_or(hp) != canon
+        });
+        if self.settings.hidden_projects.len() != before {
+            let _ = self.settings.save();
         }
     }
 
@@ -659,7 +863,118 @@ impl GameReCompApp {
             .iter()
             .map(PathBuf::from)
             .collect();
-        self.projects = discover_projects(&root, &extra);
+        let items = discover_projects(&root, &extra);
+        self.projects = Self::filter_hidden_projects(items, &self.settings.hidden_projects);
+        self.projects_loading = false;
+    }
+
+    pub fn refresh_projects_async(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.projects_loading = true;
+        let root = self.projects_root();
+        let extra: Vec<PathBuf> = self
+            .settings
+            .custom_projects
+            .iter()
+            .map(PathBuf::from)
+            .collect();
+        let hidden = self.settings.hidden_projects.clone();
+        let bg = cx.background_executor().spawn(async move {
+            let items = discover_projects(&root, &extra);
+            Self::filter_hidden_projects(items, &hidden)
+        });
+        let weak = cx.entity().downgrade();
+        window
+            .spawn(cx, async move |cx| {
+                let items = bg.await;
+                let _ = weak.update(cx, |this, cx| {
+                    this.projects = items;
+                    this.projects_loading = false;
+                    cx.notify();
+                });
+            })
+            .detach();
+    }
+
+    pub fn refresh_toolchain_async(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.toolchain_loading = true;
+        let bg = cx
+            .background_executor()
+            .spawn(async move { ToolchainStatus::detect() });
+        let weak = cx.entity().downgrade();
+        window
+            .spawn(cx, async move |cx| {
+                let tc = bg.await;
+                let _ = weak.update(cx, |this, cx| {
+                    this.toolchain = tc;
+                    this.toolchain_loading = false;
+                    cx.notify();
+                });
+            })
+            .detach();
+    }
+
+    pub fn pick_folder_async(
+        &mut self,
+        prompt: &'static str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        on_pick: impl FnOnce(&mut GameReCompApp, PathBuf, &mut Window, &mut Context<Self>) + 'static,
+    ) {
+        let rx = cx.prompt_for_paths(PathPromptOptions {
+            files: false,
+            directories: true,
+            multiple: false,
+            prompt: Some(prompt.into()),
+        });
+        let weak = cx.entity().downgrade();
+        window
+            .spawn(cx, async move |cx| {
+                if let Ok(Ok(Some(mut dirs))) = rx.await {
+                    if let Some(dir) = dirs.pop() {
+                        let _ = cx.update(|window, app| {
+                            if let Some(ent) = weak.upgrade() {
+                                ent.update(app, |this, cx| {
+                                    on_pick(this, dir, window, cx);
+                                    cx.notify();
+                                });
+                            }
+                        });
+                    }
+                }
+            })
+            .detach();
+    }
+
+    pub fn pick_file_async(
+        &mut self,
+        prompt: &'static str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        on_pick: impl FnOnce(&mut GameReCompApp, PathBuf, &mut Window, &mut Context<Self>) + 'static,
+    ) {
+        let rx = cx.prompt_for_paths(PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: false,
+            prompt: Some(prompt.into()),
+        });
+        let weak = cx.entity().downgrade();
+        window
+            .spawn(cx, async move |cx| {
+                if let Ok(Ok(Some(mut files))) = rx.await {
+                    if let Some(file) = files.pop() {
+                        let _ = cx.update(|window, app| {
+                            if let Some(ent) = weak.upgrade() {
+                                ent.update(app, |this, cx| {
+                                    on_pick(this, file, window, cx);
+                                    cx.notify();
+                                });
+                            }
+                        });
+                    }
+                }
+            })
+            .detach();
     }
 
     pub fn toggle_theme(&mut self, cx: &mut Context<Self>) {
@@ -679,6 +994,8 @@ impl GameReCompApp {
         self.show_theme_menu = false;
         self.settings.theme = mode.as_str().to_string();
         let _ = self.settings.save();
+        let tok = self.tokens();
+        style::sync_gpui_kit_theme(&tok, cx);
         cx.notify();
     }
 
@@ -693,7 +1010,7 @@ impl GameReCompApp {
 
     pub fn pick_pe_path(&mut self, path: PathBuf) {
         let info = inspect_pe(&path);
-        let default_dir = default_project_dir(&self.cfg.repo_root, &path);
+        let default_dir = self.default_project_dir_for(&path);
         self.opts.pe_file = path.display().to_string();
         self.opts.project_dir = default_dir.display().to_string();
         self.picked_pe = path;
@@ -703,58 +1020,60 @@ impl GameReCompApp {
         self.route = Route::Home;
     }
 
-    pub fn browse_for_pe(&mut self, cx: &mut Context<Self>) {
-        let mut dlg = rfd::FileDialog::new()
-            .set_title("Choose a 32-bit Windows PE executable")
-            .add_filter("Windows PE Executable", &["exe", "EXE"]);
-        if !self.settings.rom_library_dir.trim().is_empty() {
-            dlg = dlg.set_directory(&self.settings.rom_library_dir);
-        }
-        if let Some(file) = dlg.pick_file() {
-            self.pick_pe_path(file);
-            cx.notify();
-        }
+    pub fn browse_for_pe(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let rx = cx.prompt_for_paths(PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: false,
+            prompt: Some("Choose a 32-bit Windows PE executable (.exe)".into()),
+        });
+        let weak = cx.entity().downgrade();
+        window
+            .spawn(cx, async move |cx| {
+                if let Ok(Ok(Some(mut files))) = rx.await {
+                    if let Some(file) = files.pop() {
+                        let _ = weak.update(cx, |this, cx| {
+                            this.pick_pe_path(file);
+                            cx.notify();
+                        });
+                    }
+                }
+            })
+            .detach();
     }
 
-    pub fn browse_for_project_folder(&mut self, cx: &mut Context<Self>) {
-        if let Some(dir) = rfd::FileDialog::new()
-            .set_title("Open a saved GameReComp project directory")
-            .set_directory(self.projects_root())
-            .pick_folder()
-        {
-            let dir_str = dir.display().to_string();
-            if !self.settings.custom_projects.contains(&dir_str) {
-                self.settings.custom_projects.push(dir_str);
-                let _ = self.settings.save();
-            }
-            self.refresh_projects();
-            self.open_project_dir(dir, ProjectTab::Overview);
-            cx.notify();
-        }
+    pub fn browse_for_project_folder(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.pick_folder_async(
+            "Open a saved GameReComp project directory",
+            window,
+            cx,
+            |this, dir, window, cx| {
+                let dir_str = dir.display().to_string();
+                this.unhide_project_dir(&dir);
+                if !this.settings.custom_projects.contains(&dir_str) {
+                    this.settings.custom_projects.push(dir_str);
+                    let _ = this.settings.save();
+                }
+                this.refresh_projects_async(window, cx);
+                this.open_project_dir_async(dir, ProjectTab::Overview, window, cx);
+            },
+        );
     }
 
-    pub fn browse_for_batch_folder(&mut self, cx: &mut Context<Self>) {
-        if let Some(dir) = rfd::FileDialog::new()
-            .set_title("Choose a folder of PE32 executables to batch recompile")
-            .pick_folder()
-        {
-            self.start_batch_worker(dir, cx);
-        }
+    pub fn browse_for_batch_folder(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.pick_folder_async(
+            "Choose a folder of PE32 executables to batch recompile",
+            window,
+            cx,
+            |this, dir, _window, cx| {
+                this.start_batch_worker(dir, cx);
+            },
+        );
     }
 
-    pub fn open_project_dir(&mut self, dir: PathBuf, tab: ProjectTab) {
-        self.active_project_dir = Some(dir.clone());
-        self.inspector_open = false;
-        self.inspector_func_idx = None;
-        self.selected_frame_idx = None;
-        self.fn_search.clear();
-        self.fn_filter = FnFilter::All;
-        self.fn_table_limit = 200;
-        self.renaming_project = false;
-
-        match ProjectModel::load(&dir) {
-            Ok(mut m) => {
-                m.load_certified_index(&self.cfg.repo_root);
+    fn apply_loaded_project(&mut self, result: Result<ProjectModel, String>) {
+        match result {
+            Ok(m) => {
                 self.opts.pe_file = m.pe_path.clone();
                 self.opts.project_dir = m.dir.display().to_string();
                 if m.has_wasm_build || m.target_arch == "wasm32" {
@@ -770,7 +1089,66 @@ impl GameReCompApp {
                 self.load_error = e;
             }
         }
+    }
+
+    pub fn open_project_dir(&mut self, dir: PathBuf, tab: ProjectTab) {
+        self.active_project_dir = Some(dir.clone());
+        self.inspector_open = false;
+        self.inspector_func_idx = None;
+        self.selected_frame_idx = None;
+        self.fn_search.clear();
+        self.fn_filter = FnFilter::All;
+        self.fn_table_limit = 200;
+        self.renaming_project = false;
+
+        let res = ProjectModel::load(&dir).map(|mut m| {
+            m.load_certified_index(&self.cfg.repo_root);
+            m
+        });
+        self.apply_loaded_project(res);
         self.route = Route::Project(tab);
+    }
+
+    pub fn open_project_dir_async(
+        &mut self,
+        dir: PathBuf,
+        tab: ProjectTab,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.active_project_dir = Some(dir.clone());
+        self.inspector_open = false;
+        self.inspector_func_idx = None;
+        self.selected_frame_idx = None;
+        self.fn_search.clear();
+        self.fn_filter = FnFilter::All;
+        self.fn_table_limit = 200;
+        self.renaming_project = false;
+        self.active_project = None;
+        self.load_error.clear();
+        self.route = Route::Project(tab);
+        cx.notify();
+
+        let repo_root = self.cfg.repo_root.clone();
+        let target_dir = dir.clone();
+        let bg = cx.background_executor().spawn(async move {
+            ProjectModel::load(&target_dir).map(|mut m| {
+                m.load_certified_index(&repo_root);
+                m
+            })
+        });
+        let weak = cx.entity().downgrade();
+        window
+            .spawn(cx, async move |cx| {
+                let res = bg.await;
+                let _ = weak.update(cx, |this, cx| {
+                    if this.active_project_dir.as_ref() == Some(&dir) {
+                        this.apply_loaded_project(res);
+                        cx.notify();
+                    }
+                });
+            })
+            .detach();
     }
 
     pub fn reload_active_project(&mut self) {
@@ -781,6 +1159,17 @@ impl GameReCompApp {
             };
             self.open_project_dir(dir, tab);
             self.refresh_projects();
+        }
+    }
+
+    pub fn reload_active_project_async(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(dir) = self.active_project_dir.clone() {
+            let tab = match self.route {
+                Route::Project(t) => t,
+                _ => ProjectTab::Overview,
+            };
+            self.open_project_dir_async(dir, tab, window, cx);
+            self.refresh_projects_async(window, cx);
         }
     }
 
@@ -917,23 +1306,25 @@ impl GameReCompApp {
     }
 
     fn enqueue_or_start_pipeline_inner(&mut self, opts: PipelineOptions) -> bool {
-        let repo_root = self.cfg.repo_root.clone();
         let project_dir = if !opts.project_dir.trim().is_empty() {
             PathBuf::from(opts.project_dir.trim())
         } else {
-            default_project_dir(&repo_root, Path::new(&opts.pe_file))
+            self.default_project_dir_for(Path::new(&opts.pe_file))
         };
+        if !opts.dry_run {
+            self.unhide_project_dir(&project_dir);
+        }
 
         // Guard against duplicate concurrent runs targeting the exact same project directory
         let already_active = self
             .jobs
             .iter()
-            .any(|j| j.is_running() && j.project_dir.as_ref() == Some(&project_dir))
+            .any(|j| j.is_active() && j.project_dir.as_ref() == Some(&project_dir))
             || self.queued_pipelines.iter().any(|q| {
                 let qdir = if !q.opts.project_dir.trim().is_empty() {
                     PathBuf::from(q.opts.project_dir.trim())
                 } else {
-                    default_project_dir(&repo_root, Path::new(&q.opts.pe_file))
+                    self.default_project_dir_for(Path::new(&q.opts.pe_file))
                 };
                 qdir == project_dir
             });
@@ -953,7 +1344,7 @@ impl GameReCompApp {
             return false;
         }
 
-        if self.active_running_count() < self.max_concurrent_jobs {
+        if !self.queue_paused && self.active_slot_count() < self.effective_max_concurrent_jobs() {
             self.spawn_pipeline_job(opts);
         } else {
             let id = self.alloc_job_id();
@@ -983,9 +1374,11 @@ impl GameReCompApp {
     }
 
     fn drain_queued_pipelines(&mut self) {
-        while self.active_running_count() < self.max_concurrent_jobs
-            && !self.queued_pipelines.is_empty()
-        {
+        if self.queue_paused {
+            return;
+        }
+        let limit = self.effective_max_concurrent_jobs();
+        while self.active_slot_count() < limit && !self.queued_pipelines.is_empty() {
             let next = self.queued_pipelines.remove(0);
             self.spawn_pipeline_job(next.opts);
         }
@@ -997,8 +1390,11 @@ impl GameReCompApp {
         let project_dir = if !opts.project_dir.trim().is_empty() {
             PathBuf::from(opts.project_dir.trim())
         } else {
-            default_project_dir(&repo_root, Path::new(&opts.pe_file))
+            self.default_project_dir_for(Path::new(&opts.pe_file))
         };
+        if !opts.dry_run {
+            self.unhide_project_dir(&project_dir);
+        }
         let capture = opts.capture_screenshots;
         let clean_objects = opts.clean_objects;
         let verify_standalone = opts.verify_standalone;
@@ -1006,6 +1402,18 @@ impl GameReCompApp {
         let is_dry_run = opts.dry_run;
         let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
         let child_for_thread = Arc::clone(&child_slot);
+        let pgid_slot: Arc<Mutex<Option<u32>>> = Arc::new(Mutex::new(None));
+        let pgid_for_thread = Arc::clone(&pgid_slot);
+
+        let pe_info = inspect_pe(Path::new(&opts.pe_file));
+        let pe_summary = if pe_info.ok {
+            format!(
+                "{} {} (base 0x{:08X})",
+                pe_info.magic, pe_info.machine, pe_info.image_base
+            )
+        } else {
+            String::new()
+        };
 
         let mut backend_args = opts.to_backend_args();
         if !backend_args.iter().any(|a| a == "--no-progress") {
@@ -1033,13 +1441,19 @@ impl GameReCompApp {
             kind: WorkerKind::Pipeline,
             name: file_name.clone(),
             pe_path: opts.pe_file.clone(),
+            pe_summary,
             target_label: target_label.clone(),
             project_dir: Some(project_dir.clone()),
+            built_binary: None,
+            has_wasm: false,
+            failure_summary: String::new(),
             auto_launch_after_build,
             is_dry_run,
             status: JobStatus::Running,
             stage: "inspect".to_string(),
             started: Instant::now(),
+            paused_at: None,
+            paused_total: Duration::ZERO,
             finished_secs: None,
             current_file: file_name.clone(),
             current_task_detail: format!("Inspecting PE32 headers & targeting {target_label}"),
@@ -1054,6 +1468,7 @@ impl GameReCompApp {
             live_stages,
             live_logs: vec![format!("$ {}", opts.format_command_preview())],
             child: child_slot,
+            pgid: pgid_slot,
             rx: Some(rx),
         };
         self.jobs.push(job);
@@ -1075,15 +1490,20 @@ impl GameReCompApp {
                 cmd.env("RECOMP_SCREENSHOT", shots);
             }
 
-            let code = run_streaming_child_inner(cmd, child_for_thread, &tx);
+            let code = run_streaming_child_inner(cmd, child_for_thread, pgid_for_thread, &tx);
 
             if !is_dry_run && clean_objects {
                 let _ = crate::tasks::clean_cmake_objects(&project_dir);
             }
-            if !is_dry_run && verify_standalone && (code == 0 || code == 3) {
-                if let Ok(m) = ProjectModel::load(&project_dir) {
-                    if let Some(bin) = m.built_binary_path() {
-                        match crate::tasks::verify_standalone_binary(&bin, 700) {
+            let (built_binary, has_wasm) = if !is_dry_run {
+                let wasm_ok = project_dir.join("build").join("index.html").is_file()
+                    || project_dir.join("index.html").is_file();
+                let bin = ProjectModel::load(&project_dir)
+                    .ok()
+                    .and_then(|m| m.built_binary_path());
+                if verify_standalone && (code == 0 || code == 3) {
+                    if let Some(ref b) = bin {
+                        match crate::tasks::verify_standalone_binary(b, 700) {
                             Ok(msg) => {
                                 let _ = tx.send(WorkerMsg::Line(format!("standalone: PASS ({msg})")));
                             }
@@ -1093,7 +1513,10 @@ impl GameReCompApp {
                         }
                     }
                 }
-            }
+                (bin, wasm_ok)
+            } else {
+                (None, false)
+            };
 
             let summary = if is_dry_run {
                 "Dry-run plan printed to console".to_string()
@@ -1110,6 +1533,8 @@ impl GameReCompApp {
                 kind: WorkerKind::Pipeline,
                 code,
                 project_dir: if is_dry_run { None } else { Some(project_dir) },
+                built_binary,
+                has_wasm,
                 summary,
             });
         });
@@ -1120,7 +1545,7 @@ impl GameReCompApp {
             return;
         };
         if self.jobs.iter().any(|j| {
-            j.is_running()
+            j.is_active()
                 && j.kind == WorkerKind::Readability
                 && j.project_dir.as_ref() == Some(&dir)
         }) {
@@ -1132,6 +1557,8 @@ impl GameReCompApp {
         let target_fn = self.agent_target_fn.trim().to_string();
         let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
         let child_for_thread = Arc::clone(&child_slot);
+        let pgid_slot: Arc<Mutex<Option<u32>>> = Arc::new(Mutex::new(None));
+        let pgid_for_thread = Arc::clone(&pgid_slot);
 
         let mut args = vec![
             "-m".to_string(),
@@ -1160,13 +1587,19 @@ impl GameReCompApp {
             kind: WorkerKind::Readability,
             name: format!("Agent: {proj_name}"),
             pe_path: String::new(),
+            pe_summary: String::new(),
             target_label: stage.clone(),
             project_dir: Some(dir.clone()),
+            built_binary: None,
+            has_wasm: false,
+            failure_summary: String::new(),
             auto_launch_after_build: false,
             is_dry_run: false,
             status: JobStatus::Running,
             stage,
             started: Instant::now(),
+            paused_at: None,
+            paused_total: Duration::ZERO,
             finished_secs: None,
             current_file: String::new(),
             current_task_detail: "Running readability & provenance pass".to_string(),
@@ -1175,6 +1608,7 @@ impl GameReCompApp {
             live_stages: fresh_live_stages(),
             live_logs: vec![format!("$ python3 {}", args.join(" "))],
             child: child_slot,
+            pgid: pgid_slot,
             rx: Some(rx),
         });
         self.selected_job_id = Some(id);
@@ -1191,11 +1625,13 @@ impl GameReCompApp {
             if let Some(ai) = ai_cmd {
                 cmd.env("REVENG_AI_CMD", ai);
             }
-            let code = run_streaming_child_inner(cmd, child_for_thread, &tx);
+            let code = run_streaming_child_inner(cmd, child_for_thread, pgid_for_thread, &tx);
             let _ = tx.send(WorkerMsg::Finished {
                 kind: WorkerKind::Readability,
                 code,
                 project_dir: Some(dir),
+                built_binary: None,
+                has_wasm: false,
                 summary: if code == 0 {
                     "Readability pass finished cleanly".to_string()
                 } else {
@@ -1233,9 +1669,11 @@ impl GameReCompApp {
     pub fn start_batch_worker(&mut self, folder: PathBuf, cx: &mut Context<Self>) {
         let id = self.alloc_job_id();
         let exe = self.cli_binary_path();
-        let parallel = self.max_concurrent_jobs.max(1);
+        let parallel = self.effective_max_concurrent_jobs().max(1);
         let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
         let child_for_thread = Arc::clone(&child_slot);
+        let pgid_slot: Arc<Mutex<Option<u32>>> = Arc::new(Mutex::new(None));
+        let pgid_for_thread = Arc::clone(&pgid_slot);
         let folder_name = folder
             .file_name()
             .and_then(|n| n.to_str())
@@ -1248,13 +1686,19 @@ impl GameReCompApp {
             kind: WorkerKind::Batch,
             name: format!("Batch: {folder_name}"),
             pe_path: folder.display().to_string(),
+            pe_summary: String::new(),
             target_label: format!("{parallel} workers"),
             project_dir: None,
+            built_binary: None,
+            has_wasm: false,
+            failure_summary: String::new(),
             auto_launch_after_build: false,
             is_dry_run: false,
             status: JobStatus::Running,
             stage: format!("scanning {}", folder.display()),
             started: Instant::now(),
+            paused_at: None,
+            paused_total: Duration::ZERO,
             finished_secs: None,
             current_file: String::new(),
             current_task_detail: format!("Running batch with {parallel} parallel workers"),
@@ -1266,6 +1710,7 @@ impl GameReCompApp {
                 folder.display()
             )],
             child: child_slot,
+            pgid: pgid_slot,
             rx: Some(rx),
         });
         self.selected_job_id = Some(id);
@@ -1285,25 +1730,171 @@ impl GameReCompApp {
             ])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-            let code = run_streaming_child_inner(cmd, child_for_thread, &tx);
+            let code = run_streaming_child_inner(cmd, child_for_thread, pgid_for_thread, &tx);
             let _ = tx.send(WorkerMsg::Finished {
                 kind: WorkerKind::Batch,
                 code,
                 project_dir: None,
+                built_binary: None,
+                has_wasm: false,
                 summary: format!("Batch run finished (exit {code})"),
             });
         });
     }
 
+    fn signal_process_group(job: &ActiveJob, sig: &str) {
+        #[cfg(unix)]
+        {
+            if let Ok(guard) = job.pgid.lock() {
+                if let Some(pgid) = *guard {
+                    let _ = Command::new("kill")
+                        .args([sig, &format!("-{pgid}")])
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .status();
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = (job, sig);
+        }
+    }
+
+    pub fn pause_job(&mut self, job_id: u64) {
+        #[cfg(not(unix))]
+        {
+            let _ = job_id;
+            self.push_toast(
+                "Pause unsupported on Windows",
+                "Process-group pause/resume requires macOS or Linux.",
+                self.tokens().info,
+                false,
+            );
+            return;
+        }
+        #[cfg(unix)]
+        {
+            let mut paused_name: Option<String> = None;
+            if let Some(job) = self.jobs.iter_mut().find(|j| j.id == job_id) {
+                if job.is_running() {
+                    Self::signal_process_group(job, "-STOP");
+                    job.status = JobStatus::Paused;
+                    job.paused_at = Some(Instant::now());
+                    job.current_task_detail = "Paused by user (SIGSTOP)".to_string();
+                    job.live_logs.push("[paused by user]".to_string());
+                    paused_name = Some(job.name.clone());
+                }
+            }
+            if let Some(name) = paused_name {
+                self.push_feed("pipeline", &format!("paused {name}"), false);
+                self.push_toast(
+                    "Recompilation paused",
+                    &format!("Paused {name} and its child compilers."),
+                    self.tokens().work,
+                    false,
+                );
+            }
+        }
+    }
+
+    pub fn resume_job(&mut self, job_id: u64) {
+        let mut resumed_name: Option<String> = None;
+        if let Some(job) = self.jobs.iter_mut().find(|j| j.id == job_id) {
+            if job.is_paused() {
+                Self::signal_process_group(job, "-CONT");
+                if let Some(at) = job.paused_at.take() {
+                    job.paused_total += at.elapsed();
+                }
+                job.status = JobStatus::Running;
+                job.current_task_detail = format!("Resumed stage {}", job.stage);
+                job.live_logs.push("[resumed by user]".to_string());
+                resumed_name = Some(job.name.clone());
+            }
+        }
+        if let Some(name) = resumed_name {
+            self.push_feed("pipeline", &format!("resumed {name}"), false);
+            self.push_toast(
+                "Recompilation resumed",
+                &format!("Resumed {name}."),
+                self.tokens().match_fill,
+                false,
+            );
+        }
+    }
+
+    pub fn pause_all_jobs(&mut self) {
+        #[cfg(not(unix))]
+        {
+            self.queue_paused = true;
+            self.push_toast(
+                "Queue paused",
+                "Queued jobs held; per-process pause requires macOS or Linux.",
+                self.tokens().work,
+                false,
+            );
+            return;
+        }
+        #[cfg(unix)]
+        {
+            self.queue_paused = true;
+            let mut count = 0usize;
+            for job in &mut self.jobs {
+                if job.is_running() {
+                    Self::signal_process_group(job, "-STOP");
+                    job.status = JobStatus::Paused;
+                    job.paused_at = Some(Instant::now());
+                    job.current_task_detail = "Paused by user (SIGSTOP)".to_string();
+                    job.live_logs.push("[paused by user]".to_string());
+                    count += 1;
+                }
+            }
+            self.push_toast(
+                "Paused recompilation",
+                &format!("Paused {count} running job(s) and held queue."),
+                self.tokens().work,
+                false,
+            );
+        }
+    }
+
+    pub fn resume_all_jobs(&mut self) {
+        self.queue_paused = false;
+        let mut count = 0usize;
+        for job in &mut self.jobs {
+            if job.is_paused() {
+                Self::signal_process_group(job, "-CONT");
+                if let Some(at) = job.paused_at.take() {
+                    job.paused_total += at.elapsed();
+                }
+                job.status = JobStatus::Running;
+                job.current_task_detail = format!("Resumed stage {}", job.stage);
+                job.live_logs.push("[resumed by user]".to_string());
+                count += 1;
+            }
+        }
+        self.drain_queued_pipelines();
+        self.push_toast(
+            "Resumed recompilation",
+            &format!("Resumed {count} paused job(s) and queue."),
+            self.tokens().match_fill,
+            false,
+        );
+    }
+
     pub fn stop_job(&mut self, job_id: u64) {
         if let Some(job) = self.jobs.iter_mut().find(|j| j.id == job_id) {
+            Self::signal_process_group(job, "-CONT");
+            Self::signal_process_group(job, "-KILL");
             if let Ok(mut guard) = job.child.lock() {
                 if let Some(ref mut child) = *guard {
                     let _ = child.kill();
                 }
             }
-            if job.is_running() {
-                job.finished_secs = Some(job.started.elapsed().as_secs_f32());
+            if job.is_active() {
+                let elapsed = job.elapsed_secs();
+                job.finished_secs = Some(elapsed);
+                job.paused_at = None;
                 job.status = JobStatus::Stopped;
                 job.rx = None;
                 job.live_logs.push("[stopped by user]".to_string());
@@ -1319,14 +1910,19 @@ impl GameReCompApp {
     }
 
     pub fn stop_all_jobs(&mut self) {
+        self.queue_paused = false;
         for job in &mut self.jobs {
-            if job.is_running() {
+            if job.is_active() {
+                Self::signal_process_group(job, "-CONT");
+                Self::signal_process_group(job, "-KILL");
                 if let Ok(mut guard) = job.child.lock() {
                     if let Some(ref mut child) = *guard {
                         let _ = child.kill();
                     }
                 }
-                job.finished_secs = Some(job.started.elapsed().as_secs_f32());
+                let elapsed = job.elapsed_secs();
+                job.finished_secs = Some(elapsed);
+                job.paused_at = None;
                 job.status = JobStatus::Stopped;
                 job.rx = None;
                 job.live_logs.push("[stopped by user]".to_string());
@@ -1336,7 +1932,7 @@ impl GameReCompApp {
         self.queued_pipelines.clear();
         self.push_toast(
             "Stopped all jobs",
-            &format!("Stopped running jobs and cleared {cleared_q} queued item(s)."),
+            &format!("Stopped active jobs and cleared {cleared_q} queued item(s)."),
             self.tokens().work,
             false,
         );
@@ -1347,7 +1943,7 @@ impl GameReCompApp {
     }
 
     pub fn clear_finished_jobs(&mut self) {
-        self.jobs.retain(|j| j.is_running());
+        self.jobs.retain(|j| j.is_active());
         if let Some(sel) = self.selected_job_id {
             if !self.jobs.iter().any(|j| j.id == sel) {
                 self.selected_job_id = self.jobs.first().map(|j| j.id);
@@ -1362,22 +1958,454 @@ impl GameReCompApp {
     }
 
     pub fn launch_rebuilt_binary(&mut self, bin: &Path) {
+        self.launch_rebuilt_binary_with_data(bin, None);
+    }
+
+    pub fn launch_rebuilt_binary_with_data(&mut self, bin: &Path, data_dir: Option<&Path>) {
+        if !bin.is_file() {
+            self.push_toast(
+                "Missing executable",
+                &format!("Built binary not found: {}", bin.display()),
+                self.tokens().not_c,
+                true,
+            );
+            return;
+        }
         let mut cmd = Command::new(bin);
-        if let Some(parent) = bin.parent() {
+        if let Some(dir) = data_dir {
+            if !dir.is_dir() {
+                self.push_toast(
+                    "Invalid game data folder",
+                    &format!("Directory does not exist: {}", dir.display()),
+                    self.tokens().not_c,
+                    true,
+                );
+                return;
+            }
+            cmd.current_dir(dir)
+                .env("RECOMP_ASSETS_DIR", dir)
+                .arg(dir);
+        } else if let Some(parent) = bin.parent() {
             cmd.current_dir(parent);
         }
         match cmd.spawn() {
             Ok(_) => {
-                self.push_toast(
-                    "Launched binary",
-                    &format!("Started {}", bin.display()),
-                    self.tokens().match_fill,
-                    false,
-                );
+                if let Some(dir) = data_dir {
+                    self.push_toast(
+                        "Launched with game data",
+                        &format!("{} (data: {})", bin.display(), dir.display()),
+                        self.tokens().match_fill,
+                        false,
+                    );
+                } else {
+                    self.push_toast(
+                        "Launched standalone",
+                        &format!("Started {}", bin.display()),
+                        self.tokens().match_fill,
+                        false,
+                    );
+                }
             }
             Err(e) => {
                 self.push_toast("Launch failed", &e.to_string(), self.tokens().not_c, true);
             }
+        }
+    }
+
+    pub fn launch_project_dir_smart(&mut self, dir: &Path, force_standalone: bool) {
+        let meta = load_ui_meta(dir);
+        let has_wasm = project_has_wasm(dir);
+        let bin = find_project_binary(dir);
+        if let Some(b) = bin {
+            if !force_standalone && meta.launch_with_data_dir && !meta.game_data_dir.trim().is_empty()
+            {
+                let data_path = PathBuf::from(meta.game_data_dir.trim());
+                self.launch_rebuilt_binary_with_data(&b, Some(&data_path));
+            } else {
+                self.launch_rebuilt_binary_with_data(&b, None);
+            }
+        } else if has_wasm {
+            self.launch_or_open_wasm(dir);
+        } else {
+            self.push_toast(
+                "No built executable",
+                "Run the recompilation pipeline first to generate a runnable binary.",
+                self.tokens().work,
+                false,
+            );
+        }
+    }
+
+    pub fn open_run_game_modal(
+        &mut self,
+        dir: PathBuf,
+        name: String,
+        preselect_data_dir: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let meta = load_ui_meta(&dir);
+        let binary_path = find_project_binary(&dir);
+        let has_wasm = project_has_wasm(&dir);
+        let suggested_pe_dir = read_project_pe_path(&dir)
+            .and_then(|pe| PathBuf::from(pe).parent().map(|p| p.to_path_buf()))
+            .filter(|p| p.is_dir())
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        let data_dir = if !meta.game_data_dir.trim().is_empty() {
+            meta.game_data_dir.clone()
+        } else {
+            suggested_pe_dir.clone()
+        };
+        let use_data_dir = preselect_data_dir || meta.launch_with_data_dir;
+        self.context_menu = None;
+        self.run_game_modal = Some(RunGameModal {
+            project_dir: dir,
+            project_name: name,
+            binary_path,
+            has_wasm,
+            use_data_dir,
+            data_dir,
+            suggested_pe_dir,
+            save_as_default: true,
+        });
+        if use_data_dir {
+            self.focused_input = Some(FocusInput::RunGameDataDir);
+        }
+        cx.notify();
+    }
+
+    pub fn confirm_run_game_modal(&mut self, launch_now: bool, cx: &mut Context<Self>) {
+        let Some(modal) = self.run_game_modal.clone() else {
+            return;
+        };
+        let trimmed_data = modal.data_dir.trim().to_string();
+        if modal.save_as_default || !launch_now {
+            let mut meta = load_ui_meta(&modal.project_dir);
+            meta.game_data_dir = trimmed_data.clone();
+            meta.launch_with_data_dir = modal.use_data_dir;
+            let _ = save_ui_meta_at(&modal.project_dir, &meta);
+            if self.active_project_dir.as_ref() == Some(&modal.project_dir) {
+                if let Some(ref mut proj) = self.active_project {
+                    proj.ui_meta.game_data_dir = trimmed_data.clone();
+                    proj.ui_meta.launch_with_data_dir = modal.use_data_dir;
+                }
+            }
+            if !launch_now {
+                self.push_toast(
+                    "Run options saved",
+                    if modal.use_data_dir {
+                        "Saved default launch mode: Game Data Folder."
+                    } else {
+                        "Saved default launch mode: Standalone Direct."
+                    },
+                    self.tokens().match_fill,
+                    false,
+                );
+            }
+        }
+        if launch_now {
+            if modal.use_data_dir {
+                if trimmed_data.is_empty() || !Path::new(&trimmed_data).is_dir() {
+                    self.push_toast(
+                        "Select a valid game folder",
+                        "Choose an existing game data/assets directory before launching.",
+                        self.tokens().not_c,
+                        true,
+                    );
+                    cx.notify();
+                    return;
+                }
+                if let Some(ref bin) = modal.binary_path {
+                    self.launch_rebuilt_binary_with_data(bin, Some(Path::new(&trimmed_data)));
+                } else if modal.has_wasm {
+                    self.launch_or_open_wasm(&modal.project_dir);
+                } else {
+                    self.push_toast(
+                        "No built executable",
+                        "Build this project before launching.",
+                        self.tokens().work,
+                        false,
+                    );
+                }
+            } else if let Some(ref bin) = modal.binary_path {
+                self.launch_rebuilt_binary_with_data(bin, None);
+            } else if modal.has_wasm {
+                self.launch_or_open_wasm(&modal.project_dir);
+            } else {
+                self.push_toast(
+                    "No built executable",
+                    "Build this project before launching.",
+                    self.tokens().work,
+                    false,
+                );
+            }
+        }
+        self.run_game_modal = None;
+        if self.focused_input == Some(FocusInput::RunGameDataDir) {
+            self.focused_input = None;
+        }
+        cx.notify();
+    }
+
+    pub fn close_run_game_modal(&mut self, cx: &mut Context<Self>) {
+        self.run_game_modal = None;
+        if self.focused_input == Some(FocusInput::RunGameDataDir) {
+            self.focused_input = None;
+        }
+        cx.notify();
+    }
+
+    pub fn open_project_context_menu(
+        &mut self,
+        dir: PathBuf,
+        name: String,
+        pos: Point<Pixels>,
+        cx: &mut Context<Self>,
+    ) {
+        self.show_new_menu = false;
+        self.show_theme_menu = false;
+        self.show_notif_panel = false;
+        self.context_menu = Some(ProjectContextMenu {
+            dir,
+            name,
+            x: pos.x.into(),
+            y: pos.y.into(),
+        });
+        cx.notify();
+    }
+
+    pub fn close_project_context_menu(&mut self, cx: &mut Context<Self>) {
+        self.context_menu = None;
+        cx.notify();
+    }
+
+    pub fn open_rename_project_modal(
+        &mut self,
+        dir: PathBuf,
+        current_name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.context_menu = None;
+        self.rename_modal = Some(RenameProjectModal {
+            dir,
+            name_buf: current_name,
+        });
+        self.set_focus_input(Some(FocusInput::QuickRenameProject), window, cx);
+    }
+
+    pub fn commit_quick_rename_project(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(modal) = self.rename_modal.take() else {
+            return;
+        };
+        let trimmed = modal.name_buf.trim().to_string();
+        if !trimmed.is_empty() {
+            let mut meta = load_ui_meta(&modal.dir);
+            meta.display_name = trimmed.clone();
+            match save_ui_meta_at(&modal.dir, &meta) {
+                Ok(_) => {
+                    if self.active_project_dir.as_ref() == Some(&modal.dir) {
+                        if let Some(ref mut m) = self.active_project {
+                            m.ui_meta.display_name = trimmed.clone();
+                        }
+                    }
+                    self.push_toast(
+                        "Project renamed",
+                        &format!("Updated project title to \"{trimmed}\"."),
+                        self.tokens().match_fill,
+                        false,
+                    );
+                }
+                Err(e) => {
+                    self.push_toast("Rename failed", &e, self.tokens().not_c, true);
+                }
+            }
+            self.refresh_projects_async(window, cx);
+        }
+        if self.focused_input == Some(FocusInput::QuickRenameProject) {
+            self.focused_input = None;
+        }
+        cx.notify();
+    }
+
+    pub fn close_rename_project_modal(&mut self, cx: &mut Context<Self>) {
+        self.rename_modal = None;
+        if self.focused_input == Some(FocusInput::QuickRenameProject) {
+            self.focused_input = None;
+        }
+        cx.notify();
+    }
+
+    pub fn open_delete_project_modal(
+        &mut self,
+        dir: PathBuf,
+        name: String,
+        cx: &mut Context<Self>,
+    ) {
+        self.context_menu = None;
+        self.confirm_delete = Some(ConfirmDeleteProject {
+            dir,
+            name,
+            delete_from_disk: false,
+        });
+        cx.notify();
+    }
+
+    pub fn close_delete_project_modal(&mut self, cx: &mut Context<Self>) {
+        self.confirm_delete = None;
+        cx.notify();
+    }
+
+    pub fn execute_delete_project(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(req) = self.confirm_delete.take() else {
+            return;
+        };
+        let dir = req.dir.clone();
+        let name = req.name.clone();
+        let active_ids: Vec<u64> = self
+            .jobs
+            .iter()
+            .filter(|j| j.is_active() && j.project_dir.as_ref() == Some(&dir))
+            .map(|j| j.id)
+            .collect();
+        for jid in active_ids {
+            self.stop_job(jid);
+        }
+        let queued = std::mem::take(&mut self.queued_pipelines);
+        self.queued_pipelines = queued
+            .into_iter()
+            .filter(|q| {
+                let qdir = if !q.opts.project_dir.trim().is_empty() {
+                    PathBuf::from(q.opts.project_dir.trim())
+                } else {
+                    self.default_project_dir_for(Path::new(&q.opts.pe_file))
+                };
+                qdir != dir
+            })
+            .collect();
+
+        let dir_str = dir.display().to_string();
+        let canon = fs::canonicalize(&dir).unwrap_or_else(|_| dir.clone());
+        self.settings.custom_projects.retain(|c| {
+            let cp = PathBuf::from(c);
+            c != &dir_str && fs::canonicalize(&cp).unwrap_or(cp) != canon
+        });
+
+        if self.active_project_dir.as_ref() == Some(&dir) {
+            self.active_project_dir = None;
+            self.active_project = None;
+            self.load_error.clear();
+            self.inspector_open = false;
+            self.route = Route::Home;
+        }
+
+        if req.delete_from_disk {
+            let root_canon = {
+                let p = self.projects_root();
+                fs::canonicalize(&p).unwrap_or(p)
+            };
+            let repo_canon = fs::canonicalize(&self.cfg.repo_root)
+                .unwrap_or_else(|_| self.cfg.repo_root.clone());
+            let home_canon = std::env::var_os("HOME")
+                .or_else(|| std::env::var_os("USERPROFILE"))
+                .map(PathBuf::from)
+                .map(|p| fs::canonicalize(&p).unwrap_or(p));
+            let safe = !dir.as_os_str().is_empty()
+                && canon != Path::new("/")
+                && canon.components().count() >= 3
+                && canon != root_canon
+                && canon != repo_canon
+                && home_canon.as_ref().map(|h| h != &canon).unwrap_or(true);
+            if !safe {
+                self.push_toast(
+                    "Refused unsafe delete",
+                    "Safety check blocked deleting a root or home directory.",
+                    self.tokens().not_c,
+                    true,
+                );
+                let _ = self.settings.save();
+                cx.notify();
+                return;
+            }
+            let _ = self.settings.save();
+            let dir_rm = dir.clone();
+            let bg = cx
+                .background_executor()
+                .spawn(async move { fs::remove_dir_all(&dir_rm).map_err(|e| e.to_string()) });
+            let weak = cx.entity().downgrade();
+            window
+                .spawn(cx, async move |cx| {
+                    let res = bg.await;
+                    let _ = cx.update(|window, app| {
+                        if let Some(ent) = weak.upgrade() {
+                            ent.update(app, |this, cx| {
+                                match res {
+                                    Ok(()) => {
+                                        this.push_toast(
+                                            "Project deleted from disk",
+                                            &format!("Deleted {name} permanently."),
+                                            this.tokens().work,
+                                            false,
+                                        );
+                                    }
+                                    Err(e) => {
+                                        this.push_toast(
+                                            "Delete failed",
+                                            &e,
+                                            this.tokens().not_c,
+                                            true,
+                                        );
+                                    }
+                                }
+                                this.refresh_projects_async(window, cx);
+                                cx.notify();
+                            });
+                        }
+                    });
+                })
+                .detach();
+        } else {
+            if !self.settings.hidden_projects.contains(&dir_str) {
+                self.settings.hidden_projects.push(dir_str);
+            }
+            let _ = self.settings.save();
+            self.push_toast(
+                "Removed from project list",
+                &format!("Hid {name} from the sidebar (files kept on disk)."),
+                self.tokens().info,
+                false,
+            );
+            self.refresh_projects_async(window, cx);
+        }
+        cx.notify();
+    }
+
+    pub fn rerun_project_by_dir(&mut self, dir: PathBuf, cx: &mut Context<Self>) {
+        self.context_menu = None;
+        let pe_opt = if self.active_project_dir.as_ref() == Some(&dir) {
+            self.active_project
+                .as_ref()
+                .map(|m| m.pe_path.clone())
+                .filter(|s| !s.trim().is_empty())
+        } else {
+            None
+        }
+        .or_else(|| read_project_pe_path(&dir));
+
+        if let Some(pe) = pe_opt {
+            let mut opts = self.opts.clone();
+            opts.pe_file = pe;
+            opts.project_dir = dir.display().to_string();
+            opts.dry_run = false;
+            self.enqueue_or_start_pipeline(opts, cx);
+        } else {
+            self.push_toast(
+                "Executable path not found",
+                "Open Project Settings to set the original PE executable path.",
+                self.tokens().not_c,
+                true,
+            );
+            cx.notify();
         }
     }
 
@@ -1422,17 +2450,320 @@ impl GameReCompApp {
         }
     }
 
+    pub fn open_issue_for_job(&mut self, job_id: u64, cx: &mut Context<Self>) {
+        let Some(job) = self.jobs.iter().find(|j| j.id == job_id) else {
+            return;
+        };
+        let failed_stage = job
+            .live_stages
+            .iter()
+            .find(|s| matches!(s.state, StageExecState::Failed))
+            .map(|s| s.name.to_string())
+            .unwrap_or_else(|| job.stage.clone());
+        let exit_code = match job.status {
+            JobStatus::Failed(c) => Some(c),
+            _ => None,
+        };
+        let err_raw = if !job.failure_summary.is_empty() {
+            job.failure_summary.clone()
+        } else {
+            job.current_task_detail.clone()
+        };
+        let tail: String = job
+            .live_logs
+            .iter()
+            .rev()
+            .take(25)
+            .cloned()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .map(|l| sanitize_home_path(&l))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let pe_summary = if job.pe_summary.trim().is_empty() {
+            "PE32 i386".to_string()
+        } else {
+            job.pe_summary.clone()
+        };
+        let err_sanitized = sanitize_home_path(&err_raw);
+        let title_hint = if !failed_stage.is_empty() {
+            format!("failed in stage {failed_stage}")
+        } else if let Some(c) = exit_code {
+            format!("exited with code {c}")
+        } else {
+            "support request".to_string()
+        };
+        self.issue_draft = IssueDraft {
+            game_name: job.name.clone(),
+            title: format!("[Support Request] {}: {title_hint}", job.name),
+            pe_summary,
+            target_summary: job.target_label.clone(),
+            failed_stage,
+            exit_code,
+            error_summary: err_sanitized,
+            log_tail: tail,
+            user_notes: String::new(),
+        };
+        self.show_issue_modal = true;
+        self.focused_input = Some(FocusInput::IssueTitle);
+        cx.notify();
+    }
+
+    pub fn open_issue_for_picked_pe(&mut self, cx: &mut Context<Self>) {
+        let game_name = self
+            .picked_pe
+            .file_name()
+            .and_then(|n| n.to_str())
+            .filter(|s| !s.is_empty())
+            .unwrap_or("game.exe")
+            .to_string();
+        let pe_summary = if !self.picked_pe_info.magic.is_empty() {
+            format!(
+                "{} {} (base 0x{:08X})",
+                self.picked_pe_info.magic,
+                self.picked_pe_info.machine,
+                self.picked_pe_info.image_base
+            )
+        } else {
+            "Unknown executable".to_string()
+        };
+        let err = if !self.picked_pe_info.error.trim().is_empty() {
+            sanitize_home_path(&self.picked_pe_info.error)
+        } else if !self.load_error.trim().is_empty() {
+            sanitize_home_path(&self.load_error)
+        } else {
+            "Executable was rejected by PE32 preflight check.".to_string()
+        };
+        self.issue_draft = IssueDraft {
+            game_name: game_name.clone(),
+            title: format!("[Support Request] {game_name}: unsupported PE / preflight failure"),
+            pe_summary,
+            target_summary: self.opts.resolved_target_summary(),
+            failed_stage: "inspect".to_string(),
+            exit_code: None,
+            error_summary: err,
+            log_tail: String::new(),
+            user_notes: String::new(),
+        };
+        self.show_issue_modal = true;
+        self.focused_input = Some(FocusInput::IssueTitle);
+        cx.notify();
+    }
+
+    pub fn open_issue_for_project(&mut self, cx: &mut Context<Self>) {
+        if let Some(dir) = self.active_project_dir.clone() {
+            if let Some(job) = self.job_for_project(&dir) {
+                if matches!(job.status, JobStatus::Failed(_) | JobStatus::Stopped) {
+                    let id = job.id;
+                    self.open_issue_for_job(id, cx);
+                    return;
+                }
+            }
+        }
+        let (game_name, pe_summary, target_summary, failed_stage, err_summary, tail) =
+            if let Some(ref m) = self.active_project {
+                let stage = m
+                    .stages
+                    .iter()
+                    .find(|s| {
+                        s.status.eq_ignore_ascii_case("failed")
+                            || s.status.eq_ignore_ascii_case("fail")
+                    })
+                    .map(|s| s.name.clone())
+                    .unwrap_or_else(|| "verify".to_string());
+                let err = if !self.load_error.trim().is_empty() {
+                    sanitize_home_path(&self.load_error)
+                } else {
+                    format!(
+                        "Verification '{}' (score {}%, {}/{} verified, build_passed={}, boot_passed={}, unresolved_imports={})",
+                        m.verification,
+                        m.score,
+                        m.verified_count(),
+                        m.all_functions.len(),
+                        m.diag.build_passed,
+                        m.diag.boot_passed,
+                        m.diag.unresolved_import_count
+                    )
+                };
+                let stage_log: String = m
+                    .stages
+                    .iter()
+                    .map(|s| {
+                        sanitize_home_path(&format!(
+                            "{}: {} ({})",
+                            s.name, s.status, s.detail
+                        ))
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                (
+                    m.display_title().to_string(),
+                    format!(
+                        "{} {} · {} functions · {} imports",
+                        if m.inspect.pe_type.is_empty() {
+                            "PE32"
+                        } else {
+                            &m.inspect.pe_type
+                        },
+                        if m.inspect.machine.is_empty() {
+                            "x86"
+                        } else {
+                            &m.inspect.machine
+                        },
+                        m.all_functions.len(),
+                        m.inspect.import_count
+                    ),
+                    format!("{}/{}", m.target_os, m.target_arch),
+                    stage,
+                    err,
+                    stage_log,
+                )
+            } else {
+                let name = self
+                    .active_project_dir
+                    .as_ref()
+                    .and_then(|d| d.file_name())
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("project")
+                    .to_string();
+                (
+                    name,
+                    "Unknown PE".to_string(),
+                    self.opts.resolved_target_summary(),
+                    "load".to_string(),
+                    sanitize_home_path(&self.load_error),
+                    String::new(),
+                )
+            };
+        self.issue_draft = IssueDraft {
+            game_name: game_name.clone(),
+            title: format!("[Support Request] {game_name}: {failed_stage} issue"),
+            pe_summary,
+            target_summary,
+            failed_stage,
+            exit_code: None,
+            error_summary: err_summary,
+            log_tail: tail,
+            user_notes: String::new(),
+        };
+        self.show_issue_modal = true;
+        self.focused_input = Some(FocusInput::IssueTitle);
+        cx.notify();
+    }
+
+    pub fn close_issue_modal(&mut self, cx: &mut Context<Self>) {
+        self.show_issue_modal = false;
+        if matches!(
+            self.focused_input,
+            Some(FocusInput::IssueTitle | FocusInput::IssueNotes)
+        ) {
+            self.focused_input = None;
+        }
+        cx.notify();
+    }
+
+    pub fn format_issue_markdown(&self) -> String {
+        let d = &self.issue_draft;
+        let exit_str = d
+            .exit_code
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| "n/a".to_string());
+        let mut md = format!(
+            "## Game Support Request\n\
+             - **Game / Executable:** `{}`\n\
+             - **PE Summary:** {}\n\
+             - **Target Output:** {}\n\
+             - **Host OS / Arch:** `{}/{}`\n\
+             - **System Resources:** {}\n\
+             - **Failed Stage:** `{}` (exit `{}`)\n\
+             - **GameReComp Version:** `v{}`\n\n\
+             ### Error Summary\n{}\n",
+            d.game_name,
+            d.pe_summary,
+            d.target_summary,
+            std::env::consts::OS,
+            std::env::consts::ARCH,
+            self.sys_resources.summary(),
+            d.failed_stage,
+            exit_str,
+            crate::cli::VERSION,
+            d.error_summary.trim(),
+        );
+        if !d.user_notes.trim().is_empty() {
+            md.push_str("\n### Additional Notes\n");
+            md.push_str(d.user_notes.trim());
+            md.push('\n');
+        }
+        if !d.log_tail.trim().is_empty() {
+            md.push_str("\n### Sanitized Log Tail\n```text\n");
+            md.push_str(d.log_tail.trim());
+            md.push_str("\n```\n");
+        }
+        md.push_str("\n### Toolchain\n```text\n");
+        md.push_str(&sanitize_home_path(&self.toolchain.format_selftest_line()));
+        md.push_str("\n```\n");
+        md
+    }
+
+    pub fn copy_issue_markdown(&mut self, cx: &mut Context<Self>) {
+        let md = self.format_issue_markdown();
+        cx.write_to_clipboard(ClipboardItem::new_string(md));
+        self.push_toast(
+            "Issue markdown copied",
+            "Full sanitized diagnostic markdown copied to clipboard.",
+            self.tokens().match_fill,
+            false,
+        );
+        cx.notify();
+    }
+
+    pub fn submit_issue_to_github(&mut self, cx: &mut Context<Self>) {
+        let md = self.format_issue_markdown();
+        cx.write_to_clipboard(ClipboardItem::new_string(md.clone()));
+        let title = if self.issue_draft.title.trim().is_empty() {
+            format!("[Support Request] {}", self.issue_draft.game_name)
+        } else {
+            self.issue_draft.title.trim().to_string()
+        };
+        let body_for_url = if md.chars().count() > 1800 {
+            let truncated: String = md.chars().take(1700).collect();
+            format!("{truncated}\n\n*(Full sanitized log copied to clipboard — paste if needed.)*")
+        } else {
+            md
+        };
+        let url = format!(
+            "https://github.com/heaven-hm/GameReComp/issues/new?title={}&body={}",
+            percent_encode_query(&title),
+            percent_encode_query(&body_for_url),
+        );
+        let _ = open::that(url);
+        self.push_toast(
+            "Opened GitHub issue draft",
+            "Pre-filled GitHub issue opened and full markdown copied to clipboard.",
+            self.tokens().info,
+            false,
+        );
+        self.close_issue_modal(cx);
+    }
+
     pub fn report_problem(&mut self, cx: &mut Context<Self>) {
         let report = format!(
-            "GameReComp v{} (GPUI)\nOS/Arch: {}/{}\nRepo: {}\nToolchain: {}\n",
+            "GameReComp v{} (GPUI)\nOS/Arch: {}/{}\nResources: {}\nProjects Dir: {}\nToolchain: {}\n",
             crate::cli::VERSION,
             std::env::consts::OS,
             std::env::consts::ARCH,
-            self.cfg.repo_root.display(),
-            self.toolchain.format_selftest_line(),
+            self.sys_resources.summary(),
+            sanitize_home_path(&self.projects_root().display().to_string()),
+            sanitize_home_path(&self.toolchain.format_selftest_line()),
         );
-        cx.write_to_clipboard(ClipboardItem::new_string(report));
-        let _ = open::that("https://github.com/heaven-hm/GameReComp/issues/new");
+        cx.write_to_clipboard(ClipboardItem::new_string(report.clone()));
+        let url = format!(
+            "https://github.com/heaven-hm/GameReComp/issues/new?title={}&body={}",
+            percent_encode_query("[Bug Report] GameReComp"),
+            percent_encode_query(&report),
+        );
+        let _ = open::that(url);
         self.push_toast(
             "Report copied",
             "Diagnostic report copied to clipboard and issue tracker opened.",
@@ -1482,14 +2813,14 @@ impl GameReCompApp {
         }
     }
 
-    fn poll_worker_and_timers(&mut self) -> bool {
+    fn poll_worker_and_timers(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
         let mut changed = false;
         let running = self.has_running_jobs();
         if running {
             self.anim_frame = self.anim_frame.wrapping_add(1);
             changed = true;
         }
-        let scan_now = running && self.anim_frame % 6 == 0;
+        let scan_now = running && self.anim_frame % 15 == 0;
 
         let prev_toasts = self.toasts.len();
         self.toasts
@@ -1503,6 +2834,8 @@ impl GameReCompApp {
             kind: WorkerKind,
             code: i32,
             project_dir: Option<PathBuf>,
+            built_binary: Option<PathBuf>,
+            has_wasm: bool,
             auto_launch: bool,
             is_dry_run: bool,
             name: String,
@@ -1613,12 +2946,21 @@ impl GameReCompApp {
                         kind,
                         code,
                         project_dir,
+                        built_binary,
+                        has_wasm,
                         summary,
                     } => {
                         scan_job_generated_files(job);
-                        job.finished_secs = Some(job.started.elapsed().as_secs_f32());
+                        let elapsed = job.elapsed_secs();
+                        job.finished_secs = Some(elapsed);
+                        job.paused_at = None;
                         job.rx = None;
+                        job.built_binary = built_binary.clone();
+                        job.has_wasm = has_wasm;
                         let ok = code == 0 || code == 3;
+                        if !ok {
+                            job.failure_summary = summary.clone();
+                        }
                         if !matches!(job.status, JobStatus::Stopped) {
                             job.status = if ok {
                                 JobStatus::Done(code)
@@ -1647,6 +2989,8 @@ impl GameReCompApp {
                             kind,
                             code,
                             project_dir,
+                            built_binary,
+                            has_wasm,
                             auto_launch: job.auto_launch_after_build,
                             is_dry_run: job.is_dry_run,
                             name: job.name.clone(),
@@ -1662,7 +3006,7 @@ impl GameReCompApp {
         }
 
         if !finished_events.is_empty() {
-            self.refresh_projects();
+            self.refresh_projects_async(window, cx);
         }
 
         for ev in finished_events {
@@ -1683,33 +3027,42 @@ impl GameReCompApp {
             match ev.kind {
                 WorkerKind::Pipeline => {
                     if let Some(dir) = ev.project_dir {
-                        if dir.join("reports").join("report.json").is_file() {
+                        if ev.built_binary.is_some()
+                            || ev.has_wasm
+                            || dir.join("reports").join("report.json").is_file()
+                        {
                             self.last_finished_project = Some(dir.clone());
                             if self.active_project_dir.as_ref() == Some(&dir) {
-                                self.open_project_dir(dir.clone(), ProjectTab::Overview);
+                                self.open_project_dir_async(dir.clone(), ProjectTab::Overview, window, cx);
                             } else if self.jobs.len() == 1
                                 && self.queued_pipelines.is_empty()
                                 && matches!(self.route, Route::Home)
                                 && matches!(self.drop_state, DropState::Idle | DropState::Busy)
                             {
-                                self.open_project_dir(dir.clone(), ProjectTab::Overview);
+                                self.open_project_dir_async(dir.clone(), ProjectTab::Overview, window, cx);
                             }
                             if ok && !ev.is_dry_run && ev.auto_launch {
-                                self.launch_project_dir_after_build(&dir);
+                                if ev.has_wasm {
+                                    self.launch_or_open_wasm(&dir);
+                                } else if let Some(ref bin) = ev.built_binary {
+                                    self.launch_rebuilt_binary(bin);
+                                }
                             }
                         }
                     }
                 }
                 WorkerKind::Readability => {
-                    self.reload_active_project();
+                    self.reload_active_project_async(window, cx);
                 }
                 WorkerKind::Batch => {}
             }
             let _ = ev.job_id;
         }
 
-        // Promote next queued game(s) immediately when parallel slots free up
-        self.drain_queued_pipelines();
+        // Promote next queued game(s) immediately when parallel slots free up (unless queue paused)
+        if !self.queue_paused {
+            self.drain_queued_pipelines();
+        }
         changed
     }
 
@@ -1743,10 +3096,14 @@ impl GameReCompApp {
             FocusInput::InspectorNote => Some(&mut self.inspector_note_input),
             FocusInput::SettingsProjectsRoot => Some(&mut self.settings.projects_root),
             FocusInput::SettingsRomLib => Some(&mut self.settings.rom_library_dir),
+            FocusInput::IssueTitle => Some(&mut self.issue_draft.title),
+            FocusInput::IssueNotes => Some(&mut self.issue_draft.user_notes),
+            FocusInput::RunGameDataDir => self.run_game_modal.as_mut().map(|m| &mut m.data_dir),
+            FocusInput::QuickRenameProject => self.rename_modal.as_mut().map(|m| &mut m.name_buf),
         }
     }
 
-    fn handle_key_down(&mut self, event: &KeyDownEvent, _window: &mut Window, cx: &mut Context<Self>) {
+    fn handle_key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         let key = event.keystroke.key.as_str();
         let mods = &event.keystroke.modifiers;
 
@@ -1769,6 +3126,16 @@ impl GameReCompApp {
         if key == "escape" {
             if self.focused_input.is_some() {
                 self.focused_input = None;
+            } else if self.context_menu.is_some() {
+                self.context_menu = None;
+            } else if self.run_game_modal.is_some() {
+                self.run_game_modal = None;
+            } else if self.rename_modal.is_some() {
+                self.rename_modal = None;
+            } else if self.confirm_delete.is_some() {
+                self.confirm_delete = None;
+            } else if self.show_issue_modal {
+                self.show_issue_modal = false;
             } else if self.inspector_open {
                 self.inspector_open = false;
             } else if self.show_notif_panel {
@@ -1794,6 +3161,7 @@ impl GameReCompApp {
             if key == "enter" {
                 match focus_kind {
                     FocusInput::ProjectRename => self.commit_project_rename(),
+                    FocusInput::QuickRenameProject => self.commit_quick_rename_project(window, cx),
                     FocusInput::AgentCmd => self.save_agent_cmd(),
                     FocusInput::InspectorNote => {
                         if let Some(idx) = self.inspector_func_idx {
@@ -1855,10 +3223,17 @@ impl GameReCompApp {
         }
     }
 
-    fn render_notif_center(&self, t: &ThemeTokens, cx: &mut Context<Self>) -> Option<Div> {
+    fn render_notif_center(&self, t: &ThemeTokens, viewport_w: f32, cx: &mut Context<Self>) -> Option<Div> {
         if !self.show_notif_panel {
             return None;
         }
+        let sidebar_w = if self.sidebar_collapsed || viewport_w < 920.0 {
+            60.0
+        } else if viewport_w < 1140.0 {
+            220.0
+        } else {
+            256.0
+        };
         let mut list = div()
             .id("notif_center_list")
             .max_h(px(380.0))
@@ -1940,7 +3315,7 @@ impl GameReCompApp {
             div()
                 .absolute()
                 .top(px(12.0))
-                .left(px(256.0))
+                .left(px(sidebar_w))
                 .w(px(390.0))
                 .rounded(px(4.0))
                 .bg(rgb(t.overlay))
@@ -2098,6 +3473,8 @@ impl GameReCompApp {
 impl Drop for GameReCompApp {
     fn drop(&mut self) {
         for job in &self.jobs {
+            Self::signal_process_group(job, "-CONT");
+            Self::signal_process_group(job, "-KILL");
             if let Ok(mut g) = job.child.lock() {
                 if let Some(ref mut c) = *g {
                     let _ = c.kill();
@@ -2172,15 +3549,22 @@ impl Focusable for GameReCompApp {
 }
 
 impl Render for GameReCompApp {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.tokens();
+        let vp = window.viewport_size();
+        let viewport_w: f32 = vp.width.into();
+        let viewport_h: f32 = vp.height.into();
         let main_view = match self.route {
-            Route::Home => home::render_home(self, &t, cx).into_any_element(),
-            Route::Project(tab) => project::render_project(self, &t, tab, cx).into_any_element(),
-            Route::Agents => pages::render_agents_page(self, &t, cx).into_any_element(),
-            Route::Tools => pages::render_tools_page(self, &t, cx).into_any_element(),
-            Route::Settings => pages::render_settings_page(self, &t, cx).into_any_element(),
-            Route::About => pages::render_about_page(self, &t, cx).into_any_element(),
+            Route::Home => home::render_home(self, &t, viewport_w, cx).into_any_element(),
+            Route::Project(tab) => {
+                project::render_project(self, &t, tab, viewport_w, cx).into_any_element()
+            }
+            Route::Agents => pages::render_agents_page(self, &t, viewport_w, cx).into_any_element(),
+            Route::Tools => pages::render_tools_page(self, &t, viewport_w, cx).into_any_element(),
+            Route::Settings => {
+                pages::render_settings_page(self, &t, viewport_w, cx).into_any_element()
+            }
+            Route::About => pages::render_about_page(self, &t, viewport_w, cx).into_any_element(),
         };
 
         div()
@@ -2194,13 +3578,29 @@ impl Render for GameReCompApp {
             .bg(rgb(t.bg))
             .text_color(rgb(t.ink))
             .font_family(t.ui_font)
-            .child(sidebar::render_sidebar(self, &t, cx))
+            .child(sidebar::render_sidebar(self, &t, viewport_w, cx))
             .child(main_view)
             .when_some(inspector::render_function_inspector(self, &t, cx), |el, d| {
                 el.child(d)
             })
-            .when_some(self.render_notif_center(&t, cx), |el, p| el.child(p))
+            .when_some(self.render_notif_center(&t, viewport_w, cx), |el, p| {
+                el.child(p)
+            })
             .when_some(self.render_toasts(&t), |el, st| el.child(st))
+            .when_some(
+                pages::render_project_context_menu(self, &t, viewport_w, viewport_h, cx),
+                |el, cm| el.child(cm),
+            )
+            .when_some(pages::render_run_game_modal(self, &t, cx), |el, m| {
+                el.child(m)
+            })
+            .when_some(pages::render_rename_project_modal(self, &t, cx), |el, m| {
+                el.child(m)
+            })
+            .when_some(pages::render_delete_project_modal(self, &t, cx), |el, m| {
+                el.child(m)
+            })
+            .when_some(pages::render_issue_modal(self, &t, cx), |el, m| el.child(m))
     }
 }
 
@@ -2218,10 +3618,19 @@ fn fresh_live_stages() -> Vec<LiveStageRow> {
 fn run_streaming_child_inner(
     mut cmd: Command,
     child_slot: Arc<Mutex<Option<Child>>>,
+    pgid_slot: Arc<Mutex<Option<u32>>>,
     tx: &mpsc::Sender<WorkerMsg>,
 ) -> i32 {
+    #[cfg(unix)]
+    {
+        cmd.process_group(0);
+    }
     match cmd.spawn() {
         Ok(mut child) => {
+            let pid = child.id();
+            if let Ok(mut pg) = pgid_slot.lock() {
+                *pg = Some(pid);
+            }
             let stdout = child.stdout.take();
             let stderr = child.stderr.take();
             if let Ok(mut g) = child_slot.lock() {
@@ -2428,40 +3837,73 @@ fn now_hms() -> String {
     Local::now().format("%H:%M:%S").to_string()
 }
 
+pub fn sanitize_home_path(s: &str) -> String {
+    let mut out = s.to_string();
+    for var in ["HOME", "USERPROFILE"] {
+        if let Ok(home) = std::env::var(var) {
+            let trimmed = home.trim_end_matches(['/', '\\']);
+            if trimmed.len() > 2 && out.contains(trimmed) {
+                out = out.replace(trimmed, "~");
+            }
+        }
+    }
+    out
+}
+
+pub fn percent_encode_query(s: &str) -> String {
+    use std::fmt::Write as _;
+    let mut out = String::with_capacity(s.len());
+    for b in s.as_bytes() {
+        match *b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*b as char);
+            }
+            _ => {
+                let _ = write!(out, "%{b:02X}");
+            }
+        }
+    }
+    out
+}
+
 pub fn launch_gui(cfg: AppConfig, open_dir: Option<&Path>) -> i32 {
     let open_owned = open_dir.map(|p| p.to_path_buf());
-    Application::new().run(move |cx: &mut App| {
-        style::register_fonts(cx);
-        let bounds = Bounds::centered(None, size(px(1380.0), px(880.0)), cx);
-        let options = WindowOptions {
-            window_bounds: Some(WindowBounds::Windowed(bounds)),
-            titlebar: Some(TitlebarOptions {
-                title: Some("GameReComp — Pick your game and turn it to native port".into()),
-                appears_transparent: false,
+    gpui::application()
+        .with_assets(gpui::assets::Assets)
+        .run(move |cx: &mut App| {
+            gpui::init(cx);
+            style::register_fonts(cx);
+            let bounds = Bounds::centered(None, size(px(1380.0), px(880.0)), cx);
+            let options = WindowOptions {
+                window_bounds: Some(WindowBounds::Windowed(bounds)),
+                window_min_size: Some(size(px(860.0), px(580.0))),
+                titlebar: Some(TitlebarOptions {
+                    title: Some("GameReComp — Pick your game and turn it to native port".into()),
+                    appears_transparent: false,
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        };
-        cx.on_window_closed(|cx| {
-            if cx.windows().is_empty() {
+            };
+            cx.on_window_closed(|cx, _id| {
+                if cx.windows().is_empty() {
+                    cx.quit();
+                }
+            })
+            .detach();
+            let cfg_clone = cfg.clone();
+            let open_clone = open_owned.clone();
+            if let Err(e) = gpui::open_window(options, cx, move |window, cx| {
+                let view = cx
+                    .new(|cx| GameReCompApp::new(cfg_clone, open_clone.as_deref(), window, cx));
+                let handle = view.read(cx).focus_handle.clone();
+                window.focus(&handle, cx);
+                view
+            }) {
+                eprintln!("error: failed to open GPUI Kit window: {e}");
                 cx.quit();
             }
-        })
-        .detach();
-        let cfg_clone = cfg.clone();
-        let open_clone = open_owned.clone();
-        if let Err(e) = cx.open_window(options, move |window, cx| {
-            let view =
-                cx.new(|cx| GameReCompApp::new(cfg_clone, open_clone.as_deref(), window, cx));
-            let handle = view.read(cx).focus_handle.clone();
-            window.focus(&handle);
-            view
-        }) {
-            eprintln!("error: failed to open GPUI window: {e}");
-            cx.quit();
-        }
-        cx.activate(true);
-    });
+            cx.activate(true);
+        });
     0
 }
 
@@ -2519,5 +3961,20 @@ mod tests {
             parse_file_event("wrote src/recomp/gen/recomp_000.c (148 functions)").unwrap();
         assert_eq!(act3, "GEN");
         assert_eq!(path3, "gen/recomp_000.c");
+    }
+
+    #[test]
+    fn sanitizes_home_paths_and_percent_encodes_query() {
+        if let Ok(home) = std::env::var("HOME") {
+            let trimmed = home.trim_end_matches('/');
+            if trimmed.len() > 2 {
+                let sample = format!("{trimmed}/Games/cube.exe failed");
+                assert_eq!(sanitize_home_path(&sample), "~/Games/cube.exe failed");
+            }
+        }
+        assert_eq!(
+            percent_encode_query("Hi [1]!"),
+            "Hi%20%5B1%5D%21"
+        );
     }
 }

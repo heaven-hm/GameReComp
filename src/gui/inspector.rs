@@ -365,6 +365,8 @@ pub fn render_function_inspector(
                                 app.focused_input == Some(FocusInput::InspectorNote),
                                 false,
                             )
+                            .flex_1()
+                            .min_w_0()
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.set_focus_input(Some(FocusInput::InspectorNote), window, cx);
                             })),

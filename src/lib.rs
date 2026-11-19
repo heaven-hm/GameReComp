@@ -25,6 +25,9 @@ pub mod orchestrator;
 pub mod tasks;
 
 #[cfg(feature = "gui")]
+extern crate gpui_kit as gpui;
+
+#[cfg(feature = "gui")]
 pub mod gui;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -94,6 +94,10 @@ pub struct ProjectUiMeta {
     pub notes: BTreeMap<String, Vec<UserNote>>,
     #[serde(default)]
     pub agent_instructions: String,
+    #[serde(default)]
+    pub game_data_dir: String,
+    #[serde(default)]
+    pub launch_with_data_dir: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -578,8 +582,7 @@ impl ProjectModel {
     }
 
     pub fn save_ui_meta(&self) -> Result<(), String> {
-        let body = serde_json::to_string_pretty(&self.ui_meta).map_err(|e| e.to_string())?;
-        fs::write(self.dir.join("gamerecomp_ui.json"), body).map_err(|e| e.to_string())
+        save_ui_meta_at(&self.dir, &self.ui_meta)
     }
 
     pub fn display_title(&self) -> &str {
@@ -748,6 +751,208 @@ impl ProjectModel {
     }
 }
 
+pub fn load_ui_meta(dir: &Path) -> ProjectUiMeta {
+    fs::read_to_string(dir.join("gamerecomp_ui.json"))
+        .ok()
+        .and_then(|raw| serde_json::from_str::<ProjectUiMeta>(&raw).ok())
+        .unwrap_or_default()
+}
+
+pub fn save_ui_meta_at(dir: &Path, meta: &ProjectUiMeta) -> Result<(), String> {
+    let body = serde_json::to_string_pretty(meta).map_err(|e| e.to_string())?;
+    fs::write(dir.join("gamerecomp_ui.json"), body).map_err(|e| e.to_string())
+}
+
+pub fn project_has_wasm(dir: &Path) -> bool {
+    dir.join("build").join("index.html").is_file() || dir.join("index.html").is_file()
+}
+
+pub fn find_project_binary(dir: &Path) -> Option<PathBuf> {
+    let mut temp = ProjectModel::default();
+    temp.dir = dir.to_path_buf();
+    if let Some(m) = read_json_value(&dir.join("manifest.json")) {
+        if let Some(bin) = m.get("binary").filter(|v| v.is_object()) {
+            temp.build.binary_path = bin
+                .get("path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+        }
+    }
+    temp.built_binary_path()
+}
+
+pub fn read_project_pe_path(dir: &Path) -> Option<String> {
+    if let Some(pj) = read_json_value(&dir.join("project.json")) {
+        for key in ["pe_path", "original_exe"] {
+            if let Some(s) = pj.get(key).and_then(|v| v.as_str()) {
+                if !s.trim().is_empty() {
+                    return Some(s.trim().to_string());
+                }
+            }
+        }
+    }
+    if let Some(rep) = read_json_value(&dir.join("reports").join("report.json")) {
+        for key in ["pe_path", "pe", "original_exe"] {
+            if let Some(s) = rep.get(key).and_then(|v| v.as_str()) {
+                if !s.trim().is_empty() {
+                    return Some(s.trim().to_string());
+                }
+            }
+        }
+    }
+    if let Some(m) = read_json_value(&dir.join("manifest.json")) {
+        if let Some(s) = m.get("pe").and_then(|v| v.as_str()) {
+            if !s.trim().is_empty() {
+                return Some(s.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Fast summary loader for sidebar/grid discovery: reads only small metadata files instead of
+/// deserializing thousands of function rows in `reports/functions.json`.
+fn load_project_summary(dir: &Path, idx: usize) -> ProjectSummary {
+    let fallback_name = dir
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("project")
+        .to_string();
+
+    let report_path = dir.join("reports").join("report.json");
+    let Some(report) = read_json_value(&report_path) else {
+        return ProjectSummary {
+            dir: dir.to_path_buf(),
+            name: fallback_name,
+            pe_name: String::new(),
+            target_label: "UNBUILT".to_string(),
+            score: 0,
+            verification: "unbuilt".to_string(),
+            total_functions: 0,
+            verified_functions: 0,
+            has_wasm: false,
+            has_binary: false,
+            build_passed: false,
+            load_ok: false,
+            color_idx: idx % 6,
+        };
+    };
+
+    let score = report.get("score").and_then(|v| v.as_i64()).unwrap_or(0);
+    let verification = report
+        .get("outcome")
+        .and_then(|o| o.get("status"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    let mut build_passed = report
+        .get("metrics")
+        .and_then(|m| m.get("build_passed"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !build_passed {
+        if let Some(stages) = report.get("stages").and_then(|v| v.as_array()) {
+            build_passed = stages.iter().any(|s| {
+                s.get("name").and_then(|v| v.as_str()) == Some("compile")
+                    && s.get("status").and_then(|v| v.as_str()) == Some("ok")
+            });
+        }
+    }
+
+    let proj_json = read_json_value(&dir.join("project.json"));
+    let mut name = proj_json
+        .as_ref()
+        .and_then(|pj| pj.get("name").and_then(|v| v.as_str()))
+        .filter(|s| !s.is_empty())
+        .unwrap_or(&fallback_name)
+        .to_string();
+    let original_exe = proj_json
+        .as_ref()
+        .and_then(|pj| pj.get("original_exe").and_then(|v| v.as_str()))
+        .unwrap_or("")
+        .to_string();
+    let target_arch = proj_json
+        .as_ref()
+        .and_then(|pj| pj.get("target_arch").and_then(|v| v.as_str()))
+        .unwrap_or("host")
+        .to_string();
+    let hl_arr = proj_json
+        .as_ref()
+        .and_then(|pj| pj.get("high_level_functions").and_then(|v| v.as_array()));
+    let verified_functions = hl_arr
+        .map(|arr| {
+            arr.iter()
+                .filter(|row| row.get("verified").and_then(|v| v.as_bool()).unwrap_or(false))
+                .count()
+        })
+        .unwrap_or(0);
+
+    if let Some(ui_val) = read_json_value(&dir.join("gamerecomp_ui.json")) {
+        if let Ok(meta) = serde_json::from_value::<ProjectUiMeta>(ui_val) {
+            if !meta.display_name.trim().is_empty() {
+                name = meta.display_name.trim().to_string();
+            }
+        }
+    }
+
+    // Extract just the `"count"` field from reports/functions.json (near top of file) cleanly
+    let total_functions = fs::read_to_string(dir.join("reports").join("functions.json"))
+        .ok()
+        .and_then(|s| {
+            let head: String = s.chars().take(512).collect();
+            let pos = head.find("\"count\"")?;
+            let after = &head[pos + 7..];
+            let colon = after.find(':')?;
+            let digits: String = after[colon + 1..]
+                .chars()
+                .skip_while(|c| c.is_whitespace())
+                .take_while(|c| c.is_ascii_digit())
+                .collect();
+            digits.parse::<usize>().ok()
+        })
+        .unwrap_or_else(|| hl_arr.map(|a| a.len()).unwrap_or(0));
+
+    let has_wasm = project_has_wasm(dir);
+    let target_label = if has_wasm || target_arch == "wasm32" {
+        "WASM32".to_string()
+    } else {
+        "PE32".to_string()
+    };
+
+    let pe_name = if !original_exe.is_empty() {
+        original_exe
+    } else {
+        read_json_value(&dir.join("manifest.json"))
+            .and_then(|m| {
+                m.get("pe")
+                    .and_then(|v| v.as_str())
+                    .and_then(|p| Path::new(p).file_name().and_then(|s| s.to_str()))
+                    .map(String::from)
+            })
+            .unwrap_or_default()
+    };
+
+    let has_binary = find_project_binary(dir).is_some();
+
+    ProjectSummary {
+        dir: dir.to_path_buf(),
+        name,
+        pe_name,
+        target_label,
+        score,
+        verification,
+        total_functions,
+        verified_functions,
+        has_wasm,
+        has_binary,
+        build_passed,
+        load_ok: true,
+        color_idx: idx % 6,
+    }
+}
+
 pub fn discover_projects(projects_root: &Path, extra_dirs: &[PathBuf]) -> Vec<ProjectSummary> {
     let mut dirs = Vec::new();
     let mut seen = HashSet::new();
@@ -778,61 +983,7 @@ pub fn discover_projects(projects_root: &Path, extra_dirs: &[PathBuf]) -> Vec<Pr
 
     dirs.into_iter()
         .enumerate()
-        .map(|(idx, dir)| {
-            let fallback_name = dir
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("project")
-                .to_string();
-            match ProjectModel::load(&dir) {
-                Ok(m) => {
-                    let target_label = if m.has_wasm_build || m.target_arch == "wasm32" {
-                        "WASM32".to_string()
-                    } else {
-                        "PE32".to_string()
-                    };
-                    let pe_name = if !m.original_exe.is_empty() {
-                        m.original_exe.clone()
-                    } else {
-                        Path::new(&m.pe_path)
-                            .file_name()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("")
-                            .to_string()
-                    };
-                    ProjectSummary {
-                        dir: m.dir.clone(),
-                        name: m.display_title().to_string(),
-                        pe_name,
-                        target_label,
-                        score: m.score,
-                        verification: m.verification.clone(),
-                        total_functions: m.all_functions.len(),
-                        verified_functions: m.verified_count(),
-                        has_wasm: m.has_wasm_build,
-                        has_binary: m.built_binary_path().is_some(),
-                        build_passed: m.diag.build_passed,
-                        load_ok: true,
-                        color_idx: idx % 6,
-                    }
-                }
-                Err(_) => ProjectSummary {
-                    dir,
-                    name: fallback_name,
-                    pe_name: String::new(),
-                    target_label: "UNBUILT".to_string(),
-                    score: 0,
-                    verification: "unbuilt".to_string(),
-                    total_functions: 0,
-                    verified_functions: 0,
-                    has_wasm: false,
-                    has_binary: false,
-                    build_passed: false,
-                    load_ok: false,
-                    color_idx: idx % 6,
-                },
-            }
-        })
+        .map(|(idx, dir)| load_project_summary(&dir, idx))
         .collect()
 }
 

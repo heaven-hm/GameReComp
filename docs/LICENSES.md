@@ -2,7 +2,9 @@
 
 ## This repository
 
-MIT, copyright 2026 sp00nz — see `LICENSE`.
+GNU Affero General Public License v3.0 (AGPL-3.0-only) — see `LICENSE`.
+Earlier revisions were published under the MIT licence (copyright 2026 sp00nz);
+that notice is preserved in `LICENSES/GameReComp-prior-MIT.txt`.
 
 `NOTICE` is the authoritative inventory of third-party code vendored into this
 repository, with the upstream project, version and licence text location for

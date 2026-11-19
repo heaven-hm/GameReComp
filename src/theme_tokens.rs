@@ -357,6 +357,15 @@ impl ThemeTokens {
         (base * self.code_font_scale).clamp(8.0, 48.0)
     }
 
+    /// High-contrast accent foreground safe for interactive links and text across all light/dark themes.
+    pub const fn accent_fg(&self) -> u32 {
+        if self.dark {
+            self.hl
+        } else {
+            self.info
+        }
+    }
+
     /// 1. Marked Dark — decompdecomp editorial charcoal + yellow highlighter.
     pub const fn dark() -> Self {
         Self {

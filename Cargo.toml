@@ -2,6 +2,7 @@
 name = "game-recomp"
 version = "0.0.1"
 edition = "2021"
+license = "AGPL-3.0-only"
 description = "GameReComp Rust CLI (game-recomp-cli) and GPUI desktop GUI (game-recomp-gui) with WASM-ready core"
 
 [lib]
@@ -29,8 +30,7 @@ cli = [
 ]
 gui = [
     "cli",
-    "dep:gpui",
-    "dep:rfd",
+    "dep:gpui-kit",
 ]
 
 [dependencies]
@@ -44,9 +44,8 @@ indicatif = { version = "0.18", optional = true }
 open = { version = "5", optional = true }
 owo-colors = { version = "4", optional = true }
 
-# GPUI desktop GUI dependencies
-gpui = { version = "0.2.2", features = ["runtime_shaders"], optional = true }
-rfd = { version = "0.18", optional = true }
+# GPUI Kit desktop GUI dependencies (https://github.com/longbridge/gpui-kit)
+gpui-kit = { version = "0.10.0", optional = true }
 
 [profile.release]
 opt-level = 2

@@ -34,6 +34,8 @@ pub struct UserSettings {
     pub projects_root: String,
     #[serde(default)]
     pub custom_projects: Vec<String>,
+    #[serde(default)]
+    pub hidden_projects: Vec<String>,
     #[serde(default = "default_timeout_u64")]
     pub default_timeout_secs: u64,
     #[serde(default = "default_max_concurrent_jobs")]
@@ -63,7 +65,83 @@ fn default_timeout_u64() -> u64 {
 }
 
 fn default_max_concurrent_jobs() -> usize {
-    2
+    0
+}
+
+pub fn default_user_projects_dir() -> PathBuf {
+    env::var_os("HOME")
+        .or_else(|| env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .map(|h| h.join("GameReComp").join("projects"))
+        .unwrap_or_else(|| PathBuf::from("projects"))
+}
+
+#[derive(Debug, Clone)]
+pub struct SystemResources {
+    pub cpu_cores: usize,
+    pub total_ram_mb: u64,
+    pub recommended_parallel_games: usize,
+}
+
+impl Default for SystemResources {
+    fn default() -> Self {
+        Self::detect()
+    }
+}
+
+impl SystemResources {
+    pub fn detect() -> Self {
+        let cpu_cores = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4);
+        let total_ram_mb = detect_total_ram_mb().unwrap_or(8192);
+        let recommended_parallel_games = Self::compute_recommended(cpu_cores, total_ram_mb);
+        Self {
+            cpu_cores,
+            total_ram_mb,
+            recommended_parallel_games,
+        }
+    }
+
+    pub fn compute_recommended(cpu_cores: usize, total_ram_mb: u64) -> usize {
+        let by_ram = ((total_ram_mb / 2048).max(1)) as usize;
+        let by_cpu = (cpu_cores / 2).max(1);
+        by_ram.min(by_cpu).clamp(1, 8)
+    }
+
+    pub fn summary(&self) -> String {
+        format!(
+            "Auto: {} parallel ({:.0} GB RAM · {} cores)",
+            self.recommended_parallel_games,
+            (self.total_ram_mb as f64) / 1024.0,
+            self.cpu_cores
+        )
+    }
+}
+
+fn detect_total_ram_mb() -> Option<u64> {
+    #[cfg(target_os = "macos")]
+    {
+        let out = Command::new("sysctl").args(["-n", "hw.memsize"]).output().ok()?;
+        let s = String::from_utf8_lossy(&out.stdout);
+        let bytes = s.trim().parse::<u64>().ok()?;
+        return Some((bytes / (1024 * 1024)).max(512));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let meminfo = fs::read_to_string("/proc/meminfo").ok()?;
+        for line in meminfo.lines() {
+            if let Some(rest) = line.strip_prefix("MemTotal:") {
+                let kb = rest.split_whitespace().next()?.parse::<u64>().ok()?;
+                return Some((kb / 1024).max(512));
+            }
+        }
+        return None;
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        None
+    }
 }
 
 impl Default for UserSettings {
@@ -77,6 +155,7 @@ impl Default for UserSettings {
             reveng_ai_cmd: String::new(),
             projects_root: String::new(),
             custom_projects: Vec::new(),
+            hidden_projects: Vec::new(),
             default_timeout_secs: default_timeout_u64(),
             max_concurrent_jobs: default_max_concurrent_jobs(),
             rom_library_dir: String::new(),
@@ -293,7 +372,7 @@ pub struct DetectedAgentInfo {
     pub description: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ToolchainStatus {
     pub present: Vec<String>,
     pub missing: Vec<String>,
@@ -533,5 +612,13 @@ mod tests {
     fn resolves_repo_root_from_cwd() {
         let cfg = AppConfig::load(None);
         assert!(cfg.repo_root.join("tools").join("autorecomp").is_dir());
+    }
+
+    #[test]
+    fn computes_recommended_parallel_jobs_from_resources() {
+        assert_eq!(SystemResources::compute_recommended(8, 4096), 2);
+        assert_eq!(SystemResources::compute_recommended(10, 16384), 5);
+        assert_eq!(SystemResources::compute_recommended(32, 65536), 8);
+        assert_eq!(SystemResources::compute_recommended(1, 1024), 1);
     }
 }

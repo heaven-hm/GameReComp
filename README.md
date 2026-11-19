@@ -8,15 +8,50 @@
 
 Recompile legacy Windows PC games using [PCRecomp](https://github.com/sp00nznet/pcrecomp), [rev.ng](https://github.com/revng/revng), and reusable runtime shims.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/target-Linux%20%7C%20macOS-informational)](#quick-start)
 [![Input](https://img.shields.io/badge/input-Windows%20PE32-orange)](#what-it-does)
 [![Verified games](https://img.shields.io/badge/verified%20playable%20games-0-yellow)](#proof--gameplay)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)](https://github.com/heaven-hm/GameReComp/issues)
 
-[**Quick start**](#quick-start) · [**Screenshots & proof**](#proof--gameplay) · [**Roadmap**](#game-roadmap) · [**Toolchain**](#toolchain) · [**Contribute**](#contributing)
+[**Vision**](#project-vision) · [**Quick start**](#quick-start) · [**Screenshots & proof**](#proof--gameplay) · [**Roadmap**](#game-roadmap) · [**Toolchain**](#toolchain) · [**Contribute**](#contributing)
 
 </div>
+
+## Project Vision
+
+GameReComp is an open-source research and development project focused on preserving, reconstructing, modernising, and extending older games and software.
+
+The goal is to build a general-purpose toolchain that enables developers and researchers to:
+
+- Analyse and reconstruct legacy x86 and x64 applications.
+- Recover readable source code where technically possible.
+- Recompile reconstructed projects.
+- Port legacy Windows games and software to native operating systems such as macOS and Linux.
+- Improve compatibility with modern hardware and operating systems.
+- Introduce new features, enhancements, performance improvements, and modernisation.
+- Preserve older software and make it usable on modern platforms.
+- Support additional architectures, compilers, formats, and legacy technologies over time.
+
+## Development Roadmap
+
+The long-term roadmap is to expand GameReComp beyond individual games and support a wider range of legacy applications and software.
+
+1. **Reverse Engineering:** Improve binary analysis, disassembly, and code reconstruction.
+2. **Source Reconstruction:** Recover readable and maintainable source code.
+3. **Recompilation:** Rebuild reconstructed projects with compatible toolchains.
+4. **Native Porting:** Enable cross-platform builds for macOS and Linux.
+5. **Modernisation:** Support new features, performance improvements, and compatibility enhancements.
+6. **Software Preservation:** Extend support to older games, applications, and software.
+7. **Architecture Expansion:** Explore additional CPU architectures and platforms.
+
+## Responsible Use
+
+GameReComp is intended for legitimate software preservation, interoperability research, education, compatibility improvements, and development.
+
+It is not intended to facilitate malware development, unauthorised access, software piracy, or other harmful activities.
+
+Users are responsible for ensuring they have the necessary rights and permissions to analyse, modify, and distribute any third-party software they work with.
 
 ## What it does
 
@@ -204,65 +239,125 @@ Generated C (rev.ng also works with LLVM IR)
    ↓
 ABI bridge + recomp32 / win32hle runtime shims (SDL2, DirectDraw, DirectSound)
    ↓
-CMake + C compiler (Clang or GCC)
+CMake + C compiler (Clang or GCC) + Emscripten (optional WASM32)
    ↓
-Native executable → runtime checks + Unicorn differential tests → reports
+Standalone native executable / WASM browser port → runtime checks + Unicorn differential tests → reports
 ```
 
-| Component | Role |
-| --- | --- |
-| [PCRecomp](https://github.com/sp00nznet/pcrecomp) / [Capstone](https://github.com/capstone-engine/capstone) | Function discovery and executable-oriented x86-to-C lifting |
-| [rev.ng](https://github.com/revng/revng) / [LLVM](https://llvm.org/) | Higher-level C recovery and LLVM-based lifting infrastructure |
-| `recomp32` + `win32hle` / [SDL2](https://github.com/libsdl-org/SDL) | Guest execution model, Win32 and game runtime shims |
-| [CMake](https://cmake.org/) + [Clang](https://clang.llvm.org/) / GCC | Native project generation and compilation |
-| [Unicorn](https://github.com/unicorn-engine/unicorn) | Differential testing of machine-code behavior |
+| Layer | Component | Role |
+| --- | --- | --- |
+| **Desktop GUI** | [GPUI Kit](https://github.com/longbridge/gpui-kit) (`gpui-kit = "0.10.0"`) | GPU-accelerated Rust UI (`game-recomp-gui`) with project CRUD, right-click context menu, standalone/data-folder launch options, Pause/Resume, and live per-file telemetry |
+| **CLI & Core** | Rust `game-recomp-cli` + WASM-ready `game_recomp` | `clap` CLI orchestrator, batch parallel runner, local WASM HTTP server, and PE32 inspector |
+| **Lifting & Recovery** | [PCRecomp](https://github.com/sp00nznet/pcrecomp) / [Capstone](https://github.com/capstone-engine/capstone) & [rev.ng](https://github.com/revng/revng) | x86 PE32 function discovery, CFG recovery, static C lifting, and readable high-level C recovery |
+| **Runtime Shims** | `recomp32` + `win32hle` / [SDL2](https://github.com/libsdl-org/SDL) | Self-contained C Win32/DirectX shims compiled via CMake + Clang/GCC (and optional FFmpeg) |
+| **Verification** | [Unicorn](https://github.com/unicorn-engine/unicorn) | Differential testing of machine-code behavior against the original PE |
 
 **Note:** The current executable path is **PCRecomp-generated C → C compiler**. rev.ng-based readable-source replacement and multi-lifter fallback are being developed; LLVM IR is not currently the required build artifact. [Architecture](docs/ARCHITECTURE.md) · [Lifter fallback roadmap](https://github.com/heaven-hm/GameReComp/issues/25)
 
-## Quick start
+## Prerequisites & Toolchain Setup
 
-**Requirements:** Rust stable for the CLI; Python 3.10+, Capstone 5, CMake
-3.16+, a C compiler, pkg-config, SDL2, and SDL2_ttf for conversion runs.
+You need **Rust** (to build `game-recomp-gui` and `game-recomp-cli`), **GPUI Kit** system libraries (for the desktop GUI), and the **Python + CMake + C + SDL2** pipeline toolchain (to convert and compile games).
+
+### 1. Rust & WASM Core (`rustup`)
+
+- **Rust toolchain:** Stable Rust **1.85+** (edition 2024 support required by `gpui-kit 0.10`):
+  ```bash
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  rustup update stable
+  rustup default stable
+  # Optional: required only for WebAssembly core checks/builds
+  rustup target add wasm32-unknown-unknown
+  ```
+
+### 2. Platform Native Dependencies (GPUI Kit Desktop GUI + Recompiled Game Builds)
+
+- **macOS (Apple Silicon / Intel):**
+  ```bash
+  xcode-select --install
+  brew install cmake pkg-config sdl2 sdl2_ttf python@3.12 ffmpeg
+  python3 -m pip install capstone
+  ```
+- **Linux (Ubuntu / Debian):**
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y \
+    build-essential clang cmake pkg-config git libssl-dev \
+    libfontconfig1-dev libfreetype-dev libexpat1-dev \
+    libx11-dev libxkbcommon-dev libxkbcommon-x11-dev \
+    libwayland-dev libvulkan1 vulkan-tools \
+    libsdl2-dev libsdl2-ttf-dev python3 python3-pip
+  python3 -m pip install capstone
+  ```
+- **Windows (x86_64 MSVC):**
+  1. Install **Visual Studio Build Tools 2022** with the **Desktop development with C++** workload (MSVC v143 + Windows 10/11 SDK).
+  2. Install [CMake 3.20+](https://cmake.org/download/), [Python 3.10+](https://www.python.org/downloads/), and `vcpkg` (`vcpkg install sdl2:x64-windows sdl2-ttf:x64-windows pkgconf:x64-windows`).
+  3. Install Capstone: `python -m pip install capstone`.
+- **Optional extras:**
+  - `python3 -m pip install unicorn` for differential oracle verification tests.
+  - [Emscripten (`emcc`)](https://emscripten.org/) + Node.js when targeting WebAssembly (`web/wasm32`) game builds.
+
+## Quick start
 
 ```bash
 git clone https://github.com/heaven-hm/GameReComp.git
 cd GameReComp
-python3 -m pip install capstone
+
+# Build BOTH desktop GPUI Kit GUI and CLI (release binaries in target/release/)
 cargo build --release
 
-./GameReComp --version
-./GameReComp /path/to/game.exe
-./GameReComp /path/to/game.exe --interactive
+# Or build & stage via CMake into gui/build/
+cmake -S gui -B gui/build
+cmake --build gui/build
+
+# Launch the GPUI Kit desktop studio
+./target/release/game-recomp-gui
+
+# Or run the CLI directly
+./target/release/game-recomp-cli --version
+./target/release/game-recomp-cli /path/to/game.exe
 ```
 
-The CLI shows a weighted progress bar over the eight pipeline stages on a
-terminal (plain stage lines in pipes/CI), and is explicit about what it will
-do before it does it: `--dry-run` prints the resolved plan and builds nothing.
+Generated projects default to `~/GameReComp/projects/<game>/` (customizable in Settings): `src/` (C), `build/` (standalone binary or WASM), and `reports/` (evidence). Supply your own legally obtained game executable and assets. [Installation & troubleshooting →](docs/GETTING_STARTED.md)
 
-Generated files: `projects/<game>/src/` (C), `build/` (binary), `reports/` (evidence). Supply your own legally obtained game executable and assets. [Installation & troubleshooting →](docs/GETTING_STARTED.md)
+### Desktop GUI Highlights
+
+- **Project CRUD & Right-Click Menu:** Right-click (or click `⋯`) on any project in the sidebar or home grid to **Open & Inspect**, **Run Standalone**, **Run with Game Data Folder**, **Pause / Resume / Stop**, **Re-run**, **Rename**, **Create Support Issue**, or **Remove / Delete**.
+- **Run Game Options:** Launch self-contained rebuilt executables directly, or select an external game data/assets folder (`cwd`, `RECOMP_ASSETS_DIR`, and `argv[1]`) for titles that load external levels/data.
+- **Auto RAM/CPU Parallel Concurrency & Pause/Resume:** Defaults to `Auto` parallel workers based on system RAM and CPU cores (with manual `1..=8` override), plus process-group Pause/Resume during active recompilation.
+- **One-Click Support Issue Reporting:** Failed preflight checks or builds offer **Create Support Issue** with sanitized diagnostics and log tails.
 
 <details>
-<summary><b>More commands</b></summary>
+<summary><b>More build, check & CLI commands</b></summary>
 
 ```bash
-# Output shape
-./GameReComp /path/to/game.exe --out-mode source   # C project only
-./GameReComp /path/to/game.exe --out-mode binary   # add native binary, no run/verify
-./GameReComp /path/to/game.exe --stages inspect,recover,translate
-./GameReComp --list-stages
+# CLI-only build (headless / no GPUI Kit GUI dependencies)
+cargo build --release --bin game-recomp-cli --no-default-features --features cli
 
-# Target (host builds only; anything else is refused, not mislabeled)
-./GameReComp /path/to/game.exe --target-os host --target-arch host
+# Verify WebAssembly-compatible Rust core library
+cargo check --target wasm32-unknown-unknown --lib --no-default-features
+
+# Run all Rust unit tests and pipeline quick verification
+cargo test
+sh verify.sh --fast
+
+# CLI output shape & targets
+./target/release/game-recomp-cli /path/to/game.exe --out-mode source   # C project only
+./target/release/game-recomp-cli /path/to/game.exe --out-mode binary   # native binary, no run/verify
+./target/release/game-recomp-cli /path/to/game.exe --stages inspect,recover,translate
+./target/release/game-recomp-cli --list-stages
+
+# Target (host builds or WebAssembly)
+./target/release/game-recomp-cli /path/to/game.exe --target-os host --target-arch host
 
 # Working directory and evidence
-./GameReComp /path/to/game.exe --assets-dir /path/to/game/assets
-./GameReComp /path/to/game.exe --timeout 60 --json
+./target/release/game-recomp-cli /path/to/game.exe --assets-dir /path/to/game/assets
+./target/release/game-recomp-cli /path/to/game.exe --timeout 60 --json
 
-# Plan without running, and without the bar
-./GameReComp /path/to/game.exe --dry-run
-./GameReComp /path/to/game.exe --no-progress --verbose
-./GameReComp batch /path/to/flat-win32-directory --timeout 10 --clean-objects --verify-standalone
-sh verify.sh --fast
+# Plan without running, batch mode, and local WASM server
+./target/release/game-recomp-cli /path/to/game.exe --dry-run
+./target/release/game-recomp-cli /path/to/game.exe --no-progress --verbose
+./target/release/game-recomp-cli batch /path/to/flat-win32-directory --timeout 10 --clean-objects --verify-standalone
+./target/release/game-recomp-cli serve ~/GameReComp/projects/my_game --port 8087
 ```
 
 Exit codes: `0` verified/success, `2` a stage failed, `3` ran but unverified,
@@ -283,4 +378,4 @@ Contributions to binary lifting, readable C recovery, runtime shims, and reprodu
 
 ## License
 
-**[MIT](LICENSE)** · [Third-party notices](NOTICE) · [Dependency licenses](docs/LICENSES.md)
+**[GNU Affero General Public License v3.0](LICENSE)** (AGPL-3.0-only) · [Third-party notices](NOTICE) · [Dependency licenses](docs/LICENSES.md)
