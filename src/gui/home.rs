@@ -3,8 +3,9 @@ use gpui::{
     rgb,
 };
 
-use super::style::{self, FONT_MONO, FONT_SANS};
-use super::{DropState, FocusInput, GameReCompApp, ProjectTab, StageExecState};
+use super::style;
+use super::{ActiveJob, DropState, FocusInput, GameReCompApp, JobStatus, ProjectTab, StageExecState};
+use crate::model::ProjectModel;
 use crate::pipeline_opts::{ALL_STAGES, AppProfile, OutMode, STAGE_DESCRIPTIONS};
 use crate::theme_tokens::ThemeTokens;
 
@@ -39,6 +40,11 @@ pub fn render_home(
 
     content = content.child(hero);
 
+    // ------------------------------------------------------------------ Multi-Game Concurrent Queue Panel
+    if !app.jobs.is_empty() || !app.queued_pipelines.is_empty() {
+        content = content.child(render_active_jobs_panel(app, t, cx));
+    }
+
     // ------------------------------------------------------------------ Privacy shield notice
     content = content.child(
         div()
@@ -48,16 +54,16 @@ pub fn render_home(
             .gap(px(9.0))
             .child(
                 div()
-                    .font_family(FONT_MONO)
+                    .font_family(t.mono_font)
                     .font_weight(FontWeight::BOLD)
-                    .text_size(px(14.0))
+                    .text_size(px(t.ui_px(14.0)))
                     .text_color(rgb(t.match_fill))
                     .child("🛡"),
             )
             .child(
                 div()
-                    .font_family(FONT_SANS)
-                    .text_size(px(13.0))
+                    .font_family(t.ui_font)
+                    .text_size(px(t.ui_px(13.0)))
                     .text_color(rgb(t.muted))
                     .child("Your game never leaves this computer. Recompilation, builds, and verification run locally; AI readability only runs when you explicitly configure an agent."),
             ),
@@ -189,17 +195,17 @@ pub fn render_home(
                         .child(div().w(px(9.0)).h(px(9.0)).rounded(px(2.0)).bg(rgb(sw_hex)))
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(15.5))
+                                .text_size(px(t.ui_px(15.5)))
                                 .text_color(rgb(t.ink))
                                 .child(proj.name.clone()),
                         ),
                 )
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.muted))
                         .child(meta),
                 )
@@ -211,9 +217,9 @@ pub fn render_home(
                 ))
                 .child(
                     div()
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(11.5))
+                        .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.ink_2))
                         .child(if proj.load_ok {
                             format!("{} / 100 score", proj.score)
@@ -236,9 +242,9 @@ pub fn render_home(
             .gap(px(14.0))
             .child(
                 div()
-                    .font_family(FONT_SANS)
+                    .font_family(t.ui_font)
                     .font_weight(FontWeight::EXTRA_BOLD)
-                    .text_size(px(26.0))
+                    .text_size(px(t.ui_px(26.0)))
                     .text_color(rgb(t.ink))
                     .child("Your projects"),
             )
@@ -287,9 +293,9 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
                         .rounded(px(3.0))
                         .bg(rgb(t.ink))
                         .text_color(rgb(t.bg))
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(12.0))
+                        .text_size(px(t.ui_px(12.0)))
                         .child(num),
                 )
                 .child(
@@ -299,16 +305,16 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
                         .gap(px(1.0))
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(14.0))
+                                .text_size(px(t.ui_px(14.0)))
                                 .text_color(rgb(t.ink))
                                 .child(title),
                         )
                         .child(
                             div()
-                                .font_family(FONT_SANS)
-                                .text_size(px(13.0))
+                                .font_family(t.ui_font)
+                                .text_size(px(t.ui_px(13.0)))
                                 .text_color(rgb(t.muted))
                                 .child(desc),
                         ),
@@ -327,17 +333,17 @@ fn render_hero_copy(t: &ThemeTokens) -> Div {
         .child(style::eyebrow(t, "GAMERECOMP · NATIVE PORT STUDIO"))
         .child(
             div()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::EXTRA_BOLD)
-                .text_size(px(44.0))
+                .text_size(px(t.ui_px(44.0)))
                 .line_height(px(46.0))
                 .text_color(rgb(t.ink))
                 .child("Pick your game\nand turn it to\nnative port."),
         )
         .child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(15.0))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(15.0)))
                 .line_height(px(23.0))
                 .text_color(rgb(t.ink_2))
                 .child("Turn 32-bit Windows games and apps into standalone native ports for macOS, Linux, Windows, or WebAssembly — with automatic machine detection, live per-file animations, and one-click game launch."),
@@ -365,7 +371,17 @@ fn render_dropzone_card(
         .flex_col()
         .justify_center()
         .on_drop::<ExternalPaths>(cx.listener(|this, paths: &ExternalPaths, _, cx| {
-            if let Some(first) = paths.paths().first().cloned() {
+            let dropped = paths.paths();
+            if dropped.len() > 1 {
+                let files: Vec<std::path::PathBuf> =
+                    dropped.iter().filter(|p| p.is_file()).cloned().collect();
+                if !files.is_empty() {
+                    this.enqueue_multiple_pes(files);
+                } else if let Some(first_dir) = dropped.iter().find(|p| p.is_dir()).cloned() {
+                    this.start_batch_worker(first_dir, cx);
+                }
+                cx.notify();
+            } else if let Some(first) = dropped.first().cloned() {
                 if first.is_dir() {
                     if first.join("project.json").is_file()
                         || first.join("reports").join("report.json").is_file()
@@ -415,9 +431,9 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
                 .flex()
                 .items_center()
                 .justify_center()
-                .font_family(FONT_MONO)
+                .font_family(t.mono_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(11.0))
+                .text_size(px(t.ui_px(11.0)))
                 .text_color(rgb(t.muted))
                 .child("PE32"),
         );
@@ -445,25 +461,27 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
         .child(
             div()
                 .mt(px(6.0))
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::EXTRA_BOLD)
-                .text_size(px(20.0))
+                .text_size(px(t.ui_px(20.0)))
                 .text_color(rgb(t.ink))
                 .child("Drop a game or app here"),
         )
         .child(
             div()
                 .flex()
+                .flex_wrap()
                 .items_center()
+                .justify_center()
                 .gap(px(6.0))
-                .font_family(FONT_SANS)
-                .text_size(px(13.0))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.muted))
-                .child("32-bit Windows PE (.exe)  ·  or")
+                .child("32-bit Windows PE (.exe)  ·")
                 .child(
                     div()
                         .id("drop_choose_file_link")
-                        .text_color(rgb(t.hl))
+                        .text_color(if t.dark { rgb(t.hl) } else { rgb(t.info) })
                         .font_weight(FontWeight::SEMIBOLD)
                         .underline()
                         .cursor_pointer()
@@ -471,7 +489,34 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
                             this.browse_for_pe(cx);
                         }))
                         .child("choose a file"),
+                )
+                .child("·")
+                .child(
+                    div()
+                        .id("drop_choose_multi_link")
+                        .px(px(8.0))
+                        .py(px(3.0))
+                        .rounded(px(3.0))
+                        .bg(rgb(t.bg_alt))
+                        .border_1()
+                        .border_color(rgb(t.line))
+                        .font_family(t.mono_font)
+                        .font_weight(FontWeight::BOLD)
+                        .text_size(px(t.ui_px(11.5)))
+                        .text_color(rgb(t.ink))
+                        .cursor_pointer()
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.browse_for_multiple_pes(cx);
+                        }))
+                        .child("+ Select multiple games…"),
                 ),
+        )
+        .child(
+            div()
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(11.5)))
+                .text_color(rgb(t.muted))
+                .child("Tip: Drop multiple .exe files at once to decompile several games in parallel."),
         )
         .child(plat_row)
         .child(
@@ -480,8 +525,8 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
                 .items_center()
                 .gap(px(4.0))
                 .mt(px(4.0))
-                .font_family(FONT_SANS)
-                .text_size(px(11.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
                 .child(
                     div()
@@ -495,9 +540,9 @@ fn render_drop_idle(t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
             div()
                 .id("drop_open_dir_link")
                 .mt(px(8.0))
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::SEMIBOLD)
-                .text_size(px(12.0))
+                .text_size(px(t.ui_px(12.0)))
                 .text_color(rgb(t.hl))
                 .underline()
                 .cursor_pointer()
@@ -552,8 +597,7 @@ fn render_drop_picked(
         )
     };
 
-    let can_start =
-        info.ok && info.pe32_x86 && app.picked_owned_checked && app.running_kind.is_none();
+    let can_start = info.ok && info.pe32_x86 && app.picked_owned_checked;
 
     let mut box_div = div().w_full().flex().flex_col().gap(px(12.0));
 
@@ -572,9 +616,9 @@ fn render_drop_picked(
                         .child(style::eyebrow(t, fname))
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::EXTRA_BOLD)
-                                .text_size(px(22.0))
+                                .text_size(px(t.ui_px(22.0)))
                                 .text_color(rgb(t.ink))
                                 .child(stem),
                         ),
@@ -604,8 +648,8 @@ fn render_drop_picked(
                 .bg(rgb(t.bg_alt))
                 .border_1()
                 .border_color(rgb(status_border))
-                .font_family(FONT_SANS)
-                .text_size(px(12.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(12.5)))
                 .text_color(rgb(status_fg))
                 .child(status_txt),
         );
@@ -661,8 +705,8 @@ fn render_drop_picked(
             )
             .child(
                 div()
-                    .font_family(FONT_SANS)
-                    .text_size(px(11.5))
+                    .font_family(t.ui_font)
+                    .text_size(px(t.ui_px(11.5)))
                     .text_color(rgb(t.muted))
                     .child(opts.app_profile.description()),
             ),
@@ -731,8 +775,8 @@ fn render_drop_picked(
                     .gap(px(6.0))
                     .child(
                         div()
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.0)))
                             .text_color(rgb(t.muted))
                             .child("Output OS:"),
                     )
@@ -764,8 +808,8 @@ fn render_drop_picked(
                     .gap(px(6.0))
                     .child(
                         div()
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.0)))
                             .text_color(rgb(t.muted))
                             .child("Output Arch:"),
                     )
@@ -893,9 +937,9 @@ fn render_drop_picked(
             .bg(rgb(t.bg_alt))
             .border_1()
             .border_color(rgb(t.line_soft))
-            .font_family(FONT_MONO)
+            .font_family(t.mono_font)
             .font_weight(FontWeight::SEMIBOLD)
-            .text_size(px(11.5))
+            .text_size(px(t.ui_px(11.5)))
             .text_color(rgb(t.hl))
             .cursor_pointer()
             .on_click(cx.listener(|this, _, _, cx| {
@@ -932,8 +976,8 @@ fn render_drop_picked(
                     .child(
                         div()
                             .flex_1()
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.0)))
                             .text_color(rgb(t.ink_2))
                             .child(cmd_preview),
                     )
@@ -971,6 +1015,32 @@ fn render_drop_picked(
         })),
     );
 
+    // Parallel concurrency selector
+    let active_now = app.active_running_count();
+    let mut par_row = div()
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap(px(6.0))
+        .child(style::eyebrow(
+            t,
+            format!("PARALLEL GAMES ({active_now}/{} ACTIVE)", app.max_concurrent_jobs),
+        ));
+    for n in [1usize, 2, 3, 4, 6, 8] {
+        par_row = par_row.child(
+            style::option_pill(
+                ("pick_parallel", n),
+                t,
+                format!("{n}"),
+                app.max_concurrent_jobs == n,
+            )
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.set_max_concurrent_jobs(n, cx);
+            })),
+        );
+    }
+    box_div = box_div.child(par_row);
+
     // Ownership Confirmation Checkbox
     box_div = box_div.child(
         style::toggle_checkbox(
@@ -986,7 +1056,15 @@ fn render_drop_picked(
         })),
     );
 
-    // Action buttons: Start recompiling / Dry-run plan / Cancel
+    let start_label = if active_now == 0 {
+        "▶  Start recompiling"
+    } else if active_now < app.max_concurrent_jobs {
+        "▶  Start in parallel"
+    } else {
+        "+  Add to parallel queue"
+    };
+
+    // Action buttons: Start recompiling / Add more / Dry-run / Cancel
     box_div = box_div.child(
         div()
             .flex()
@@ -995,13 +1073,21 @@ fn render_drop_picked(
             .gap(px(10.0))
             .pt(px(2.0))
             .child(
-                style::primary_btn("start_recomp_btn", t, "▶  Start recompiling", can_start)
-                    .when(can_start, |el| {
+                style::primary_btn("start_recomp_btn", t, start_label, can_start).when(
+                    can_start,
+                    |el| {
                         el.on_click(cx.listener(|this, _, _, cx| {
                             this.opts.dry_run = false;
                             this.start_picked_pipeline(cx);
                         }))
-                    }),
+                    },
+                ),
+            )
+            .child(
+                style::ghost_btn("add_more_games_pick_btn", t, "+ Add multiple games…")
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.browse_for_multiple_pes(cx);
+                    })),
             )
             .child(
                 style::ghost_btn("dry_run_btn", t, "Dry-run plan").on_click(cx.listener(
@@ -1320,28 +1406,380 @@ pub fn render_advanced_cli_options(
         )
 }
 
-/// Animated live pipeline stepper + active file spotlight + per-file telemetry stream!
-pub fn render_live_stage_stepper(
+/// Multi-Game Parallel Decompilation Queue Panel: runs and monitors multiple games simultaneously!
+pub fn render_active_jobs_panel(
     app: &GameReCompApp,
     t: &ThemeTokens,
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
+    let running_count = app.active_running_count();
+    let queued_count = app.queued_pipelines.len();
+    let done_count = app.jobs.len().saturating_sub(running_count);
     const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     let spin_glyph = SPINNER[app.anim_frame % SPINNER.len()];
 
-    let elapsed_total = app
-        .running_started
-        .map(|st| format!("{:.1}s", st.elapsed().as_secs_f32()))
-        .unwrap_or_else(|| "0.0s".to_string());
+    // Concurrency selector row
+    let mut par_pills = div().flex().items_center().gap(px(4.0)).child(
+        div()
+            .font_family(t.mono_font)
+            .text_size(px(t.ui_px(10.5)))
+            .text_color(rgb(t.muted))
+            .child("Max parallel:"),
+    );
+    for n in [1usize, 2, 3, 4, 6, 8] {
+        par_pills = par_pills.child(
+            style::option_pill(
+                ("queue_parallel", n),
+                t,
+                format!("{n}"),
+                app.max_concurrent_jobs == n,
+            )
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.set_max_concurrent_jobs(n, cx);
+            })),
+        );
+    }
 
-    let done_count = app
-        .live_stages
-        .iter()
-        .filter(|s| matches!(s.state, StageExecState::Done(_)))
-        .count();
-    let in_stage_bonus = app.compile_pct.unwrap_or(0.35).clamp(0.0, 0.95);
-    let frac = ((done_count as f32 + in_stage_bonus) / (ALL_STAGES.len() as f32)).clamp(0.02, 1.0);
+    let mut hdr_actions = div()
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap(px(8.0))
+        .child(par_pills)
+        .child(
+            style::ghost_btn("queue_add_games_btn", t, "+ Add More Games…").on_click(
+                cx.listener(|this, _, _, cx| {
+                    this.browse_for_multiple_pes(cx);
+                }),
+            ),
+        );
+
+    if done_count > 0 {
+        hdr_actions = hdr_actions.child(
+            style::ghost_btn("queue_clear_done_btn", t, "Clear Done").on_click(cx.listener(
+                |this, _, _, cx| {
+                    this.clear_finished_jobs();
+                    cx.notify();
+                },
+            )),
+        );
+    }
+    if running_count > 0 || queued_count > 0 {
+        hdr_actions = hdr_actions.child(
+            style::danger_btn("queue_stop_all_btn", t, "■ Stop All").on_click(cx.listener(
+                |this, _, _, cx| {
+                    this.stop_all_jobs();
+                    cx.notify();
+                },
+            )),
+        );
+    }
+
+    let mut cards_grid = div().flex().flex_wrap().gap(px(10.0)).w_full();
+    let focused_id = app.focused_job().map(|j| j.id);
+
+    for job in &app.jobs {
+        let job_id = job.id;
+        let is_selected = focused_id == Some(job_id);
+        let pct = (job.progress_fraction() * 100.0).round() as usize;
+        let elapsed = format!("{:.1}s", job.elapsed_secs());
+
+        let (badge_el, bar_col) = match job.status {
+            JobStatus::Running => (
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(5.0))
+                    .child(style::animated_pulse_dot(
+                        ("job_card_dot", job_id as usize),
+                        t.hl,
+                        7.0,
+                    ))
+                    .child(style::status_badge(
+                        format!("{spin_glyph} {}", job.stage.to_uppercase()),
+                        t.hl,
+                        t.hl_ink,
+                    ))
+                    .into_any_element(),
+                t.hl,
+            ),
+            JobStatus::Done(_) => (
+                style::status_badge("✓ DONE", t.match_bg, t.match_ink).into_any_element(),
+                t.match_fill,
+            ),
+            JobStatus::Failed(c) => (
+                style::status_badge(format!("✗ ERR {c}"), t.miss_bg, t.miss).into_any_element(),
+                t.not_c,
+            ),
+            JobStatus::Stopped => (
+                style::status_badge("■ STOPPED", t.work_bg, t.work).into_any_element(),
+                t.work,
+            ),
+        };
+
+        let mut quick_actions = div().flex().items_center().gap(px(6.0));
+        if job.is_running() {
+            quick_actions = quick_actions.child(
+                style::danger_btn(("job_stop", job_id as usize), t, "■ Stop").on_click(
+                    cx.listener(move |this, _, _, cx| {
+                        this.stop_job(job_id);
+                        cx.notify();
+                    }),
+                ),
+            );
+        } else if let Some(ref pdir) = job.project_dir {
+            if let Ok(m) = ProjectModel::load(pdir) {
+                let pdir_open = pdir.clone();
+                if m.has_wasm_build {
+                    let pdir_w = pdir.clone();
+                    quick_actions = quick_actions.child(
+                        style::primary_btn(("job_wasm", job_id as usize), t, "🌐 Play WASM", true)
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                this.launch_or_open_wasm(&pdir_w);
+                                cx.notify();
+                            })),
+                    );
+                } else if let Some(bin) = m.built_binary_path() {
+                    quick_actions = quick_actions.child(
+                        style::primary_btn(("job_launch", job_id as usize), t, "▶ Launch Game", true)
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                this.launch_rebuilt_binary(&bin);
+                                cx.notify();
+                            })),
+                    );
+                }
+                quick_actions = quick_actions.child(
+                    style::ghost_btn(("job_open", job_id as usize), t, "Inspect").on_click(
+                        cx.listener(move |this, _, _, cx| {
+                            this.open_project_dir(pdir_open.clone(), ProjectTab::Overview);
+                            cx.notify();
+                        }),
+                    ),
+                );
+            }
+        }
+
+        let hover_bg = t.bg_alt;
+        let card = div()
+            .id(("job_card", job_id as usize))
+            .w(px(300.0))
+            .flex_grow()
+            .p(px(12.0))
+            .rounded(px(4.0))
+            .bg(if is_selected { rgb(t.bg_alt) } else { rgb(t.panel) })
+            .border_1()
+            .border_color(if is_selected {
+                if t.dark { rgb(t.hl) } else { rgb(t.btn) }
+            } else {
+                rgb(t.line)
+            })
+            .cursor_pointer()
+            .hover(move |s| s.bg(rgb(hover_bg)))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.selected_job_id = Some(job_id);
+                cx.notify();
+            }))
+            .flex()
+            .flex_col()
+            .gap(px(7.0))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(6.0))
+                    .child(
+                        div()
+                            .font_family(t.ui_font)
+                            .font_weight(FontWeight::EXTRA_BOLD)
+                            .text_size(px(t.ui_px(14.0)))
+                            .text_color(rgb(t.ink))
+                            .child(job.name.clone()),
+                    )
+                    .child(badge_el),
+            )
+            .child(
+                div()
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(10.5)))
+                    .text_color(rgb(t.muted))
+                    .child(format!(
+                        "{} · {} files · {pct}% · {elapsed}",
+                        job.target_label,
+                        job.processed_files.len()
+                    )),
+            )
+            .child(style::progress_meter(
+                t,
+                px(5.0),
+                job.progress_fraction(),
+                bar_col,
+            ))
+            .when(!job.current_file.is_empty(), |el| {
+                el.child(
+                    div()
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.0)))
+                        .text_color(rgb(t.ink_2))
+                        .child(format!("file: {}", job.current_file)),
+                )
+            })
+            .child(quick_actions);
+
+        cards_grid = cards_grid.child(card);
+    }
+
+    for q in &app.queued_pipelines {
+        let q_id = q.id;
+        cards_grid = cards_grid.child(
+            div()
+                .id(("queued_card", q_id as usize))
+                .w(px(260.0))
+                .flex_grow()
+                .p(px(12.0))
+                .rounded(px(4.0))
+                .bg(rgb(t.code_bg))
+                .border_1()
+                .border_color(rgb(t.line_soft))
+                .flex()
+                .flex_col()
+                .gap(px(6.0))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .font_family(t.ui_font)
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(t.ui_px(13.5)))
+                                .text_color(rgb(t.ink_2))
+                                .child(q.name.clone()),
+                        )
+                        .child(style::status_badge("QUEUED", t.bg_alt, t.muted)),
+                )
+                .child(
+                    div()
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(10.5)))
+                        .text_color(rgb(t.muted))
+                        .child(q.target_label.clone()),
+                )
+                .child(
+                    style::ghost_btn(("cancel_queued", q_id as usize), t, "Remove from queue")
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.remove_queued_job(q_id);
+                            cx.notify();
+                        })),
+                ),
+        );
+    }
+
+    let mut panel = style::panel_box(t)
+        .w_full()
+        .max_w(px(1340.0))
+        .border_color(if running_count > 0 {
+            if t.dark { rgb(t.hl) } else { rgb(t.btn) }
+        } else {
+            rgb(t.line)
+        })
+        .p(px(16.0))
+        .flex()
+        .flex_col()
+        .gap(px(14.0))
+        .child(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .justify_between()
+                .gap(px(10.0))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .when(running_count > 0, |el| {
+                            el.child(style::animated_pulse_dot("queue_hdr_pulse", t.hl, 9.0))
+                        })
+                        .child(style::eyebrow(t, "MULTI-GAME DECOMPILATION QUEUE"))
+                        .child(style::status_badge(
+                            format!("{running_count} running · {queued_count} queued · {done_count} finished"),
+                            if running_count > 0 { t.hl_soft } else { t.bg_alt },
+                            if running_count > 0 { t.ink } else { t.muted },
+                        )),
+                )
+                .child(hdr_actions),
+        )
+        .child(cards_grid);
+
+    if let Some(focused) = app.focused_job() {
+        let tail_start = focused.live_logs.len().saturating_sub(12);
+        let mut log_box = div()
+            .id(("focused_job_logs", focused.id as usize))
+            .w_full()
+            .max_h(px(130.0))
+            .overflow_y_scroll()
+            .p(px(10.0))
+            .rounded(px(3.0))
+            .bg(rgb(t.code_bg))
+            .border_1()
+            .border_color(rgb(t.line_soft))
+            .flex()
+            .flex_col()
+            .gap(px(2.0));
+        for line in &focused.live_logs[tail_start..] {
+            log_box = log_box.child(
+                div()
+                    .font_family(t.mono_font)
+                    .text_size(px(t.code_px(11.0)))
+                    .text_color(if line.starts_with("==>") {
+                        rgb(t.hl)
+                    } else {
+                        rgb(t.muted)
+                    })
+                    .child(line.clone()),
+            );
+        }
+
+        panel = panel.child(
+            div()
+                .pt(px(10.0))
+                .border_t_1()
+                .border_color(rgb(t.line_soft))
+                .flex()
+                .flex_col()
+                .gap(px(10.0))
+                .child(render_live_stage_stepper(focused, app.anim_frame, t, cx))
+                .child(log_box),
+        );
+    }
+
+    panel
+}
+
+/// Animated live pipeline stepper + active file spotlight + per-file telemetry stream for a job!
+pub fn render_live_stage_stepper(
+    job: &ActiveJob,
+    anim_frame: usize,
+    t: &ThemeTokens,
+    cx: &mut Context<GameReCompApp>,
+) -> Div {
+    const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    let spin_glyph = if job.is_running() {
+        SPINNER[anim_frame % SPINNER.len()]
+    } else if matches!(job.status, JobStatus::Done(_)) {
+        "✓"
+    } else {
+        "■"
+    };
+
+    let elapsed_total = format!("{:.1}s", job.elapsed_secs());
+    let frac = job.progress_fraction();
     let pct_int = (frac * 100.0).round() as usize;
+    let jid = job.id as usize;
 
     // Animated 6-bar equalizer activity indicator driven by anim_frame
     let eq_heights = [
@@ -1352,7 +1790,11 @@ pub fn render_live_stage_stepper(
         [7.0, 14.0, 18.0, 8.0, 11.0, 12.0],
         [14.0, 16.0, 9.0, 14.0, 7.0, 18.0],
     ];
-    let bars = eq_heights[(app.anim_frame / 2) % eq_heights.len()];
+    let bars = if job.is_running() {
+        eq_heights[(anim_frame / 2) % eq_heights.len()]
+    } else {
+        [6.0, 6.0, 6.0, 6.0, 6.0, 6.0]
+    };
     let mut eq = div().flex().items_end().gap(px(2.5)).h(px(18.0));
     for (b_idx, h_val) in bars.into_iter().enumerate() {
         let col = if b_idx % 2 == 0 {
@@ -1370,15 +1812,15 @@ pub fn render_live_stage_stepper(
     }
 
     // Active File Spotlight Card (shows exact file + live sub-step being processed!)
-    let active_file_name = if app.current_file.is_empty() {
-        format!("stage: {}", app.running_stage)
+    let active_file_name = if job.current_file.is_empty() {
+        format!("stage: {}", job.stage)
     } else {
-        app.current_file.clone()
+        job.current_file.clone()
     };
-    let active_detail = if app.current_task_detail.is_empty() {
+    let active_detail = if job.current_task_detail.is_empty() {
         "Preparing decompilation task...".to_string()
     } else {
-        app.current_task_detail.clone()
+        job.current_task_detail.clone()
     };
     let active_spotlight = div()
         .w_full()
@@ -1403,13 +1845,19 @@ pub fn render_live_stage_stepper(
                         .flex()
                         .items_center()
                         .gap(px(8.0))
-                        .child(style::animated_pulse_dot("active_file_dot", t.match_fill, 8.0))
+                        .when(job.is_running(), |el| {
+                            el.child(style::animated_pulse_dot(
+                                ("active_file_dot", jid),
+                                t.match_fill,
+                                8.0,
+                            ))
+                        })
                         .child(style::status_badge("ACTIVE FILE", t.hl, t.hl_ink))
                         .child(
                             div()
-                                .font_family(FONT_MONO)
+                                .font_family(t.mono_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(12.5))
+                                .text_size(px(t.ui_px(12.5)))
                                 .text_color(rgb(t.ink))
                                 .child(active_file_name),
                         ),
@@ -1421,7 +1869,7 @@ pub fn render_live_stage_stepper(
                         .gap(px(8.0))
                         .child(style::chip_outlined(
                             t,
-                            format!("{} file(s) touched", app.processed_files.len()),
+                            format!("{} file(s) touched", job.processed_files.len()),
                             Some(t.info),
                         ))
                         .child(style::chip_outlined(
@@ -1438,16 +1886,16 @@ pub fn render_live_stage_stepper(
                 .gap(px(8.0))
                 .child(
                     div()
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(12.0))
+                        .text_size(px(t.ui_px(12.0)))
                         .text_color(if t.dark { rgb(t.hl) } else { rgb(t.info) })
                         .child(spin_glyph),
                 )
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.ink_2))
                         .child(active_detail),
                 ),
@@ -1455,7 +1903,7 @@ pub fn render_live_stage_stepper(
 
     let mut rows = div().flex().flex_col().gap(px(5.0)).w_full();
     for (i, (stage_name, desc)) in STAGE_DESCRIPTIONS.iter().enumerate() {
-        let st = app.live_stages.get(i);
+        let st = job.live_stages.get(i);
         let state = st.map(|s| &s.state).unwrap_or(&StageExecState::Pending);
         let detail = st.map(|s| s.detail.as_str()).unwrap_or("");
 
@@ -1470,8 +1918,8 @@ pub fn render_live_stage_stepper(
                     .child(style::status_badge("✓ DONE", t.match_bg, t.match_ink))
                     .child(
                         div()
-                            .font_family(FONT_MONO)
-                            .text_size(px(10.5))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(10.5)))
                             .text_color(rgb(t.muted))
                             .child(format!("{secs:.1}s")),
                     )
@@ -1484,7 +1932,11 @@ pub fn render_live_stage_stepper(
                     .flex()
                     .items_center()
                     .gap(px(6.0))
-                    .child(style::animated_pulse_dot(("stage_pulse", i), t.match_fill, 8.0))
+                    .child(style::animated_pulse_dot(
+                        ("stage_pulse", jid * 16 + i),
+                        t.match_fill,
+                        8.0,
+                    ))
                     .child(style::status_badge(
                         format!("{spin_glyph} RUNNING"),
                         t.hl,
@@ -1492,9 +1944,9 @@ pub fn render_live_stage_stepper(
                     ))
                     .child(
                         div()
-                            .font_family(FONT_MONO)
+                            .font_family(t.mono_font)
                             .font_weight(FontWeight::BOLD)
-                            .text_size(px(10.5))
+                            .text_size(px(t.ui_px(10.5)))
                             .text_color(rgb(t.ink))
                             .child(format!("{:.1}s", started.elapsed().as_secs_f32())),
                     )
@@ -1509,8 +1961,8 @@ pub fn render_live_stage_stepper(
                 rgb(t.line_soft),
                 rgb(t.panel),
                 div()
-                    .font_family(FONT_MONO)
-                    .text_size(px(10.5))
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(10.5)))
                     .text_color(rgb(t.muted))
                     .child(format!("{}/8", i + 1))
                     .into_any_element(),
@@ -1519,8 +1971,8 @@ pub fn render_live_stage_stepper(
 
         let sub_text = if !detail.is_empty() {
             detail.to_string()
-        } else if matches!(state, StageExecState::Running(_)) && !app.current_file.is_empty() {
-            format!("{}  ·  {}", desc, app.current_file)
+        } else if matches!(state, StageExecState::Running(_)) && !job.current_file.is_empty() {
+            format!("{}  ·  {}", desc, job.current_file)
         } else {
             (*desc).to_string()
         };
@@ -1545,16 +1997,16 @@ pub fn render_live_stage_stepper(
                         .child(
                             div()
                                 .w(px(78.0))
-                                .font_family(FONT_MONO)
+                                .font_family(t.mono_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(12.0))
+                                .text_size(px(t.ui_px(12.0)))
                                 .text_color(rgb(t.ink))
                                 .child(*stage_name),
                         )
                         .child(
                             div()
-                                .font_family(FONT_SANS)
-                                .text_size(px(12.0))
+                                .font_family(t.ui_font)
+                                .text_size(px(t.ui_px(12.0)))
                                 .text_color(rgb(t.ink_2))
                                 .child(sub_text),
                         ),
@@ -1581,27 +2033,27 @@ pub fn render_live_stage_stepper(
                 .justify_between()
                 .child(style::eyebrow(
                     t,
-                    format!("LIVE FILE TELEMETRY ({} FILES)", app.processed_files.len()),
+                    format!("LIVE FILE TELEMETRY ({} FILES)", job.processed_files.len()),
                 ))
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(10.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(10.5)))
                         .text_color(rgb(t.muted))
                         .child("newest first"),
                 ),
         );
 
-    if app.processed_files.is_empty() {
+    if job.processed_files.is_empty() {
         files_box = files_box.child(
             div()
-                .font_family(FONT_MONO)
-                .text_size(px(11.0))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.0)))
                 .text_color(rgb(t.muted))
                 .child("Waiting for first generated / compiled file event…"),
         );
     } else {
-        for (idx, item) in app.processed_files.iter().rev().take(8).enumerate() {
+        for (idx, item) in job.processed_files.iter().rev().take(8).enumerate() {
             let (badge_bg, badge_fg) = match item.action {
                 "CC" | "LINK" => (t.info_bg, t.info),
                 "GEN" | "HL" => (t.match_bg, t.match_ink),
@@ -1627,28 +2079,28 @@ pub fn render_live_stage_stepper(
                             .child(style::status_badge(item.action, badge_bg, badge_fg))
                             .child(
                                 div()
-                                    .font_family(FONT_MONO)
+                                    .font_family(t.mono_font)
                                     .font_weight(if idx == 0 {
                                         FontWeight::BOLD
                                     } else {
                                         FontWeight::MEDIUM
                                     })
-                                    .text_size(px(11.5))
+                                    .text_size(px(t.ui_px(11.5)))
                                     .text_color(rgb(t.ink))
                                     .child(item.path.clone()),
                             )
                             .child(
                                 div()
-                                    .font_family(FONT_SANS)
-                                    .text_size(px(11.0))
+                                    .font_family(t.ui_font)
+                                    .text_size(px(t.ui_px(11.0)))
                                     .text_color(rgb(t.muted))
                                     .child(item.detail.clone()),
                             ),
                     )
                     .child(
                         div()
-                            .font_family(FONT_MONO)
-                            .text_size(px(10.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(10.0)))
                             .text_color(rgb(t.muted))
                             .child(item.timestamp.clone()),
                     ),
@@ -1656,6 +2108,8 @@ pub fn render_live_stage_stepper(
         }
     }
 
+    let job_id_stop = job.id;
+    let is_running = job.is_running();
     div()
         .w_full()
         .flex()
@@ -1674,14 +2128,15 @@ pub fn render_live_stage_stepper(
                         .child(eq)
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::EXTRA_BOLD)
-                                .text_size(px(18.0))
+                                .text_size(px(t.ui_px(17.5)))
                                 .text_color(rgb(t.ink))
                                 .child(format!(
-                                    "{spin_glyph}  {} in progress · {}",
-                                    app.running_kind.map(|k| k.label()).unwrap_or("Pipeline"),
-                                    app.running_stage
+                                    "{spin_glyph}  {} · {} ({})",
+                                    job.name,
+                                    job.kind.label(),
+                                    job.stage
                                 )),
                         ),
                 )
@@ -1692,24 +2147,28 @@ pub fn render_live_stage_stepper(
                         .gap(px(8.0))
                         .child(
                             div()
-                                .font_family(FONT_MONO)
+                                .font_family(t.mono_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(12.0))
+                                .text_size(px(t.ui_px(12.0)))
                                 .text_color(rgb(t.ink))
                                 .child(elapsed_total),
                         )
-                        .child(
-                            style::danger_btn("stop_stepper_btn", t, "■ Stop").on_click(
-                                cx.listener(|this, _, _, cx| {
-                                    this.stop_running_worker();
-                                    cx.notify();
-                                }),
-                            ),
-                        ),
+                        .when(is_running, |el| {
+                            el.child(
+                                style::danger_btn(("stop_stepper_btn", jid), t, "■ Stop").on_click(
+                                    cx.listener(move |this, _, _, cx| {
+                                        this.stop_job(job_id_stop);
+                                        cx.notify();
+                                    }),
+                                ),
+                            )
+                        }),
                 ),
         )
         .child(style::progress_meter(t, px(7.0), frac, t.match_fill))
-        .child(style::animated_workbar("busy_shimmer_bar", t, 4.0))
+        .when(is_running, |el| {
+            el.child(style::animated_workbar(("busy_shimmer_bar", jid), t, 4.0))
+        })
         .child(active_spotlight)
         .child(rows)
         .child(files_box)
@@ -1720,42 +2179,19 @@ fn render_drop_busy(
     t: &ThemeTokens,
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
-    let tail_start = app.live_logs.len().saturating_sub(14);
-    let mut log_div = div()
-        .id("drop_busy_log")
-        .w_full()
-        .max_h(px(130.0))
-        .overflow_y_scroll()
-        .p(px(10.0))
-        .rounded(px(3.0))
-        .bg(rgb(t.code_bg))
-        .border_1()
-        .border_color(rgb(t.line_soft))
-        .flex()
-        .flex_col()
-        .gap(px(2.0));
-
-    for line in &app.live_logs[tail_start..] {
-        log_div = log_div.child(
+    let mut col = div().w_full().flex().flex_col().gap(px(10.0));
+    if let Some(job) = app.focused_job() {
+        col = col.child(render_live_stage_stepper(job, app.anim_frame, t, cx));
+    } else {
+        col = col.child(
             div()
-                .font_family(FONT_MONO)
-                .text_size(px(11.0))
-                .text_color(if line.starts_with("==>") {
-                    rgb(t.hl)
-                } else {
-                    rgb(t.muted)
-                })
-                .child(line.clone()),
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(13.0)))
+                .text_color(rgb(t.muted))
+                .child("No active decompilation job."),
         );
     }
-
-    div()
-        .w_full()
-        .flex()
-        .flex_col()
-        .gap(px(10.0))
-        .child(render_live_stage_stepper(app, t, cx))
-        .child(log_div)
+    col
 }
 
 fn render_drop_error(
@@ -1764,7 +2200,10 @@ fn render_drop_error(
     err: &str,
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
-    let logs_joined = app.live_logs.join("\n");
+    let logs_joined = app
+        .focused_job()
+        .map(|j| j.live_logs.join("\n"))
+        .unwrap_or_default();
     div()
         .w_full()
         .flex()
@@ -1772,16 +2211,16 @@ fn render_drop_error(
         .gap(px(12.0))
         .child(
             div()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::EXTRA_BOLD)
-                .text_size(px(19.0))
+                .text_size(px(t.ui_px(19.0)))
                 .text_color(rgb(t.ink))
                 .child("Couldn't complete recompilation"),
         )
         .child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(13.0))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.miss))
                 .child(err.to_string()),
         )
@@ -1840,16 +2279,16 @@ fn start_card(
         .hover(move |s| s.border_color(rgb(ink)))
         .child(
             div()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::EXTRA_BOLD)
-                .text_size(px(15.5))
+                .text_size(px(t.ui_px(15.5)))
                 .text_color(rgb(t.ink))
                 .child(title),
         )
         .child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(12.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(12.5)))
                 .line_height(px(18.0))
                 .text_color(rgb(t.muted))
                 .child(desc.to_string()),
@@ -1868,9 +2307,9 @@ fn plat_chip(t: &ThemeTokens, label: &'static str, rec: bool) -> Div {
         } else {
             rgb(t.line)
         })
-        .font_family(FONT_MONO)
+        .font_family(t.mono_font)
         .font_weight(FontWeight::BOLD)
-        .text_size(px(10.5))
+        .text_size(px(t.ui_px(10.5)))
         .text_color(if rec { rgb(t.ink) } else { rgb(t.muted) })
         .child(label)
 }
@@ -1883,9 +2322,9 @@ fn fact(t: &ThemeTokens, k: &'static str, v: &str) -> Div {
         .child(style::eyebrow(t, k))
         .child(
             div()
-                .font_family(FONT_MONO)
+                .font_family(t.mono_font)
                 .font_weight(FontWeight::SEMIBOLD)
-                .text_size(px(13.0))
+                .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.ink))
                 .child(v.to_string()),
         )
@@ -1909,8 +2348,8 @@ fn path_row(
         .child(
             div()
                 .w(px(86.0))
-                .font_family(FONT_MONO)
-                .text_size(px(11.0))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.0)))
                 .text_color(rgb(t.muted))
                 .child(label),
         )
@@ -1934,8 +2373,8 @@ fn num_field(
         .gap(px(3.0))
         .child(
             div()
-                .font_family(FONT_MONO)
-                .text_size(px(10.0))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(10.0)))
                 .text_color(rgb(t.muted))
                 .child(label),
         )

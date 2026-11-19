@@ -2,7 +2,7 @@ use gpui::{
     ClipboardItem, Context, Div, FontWeight, Stateful, Styled, div, prelude::*, px, relative, rgb,
 };
 
-use super::style::{self, FONT_MONO, FONT_SANS};
+use super::style;
 use super::{FocusInput, GameReCompApp, InspectorTab};
 use crate::theme_tokens::ThemeTokens;
 
@@ -64,9 +64,9 @@ pub fn render_function_inspector(
                 .child(style::eyebrow(t, meta))
                 .child(
                     div()
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(20.0))
+                        .text_size(px(t.ui_px(20.0)))
                         .text_color(rgb(t.ink))
                         .child(func.symbol.clone()),
                 ),
@@ -209,8 +209,8 @@ pub fn render_function_inspector(
                 .gap(px(4.0))
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(12.0))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(12.0)))
                         .text_color(rgb(t.ink))
                         .child(format!(
                             "category: {}   ·   source_unit: {}",
@@ -226,8 +226,8 @@ pub fn render_function_inspector(
             if !func.verified_by.is_empty() {
                 prov = prov.child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.match_ink))
                         .child(format!("verified_by: {}", func.verified_by)),
                 );
@@ -235,8 +235,8 @@ pub fn render_function_inspector(
             if !func.not_proven.is_empty() {
                 prov = prov.child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.work))
                         .child(format!("not_proven: {}", func.not_proven)),
                 );
@@ -244,8 +244,8 @@ pub fn render_function_inspector(
             for ev in &func.evidence {
                 prov = prov.child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.muted))
                         .child(format!("• {ev}")),
                 );
@@ -271,15 +271,15 @@ pub fn render_function_inspector(
                             div()
                                 .w(px(34.0))
                                 .min_w(px(34.0))
-                                .font_family(FONT_MONO)
-                                .text_size(px(11.0))
+                                .font_family(t.mono_font)
+                                .text_size(px(t.code_px(11.0)))
                                 .text_color(rgb(t.muted))
                                 .child(format!("{:>4}", ln_i + 1)),
                         )
                         .child(
                             div()
-                                .font_family(FONT_MONO)
-                                .text_size(px(12.0))
+                                .font_family(t.mono_font)
+                                .text_size(px(t.code_px(12.0)))
                                 .text_color(col)
                                 .child(line.to_string()),
                         ),
@@ -309,8 +309,8 @@ pub fn render_function_inspector(
             if notes.is_empty() {
                 notes_list = notes_list.child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(13.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(13.0)))
                         .text_color(rgb(t.muted))
                         .child("No notes recorded for this function yet."),
                 );
@@ -328,15 +328,15 @@ pub fn render_function_inspector(
                             .gap(px(3.0))
                             .child(
                                 div()
-                                    .font_family(FONT_MONO)
-                                    .text_size(px(10.5))
+                                    .font_family(t.mono_font)
+                                    .text_size(px(t.ui_px(10.5)))
                                     .text_color(rgb(t.muted))
                                     .child(format!("{}  ·  {}", n.author, n.timestamp)),
                             )
                             .child(
                                 div()
-                                    .font_family(FONT_SANS)
-                                    .text_size(px(13.0))
+                                    .font_family(t.ui_font)
+                                    .text_size(px(t.ui_px(13.0)))
                                     .text_color(rgb(t.ink))
                                     .child(n.text.clone()),
                             ),

@@ -5,7 +5,7 @@ use gpui::{
 };
 
 use super::home::{render_advanced_cli_options, render_live_stage_stepper};
-use super::style::{self, FONT_MONO, FONT_SANS};
+use super::style;
 use super::{FnFilter, FnSort, FocusInput, GameReCompApp, MapColorMode, ProjectTab, Route, WorkerKind};
 use crate::model::{FunctionRow, ProjectModel};
 use crate::pipeline_opts::AppProfile;
@@ -27,17 +27,17 @@ pub fn render_project(
             .gap(px(12.0))
             .child(
                 div()
-                    .font_family(FONT_SANS)
+                    .font_family(t.ui_font)
                     .font_weight(FontWeight::EXTRA_BOLD)
-                    .text_size(px(24.0))
+                    .text_size(px(t.ui_px(24.0)))
                     .text_color(rgb(t.ink))
                     .child("No project loaded"),
             )
             .when(!app.load_error.is_empty(), |el| {
                 el.child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(13.5))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(13.5)))
                         .text_color(rgb(t.miss))
                         .child(app.load_error.clone()),
                 )
@@ -182,7 +182,7 @@ fn render_project_header(
                     .px(px(6.0))
                     .py(px(4.0))
                     .rounded(px(3.0))
-                    .text_size(px(15.0))
+                    .text_size(px(t.ui_px(15.0)))
                     .text_color(rgb(t.muted))
                     .cursor_pointer()
                     .hover({
@@ -200,8 +200,27 @@ fn render_project_header(
 
     // Right actions row
     let mut actions = div().flex().flex_wrap().items_center().gap(px(8.0));
+    let proj_job = app.job_for_project(&model.dir);
+    let proj_running = proj_job.filter(|j| j.is_running());
+    let total_running = app.active_running_count();
+    let other_running = total_running.saturating_sub(if proj_running.is_some() { 1 } else { 0 });
 
-    if let Some(kind) = app.running_kind {
+    if other_running > 0 {
+        actions = actions.child(
+            style::ghost_btn(
+                "hdr_other_jobs_btn",
+                t,
+                format!("+{other_running} other running"),
+            )
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.route = Route::Home;
+                cx.notify();
+            })),
+        );
+    }
+
+    if let Some(job) = proj_running {
+        let jid = job.id;
         actions = actions
             .child(
                 div()
@@ -213,16 +232,16 @@ fn render_project_header(
                     .rounded(px(3.0))
                     .bg(rgb(t.hl))
                     .text_color(rgb(t.hl_ink))
-                    .font_family(FONT_MONO)
+                    .font_family(t.mono_font)
                     .font_weight(FontWeight::BOLD)
-                    .text_size(px(12.0))
+                    .text_size(px(t.ui_px(12.0)))
                     .child(style::animated_pulse_dot("hdr_working_dot", t.hl_ink, 7.0))
-                    .child(format!("{}: {}", kind.label(), app.running_stage)),
+                    .child(format!("{}: {}", job.kind.label(), job.stage)),
             )
             .child(
                 style::danger_btn("hdr_stop_btn", t, "■ Stop").on_click(cx.listener(
-                    |this, _, _, cx| {
-                        this.stop_running_worker();
+                    move |this, _, _, cx| {
+                        this.stop_job(jid);
                         cx.notify();
                     },
                 )),
@@ -302,24 +321,24 @@ fn render_project_header(
                 .gap(px(4.0))
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::EXTRA_BOLD)
-                        .text_size(px(16.0))
+                        .text_size(px(t.ui_px(16.0)))
                         .text_color(rgb(t.ink))
                         .child(format!("{}%", model.score.clamp(0, 100))),
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.5))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.5)))
                         .text_color(rgb(t.ink_2))
                         .child("score"),
                 ),
         )
         .child(
             div()
-                .font_family(FONT_MONO)
-                .text_size(px(11.5))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
                 .child(format!(
                     "{} functions  ·  {} verified  ·  {}/{} stages  ·  {}",
@@ -363,13 +382,13 @@ fn render_project_header(
                 .items_center()
                 .border_b_2()
                 .border_color(if on { rgb(t.ink) } else { rgb(t.bg) })
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(if on {
                     FontWeight::BOLD
                 } else {
                     FontWeight::MEDIUM
                 })
-                .text_size(px(13.5))
+                .text_size(px(t.ui_px(13.5)))
                 .text_color(if on { rgb(t.ink) } else { rgb(t.muted) })
                 .cursor_pointer()
                 .hover({
@@ -418,15 +437,17 @@ fn render_overview_tab(
 ) -> Div {
     let mut col = div().flex().flex_col().gap(px(22.0));
 
-    // When a pipeline/agent job is actively running, display the animated live stage stepper prominently!
-    if app.running_kind.is_some() {
+    // When a pipeline/agent job is actively running for this project, display the animated live stage stepper prominently!
+    let proj_job = app.job_for_project(&model.dir);
+    if let Some(job) = proj_job.filter(|j| j.is_running()) {
         col = col.child(
             style::panel_box(t)
                 .border_color(if t.dark { rgb(t.hl) } else { rgb(t.btn) })
                 .p(px(16.0))
-                .child(render_live_stage_stepper(app, t, cx)),
+                .child(render_live_stage_stepper(job, app.anim_frame, t, cx)),
         );
     } else if app.last_finished_project.as_deref() == Some(model.dir.as_path()) {
+        let files_count = proj_job.map(|j| j.processed_files.len()).unwrap_or(0);
         // Post-decompile ready-to-play action banner!
         let bin_opt = model.built_binary_path();
         let has_wasm = model.has_wasm_build;
@@ -494,21 +515,21 @@ fn render_overview_tab(
                                 .child(style::status_badge("✓ READY TO PLAY", t.match_fill, t.bg))
                                 .child(
                                     div()
-                                        .font_family(FONT_SANS)
+                                        .font_family(t.ui_font)
                                         .font_weight(FontWeight::EXTRA_BOLD)
-                                        .text_size(px(15.5))
+                                        .text_size(px(t.ui_px(15.5)))
                                         .text_color(rgb(t.match_ink))
                                         .child("Decompilation & build finished!"),
                                 ),
                         )
                         .child(
                             div()
-                                .font_family(FONT_SANS)
-                                .text_size(px(12.5))
+                                .font_family(t.ui_font)
+                                .text_size(px(t.ui_px(12.5)))
                                 .text_color(rgb(t.ink_2))
                                 .child(format!(
                                     "{} file(s) processed · score {}/100 · click Launch to run your rebuilt game.",
-                                    app.processed_files.len(),
+                                    files_count,
                                     model.score
                                 )),
                         ),
@@ -530,9 +551,9 @@ fn render_overview_tab(
         .border_color(rgb(t.line_soft))
         .child(
             div()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(15.0))
+                .text_size(px(t.ui_px(15.0)))
                 .text_color(rgb(t.ink))
                 .child("Function map"),
         )
@@ -601,8 +622,8 @@ fn render_overview_tab(
                 .gap(px(10.0))
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.5))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.5)))
                         .text_color(rgb(t.muted))
                         .child("Every square is a recovered function in address order. Click any square to open its C source and provenance drawer."),
                 )
@@ -686,25 +707,25 @@ fn render_overview_tab(
                         .gap(px(4.0))
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::EXTRA_BOLD)
-                                .text_size(px(42.0))
+                                .text_size(px(t.ui_px(42.0)))
                                 .line_height(px(42.0))
                                 .text_color(rgb(t.ink))
                                 .child(format!("{}", model.score)),
                         )
                         .child(
                             div()
-                                .font_family(FONT_MONO)
-                                .text_size(px(14.0))
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(14.0)))
                                 .text_color(rgb(t.muted))
                                 .child("/100"),
                         ),
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.0)))
                         .text_color(rgb(t.muted))
                         .child(format!(
                             "outcome: {} · {}",
@@ -727,17 +748,17 @@ fn render_overview_tab(
             style::ruled_kpi(t, "FUNCTIONS")
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::EXTRA_BOLD)
-                        .text_size(px(28.0))
+                        .text_size(px(t.ui_px(28.0)))
                         .text_color(rgb(t.ink))
                         .child(format!("{verified_fns} / {total_fns}")),
                 )
                 .child(stacked_bar)
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.0)))
                         .text_color(rgb(t.muted))
                         .child(format!(
                             "{lifted_fns} lifted · {} thunks · {} insns",
@@ -749,9 +770,9 @@ fn render_overview_tab(
             style::ruled_kpi(t, "PIPELINE STAGES")
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::EXTRA_BOLD)
-                        .text_size(px(28.0))
+                        .text_size(px(t.ui_px(28.0)))
                         .text_color(rgb(t.ink))
                         .child(format!(
                             "{} / {}",
@@ -762,8 +783,8 @@ fn render_overview_tab(
                 .child(stage_bars)
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.0)))
                         .text_color(rgb(t.muted))
                         .child(format!(
                             "{} unresolved imports · {} unhandled EIPs",
@@ -775,9 +796,9 @@ fn render_overview_tab(
             style::ruled_kpi(t, "BUILD & CERTIFIED")
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::EXTRA_BOLD)
-                        .text_size(px(28.0))
+                        .text_size(px(t.ui_px(28.0)))
                         .text_color(rgb(t.ink))
                         .child(if model.build.present && model.build.binary_size > 0 {
                             crate::cli::format_bytes(model.build.binary_size)
@@ -789,8 +810,8 @@ fn render_overview_tab(
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.0)))
                         .text_color(if model.build.digests_match {
                             rgb(t.match_ink)
                         } else {
@@ -806,8 +827,8 @@ fn render_overview_tab(
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.0)))
                         .text_color(rgb(t.muted))
                         .child(format!(
                             "{} certified verdicts · {} frames",
@@ -829,8 +850,8 @@ fn render_overview_tab(
         };
         stage_checks = stage_checks.child(
             div()
-                .font_family(FONT_MONO)
-                .text_size(px(11.5))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(col_hex))
                 .child(format!("{sym} {}", st.name)),
         );
@@ -855,9 +876,9 @@ fn render_overview_tab(
                 .gap(px(6.0))
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(15.0))
+                        .text_size(px(t.ui_px(15.0)))
                         .text_color(rgb(t.ink))
                         .child(if !model.diag.build_passed {
                             "Next: run the pipeline to compile this project"
@@ -916,8 +937,8 @@ fn render_overview_tab(
                     .child(style::eyebrow(t, "RUNTIME"))
                     .child(
                         div()
-                            .font_family(FONT_SANS)
-                            .text_size(px(13.5))
+                            .font_family(t.ui_font)
+                            .text_size(px(t.ui_px(13.5)))
                             .text_color(rgb(t.ink_2))
                             .child(format!(
                                 "{} · {} source file(s) · {} imported DLL(s) ({} IAT entries)",
@@ -931,9 +952,9 @@ fn render_overview_tab(
             .child(
                 div()
                     .id("runtime_details_link")
-                    .font_family(FONT_SANS)
+                    .font_family(t.ui_font)
                     .font_weight(FontWeight::SEMIBOLD)
-                    .text_size(px(12.5))
+                    .text_size(px(t.ui_px(12.5)))
                     .text_color(rgb(t.hl))
                     .underline()
                     .cursor_pointer()
@@ -993,16 +1014,16 @@ fn render_overview_tab(
                         .child(div().w(px(8.0)).h(px(8.0)).rounded(px(2.0)).bg(rgb(dot_hex)))
                         .child(
                             div()
-                                .font_family(FONT_MONO)
-                                .text_size(px(12.5))
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(12.5)))
                                 .text_color(rgb(t.ink))
                                 .child(f.symbol.clone()),
                         ),
                 )
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.0))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.0)))
                         .text_color(rgb(t.muted))
                         .child(format!("{} · {} insns", f.address, f.instructions)),
                 ),
@@ -1033,9 +1054,9 @@ fn render_overview_tab(
                         .child(
                             div()
                                 .w(px(82.0))
-                                .font_family(FONT_MONO)
+                                .font_family(t.mono_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(12.0))
+                                .text_size(px(t.ui_px(12.0)))
                                 .text_color(rgb(t.ink))
                                 .child(st.name.clone()),
                         )
@@ -1043,8 +1064,8 @@ fn render_overview_tab(
                 )
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.0))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.0)))
                         .text_color(rgb(t.muted))
                         .child(truncate(&st.detail, 36)),
                 ),
@@ -1072,18 +1093,18 @@ fn render_overview_tab(
                         .border_color(rgb(t.line_soft))
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(14.5))
+                                .text_size(px(t.ui_px(14.5)))
                                 .text_color(rgb(t.ink))
                                 .child("Highlighted functions"),
                         )
                         .child(
                             div()
                                 .id("ov_all_fns_link")
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::SEMIBOLD)
-                                .text_size(px(12.0))
+                                .text_size(px(t.ui_px(12.0)))
                                 .text_color(rgb(t.hl))
                                 .underline()
                                 .cursor_pointer()
@@ -1111,18 +1132,18 @@ fn render_overview_tab(
                         .border_color(rgb(t.line_soft))
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(14.5))
+                                .text_size(px(t.ui_px(14.5)))
                                 .text_color(rgb(t.ink))
                                 .child("Pipeline stages"),
                         )
                         .child(
                             div()
                                 .id("ov_build_link")
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::SEMIBOLD)
-                                .text_size(px(12.0))
+                                .text_size(px(t.ui_px(12.0)))
                                 .text_color(rgb(t.hl))
                                 .underline()
                                 .cursor_pointer()
@@ -1149,8 +1170,8 @@ fn render_function_map_squares(
     let n = model.all_functions.len();
     if n == 0 {
         return div()
-            .font_family(FONT_MONO)
-            .text_size(px(12.0))
+            .font_family(t.mono_font)
+            .text_size(px(t.ui_px(12.0)))
             .text_color(rgb(t.muted))
             .child("No functions recovered yet. Click Run pipeline to analyze this executable.");
     }
@@ -1225,16 +1246,16 @@ fn render_function_map_squares(
             .gap(px(10.0))
             .child(
                 div()
-                    .font_family(FONT_MONO)
+                    .font_family(t.mono_font)
                     .font_weight(FontWeight::BOLD)
-                    .text_size(px(12.0))
+                    .text_size(px(t.ui_px(12.0)))
                     .text_color(rgb(t.hl))
                     .child(hi.symbol.clone()),
             )
             .child(
                 div()
-                    .font_family(FONT_MONO)
-                    .text_size(px(11.5))
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(11.5)))
                     .text_color(rgb(t.ink_2))
                     .child(format!(
                         "{} · {} insns · {} blocks · {} calls · {}",
@@ -1244,16 +1265,16 @@ fn render_function_map_squares(
             .when(!hi.file.is_empty(), |el| {
                 el.child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.0))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.0)))
                         .text_color(rgb(t.muted))
                         .child(hi.file.clone()),
                 )
             })
     } else {
         div()
-            .font_family(FONT_MONO)
-            .text_size(px(11.0))
+            .font_family(t.mono_font)
+            .text_size(px(t.ui_px(11.0)))
             .text_color(rgb(t.muted))
             .child("Hover any square for function address & stats · click to open Inspector")
     };
@@ -1262,8 +1283,8 @@ fn render_function_map_squares(
     if n > max_tiles {
         wrap = wrap.child(
             div()
-                .font_family(FONT_MONO)
-                .text_size(px(11.0))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.0)))
                 .text_color(rgb(t.muted))
                 .child(format!(
                     "Showing first {max_tiles} of {n} functions on map. Open the Functions tab to filter & search all {n}."
@@ -1389,9 +1410,9 @@ fn render_functions_tab(
         .child(
             div()
                 .w(px(30.0))
-                .font_family(FONT_MONO)
+                .font_family(t.mono_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(11.5))
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.work))
                 .child("★"),
         )
@@ -1408,8 +1429,8 @@ fn render_functions_tab(
                 .p(px(28.0))
                 .flex()
                 .justify_center()
-                .font_family(FONT_SANS)
-                .text_size(px(13.0))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.muted))
                 .child("No matching functions."),
         );
@@ -1443,7 +1464,7 @@ fn render_functions_tab(
                         div()
                             .id(("fn_star_btn", ri))
                             .w(px(30.0))
-                            .text_size(px(14.0))
+                            .text_size(px(t.ui_px(14.0)))
                             .text_color(if is_star { rgb(t.work) } else { rgb(t.muted) })
                             .cursor_pointer()
                             .on_click(cx.listener(move |this, _, _, cx| {
@@ -1456,32 +1477,32 @@ fn render_functions_tab(
                     .child(
                         div()
                             .w(px(115.0))
-                            .font_family(FONT_MONO)
-                            .text_size(px(12.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(12.0)))
                             .text_color(rgb(t.muted))
                             .child(f.address.clone()),
                     )
                     .child(
                         div()
                             .w(px(260.0))
-                            .font_family(FONT_MONO)
-                            .text_size(px(12.5))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(12.5)))
                             .text_color(rgb(t.ink))
                             .child(truncate(&f.symbol, 30)),
                     )
                     .child(
                         div()
                             .w(px(80.0))
-                            .font_family(FONT_MONO)
-                            .text_size(px(12.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(12.0)))
                             .text_color(rgb(t.ink_2))
                             .child(format!("{}", f.instructions)),
                     )
                     .child(
                         div()
                             .w(px(175.0))
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.5))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.5)))
                             .text_color(rgb(t.muted))
                             .child(truncate(&f.file, 22)),
                     )
@@ -1498,8 +1519,8 @@ fn render_functions_tab(
         .py(px(10.0))
         .child(
             div()
-                .font_family(FONT_MONO)
-                .text_size(px(11.5))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
                 .child(format!("Showing {limit} of {} functions", rows.len())),
         )
@@ -1531,13 +1552,16 @@ fn render_stages_build_tab(
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
     let mut wrap = div().flex().flex_col().gap(px(18.0));
+    let proj_job = app
+        .job_for_project(&model.dir)
+        .or_else(|| app.focused_job());
 
-    if app.running_kind.is_some() {
+    if let Some(job) = proj_job.filter(|j| j.is_running()) {
         wrap = wrap.child(
             style::panel_box(t)
-                .border_color(rgb(t.hl))
+                .border_color(if t.dark { rgb(t.hl) } else { rgb(t.btn) })
                 .p(px(16.0))
-                .child(render_live_stage_stepper(app, t, cx)),
+                .child(render_live_stage_stepper(job, app.anim_frame, t, cx)),
         );
     }
 
@@ -1557,17 +1581,17 @@ fn render_stages_build_tab(
                 .child(
                     div()
                         .w(px(90.0))
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(12.5))
+                        .text_size(px(t.ui_px(12.5)))
                         .text_color(rgb(t.ink))
                         .child(st.name.clone()),
                 )
                 .child(style::status_badge(st.status.clone(), bg, fg))
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.5)))
                         .text_color(rgb(t.muted))
                         .child(st.detail.clone()),
                 ),
@@ -1578,8 +1602,8 @@ fn render_stages_build_tab(
             .pt(px(8.0))
             .border_t_1()
             .border_color(rgb(t.line_soft))
-            .font_family(FONT_MONO)
-            .text_size(px(11.0))
+            .font_family(t.mono_font)
+            .text_size(px(t.ui_px(11.0)))
             .text_color(rgb(t.ink_2))
             .child(format!(
                 "build={} · boot={} · strict={} · unresolved_imports={} · unhandled_eips={}",
@@ -1595,8 +1619,8 @@ fn render_stages_build_tab(
     let build_body = if !b.present {
         div()
             .p(px(16.0))
-            .font_family(FONT_SANS)
-            .text_size(px(13.0))
+            .font_family(t.ui_font)
+            .text_size(px(t.ui_px(13.0)))
             .text_color(rgb(t.muted))
             .child("No manifest.json recorded for this project yet.")
     } else {
@@ -1655,7 +1679,9 @@ fn render_stages_build_tab(
         );
 
     // Live Pipeline Console
-    let logs_copy = app.live_logs.join("\n");
+    let logs_slice: Vec<String> = proj_job.map(|j| j.live_logs.clone()).unwrap_or_default();
+    let job_id_for_clear = proj_job.map(|j| j.id);
+    let logs_copy = logs_slice.join("\n");
     let mut console_lines = div()
         .id("stages_console_scroll")
         .w_full()
@@ -1667,16 +1693,16 @@ fn render_stages_build_tab(
         .flex_col()
         .gap(px(2.0));
 
-    if app.live_logs.is_empty() {
+    if logs_slice.is_empty() {
         console_lines = console_lines.child(
             div()
-                .font_family(FONT_MONO)
-                .text_size(px(12.0))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(12.0)))
                 .text_color(rgb(t.muted))
                 .child("No live run output yet. Click Run pipeline in the project header to stream stages here."),
         );
     } else {
-        for line in app.live_logs.iter().rev().take(200).rev() {
+        for line in logs_slice.iter().rev().take(200).rev() {
             let col = if line.starts_with("==>") || line.starts_with("$ ") {
                 rgb(t.hl)
             } else if line.contains("error") || line.contains("FAIL") {
@@ -1688,8 +1714,8 @@ fn render_stages_build_tab(
             };
             console_lines = console_lines.child(
                 div()
-                    .font_family(FONT_MONO)
-                    .text_size(px(11.5))
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(11.5)))
                     .text_color(col)
                     .child(line.clone()),
             );
@@ -1708,9 +1734,9 @@ fn render_stages_build_tab(
                 .border_color(rgb(t.line_soft))
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(14.5))
+                        .text_size(px(t.ui_px(14.5)))
                         .text_color(rgb(t.ink))
                         .child("Live pipeline & runner console"),
                 )
@@ -1731,8 +1757,10 @@ fn render_stages_build_tab(
                             }),
                         ))
                         .child(style::ghost_btn("log_clear_btn", t, "Clear").on_click(
-                            cx.listener(|this, _, _, cx| {
-                                this.live_logs.clear();
+                            cx.listener(move |this, _, _, cx| {
+                                if let Some(jid) = job_id_for_clear {
+                                    this.clear_job_logs(jid);
+                                }
                                 cx.notify();
                             }),
                         )),
@@ -1753,7 +1781,21 @@ fn render_agents_tab(
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
     let ai_cmd = app.effective_ai_cmd();
-    let agent_running = app.running_kind == Some(WorkerKind::Readability);
+    let agent_job = app
+        .jobs
+        .iter()
+        .rev()
+        .find(|j| {
+            j.is_running()
+                && j.kind == WorkerKind::Readability
+                && j.project_dir.as_deref() == Some(model.dir.as_path())
+        });
+    let agent_running = agent_job.is_some();
+    let agent_job_id = agent_job.map(|j| j.id).unwrap_or(0);
+    let agent_stage = agent_job
+        .map(|j| j.stage.as_str())
+        .unwrap_or("readability")
+        .to_string();
 
     let left_agents = style::panel_box(t)
         .flex_1()
@@ -1769,16 +1811,16 @@ fn render_agents_tab(
                 .border_color(rgb(t.line_soft))
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(15.0))
+                        .text_size(px(t.ui_px(15.0)))
                         .text_color(rgb(t.ink))
                         .child("Your agents here"),
                 )
                 .child(if agent_running {
                     style::danger_btn("ag_stop_btn", t, "■ Stop").on_click(cx.listener(
-                        |this, _, _, cx| {
-                            this.stop_running_worker();
+                        move |this, _, _, cx| {
+                            this.stop_job(agent_job_id);
                             cx.notify();
                         },
                     ))
@@ -1814,9 +1856,9 @@ fn render_agents_tab(
                                     .child(style::animated_pulse_dot("ag_card_pulse", t.hl, 8.0))
                                     .child(
                                         div()
-                                            .font_family(FONT_SANS)
+                                            .font_family(t.ui_font)
                                             .font_weight(FontWeight::BOLD)
-                                            .text_size(px(14.0))
+                                            .text_size(px(t.ui_px(14.0)))
                                             .text_color(rgb(t.ink))
                                             .child("Readability & Provenance Agent #1"),
                                     ),
@@ -1824,18 +1866,18 @@ fn render_agents_tab(
                             .child(style::animated_workbar("ag_workbar", t, 4.0))
                             .child(
                                 div()
-                                    .font_family(FONT_MONO)
-                                    .text_size(px(11.5))
+                                    .font_family(t.mono_font)
+                                    .text_size(px(t.ui_px(11.5)))
                                     .text_color(rgb(t.ink_2))
-                                    .child(format!("Working: {}", app.running_stage)),
+                                    .child(format!("Working: {agent_stage}")),
                             ),
                     )
                 })
                 .when(!agent_running, |el| {
                     el.child(
                         div()
-                            .font_family(FONT_SANS)
-                            .text_size(px(13.0))
+                            .font_family(t.ui_font)
+                            .text_size(px(t.ui_px(13.0)))
                             .text_color(rgb(t.muted))
                             .child("No agent works on this game right now. Configure REVENG_AI_CMD in Agents & models and press Run readability agent."),
                     )
@@ -1879,8 +1921,8 @@ fn render_agents_tab(
     if app.feed.is_empty() {
         feed_rows = feed_rows.child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(12.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(12.5)))
                 .text_color(rgb(t.muted))
                 .child("Live pipeline stages and agent events appear here, newest first."),
         );
@@ -1901,16 +1943,16 @@ fn render_agents_tab(
                     })
                     .child(
                         div()
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.0)))
                             .text_color(rgb(t.muted))
                             .child(ev.timestamp.clone()),
                     )
                     .child(
                         div()
-                            .font_family(FONT_SANS)
+                            .font_family(t.ui_font)
                             .font_weight(FontWeight::BOLD)
-                            .text_size(px(12.5))
+                            .text_size(px(t.ui_px(12.5)))
                             .text_color(if ev.is_ok {
                                 rgb(t.match_ink)
                             } else {
@@ -1920,8 +1962,8 @@ fn render_agents_tab(
                     )
                     .child(
                         div()
-                            .font_family(FONT_SANS)
-                            .text_size(px(12.5))
+                            .font_family(t.ui_font)
+                            .text_size(px(t.ui_px(12.5)))
                             .text_color(rgb(t.ink_2))
                             .child(ev.message.clone()),
                     ),
@@ -1946,8 +1988,8 @@ fn render_agents_tab(
     if model.certified.is_empty() {
         cert_rows = cert_rows.child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(12.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(12.5)))
                 .text_color(rgb(t.muted))
                 .child("No certified verdicts indexed."),
         );
@@ -1960,17 +2002,17 @@ fn render_agents_tab(
                     .gap(px(8.0))
                     .child(
                         div()
-                            .font_family(FONT_MONO)
+                            .font_family(t.mono_font)
                             .font_weight(FontWeight::BOLD)
-                            .text_size(px(12.0))
+                            .text_size(px(t.ui_px(12.0)))
                             .text_color(rgb(t.ink))
                             .child(r.address.clone()),
                     )
                     .child(style::status_badge(r.verdict.clone(), t.match_bg, t.match_ink))
                     .child(
                         div()
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.0)))
                             .text_color(rgb(t.muted))
                             .child(format!("{} cases · {}", r.cases, r.module)),
                     ),
@@ -2014,15 +2056,15 @@ fn render_frames_tab(
     if model.frames.is_empty() {
         return style::panel_box(t).p(px(40.0)).items_center().gap(px(10.0)).child(
             div()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::EXTRA_BOLD)
-                .text_size(px(18.0))
+                .text_size(px(t.ui_px(18.0)))
                 .text_color(rgb(t.ink))
                 .child("No captured frames yet"),
         ).child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(13.0))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.muted))
                 .child("Enable Capture screenshots when running the pipeline to inspect rendered game frames here."),
         ).child(
@@ -2074,8 +2116,8 @@ fn render_frames_tab(
                     .gap(px(8.0))
                     .child(
                         div()
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.5))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.5)))
                             .text_color(rgb(t.muted))
                             .child(sel_path.display().to_string()),
                     )
@@ -2247,8 +2289,8 @@ fn render_project_settings_tab(
                         .child(
                             div()
                                 .flex_1()
-                                .font_family(FONT_MONO)
-                                .text_size(px(11.0))
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(11.0)))
                                 .text_color(rgb(t.ink_2))
                                 .child(cmd_preview),
                         )
@@ -2340,9 +2382,9 @@ fn panel_hdr(t: &ThemeTokens, title: &str, badge: Option<(&str, u32, u32)>) -> D
         .border_color(rgb(t.line_soft))
         .child(
             div()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(14.5))
+                .text_size(px(t.ui_px(14.5)))
                 .text_color(rgb(t.ink))
                 .child(title.to_string()),
         )
@@ -2359,8 +2401,8 @@ fn legend_swatch(t: &ThemeTokens, hex: u32, label: &'static str) -> Div {
         .child(div().w(px(9.0)).h(px(9.0)).rounded(px(2.0)).bg(rgb(hex)))
         .child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(11.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
                 .child(label),
         )
@@ -2388,9 +2430,9 @@ fn sort_col(
     div()
         .id(id)
         .w(px(w))
-        .font_family(FONT_MONO)
+        .font_family(t.mono_font)
         .font_weight(FontWeight::BOLD)
-        .text_size(px(10.5))
+        .text_size(px(t.ui_px(10.5)))
         .text_color(if active { rgb(t.ink) } else { rgb(t.muted) })
         .cursor_pointer()
         .on_click(cx.listener(move |this, _, _, cx| {
@@ -2444,16 +2486,16 @@ fn kv_line(t: &ThemeTokens, k: &'static str, v: &str) -> Div {
             div()
                 .w(px(120.0))
                 .min_w(px(120.0))
-                .font_family(FONT_MONO)
-                .text_size(px(11.5))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
                 .child(k),
         )
         .child(
             div()
                 .flex_1()
-                .font_family(FONT_MONO)
-                .text_size(px(11.5))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.ink))
                 .child(if v.is_empty() {
                     "-".to_string()

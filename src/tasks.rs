@@ -1,7 +1,10 @@
+use std::collections::VecDeque;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -171,72 +174,225 @@ pub fn verify_standalone_binary(binary: &Path, timeout_ms: u64) -> Result<String
     Ok(format!("ran cleanly for {timeout_ms}ms headless"))
 }
 
-pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
-    if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
-        println!(
-            "Usage: GameReComp batch <path_or_dir...> [--timeout N] [--clean-objects] [--verify-standalone] [--limit N] [--offset N] [--skip-existing]"
-        );
-        return if args.is_empty() { 2 } else { 0 };
-    }
+#[derive(Debug, Clone)]
+struct BatchArgs {
+    inputs: Vec<String>,
+    timeout: String,
+    parallel: usize,
+    clean_objects: bool,
+    verify_standalone: bool,
+    skip_existing: bool,
+    limit: Option<usize>,
+    offset: usize,
+}
 
-    let mut inputs = Vec::new();
-    let mut timeout = "10".to_string();
-    let mut clean_objects = false;
-    let mut verify_standalone = false;
-    let mut skip_existing = false;
-    let mut limit: Option<usize> = None;
-    let mut offset: usize = 0;
+fn parse_batch_args(args: &[String]) -> Result<BatchArgs, String> {
+    let mut parsed = BatchArgs {
+        inputs: Vec::new(),
+        timeout: "10".to_string(),
+        parallel: 1,
+        clean_objects: false,
+        verify_standalone: false,
+        skip_existing: false,
+        limit: None,
+        offset: 0,
+    };
 
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--timeout" => {
                 if let Some(v) = args.get(i + 1) {
-                    timeout = v.clone();
+                    parsed.timeout = v.clone();
                     i += 2;
                 } else {
-                    eprintln!("error: --timeout requires a value");
-                    return 2;
+                    return Err("error: --timeout requires a value".to_string());
+                }
+            }
+            "--parallel" | "-p" => {
+                if let Some(v) = args.get(i + 1).and_then(|x| x.parse::<usize>().ok()) {
+                    parsed.parallel = v.clamp(1, 16);
+                    i += 2;
+                } else {
+                    return Err("error: --parallel requires an integer (1..=16)".to_string());
                 }
             }
             "--clean-objects" => {
-                clean_objects = true;
+                parsed.clean_objects = true;
                 i += 1;
             }
             "--verify-standalone" => {
-                verify_standalone = true;
+                parsed.verify_standalone = true;
                 i += 1;
             }
             "--skip-existing" => {
-                skip_existing = true;
+                parsed.skip_existing = true;
                 i += 1;
             }
             "--limit" => {
                 if let Some(v) = args.get(i + 1).and_then(|x| x.parse::<usize>().ok()) {
-                    limit = Some(v);
+                    parsed.limit = Some(v);
                     i += 2;
                 } else {
-                    eprintln!("error: --limit requires an integer");
-                    return 2;
+                    return Err("error: --limit requires an integer".to_string());
                 }
             }
             "--offset" => {
                 if let Some(v) = args.get(i + 1).and_then(|x| x.parse::<usize>().ok()) {
-                    offset = v;
+                    parsed.offset = v;
                     i += 2;
                 } else {
-                    eprintln!("error: --offset requires an integer");
-                    return 2;
+                    return Err("error: --offset requires an integer".to_string());
                 }
             }
             other => {
-                inputs.push(other.to_string());
+                parsed.inputs.push(other.to_string());
                 i += 1;
             }
         }
     }
+    Ok(parsed)
+}
 
-    let all_exes = collect_exes(&inputs);
+fn run_single_batch_item(
+    cfg: &AppConfig,
+    exe: &Path,
+    idx: usize,
+    total: usize,
+    opts: &BatchArgs,
+) -> Result<Option<BatchTaskResult>, i32> {
+    let exe_name = exe
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown.exe")
+        .to_string();
+    let proj_dir = default_project_dir(&cfg.repo_root, exe);
+
+    if let Some(avail) = available_disk_mb(&cfg.repo_root) {
+        if avail < 1536 {
+            eprintln!(
+                "STOP: available disk space ({avail} MiB) dropped below 1536 MiB threshold before {exe_name}"
+            );
+            return Err(2);
+        }
+    }
+
+    if opts.skip_existing {
+        if let Ok(m) = ProjectModel::load(&proj_dir) {
+            if m.diag.build_passed
+                && m.diag.strict_boot_passed
+                && m.diag.unresolved_import_count == 0
+                && m.built_binary_path().is_some()
+            {
+                if opts.clean_objects {
+                    let _ = clean_cmake_objects(&proj_dir);
+                }
+                println!("[{}/{}] SKIP (already passing): {exe_name}", idx + 1, total);
+                return Ok(None);
+            }
+        }
+    }
+
+    println!("[{}/{}] RUN {exe_name}", idx + 1, total);
+    let t0 = Instant::now();
+    let mut run_args = vec![
+        exe.to_string_lossy().to_string(),
+        "--input-os".to_string(),
+        "auto".to_string(),
+        "--input-arch".to_string(),
+        "auto".to_string(),
+        "--target-os".to_string(),
+        "auto".to_string(),
+        "--target-arch".to_string(),
+        "auto".to_string(),
+        "--timeout".to_string(),
+        opts.timeout.clone(),
+        "--no-progress".to_string(),
+        "--no-table".to_string(),
+    ];
+    if opts.clean_objects {
+        run_args.push("--clean-objects".to_string());
+    }
+
+    let code = run_pipeline_cli(cfg, &run_args);
+    if opts.clean_objects {
+        let _ = clean_cmake_objects(&proj_dir);
+    }
+
+    let model = ProjectModel::load(&proj_dir).ok();
+    let (standalone_ok, standalone_note) = if opts.verify_standalone {
+        match model.as_ref().and_then(|m| m.built_binary_path()) {
+            Some(bin) => match verify_standalone_binary(&bin, 600) {
+                Ok(msg) => (true, msg),
+                Err(err) => (false, err),
+            },
+            None => (false, "no built binary".to_string()),
+        }
+    } else {
+        (true, "not requested".to_string())
+    };
+
+    let diag = model.as_ref().map(|m| m.diag.clone()).unwrap_or_default();
+    let res = BatchTaskResult {
+        exe_name: exe_name.clone(),
+        project_dir: proj_dir,
+        exit_code: code,
+        build_passed: diag.build_passed,
+        boot_passed: diag.boot_passed,
+        strict_boot_passed: diag.strict_boot_passed,
+        unresolved_imports: diag.unresolved_import_count,
+        unhandled_eips: diag.unhandled_eip_count,
+        crash_signal: diag.crash_signal,
+        standalone_ok,
+        standalone_note: standalone_note.clone(),
+        elapsed_secs: t0.elapsed().as_secs_f64(),
+    };
+
+    let status_tag = if (res.exit_code == EXIT_OK || res.exit_code == EXIT_UNVERIFIED)
+        && res.build_passed
+        && res.strict_boot_passed
+        && res.unresolved_imports == 0
+        && res.unhandled_eips == 0
+        && res.crash_signal.is_none()
+        && res.standalone_ok
+    {
+        "PASS"
+    } else {
+        "FAIL"
+    };
+    println!(
+        "  => {status_tag} {exe_name}: rc={} build={} boot={} strict={} unresolved={} eip={} crash={:?} standalone={} ({}) [{:.1}s]",
+        res.exit_code,
+        res.build_passed,
+        res.boot_passed,
+        res.strict_boot_passed,
+        res.unresolved_imports,
+        res.unhandled_eips,
+        res.crash_signal,
+        res.standalone_ok,
+        res.standalone_note,
+        res.elapsed_secs
+    );
+    Ok(Some(res))
+}
+
+pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
+    if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
+        println!(
+            "Usage: game-recomp-cli batch <path_or_dir...> [--parallel N] [--timeout N] [--clean-objects] [--verify-standalone] [--limit N] [--offset N] [--skip-existing]"
+        );
+        return if args.is_empty() { 2 } else { 0 };
+    }
+
+    let parsed = match parse_batch_args(args) {
+        Ok(p) => p,
+        Err(msg) => {
+            eprintln!("{msg}");
+            return 2;
+        }
+    };
+
+    let all_exes = collect_exes(&parsed.inputs);
     if all_exes.is_empty() {
         eprintln!("error: no .exe files found in inputs");
         return 2;
@@ -244,131 +400,75 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
 
     let slice: Vec<PathBuf> = all_exes
         .into_iter()
-        .skip(offset)
-        .take(limit.unwrap_or(usize::MAX))
+        .skip(parsed.offset)
+        .take(parsed.limit.unwrap_or(usize::MAX))
         .collect();
 
     println!(
-        "batch: processing {} executable(s) (offset={offset}, clean_objects={clean_objects}, verify_standalone={verify_standalone})",
-        slice.len()
+        "batch: processing {} executable(s) (parallel={}, offset={}, clean_objects={}, verify_standalone={})",
+        slice.len(),
+        parsed.parallel,
+        parsed.offset,
+        parsed.clean_objects,
+        parsed.verify_standalone
     );
 
-    let mut results: Vec<BatchTaskResult> = Vec::with_capacity(slice.len());
-    for (idx, exe) in slice.iter().enumerate() {
-        let exe_name = exe
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown.exe")
-            .to_string();
-        let proj_dir = default_project_dir(&cfg.repo_root, exe);
-
-        if let Some(avail) = available_disk_mb(&cfg.repo_root) {
-            if avail < 1536 {
-                eprintln!(
-                    "STOP: available disk space ({avail} MiB) dropped below 1536 MiB threshold before {exe_name}"
-                );
-                return 2;
+    let total = slice.len();
+    let results: Vec<BatchTaskResult> = if parsed.parallel <= 1 || total <= 1 {
+        let mut seq = Vec::with_capacity(total);
+        for (idx, exe) in slice.iter().enumerate() {
+            match run_single_batch_item(cfg, exe, idx, total, &parsed) {
+                Ok(Some(res)) => seq.push(res),
+                Ok(None) => {}
+                Err(code) => return code,
             }
         }
+        seq
+    } else {
+        let queue: Mutex<VecDeque<(usize, PathBuf)>> =
+            Mutex::new(slice.into_iter().enumerate().collect());
+        let collected: Mutex<Vec<(usize, BatchTaskResult)>> = Mutex::new(Vec::with_capacity(total));
+        let aborted = AtomicBool::new(false);
+        let workers = parsed.parallel.min(total);
 
-        if skip_existing {
-            if let Ok(m) = ProjectModel::load(&proj_dir) {
-                if m.diag.build_passed
-                    && m.diag.strict_boot_passed
-                    && m.diag.unresolved_import_count == 0
-                    && m.built_binary_path().is_some()
-                {
-                    if clean_objects {
-                        let _ = clean_cmake_objects(&proj_dir);
+        thread::scope(|s| {
+            for _ in 0..workers {
+                let q_ref = &queue;
+                let c_ref = &collected;
+                let a_ref = &aborted;
+                let p_ref = &parsed;
+                s.spawn(move || {
+                    while !a_ref.load(Ordering::Relaxed) {
+                        let next = {
+                            let mut g = q_ref.lock().unwrap();
+                            g.pop_front()
+                        };
+                        let Some((idx, exe)) = next else {
+                            break;
+                        };
+                        match run_single_batch_item(cfg, &exe, idx, total, p_ref) {
+                            Ok(Some(res)) => {
+                                let mut cg = c_ref.lock().unwrap();
+                                cg.push((idx, res));
+                            }
+                            Ok(None) => {}
+                            Err(_) => {
+                                a_ref.store(true, Ordering::Relaxed);
+                                break;
+                            }
+                        }
                     }
-                    println!("[{}/{}] SKIP (already passing): {exe_name}", idx + 1, slice.len());
-                    continue;
-                }
+                });
             }
+        });
+
+        if aborted.load(Ordering::Relaxed) {
+            return 2;
         }
-
-        println!("[{}/{}] RUN {exe_name}", idx + 1, slice.len());
-        let t0 = Instant::now();
-        let mut run_args = vec![
-            exe.to_string_lossy().to_string(),
-            "--input-os".to_string(),
-            "windows".to_string(),
-            "--input-arch".to_string(),
-            "x86".to_string(),
-            "--target-os".to_string(),
-            "macos".to_string(),
-            "--target-arch".to_string(),
-            "arm64".to_string(),
-            "--timeout".to_string(),
-            timeout.clone(),
-            "--no-progress".to_string(),
-            "--no-table".to_string(),
-        ];
-        if clean_objects {
-            run_args.push("--clean-objects".to_string());
-        }
-
-        let code = run_pipeline_cli(cfg, &run_args);
-        if clean_objects {
-            let _ = clean_cmake_objects(&proj_dir);
-        }
-
-        let model = ProjectModel::load(&proj_dir).ok();
-        let (standalone_ok, standalone_note) = if verify_standalone {
-            match model.as_ref().and_then(|m| m.built_binary_path()) {
-                Some(bin) => match verify_standalone_binary(&bin, 600) {
-                    Ok(msg) => (true, msg),
-                    Err(err) => (false, err),
-                },
-                None => (false, "no built binary".to_string()),
-            }
-        } else {
-            (true, "not requested".to_string())
-        };
-
-        let diag = model.as_ref().map(|m| m.diag.clone()).unwrap_or_default();
-        let res = BatchTaskResult {
-            exe_name: exe_name.clone(),
-            project_dir: proj_dir,
-            exit_code: code,
-            build_passed: diag.build_passed,
-            boot_passed: diag.boot_passed,
-            strict_boot_passed: diag.strict_boot_passed,
-            unresolved_imports: diag.unresolved_import_count,
-            unhandled_eips: diag.unhandled_eip_count,
-            crash_signal: diag.crash_signal,
-            standalone_ok,
-            standalone_note: standalone_note.clone(),
-            elapsed_secs: t0.elapsed().as_secs_f64(),
-        };
-
-        let status_tag = if (res.exit_code == EXIT_OK || res.exit_code == EXIT_UNVERIFIED)
-            && res.build_passed
-            && res.strict_boot_passed
-            && res.unresolved_imports == 0
-            && res.unhandled_eips == 0
-            && res.crash_signal.is_none()
-            && res.standalone_ok
-        {
-            "PASS"
-        } else {
-            "FAIL"
-        };
-        println!(
-            "  => {status_tag} {exe_name}: rc={} build={} boot={} strict={} unresolved={} eip={} crash={:?} standalone={} ({}) [{:.1}s]",
-            res.exit_code,
-            res.build_passed,
-            res.boot_passed,
-            res.strict_boot_passed,
-            res.unresolved_imports,
-            res.unhandled_eips,
-            res.crash_signal,
-            res.standalone_ok,
-            res.standalone_note,
-            res.elapsed_secs
-        );
-        results.push(res);
-    }
+        let mut pairs = collected.into_inner().unwrap();
+        pairs.sort_by_key(|(idx, _)| *idx);
+        pairs.into_iter().map(|(_, r)| r).collect()
+    };
 
     // Record batch projects, sync matrix, and write structured Rust batch report
     let mut gargs: Vec<String> = vec!["-m".into(), "tools.gamesdb".into(), "--matrix".into()];
@@ -584,5 +684,38 @@ mod tests {
         assert!(found[0].ends_with("a.EXE"));
         assert!(found[1].ends_with("b.exe"));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn parses_parallel_batch_flags_and_clamps() {
+        let args: Vec<String> = vec![
+            "/tmp/games",
+            "--parallel",
+            "4",
+            "--timeout",
+            "20",
+            "--verify-standalone",
+            "--clean-objects",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let parsed = parse_batch_args(&args).unwrap();
+        assert_eq!(parsed.parallel, 4);
+        assert_eq!(parsed.timeout, "20");
+        assert!(parsed.verify_standalone);
+        assert!(parsed.clean_objects);
+
+        let clamped: Vec<String> = vec!["/tmp/games", "-p", "99"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(parse_batch_args(&clamped).unwrap().parallel, 16);
+
+        let zero_clamped: Vec<String> = vec!["/tmp/games", "--parallel", "0"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(parse_batch_args(&zero_clamped).unwrap().parallel, 1);
     }
 }

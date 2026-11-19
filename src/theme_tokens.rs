@@ -92,6 +92,189 @@ impl ThemeMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UiFont {
+    Archivo,
+    SystemSans,
+    ModernSans,
+    EditorialSerif,
+    IbmPlexMono,
+}
+
+impl UiFont {
+    pub const ALL: &'static [UiFont] = &[
+        UiFont::Archivo,
+        UiFont::SystemSans,
+        UiFont::ModernSans,
+        UiFont::EditorialSerif,
+        UiFont::IbmPlexMono,
+    ];
+
+    pub fn from_str(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "system" | "system-sans" | "helvetica" => Self::SystemSans,
+            "modern" | "modern-sans" | "avenir" => Self::ModernSans,
+            "serif" | "editorial-serif" | "georgia" => Self::EditorialSerif,
+            "mono" | "ibm-plex-mono" => Self::IbmPlexMono,
+            _ => Self::Archivo,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Archivo => "archivo",
+            Self::SystemSans => "system",
+            Self::ModernSans => "modern",
+            Self::EditorialSerif => "serif",
+            Self::IbmPlexMono => "mono",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Archivo => "Archivo (Default)",
+            Self::SystemSans => "System Sans",
+            Self::ModernSans => "Humanist Sans",
+            Self::EditorialSerif => "Editorial Serif",
+            Self::IbmPlexMono => "IBM Plex Mono",
+        }
+    }
+
+    pub const fn family_name(self) -> &'static str {
+        match self {
+            Self::Archivo => "Archivo",
+            Self::SystemSans => {
+                if cfg!(target_os = "macos") {
+                    "Helvetica Neue"
+                } else if cfg!(target_os = "windows") {
+                    "Segoe UI"
+                } else {
+                    "DejaVu Sans"
+                }
+            }
+            Self::ModernSans => {
+                if cfg!(target_os = "macos") {
+                    "Avenir Next"
+                } else if cfg!(target_os = "windows") {
+                    "Calibri"
+                } else {
+                    "Ubuntu"
+                }
+            }
+            Self::EditorialSerif => "Georgia",
+            Self::IbmPlexMono => "IBM Plex Mono",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MonoFont {
+    IbmPlexMono,
+    Menlo,
+    Monaco,
+    Courier,
+}
+
+impl MonoFont {
+    pub const ALL: &'static [MonoFont] = &[
+        MonoFont::IbmPlexMono,
+        MonoFont::Menlo,
+        MonoFont::Monaco,
+        MonoFont::Courier,
+    ];
+
+    pub fn from_str(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "menlo" | "consolas" => Self::Menlo,
+            "monaco" | "cascadia" => Self::Monaco,
+            "courier" | "courier-new" => Self::Courier,
+            _ => Self::IbmPlexMono,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::IbmPlexMono => "ibm-plex-mono",
+            Self::Menlo => "menlo",
+            Self::Monaco => "monaco",
+            Self::Courier => "courier",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::IbmPlexMono => "IBM Plex Mono",
+            Self::Menlo => {
+                if cfg!(target_os = "windows") {
+                    "Consolas"
+                } else if cfg!(target_os = "macos") {
+                    "Menlo"
+                } else {
+                    "DejaVu Sans Mono"
+                }
+            }
+            Self::Monaco => {
+                if cfg!(target_os = "windows") {
+                    "Cascadia Mono"
+                } else if cfg!(target_os = "macos") {
+                    "Monaco"
+                } else {
+                    "Liberation Mono"
+                }
+            }
+            Self::Courier => "Courier New",
+        }
+    }
+
+    pub const fn family_name(self) -> &'static str {
+        match self {
+            Self::IbmPlexMono => "IBM Plex Mono",
+            Self::Menlo => {
+                if cfg!(target_os = "windows") {
+                    "Consolas"
+                } else if cfg!(target_os = "macos") {
+                    "Menlo"
+                } else {
+                    "DejaVu Sans Mono"
+                }
+            }
+            Self::Monaco => {
+                if cfg!(target_os = "windows") {
+                    "Cascadia Mono"
+                } else if cfg!(target_os = "macos") {
+                    "Monaco"
+                } else {
+                    "Liberation Mono"
+                }
+            }
+            Self::Courier => "Courier New",
+        }
+    }
+}
+
+pub const UI_FONT_SCALE_PRESETS: [(&str, f32); 5] = [
+    ("Compact", 0.88),
+    ("Default", 1.00),
+    ("Comfortable", 1.10),
+    ("Large", 1.22),
+    ("XL", 1.35),
+];
+
+pub const CODE_FONT_SCALE_PRESETS: [(&str, f32); 4] = [
+    ("Small", 0.90),
+    ("Default", 1.00),
+    ("Large", 1.15),
+    ("XL", 1.30),
+];
+
+pub fn clamp_font_scale(scale: f32) -> f32 {
+    if scale.is_finite() {
+        scale.clamp(0.80, 1.45)
+    } else {
+        1.0
+    }
+}
+
 /// RGB hex colors (`0xRRGGBB`) for zero-dependency cross-platform (GPUI + WASM) theming.
 #[derive(Debug, Clone, Copy)]
 pub struct ThemeTokens {
@@ -131,6 +314,10 @@ pub struct ThemeTokens {
     pub tried_cell: u32,
     pub project_swatches: [u32; 6],
     pub module_colors: [u32; 8],
+    pub ui_font: &'static str,
+    pub mono_font: &'static str,
+    pub font_scale: f32,
+    pub code_font_scale: f32,
 }
 
 impl ThemeTokens {
@@ -143,6 +330,31 @@ impl ThemeTokens {
             ThemeMode::Catppuccin => Self::catppuccin(),
             ThemeMode::SolarizedLight => Self::solarized_light(),
         }
+    }
+
+    pub fn for_appearance(
+        mode: ThemeMode,
+        ui_font: UiFont,
+        mono_font: MonoFont,
+        font_scale: f32,
+        code_font_scale: f32,
+    ) -> Self {
+        let mut t = Self::for_mode(mode);
+        t.ui_font = ui_font.family_name();
+        t.mono_font = mono_font.family_name();
+        t.font_scale = clamp_font_scale(font_scale);
+        t.code_font_scale = clamp_font_scale(code_font_scale);
+        t
+    }
+
+    /// Scale a UI typography pixel size cleanly according to the user's Font Size preference.
+    pub fn ui_px(&self, base: f32) -> f32 {
+        (base * self.font_scale).clamp(8.0, 72.0)
+    }
+
+    /// Scale a code / console pixel size independently according to the user's Code Font Size preference.
+    pub fn code_px(&self, base: f32) -> f32 {
+        (base * self.code_font_scale).clamp(8.0, 48.0)
     }
 
     /// 1. Marked Dark — decompdecomp editorial charcoal + yellow highlighter.
@@ -186,6 +398,10 @@ impl ThemeTokens {
             module_colors: [
                 0x4A483D, 0x4E8DD6, 0xF5DE2E, 0xCF4638, 0x1F9D5B, 0xD49A52, 0x9E68C8, 0x3FA69B,
             ],
+            ui_font: UiFont::Archivo.family_name(),
+            mono_font: MonoFont::IbmPlexMono.family_name(),
+            font_scale: 1.0,
+            code_font_scale: 1.0,
         }
     }
 
@@ -230,6 +446,10 @@ impl ThemeTokens {
             module_colors: [
                 0x8C897B, 0x2162A8, 0xC7A90C, 0xB82E22, 0x157F47, 0xBA7214, 0x753DA6, 0x177A71,
             ],
+            ui_font: UiFont::Archivo.family_name(),
+            mono_font: MonoFont::IbmPlexMono.family_name(),
+            font_scale: 1.0,
+            code_font_scale: 1.0,
         }
     }
 
@@ -274,6 +494,10 @@ impl ThemeTokens {
             module_colors: [
                 0x4C566A, 0x5E81AC, 0x88C0D0, 0xBF616A, 0xA3BE8C, 0xEBCB8B, 0xB48EAD, 0x8FBCBB,
             ],
+            ui_font: UiFont::Archivo.family_name(),
+            mono_font: MonoFont::IbmPlexMono.family_name(),
+            font_scale: 1.0,
+            code_font_scale: 1.0,
         }
     }
 
@@ -318,6 +542,10 @@ impl ThemeTokens {
             module_colors: [
                 0x665C54, 0x458588, 0xFABD2F, 0xCC241D, 0x98971A, 0xD65D0E, 0xB16286, 0x689D6A,
             ],
+            ui_font: UiFont::Archivo.family_name(),
+            mono_font: MonoFont::IbmPlexMono.family_name(),
+            font_scale: 1.0,
+            code_font_scale: 1.0,
         }
     }
 
@@ -362,6 +590,10 @@ impl ThemeTokens {
             module_colors: [
                 0x585B70, 0x89B4FA, 0xF9E2AF, 0xF38BA8, 0xA6E3A1, 0xFAB387, 0xCBA6F7, 0x94E2D5,
             ],
+            ui_font: UiFont::Archivo.family_name(),
+            mono_font: MonoFont::IbmPlexMono.family_name(),
+            font_scale: 1.0,
+            code_font_scale: 1.0,
         }
     }
 
@@ -406,6 +638,10 @@ impl ThemeTokens {
             module_colors: [
                 0x839496, 0x268BD2, 0xB58900, 0xDC322F, 0x859900, 0xCB4B16, 0x6C71C4, 0x2AA198,
             ],
+            ui_font: UiFont::Archivo.family_name(),
+            mono_font: MonoFont::IbmPlexMono.family_name(),
+            font_scale: 1.0,
+            code_font_scale: 1.0,
         }
     }
 }
@@ -511,5 +747,30 @@ mod tests {
             ThemeMode::SolarizedLight.toggle_dark_light(ThemeMode::Nord, ThemeMode::SolarizedLight),
             ThemeMode::Nord
         );
+    }
+
+    #[test]
+    fn resolves_fonts_and_scales_cleanly() {
+        for &f in UiFont::ALL {
+            assert_eq!(UiFont::from_str(f.as_str()), f);
+            assert!(!f.family_name().is_empty());
+        }
+        for &m in MonoFont::ALL {
+            assert_eq!(MonoFont::from_str(m.as_str()), m);
+            assert!(!m.family_name().is_empty());
+        }
+        let t = ThemeTokens::for_appearance(
+            ThemeMode::Light,
+            UiFont::EditorialSerif,
+            MonoFont::Courier,
+            1.25,
+            1.15,
+        );
+        assert_eq!(t.ui_font, "Georgia");
+        assert_eq!(t.mono_font, "Courier New");
+        assert!((t.ui_px(16.0) - 20.0).abs() < 0.01);
+        assert!((t.code_px(12.0) - 13.8).abs() < 0.05);
+        assert_eq!(clamp_font_scale(0.1), 0.80);
+        assert_eq!(clamp_font_scale(9.0), 1.45);
     }
 }

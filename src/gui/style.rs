@@ -9,6 +9,7 @@ use gpui::{
 
 use crate::theme_tokens::ThemeTokens;
 
+#[allow(dead_code)]
 pub const FONT_SANS: &str = "Archivo";
 pub const FONT_MONO: &str = "IBM Plex Mono";
 
@@ -53,9 +54,9 @@ pub fn brand_mark(t: &ThemeTokens) -> Div {
                         .border_2()
                         .border_color(rgb(t.ink))
                         .rounded(px(1.5))
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(10.5))
+                        .text_size(px(t.ui_px(10.5)))
                         .text_color(rgb(t.ink))
                         .child("G"),
                 )
@@ -68,9 +69,9 @@ pub fn brand_mark(t: &ThemeTokens) -> Div {
                         .justify_center()
                         .bg(rgb(t.hl))
                         .rounded(px(1.5))
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(10.5))
+                        .text_size(px(t.ui_px(10.5)))
                         .text_color(rgb(t.hl_ink))
                         .child("R"),
                 ),
@@ -79,9 +80,9 @@ pub fn brand_mark(t: &ThemeTokens) -> Div {
             div()
                 .flex()
                 .items_center()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::EXTRA_BOLD)
-                .text_size(px(15.5))
+                .text_size(px(t.ui_px(15.5)))
                 .child(div().text_color(rgb(t.ink)).child("Game"))
                 .child(
                     div()
@@ -104,18 +105,18 @@ pub fn yellow_project_title(t: &ThemeTokens, title: &str) -> Div {
         .bg(rgb(t.hl))
         .text_color(rgb(t.hl_ink))
         .rounded(px(2.0))
-        .font_family(FONT_SANS)
+        .font_family(t.ui_font)
         .font_weight(FontWeight::EXTRA_BOLD)
-        .text_size(px(24.0))
+        .text_size(px(t.ui_px(24.0)))
         .line_height(px(28.0))
         .child(title.to_uppercase())
 }
 
 pub fn eyebrow(t: &ThemeTokens, text: impl Into<SharedString>) -> Div {
     div()
-        .font_family(FONT_MONO)
+        .font_family(t.mono_font)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(10.5))
+        .text_size(px(t.ui_px(10.5)))
         .text_color(rgb(t.muted))
         .child(text.into())
 }
@@ -135,9 +136,9 @@ pub fn primary_btn(
         .h(px(34.0))
         .px(px(14.0))
         .rounded(px(3.0))
-        .font_family(FONT_SANS)
+        .font_family(t.ui_font)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(13.0))
+        .text_size(px(t.ui_px(13.0)))
         .child(label.into());
 
     if enabled {
@@ -174,9 +175,9 @@ pub fn ghost_btn(
         .border_1()
         .border_color(rgb(t.faint))
         .text_color(rgb(t.ink))
-        .font_family(FONT_SANS)
+        .font_family(t.ui_font)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(12.5))
+        .text_size(px(t.ui_px(12.5)))
         .cursor_pointer()
         .hover(move |s| s.bg(rgb(bg_alt)).border_color(rgb(ink)))
         .child(label.into())
@@ -202,9 +203,9 @@ pub fn danger_btn(
         .border_1()
         .border_color(ca(t.miss, 0.6))
         .text_color(rgb(t.miss))
-        .font_family(FONT_SANS)
+        .font_family(t.ui_font)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(12.5))
+        .text_size(px(t.ui_px(12.5)))
         .cursor_pointer()
         .hover(move |s| s.bg(rgb(miss_bg)).border_color(rgb(miss)))
         .child(label.into())
@@ -217,9 +218,9 @@ pub fn chip_inverted(t: &ThemeTokens, text: impl Into<SharedString>) -> Div {
         .rounded(px(2.0))
         .bg(rgb(t.ink))
         .text_color(rgb(t.bg))
-        .font_family(FONT_MONO)
+        .font_family(t.mono_font)
         .font_weight(FontWeight::BOLD)
-        .text_size(px(10.5))
+        .text_size(px(t.ui_px(10.5)))
         .child(text.into())
 }
 
@@ -237,8 +238,8 @@ pub fn chip_outlined(
         .border_1()
         .border_color(border)
         .text_color(rgb(fg))
-        .font_family(FONT_MONO)
-        .text_size(px(11.0))
+        .font_family(t.mono_font)
+        .text_size(px(t.ui_px(11.0)))
         .child(text.into())
 }
 
@@ -269,13 +270,13 @@ pub fn option_pill(
         .px(px(10.0))
         .py(px(5.0))
         .rounded(px(3.0))
-        .font_family(FONT_MONO)
+        .font_family(t.mono_font)
         .font_weight(if selected {
             FontWeight::BOLD
         } else {
             FontWeight::MEDIUM
         })
-        .text_size(px(11.5))
+        .text_size(px(t.ui_px(11.5)))
         .cursor_pointer()
         .child(label.into());
 
@@ -312,9 +313,9 @@ pub fn toggle_checkbox(
         .border_color(rgb(t.ink))
         .bg(if checked { rgb(t.hl) } else { rgb(t.panel) })
         .text_color(rgb(t.hl_ink))
-        .font_family(FONT_MONO)
+        .font_family(t.mono_font)
         .font_weight(FontWeight::BOLD)
-        .text_size(px(11.0))
+        .text_size(px(t.ui_px(11.0)))
         .child(if checked { "✓" } else { "" });
 
     let mut text_col = div()
@@ -323,17 +324,17 @@ pub fn toggle_checkbox(
         .gap(px(1.0))
         .child(
             div()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::MEDIUM)
-                .text_size(px(12.5))
+                .text_size(px(t.ui_px(12.5)))
                 .text_color(rgb(t.ink))
                 .child(label.into()),
         );
     if let Some(h) = hint {
         text_col = text_col.child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(11.0))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(11.0)))
                 .text_color(rgb(t.muted))
                 .child(h.to_string()),
         );
@@ -493,8 +494,8 @@ pub fn text_input_box(
         } else {
             rgb(t.line)
         })
-        .font_family(if mono { FONT_MONO } else { FONT_SANS })
-        .text_size(px(12.5))
+        .font_family(if mono { t.mono_font } else { t.ui_font })
+        .text_size(px(t.ui_px(12.5)))
         .text_color(fg)
         .overflow_hidden()
         .cursor_text()

@@ -1,8 +1,10 @@
 use gpui::{Context, Div, FontWeight, Stateful, Styled, div, prelude::*, px, rgb};
 
-use super::style::{self, FONT_MONO, FONT_SANS};
+use super::style;
 use super::{FocusInput, GameReCompApp};
-use crate::theme_tokens::{ThemeMode, ThemeTokens};
+use crate::theme_tokens::{
+    CODE_FONT_SCALE_PRESETS, MonoFont, ThemeMode, ThemeTokens, UI_FONT_SCALE_PRESETS, UiFont,
+};
 
 // ============================================================================
 // Page: Agents & Models
@@ -34,9 +36,9 @@ pub fn render_agents_page(
                         .justify_between()
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(15.0))
+                                .text_size(px(t.ui_px(15.0)))
                                 .text_color(rgb(t.ink))
                                 .child(ag.name.clone()),
                         )
@@ -48,15 +50,15 @@ pub fn render_agents_page(
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.5))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.5)))
                         .text_color(rgb(t.muted))
                         .child(ag.description.clone()),
                 )
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.0))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.0)))
                         .text_color(rgb(t.ink_2))
                         .child(ag.path.clone()),
                 )
@@ -94,9 +96,9 @@ pub fn render_agents_page(
                     .border_color(rgb(t.line_soft))
                     .child(
                         div()
-                            .font_family(FONT_SANS)
+                            .font_family(t.ui_font)
                             .font_weight(FontWeight::BOLD)
-                            .text_size(px(15.5))
+                            .text_size(px(t.ui_px(15.5)))
                             .text_color(rgb(t.ink))
                             .child("Agent apps on this computer"),
                     )
@@ -119,9 +121,9 @@ pub fn render_agents_page(
                     .py(px(12.0))
                     .border_b_1()
                     .border_color(rgb(t.line_soft))
-                    .font_family(FONT_SANS)
+                    .font_family(t.ui_font)
                     .font_weight(FontWeight::BOLD)
-                    .text_size(px(15.5))
+                    .text_size(px(t.ui_px(15.5)))
                     .text_color(rgb(t.ink))
                     .child("Custom REVENG_AI_CMD command"),
             )
@@ -133,8 +135,8 @@ pub fn render_agents_page(
                     .gap(px(10.0))
                     .child(
                         div()
-                            .font_family(FONT_SANS)
-                            .text_size(px(13.0))
+                            .font_family(t.ui_font)
+                            .text_size(px(t.ui_px(13.0)))
                             .text_color(rgb(t.muted))
                             .child("GameReComp sends recovery prompts on stdin and validates proposed C against the oracle before promoting provenance."),
                     )
@@ -200,9 +202,9 @@ pub fn render_tools_page(
                         .justify_between()
                         .child(
                             div()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(15.0))
+                                .text_size(px(t.ui_px(15.0)))
                                 .text_color(rgb(t.ink))
                                 .child(card.name.clone()),
                         )
@@ -215,24 +217,24 @@ pub fn render_tools_page(
                 .child(style::eyebrow(t, card.category.to_uppercase()))
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(12.5))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.5)))
                         .text_color(rgb(t.ink_2))
                         .child(card.description.clone()),
                 )
                 .when(card.installed && !card.version.is_empty(), |el| {
                     el.child(
                         div()
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.0)))
                             .text_color(rgb(t.match_ink))
                             .child(card.version.clone()),
                     )
                 })
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(11.0))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.0)))
                         .text_color(if card.installed {
                             rgb(t.muted)
                         } else {
@@ -286,9 +288,9 @@ pub fn render_settings_page(
                 .py(px(12.0))
                 .border_b_1()
                 .border_color(rgb(t.line_soft))
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(15.5))
+                .text_size(px(t.ui_px(15.5)))
                 .text_color(rgb(t.ink))
                 .child("Appearance & Workspace"),
         )
@@ -360,17 +362,17 @@ pub fn render_settings_page(
                                         .gap(px(4.0))
                                         .child(
                                             div()
-                                                .font_family(FONT_SANS)
+                                                .font_family(t.ui_font)
                                                 .font_weight(FontWeight::BOLD)
-                                                .text_size(px(12.5))
+                                                .text_size(px(t.ui_px(12.5)))
                                                 .text_color(rgb(t.ink))
                                                 .child(mode.label()),
                                         )
                                         .child(
                                             div()
-                                                .font_family(FONT_MONO)
+                                                .font_family(t.mono_font)
                                                 .font_weight(FontWeight::BOLD)
-                                                .text_size(px(9.5))
+                                                .text_size(px(t.ui_px(9.5)))
                                                 .text_color(if active {
                                                     rgb(t.match_ink)
                                                 } else {
@@ -387,8 +389,8 @@ pub fn render_settings_page(
                                 )
                                 .child(
                                     div()
-                                        .font_family(FONT_SANS)
-                                        .text_size(px(11.0))
+                                        .font_family(t.ui_font)
+                                        .text_size(px(t.ui_px(11.0)))
                                         .text_color(rgb(t.muted))
                                         .child(mode.subtitle()),
                                 ),
@@ -422,6 +424,7 @@ pub fn render_settings_page(
                         )
                         .child(grid)
                 })
+                .child(render_typography_settings(app, t, cx))
                 .child(
                     div()
                         .flex()
@@ -503,6 +506,42 @@ pub fn render_settings_page(
                         ),
                 )
                 .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(style::eyebrow(t, "MAX PARALLEL GAMES (CONCURRENT DECOMPILATION)"))
+                        .child({
+                            let mut row = div().flex().flex_wrap().gap(px(6.0));
+                            for n in [1usize, 2, 3, 4, 6, 8] {
+                                let label = if n == 1 {
+                                    "1 (Sequential)".to_string()
+                                } else {
+                                    format!("{n} Games")
+                                };
+                                row = row.child(
+                                    style::option_pill(
+                                        ("set_max_par", n),
+                                        t,
+                                        label,
+                                        app.max_concurrent_jobs == n,
+                                    )
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.set_max_concurrent_jobs(n, cx);
+                                    })),
+                                );
+                            }
+                            row
+                        })
+                        .child(
+                            div()
+                                .font_family(t.ui_font)
+                                .text_size(px(t.ui_px(11.5)))
+                                .text_color(rgb(t.muted))
+                                .child("How many games can decompile & compile simultaneously before extra picks wait in queue."),
+                        ),
+                )
+                .child(
                     div().pt(px(4.0)).child(
                         style::primary_btn("set_save_btn", t, "Save settings", true).on_click(
                             cx.listener(|this, _, _, cx| {
@@ -536,9 +575,9 @@ pub fn render_settings_page(
                 .py(px(12.0))
                 .border_b_1()
                 .border_color(rgb(t.line_soft))
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(15.5))
+                .text_size(px(t.ui_px(15.5)))
                 .text_color(rgb(t.ink))
                 .child("This computer"),
         )
@@ -608,16 +647,16 @@ pub fn render_about_page(
             style::ruled_kpi(t, "TIER 1 · RUST + GPUI + CLAP")
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::EXTRA_BOLD)
-                        .text_size(px(18.0))
+                        .text_size(px(t.ui_px(18.0)))
                         .text_color(rgb(t.ink))
                         .child("Native Desktop GUI & CLI"),
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(13.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(13.0)))
                         .text_color(rgb(t.ink_2))
                         .child("GPU-accelerated GPUI desktop interface + clap v4 CLI orchestrator, batch runner, WASM HTTP server, and PE32 inspector."),
                 ),
@@ -626,16 +665,16 @@ pub fn render_about_page(
             style::ruled_kpi(t, "TIER 2 · PYTHON PCRECOMP")
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::EXTRA_BOLD)
-                        .text_size(px(18.0))
+                        .text_size(px(t.ui_px(18.0)))
                         .text_color(rgb(t.ink))
                         .child("Disassembler & Lifter"),
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(13.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(13.0)))
                         .text_color(rgb(t.ink_2))
                         .child("Deterministic x86 PE32 disassembly, CFG recovery, static C lifting, provenance verification, and oracle testing."),
                 ),
@@ -644,16 +683,16 @@ pub fn render_about_page(
             style::ruled_kpi(t, "TIER 3 · C + WIN32 HLE + WASM32")
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::EXTRA_BOLD)
-                        .text_size(px(18.0))
+                        .text_size(px(t.ui_px(18.0)))
                         .text_color(rgb(t.ink))
                         .child("Standalone Native & Web"),
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(13.0))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(13.0)))
                         .text_color(rgb(t.ink_2))
                         .child("Self-contained C Win32 HLE runtime (SDL2 native + wasm32 browser canvas) plus WASM-compatible game_recomp Rust core library."),
                 ),
@@ -668,9 +707,9 @@ pub fn render_about_page(
                 .py(px(12.0))
                 .border_b_1()
                 .border_color(rgb(t.line_soft))
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(15.0))
+                .text_size(px(t.ui_px(15.0)))
                 .text_color(rgb(t.ink))
                 .child("Keyboard shortcuts"),
         )
@@ -684,6 +723,7 @@ pub fn render_about_page(
                 .child(info_kv(t, "J / K", "Next / previous function inside Function Inspector"))
                 .child(info_kv(t, "/", "Focus function search bar in Functions tab"))
                 .child(info_kv(t, "Cmd/Ctrl + V", "Paste into focused text field"))
+                .child(info_kv(t, "Cmd/Ctrl + +/-/0", "Increase, decrease, or reset UI font size"))
                 .child(info_kv(t, "Drag & Drop", "Drop any .exe or project folder anywhere on Home")),
         );
 
@@ -696,9 +736,9 @@ pub fn render_about_page(
                 .py(px(12.0))
                 .border_b_1()
                 .border_color(rgb(t.line_soft))
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(15.0))
+                .text_size(px(t.ui_px(15.0)))
                 .text_color(rgb(t.ink))
                 .child("Build, WASM readiness & Licenses"),
         )
@@ -759,6 +799,195 @@ pub fn render_about_page(
     )
 }
 
+fn render_typography_settings(
+    app: &GameReCompApp,
+    t: &ThemeTokens,
+    cx: &mut Context<GameReCompApp>,
+) -> Div {
+    let ui_pct = (app.font_scale * 100.0).round() as i32;
+    let code_pct = (app.code_font_scale * 100.0).round() as i32;
+
+    // UI Font family pills (each rendered in its own typeface!)
+    let mut ui_font_row = div().flex().flex_wrap().gap(px(6.0));
+    for (idx, &font) in UiFont::ALL.iter().enumerate() {
+        let selected = app.ui_font == font;
+        ui_font_row = ui_font_row.child(
+            style::option_pill(("set_ui_font", idx), t, font.label(), selected)
+                .font_family(font.family_name())
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.set_ui_font(font, cx);
+                })),
+        );
+    }
+
+    // Code / Monospace font family pills (each rendered in its own monospace typeface!)
+    let mut mono_font_row = div().flex().flex_wrap().gap(px(6.0));
+    for (idx, &font) in MonoFont::ALL.iter().enumerate() {
+        let selected = app.mono_font == font;
+        mono_font_row = mono_font_row.child(
+            style::option_pill(("set_mono_font", idx), t, font.label(), selected)
+                .font_family(font.family_name())
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.set_mono_font(font, cx);
+                })),
+        );
+    }
+
+    // UI Font Size presets + fine A- / % / A+ steppers
+    let mut ui_size_row = div().flex().flex_wrap().items_center().gap(px(6.0));
+    for (idx, (label, scale)) in UI_FONT_SCALE_PRESETS.iter().enumerate() {
+        let selected = (app.font_scale - *scale).abs() < 0.025;
+        let sc = *scale;
+        ui_size_row = ui_size_row.child(
+            style::option_pill(
+                ("set_ui_size", idx),
+                t,
+                format!("{label} ({:.0}%)", sc * 100.0),
+                selected,
+            )
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.set_font_scale(sc, cx);
+            })),
+        );
+    }
+    ui_size_row = ui_size_row
+        .child(
+            style::ghost_btn("set_ui_dec", t, "A−").on_click(cx.listener(|this, _, _, cx| {
+                this.step_font_scale(-0.05, cx);
+            })),
+        )
+        .child(style::chip_outlined(t, format!("{ui_pct}%"), Some(t.info)))
+        .child(
+            style::ghost_btn("set_ui_inc", t, "A+").on_click(cx.listener(|this, _, _, cx| {
+                this.step_font_scale(0.05, cx);
+            })),
+        );
+
+    // Code / Source Font Size presets + fine - / % / + steppers
+    let mut code_size_row = div().flex().flex_wrap().items_center().gap(px(6.0));
+    for (idx, (label, scale)) in CODE_FONT_SCALE_PRESETS.iter().enumerate() {
+        let selected = (app.code_font_scale - *scale).abs() < 0.025;
+        let sc = *scale;
+        code_size_row = code_size_row.child(
+            style::option_pill(
+                ("set_code_size", idx),
+                t,
+                format!("{label} ({:.0}%)", sc * 100.0),
+                selected,
+            )
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.set_code_font_scale(sc, cx);
+            })),
+        );
+    }
+    code_size_row = code_size_row
+        .child(
+            style::ghost_btn("set_code_dec", t, "−").on_click(cx.listener(|this, _, _, cx| {
+                this.step_code_font_scale(-0.05, cx);
+            })),
+        )
+        .child(style::chip_outlined(t, format!("{code_pct}%"), Some(t.info)))
+        .child(
+            style::ghost_btn("set_code_inc", t, "+").on_click(cx.listener(|this, _, _, cx| {
+                this.step_code_font_scale(0.05, cx);
+            })),
+        );
+
+    // Live Typography Preview Box
+    let preview = div()
+        .p(px(12.0))
+        .rounded(px(4.0))
+        .bg(rgb(t.code_bg))
+        .border_1()
+        .border_color(rgb(t.line))
+        .flex()
+        .flex_col()
+        .gap(px(6.0))
+        .child(
+            div()
+                .font_family(t.ui_font)
+                .font_weight(FontWeight::BOLD)
+                .text_size(px(t.ui_px(15.0)))
+                .text_color(rgb(t.ink))
+                .child("Live Preview · Pick your game and turn it to native port."),
+        )
+        .child(
+            div()
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(12.5)))
+                .text_color(rgb(t.ink_2))
+                .child(format!(
+                    "UI Font: {} ({ui_pct}%) · Code Font: {} ({code_pct}%)",
+                    app.ui_font.label(),
+                    app.mono_font.label()
+                )),
+        )
+        .child(
+            div()
+                .font_family(t.mono_font)
+                .text_size(px(t.code_px(12.0)))
+                .text_color(rgb(t.match_ink))
+                .child("int32_t sub_00401000(RecompState *s) { return hle_present_frame(s, 60); }"),
+        );
+
+    div()
+        .p(px(14.0))
+        .rounded(px(4.0))
+        .bg(rgb(t.bg_alt))
+        .border_1()
+        .border_color(rgb(t.line_soft))
+        .flex()
+        .flex_col()
+        .gap(px(12.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(style::eyebrow(t, "FONTS & FONT SIZE"))
+                .child(
+                    style::ghost_btn("set_typo_reset", t, "Reset fonts").on_click(cx.listener(
+                        |this, _, _, cx| {
+                            this.reset_typography(cx);
+                        },
+                    )),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(5.0))
+                .child(style::eyebrow(t, "UI FONT FAMILY"))
+                .child(ui_font_row),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(5.0))
+                .child(style::eyebrow(t, "CODE / MONOSPACE FONT"))
+                .child(mono_font_row),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(5.0))
+                .child(style::eyebrow(t, "UI FONT SIZE (SHORTCUT: CMD/CTRL + / - / 0)"))
+                .child(ui_size_row),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(5.0))
+                .child(style::eyebrow(t, "CODE & SOURCE VIEWER FONT SIZE"))
+                .child(code_size_row),
+        )
+        .child(preview)
+}
+
 fn page_shell(
     scroll_id: &'static str,
     t: &ThemeTokens,
@@ -786,17 +1015,17 @@ fn page_shell(
                 .child(style::eyebrow(t, eyebrow_txt))
                 .child(
                     div()
-                        .font_family(FONT_SANS)
+                        .font_family(t.ui_font)
                         .font_weight(FontWeight::EXTRA_BOLD)
-                        .text_size(px(34.0))
+                        .text_size(px(t.ui_px(34.0)))
                         .line_height(px(38.0))
                         .text_color(rgb(t.ink))
                         .child(title),
                 )
                 .child(
                     div()
-                        .font_family(FONT_SANS)
-                        .text_size(px(14.5))
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(14.5)))
                         .text_color(rgb(t.muted))
                         .child(subtitle),
                 ),
@@ -812,17 +1041,17 @@ fn info_kv(t: &ThemeTokens, k: &'static str, v: &str) -> Div {
             div()
                 .w(px(130.0))
                 .min_w(px(130.0))
-                .font_family(FONT_MONO)
+                .font_family(t.mono_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(11.5))
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
                 .child(k),
         )
         .child(
             div()
                 .flex_1()
-                .font_family(FONT_MONO)
-                .text_size(px(12.0))
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(12.0)))
                 .text_color(rgb(t.ink))
                 .child(v.to_string()),
         )

@@ -1,6 +1,6 @@
 use gpui::{Context, Div, FontWeight, Styled, div, prelude::*, px, rgb};
 
-use super::style::{self, FONT_MONO, FONT_SANS};
+use super::style;
 use super::{FocusInput, GameReCompApp, ProjectTab, Route};
 use crate::theme_tokens::{ThemeMode, ThemeTokens};
 
@@ -39,7 +39,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
             let bg_alt = t.bg_alt;
             move |s| s.bg(rgb(bg_alt))
         })
-        .text_size(px(14.0))
+        .text_size(px(t.ui_px(14.0)))
         .text_color(if app.unread_notifs > 0 || app.show_notif_panel {
             rgb(t.ink)
         } else {
@@ -73,9 +73,9 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                     .rounded_full()
                     .bg(rgb(t.hl))
                     .text_color(rgb(t.hl_ink))
-                    .font_family(FONT_MONO)
+                    .font_family(t.mono_font)
                     .font_weight(FontWeight::BOLD)
-                    .text_size(px(9.5))
+                    .text_size(px(t.ui_px(9.5)))
                     .child(count_txt),
             )
         });
@@ -113,9 +113,9 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
         .rounded(px(3.0))
         .bg(rgb(t.btn))
         .text_color(rgb(t.btn_ink))
-        .font_family(FONT_SANS)
+        .font_family(t.ui_font)
         .font_weight(FontWeight::BOLD)
-        .text_size(px(13.5))
+        .text_size(px(t.ui_px(13.5)))
         .cursor_pointer()
         .hover({
             let h = t.btn_hover;
@@ -141,6 +141,19 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
             .bg(rgb(t.panel))
             .border_1()
             .border_color(rgb(t.ink))
+            .child(
+                menu_item(
+                    "new_menu_multi",
+                    t,
+                    "Select multiple games…",
+                    "decompile several .exe files at once",
+                )
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.show_new_menu = false;
+                    this.route = Route::Home;
+                    this.browse_for_multiple_pes(cx);
+                })),
+            )
             .child(
                 menu_item(
                     "new_menu_file",
@@ -195,7 +208,41 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
         nav = nav.child(menu);
     }
 
-    // PROJECTS section header
+    // PROJECTS section header (with clickable active parallel jobs badge!)
+    let running_now = app.active_running_count();
+    let mut proj_hdr_right = div().flex().items_center().gap(px(6.0));
+    if running_now > 0 {
+        proj_hdr_right = proj_hdr_right.child(
+            div()
+                .id("nav_running_jobs_pill")
+                .flex()
+                .items_center()
+                .gap(px(4.0))
+                .px(px(6.0))
+                .py(px(1.5))
+                .rounded(px(2.5))
+                .bg(rgb(t.hl))
+                .text_color(rgb(t.hl_ink))
+                .font_family(t.mono_font)
+                .font_weight(FontWeight::BOLD)
+                .text_size(px(t.ui_px(9.5)))
+                .cursor_pointer()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.route = Route::Home;
+                    cx.notify();
+                }))
+                .child(style::animated_pulse_dot("nav_hdr_run_dot", t.hl_ink, 6.0))
+                .child(format!("{running_now} RUNNING")),
+        );
+    }
+    proj_hdr_right = proj_hdr_right.child(
+        div()
+            .font_family(t.mono_font)
+            .text_size(px(t.ui_px(10.5)))
+            .text_color(rgb(t.muted))
+            .child(format!("{}", app.projects.len())),
+    );
+
     nav = nav.child(
         div()
             .flex()
@@ -204,13 +251,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
             .px(px(6.0))
             .pt(px(10.0))
             .child(style::eyebrow(t, "PROJECTS"))
-            .child(
-                div()
-                    .font_family(FONT_MONO)
-                    .text_size(px(10.5))
-                    .text_color(rgb(t.muted))
-                    .child(format!("{}", app.projects.len())),
-            ),
+            .child(proj_hdr_right),
     );
 
     // Optional project filter box
@@ -259,8 +300,8 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
             div()
                 .px(px(8.0))
                 .py(px(4.0))
-                .font_family(FONT_SANS)
-                .text_size(px(12.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(12.5)))
                 .text_color(rgb(t.muted))
                 .child("None yet: drop in a game."),
         );
@@ -269,8 +310,8 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
             div()
                 .px(px(8.0))
                 .py(px(4.0))
-                .font_family(FONT_SANS)
-                .text_size(px(12.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(12.5)))
                 .text_color(rgb(t.muted))
                 .child("No project matches."),
         );
@@ -278,8 +319,7 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
         for (i, proj) in filtered.into_iter().enumerate() {
             let is_active = matches!(app.route, Route::Project(_))
                 && app.active_project_dir.as_ref() == Some(&proj.dir);
-            let is_running = app.running_kind.is_some()
-                && app.active_project_dir.as_ref() == Some(&proj.dir);
+            let is_running = app.is_project_running(&proj.dir);
             let sw_hex = t.project_swatches[proj.color_idx % t.project_swatches.len()];
             let pct = (proj.score.clamp(0, 100) as f32) / 100.0;
             let proj_dir = proj.dir.clone();
@@ -322,9 +362,9 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                             div()
                                 .flex_1()
                                 .overflow_hidden()
-                                .font_family(FONT_SANS)
+                                .font_family(t.ui_font)
                                 .font_weight(FontWeight::SEMIBOLD)
-                                .text_size(px(13.0))
+                                .text_size(px(t.ui_px(13.0)))
                                 .text_color(rgb(t.ink))
                                 .child(truncate(&proj.name, 20)),
                         )
@@ -337,8 +377,8 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                         .flex()
                         .items_center()
                         .justify_between()
-                        .font_family(FONT_MONO)
-                        .text_size(px(10.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(10.5)))
                         .text_color(if proj.load_ok {
                             rgb(t.muted)
                         } else {
@@ -458,8 +498,8 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                         div()
                             .id("theme_menu_close")
                             .px(px(4.0))
-                            .font_family(FONT_MONO)
-                            .text_size(px(11.0))
+                            .font_family(t.mono_font)
+                            .text_size(px(t.ui_px(11.0)))
                             .text_color(rgb(t.muted))
                             .cursor_pointer()
                             .on_click(cx.listener(|this, _, _, cx| {
@@ -525,15 +565,15 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                         )
                         .child(
                             div()
-                                .font_family(FONT_SANS)
-                                .text_size(px(12.0))
+                                .font_family(t.ui_font)
+                                .text_size(px(t.ui_px(12.0)))
                                 .child(mode.label()),
                         ),
                 )
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(9.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(9.5)))
                         .text_color(if active {
                             rgb(t.hl_ink)
                         } else {
@@ -549,6 +589,84 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                 );
             picker = picker.child(row);
         }
+
+        // Quick Font Size A- / % / A+ row right inside the Themes & Font drawer
+        let pct_label = format!("{}%", (app.font_scale * 100.0).round() as i32);
+        let btn_bg = t.panel;
+        let btn_hover = t.bg_alt;
+        picker = picker.child(
+            div()
+                .mt(px(4.0))
+                .pt(px(6.0))
+                .border_t_1()
+                .border_color(rgb(t.line_soft))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(4.0))
+                .child(style::eyebrow(t, "SIZE"))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .id("sidebar_font_dec")
+                                .px(px(6.0))
+                                .py(px(2.0))
+                                .rounded(px(2.5))
+                                .bg(rgb(btn_bg))
+                                .border_1()
+                                .border_color(rgb(t.line))
+                                .font_family(t.mono_font)
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(t.ui_px(10.5)))
+                                .text_color(rgb(t.ink))
+                                .cursor_pointer()
+                                .hover(move |s| s.bg(rgb(btn_hover)))
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.step_font_scale(-0.05, cx);
+                                }))
+                                .child("A−"),
+                        )
+                        .child(
+                            div()
+                                .id("sidebar_font_reset")
+                                .px(px(5.0))
+                                .py(px(2.0))
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(10.0)))
+                                .text_color(rgb(t.muted))
+                                .cursor_pointer()
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.set_font_scale(1.0, cx);
+                                }))
+                                .child(pct_label),
+                        )
+                        .child(
+                            div()
+                                .id("sidebar_font_inc")
+                                .px(px(6.0))
+                                .py(px(2.0))
+                                .rounded(px(2.5))
+                                .bg(rgb(btn_bg))
+                                .border_1()
+                                .border_color(rgb(t.line))
+                                .font_family(t.mono_font)
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(t.ui_px(10.5)))
+                                .text_color(rgb(t.ink))
+                                .cursor_pointer()
+                                .hover(move |s| s.bg(rgb(btn_hover)))
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.step_font_scale(0.05, cx);
+                                }))
+                                .child("A+"),
+                        ),
+                ),
+        );
+
         foot = foot.child(picker);
     }
 
@@ -584,9 +702,9 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                         .bg(rgb(toggle_bg))
                         .border_1()
                         .border_color(rgb(t.line))
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(11.0))
+                        .text_size(px(t.ui_px(11.0)))
                         .text_color(rgb(t.ink))
                         .cursor_pointer()
                         .hover(move |s| s.bg(rgb(toggle_hover)).border_color(rgb(toggle_ink)))
@@ -620,9 +738,9 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                         } else {
                             rgb(t.line)
                         })
-                        .font_family(FONT_MONO)
+                        .font_family(t.mono_font)
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(11.0))
+                        .text_size(px(t.ui_px(11.0)))
                         .text_color(if app.show_theme_menu {
                             rgb(t.hl_ink)
                         } else {
@@ -647,8 +765,8 @@ pub fn render_sidebar(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<Gam
                 .pt(px(5.0))
                 .child(
                     div()
-                        .font_family(FONT_MONO)
-                        .text_size(px(10.5))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(10.5)))
                         .text_color(rgb(t.muted))
                         .child(format!("v{} · {}", crate::cli::VERSION, app.theme.label())),
                 )
@@ -697,16 +815,16 @@ fn menu_item(
         .hover(move |s| s.bg(rgb(hover_bg)))
         .child(
             div()
-                .font_family(FONT_SANS)
+                .font_family(t.ui_font)
                 .font_weight(FontWeight::BOLD)
-                .text_size(px(13.0))
+                .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.ink))
                 .child(title),
         )
         .child(
             div()
-                .font_family(FONT_SANS)
-                .text_size(px(11.5))
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
                 .child(sub),
         )
@@ -728,15 +846,15 @@ fn nav_link(
         .items_center()
         .gap(px(9.0))
         .rounded(px(3.0))
-        .font_family(FONT_SANS)
-        .font_size_13()
+        .font_family(t.ui_font)
+        .text_size(px(t.ui_px(13.0)))
         .cursor_pointer();
 
     if active {
         base.bg(rgb(t.hl))
             .text_color(rgb(t.hl_ink))
             .font_weight(FontWeight::SEMIBOLD)
-            .child(div().text_size(px(13.0)).child(glyph))
+            .child(div().text_size(px(t.ui_px(13.0))).child(glyph))
             .child(label)
     } else {
         let bg_alt = t.bg_alt;
@@ -744,18 +862,10 @@ fn nav_link(
         base.text_color(rgb(t.ink_2))
             .font_weight(FontWeight::MEDIUM)
             .hover(move |s| s.bg(rgb(bg_alt)).text_color(rgb(ink)))
-            .child(div().text_size(px(13.0)).text_color(rgb(t.muted)).child(glyph))
+            .child(div().text_size(px(t.ui_px(13.0))).text_color(rgb(t.muted)).child(glyph))
             .child(label)
     }
 }
-
-trait FontSizeHelper: Styled + Sized {
-    fn font_size_13(self) -> Self {
-        self.text_size(px(13.0))
-    }
-}
-
-impl FontSizeHelper for gpui::Stateful<Div> {}
 
 fn small_icon_btn(id: &'static str, t: &ThemeTokens, glyph: &'static str) -> gpui::Stateful<Div> {
     let bg_alt = t.bg_alt;
@@ -768,7 +878,7 @@ fn small_icon_btn(id: &'static str, t: &ThemeTokens, glyph: &'static str) -> gpu
         .items_center()
         .justify_center()
         .rounded(px(3.0))
-        .text_size(px(14.0))
+        .text_size(px(t.ui_px(14.0)))
         .text_color(rgb(t.muted))
         .cursor_pointer()
         .hover(move |s| s.bg(rgb(bg_alt)).text_color(rgb(ink)))

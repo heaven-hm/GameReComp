@@ -20,6 +20,14 @@ pub struct AppConfig {
 pub struct UserSettings {
     #[serde(default = "default_theme")]
     pub theme: String,
+    #[serde(default = "default_ui_font")]
+    pub ui_font: String,
+    #[serde(default = "default_mono_font")]
+    pub mono_font: String,
+    #[serde(default = "default_font_scale")]
+    pub font_scale: f32,
+    #[serde(default = "default_font_scale")]
+    pub code_font_scale: f32,
     #[serde(default)]
     pub reveng_ai_cmd: String,
     #[serde(default)]
@@ -28,6 +36,8 @@ pub struct UserSettings {
     pub custom_projects: Vec<String>,
     #[serde(default = "default_timeout_u64")]
     pub default_timeout_secs: u64,
+    #[serde(default = "default_max_concurrent_jobs")]
+    pub max_concurrent_jobs: usize,
     #[serde(default)]
     pub rom_library_dir: String,
 }
@@ -36,18 +46,39 @@ fn default_theme() -> String {
     "dark".to_string()
 }
 
+fn default_ui_font() -> String {
+    "archivo".to_string()
+}
+
+fn default_mono_font() -> String {
+    "ibm-plex-mono".to_string()
+}
+
+fn default_font_scale() -> f32 {
+    1.0
+}
+
 fn default_timeout_u64() -> u64 {
     12
+}
+
+fn default_max_concurrent_jobs() -> usize {
+    2
 }
 
 impl Default for UserSettings {
     fn default() -> Self {
         Self {
             theme: default_theme(),
+            ui_font: default_ui_font(),
+            mono_font: default_mono_font(),
+            font_scale: default_font_scale(),
+            code_font_scale: default_font_scale(),
             reveng_ai_cmd: String::new(),
             projects_root: String::new(),
             custom_projects: Vec::new(),
             default_timeout_secs: default_timeout_u64(),
+            max_concurrent_jobs: default_max_concurrent_jobs(),
             rom_library_dir: String::new(),
         }
     }

@@ -26,7 +26,7 @@ use crate::model::{ProjectModel, ProjectSummary, UserNote, discover_projects};
 use crate::orchestrator::default_project_dir;
 use crate::pe::{PeInfo, inspect_pe};
 use crate::pipeline_opts::{ALL_STAGES, PipelineOptions};
-use crate::theme_tokens::{ThemeMode, ThemeTokens};
+use crate::theme_tokens::{MonoFont, ThemeMode, ThemeTokens, UiFont, clamp_font_scale};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
@@ -140,6 +140,14 @@ pub struct LiveStageRow {
     pub detail: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JobStatus {
+    Running,
+    Done(i32),
+    Failed(i32),
+    Stopped,
+}
+
 #[derive(Debug, Clone)]
 pub struct ProcessedFileItem {
     pub action: &'static str,
@@ -147,6 +155,62 @@ pub struct ProcessedFileItem {
     pub detail: String,
     pub timestamp: String,
     pub stage: String,
+}
+
+pub struct ActiveJob {
+    pub id: u64,
+    pub kind: WorkerKind,
+    pub name: String,
+    pub pe_path: String,
+    pub target_label: String,
+    pub project_dir: Option<PathBuf>,
+    pub auto_launch_after_build: bool,
+    pub is_dry_run: bool,
+    pub status: JobStatus,
+    pub stage: String,
+    pub started: Instant,
+    pub finished_secs: Option<f32>,
+    pub current_file: String,
+    pub current_task_detail: String,
+    pub compile_pct: Option<f32>,
+    pub processed_files: Vec<ProcessedFileItem>,
+    pub live_stages: Vec<LiveStageRow>,
+    pub live_logs: Vec<String>,
+    pub child: Arc<Mutex<Option<Child>>>,
+    pub rx: Option<Receiver<WorkerMsg>>,
+}
+
+impl ActiveJob {
+    pub fn is_running(&self) -> bool {
+        self.status == JobStatus::Running
+    }
+
+    pub fn elapsed_secs(&self) -> f32 {
+        self.finished_secs
+            .unwrap_or_else(|| self.started.elapsed().as_secs_f32())
+    }
+
+    pub fn progress_fraction(&self) -> f32 {
+        if matches!(self.status, JobStatus::Done(_)) {
+            return 1.0;
+        }
+        let done_count = self
+            .live_stages
+            .iter()
+            .filter(|s| matches!(s.state, StageExecState::Done(_)))
+            .count();
+        let bonus = self.compile_pct.unwrap_or(0.35).clamp(0.0, 0.95);
+        ((done_count as f32 + bonus) / (ALL_STAGES.len() as f32)).clamp(0.02, 1.0)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct QueuedJob {
+    pub id: u64,
+    pub name: String,
+    pub pe_path: String,
+    pub target_label: String,
+    pub opts: PipelineOptions,
 }
 
 pub enum WorkerMsg {
@@ -203,6 +267,10 @@ pub struct GameReCompApp {
     pub theme: ThemeMode,
     pub last_dark_theme: ThemeMode,
     pub last_light_theme: ThemeMode,
+    pub ui_font: UiFont,
+    pub mono_font: MonoFont,
+    pub font_scale: f32,
+    pub code_font_scale: f32,
     pub show_theme_menu: bool,
     pub route: Route,
 
@@ -222,22 +290,15 @@ pub struct GameReCompApp {
     pub picked_pe_info: PeInfo,
     pub picked_owned_checked: bool,
 
-    // Running background worker & live animated stage + file telemetry tracker
-    pub running_kind: Option<WorkerKind>,
-    pub running_stage: String,
-    pub running_started: Option<Instant>,
-    pub running_project_dir: Option<PathBuf>,
+    // Multi-game parallel decompilation & queue state
+    pub jobs: Vec<ActiveJob>,
+    pub queued_pipelines: Vec<QueuedJob>,
+    pub selected_job_id: Option<u64>,
+    pub next_job_id: u64,
+    pub max_concurrent_jobs: usize,
     pub anim_frame: usize,
-    pub current_file: String,
-    pub current_task_detail: String,
-    pub compile_pct: Option<f32>,
-    pub processed_files: Vec<ProcessedFileItem>,
     pub last_finished_project: Option<PathBuf>,
-    pub live_stages: Vec<LiveStageRow>,
-    pub running_child: Arc<Mutex<Option<Child>>>,
-    pub worker_rx: Option<Receiver<WorkerMsg>>,
     pub _poll_task: Option<Task<()>>,
-    pub live_logs: Vec<String>,
     pub feed: Vec<FeedItem>,
 
     // Sidebar / popovers / notifications
@@ -287,6 +348,10 @@ impl GameReCompApp {
     ) -> Self {
         let settings = UserSettings::load();
         let theme = ThemeMode::from_str(&settings.theme);
+        let ui_font = UiFont::from_str(&settings.ui_font);
+        let mono_font = MonoFont::from_str(&settings.mono_font);
+        let font_scale = clamp_font_scale(settings.font_scale);
+        let code_font_scale = clamp_font_scale(settings.code_font_scale);
         let toolchain = ToolchainStatus::detect();
         let agent_cmd_buf = cfg
             .reveng_ai_cmd
@@ -307,6 +372,7 @@ impl GameReCompApp {
             ThemeMode::Light
         };
 
+        let max_concurrent_jobs = settings.max_concurrent_jobs.clamp(1, 8);
         let mut app = Self {
             focus_handle: cx.focus_handle(),
             focused_input: None,
@@ -315,6 +381,10 @@ impl GameReCompApp {
             theme,
             last_dark_theme,
             last_light_theme,
+            ui_font,
+            mono_font,
+            font_scale,
+            code_font_scale,
             show_theme_menu: false,
             route: Route::Home,
             projects: Vec::new(),
@@ -328,21 +398,14 @@ impl GameReCompApp {
             picked_pe: PathBuf::new(),
             picked_pe_info: PeInfo::default(),
             picked_owned_checked: false,
-            running_kind: None,
-            running_stage: "starting".to_string(),
-            running_started: None,
-            running_project_dir: None,
+            jobs: Vec::new(),
+            queued_pipelines: Vec::new(),
+            selected_job_id: None,
+            next_job_id: 1,
+            max_concurrent_jobs,
             anim_frame: 0,
-            current_file: String::new(),
-            current_task_detail: String::new(),
-            compile_pct: None,
-            processed_files: Vec::new(),
             last_finished_project: None,
-            live_stages: fresh_live_stages(),
-            running_child: Arc::new(Mutex::new(None)),
-            worker_rx: None,
             _poll_task: None,
-            live_logs: Vec::new(),
             feed: Vec::new(),
             sidebar_filter: String::new(),
             show_new_menu: false,
@@ -391,7 +454,7 @@ impl GameReCompApp {
                 }
                 let _ = weak.update(cx, |this, cx| {
                     let changed = this.poll_worker_and_timers();
-                    if changed || this.running_kind.is_some() {
+                    if changed || this.has_running_jobs() {
                         cx.notify();
                     }
                 });
@@ -403,7 +466,170 @@ impl GameReCompApp {
     }
 
     pub fn tokens(&self) -> ThemeTokens {
-        ThemeTokens::for_mode(self.theme)
+        ThemeTokens::for_appearance(
+            self.theme,
+            self.ui_font,
+            self.mono_font,
+            self.font_scale,
+            self.code_font_scale,
+        )
+    }
+
+    pub fn set_ui_font(&mut self, font: UiFont, cx: &mut Context<Self>) {
+        self.ui_font = font;
+        self.settings.ui_font = font.as_str().to_string();
+        let _ = self.settings.save();
+        cx.notify();
+    }
+
+    pub fn set_mono_font(&mut self, font: MonoFont, cx: &mut Context<Self>) {
+        self.mono_font = font;
+        self.settings.mono_font = font.as_str().to_string();
+        let _ = self.settings.save();
+        cx.notify();
+    }
+
+    pub fn set_font_scale(&mut self, scale: f32, cx: &mut Context<Self>) {
+        let clamped = clamp_font_scale(scale);
+        self.font_scale = (clamped * 100.0).round() / 100.0;
+        self.settings.font_scale = self.font_scale;
+        let _ = self.settings.save();
+        cx.notify();
+    }
+
+    pub fn step_font_scale(&mut self, delta: f32, cx: &mut Context<Self>) {
+        self.set_font_scale(self.font_scale + delta, cx);
+    }
+
+    pub fn set_code_font_scale(&mut self, scale: f32, cx: &mut Context<Self>) {
+        let clamped = clamp_font_scale(scale);
+        self.code_font_scale = (clamped * 100.0).round() / 100.0;
+        self.settings.code_font_scale = self.code_font_scale;
+        let _ = self.settings.save();
+        cx.notify();
+    }
+
+    pub fn step_code_font_scale(&mut self, delta: f32, cx: &mut Context<Self>) {
+        self.set_code_font_scale(self.code_font_scale + delta, cx);
+    }
+
+    pub fn reset_typography(&mut self, cx: &mut Context<Self>) {
+        self.ui_font = UiFont::Archivo;
+        self.mono_font = MonoFont::IbmPlexMono;
+        self.font_scale = 1.0;
+        self.code_font_scale = 1.0;
+        self.settings.ui_font = self.ui_font.as_str().to_string();
+        self.settings.mono_font = self.mono_font.as_str().to_string();
+        self.settings.font_scale = 1.0;
+        self.settings.code_font_scale = 1.0;
+        let _ = self.settings.save();
+        cx.notify();
+    }
+
+    pub fn active_running_count(&self) -> usize {
+        self.jobs.iter().filter(|j| j.is_running()).count()
+    }
+
+    pub fn has_running_jobs(&self) -> bool {
+        self.jobs.iter().any(|j| j.is_running())
+    }
+
+    pub fn is_project_running(&self, dir: &Path) -> bool {
+        self.jobs
+            .iter()
+            .any(|j| j.is_running() && j.project_dir.as_deref() == Some(dir))
+    }
+
+    pub fn focused_job(&self) -> Option<&ActiveJob> {
+        if let Some(id) = self.selected_job_id {
+            if let Some(j) = self.jobs.iter().find(|j| j.id == id) {
+                return Some(j);
+            }
+        }
+        self.jobs
+            .iter()
+            .find(|j| j.is_running())
+            .or_else(|| self.jobs.last())
+    }
+
+    pub fn job_for_project(&self, dir: &Path) -> Option<&ActiveJob> {
+        self.jobs
+            .iter()
+            .rev()
+            .find(|j| j.project_dir.as_deref() == Some(dir))
+    }
+
+    pub fn set_max_concurrent_jobs(&mut self, n: usize, cx: &mut Context<Self>) {
+        self.max_concurrent_jobs = n.clamp(1, 8);
+        self.settings.max_concurrent_jobs = self.max_concurrent_jobs;
+        let _ = self.settings.save();
+        self.drain_queued_pipelines();
+        cx.notify();
+    }
+
+    pub fn browse_for_multiple_pes(&mut self, cx: &mut Context<Self>) {
+        let mut dlg = rfd::FileDialog::new()
+            .set_title("Select one or more 32-bit Windows PE executables")
+            .add_filter("Windows PE Executable", &["exe", "EXE"]);
+        if !self.settings.rom_library_dir.trim().is_empty() {
+            dlg = dlg.set_directory(&self.settings.rom_library_dir);
+        }
+        if let Some(files) = dlg.pick_files() {
+            if files.len() == 1 && !self.has_running_jobs() && self.jobs.is_empty() {
+                self.pick_pe_path(files[0].clone());
+            } else {
+                self.enqueue_multiple_pes(files);
+            }
+            cx.notify();
+        }
+    }
+
+    pub fn enqueue_multiple_pes(&mut self, paths: Vec<PathBuf>) {
+        let mut added = 0usize;
+        let mut skipped: Vec<String> = Vec::new();
+        for path in paths {
+            if !path.is_file() {
+                continue;
+            }
+            let name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("file")
+                .to_string();
+            let info = inspect_pe(&path);
+            if !info.ok || !info.pe32_x86 {
+                skipped.push(name);
+                continue;
+            }
+            let mut opts = self.opts.clone();
+            opts.pe_file = path.display().to_string();
+            opts.project_dir = default_project_dir(&self.cfg.repo_root, &path)
+                .display()
+                .to_string();
+            opts.dry_run = false;
+            if self.enqueue_or_start_pipeline_inner(opts) {
+                added += 1;
+            }
+        }
+        self.drop_state = DropState::Idle;
+        if added > 0 {
+            let msg = format!(
+                "Added {added} game(s) · running {}/{}",
+                self.active_running_count(),
+                self.max_concurrent_jobs
+            );
+            let ok_col = self.tokens().match_fill;
+            self.push_toast("Multi-game queue updated", &msg, ok_col, false);
+        }
+        if !skipped.is_empty() {
+            let err_col = self.tokens().miss;
+            self.push_toast(
+                "Skipped unsupported files",
+                &format!("Not PE32 i386: {}", skipped.join(", ")),
+                err_col,
+                true,
+            );
+        }
     }
 
     pub fn set_focus_input(
@@ -654,10 +880,17 @@ impl GameReCompApp {
         self.push_toast("Agent command saved", &detail, self.tokens().match_fill, false);
     }
 
+    fn alloc_job_id(&mut self) -> u64 {
+        let id = self.next_job_id;
+        self.next_job_id += 1;
+        id
+    }
+
     pub fn start_picked_pipeline(&mut self, cx: &mut Context<Self>) {
-        self.drop_state = DropState::Busy;
         let opts = self.opts.clone();
-        self.spawn_pipeline_worker(opts, cx);
+        self.enqueue_or_start_pipeline(opts, cx);
+        self.reset_dropzone();
+        cx.notify();
     }
 
     pub fn start_active_project_pipeline(&mut self, cx: &mut Context<Self>) {
@@ -675,13 +908,91 @@ impl GameReCompApp {
         if let Some(ref dir) = self.active_project_dir {
             opts.project_dir = dir.display().to_string();
         }
-        self.spawn_pipeline_worker(opts, cx);
+        self.enqueue_or_start_pipeline(opts, cx);
     }
 
-    fn spawn_pipeline_worker(&mut self, opts: PipelineOptions, cx: &mut Context<Self>) {
-        if self.running_kind.is_some() {
-            return;
+    pub fn enqueue_or_start_pipeline(&mut self, opts: PipelineOptions, cx: &mut Context<Self>) {
+        self.enqueue_or_start_pipeline_inner(opts);
+        cx.notify();
+    }
+
+    fn enqueue_or_start_pipeline_inner(&mut self, opts: PipelineOptions) -> bool {
+        let repo_root = self.cfg.repo_root.clone();
+        let project_dir = if !opts.project_dir.trim().is_empty() {
+            PathBuf::from(opts.project_dir.trim())
+        } else {
+            default_project_dir(&repo_root, Path::new(&opts.pe_file))
+        };
+
+        // Guard against duplicate concurrent runs targeting the exact same project directory
+        let already_active = self
+            .jobs
+            .iter()
+            .any(|j| j.is_running() && j.project_dir.as_ref() == Some(&project_dir))
+            || self.queued_pipelines.iter().any(|q| {
+                let qdir = if !q.opts.project_dir.trim().is_empty() {
+                    PathBuf::from(q.opts.project_dir.trim())
+                } else {
+                    default_project_dir(&repo_root, Path::new(&q.opts.pe_file))
+                };
+                qdir == project_dir
+            });
+        if already_active {
+            let info_col = self.tokens().info;
+            let name = project_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("project")
+                .to_string();
+            self.push_toast(
+                "Already active or queued",
+                &format!("{name} is already decompiling or waiting in queue."),
+                info_col,
+                false,
+            );
+            return false;
         }
+
+        if self.active_running_count() < self.max_concurrent_jobs {
+            self.spawn_pipeline_job(opts);
+        } else {
+            let id = self.alloc_job_id();
+            let name = Path::new(&opts.pe_file)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("game.exe")
+                .to_string();
+            let target_label = opts.resolved_target_summary();
+            let pe_path = opts.pe_file.clone();
+            self.queued_pipelines.push(QueuedJob {
+                id,
+                name: name.clone(),
+                pe_path,
+                target_label,
+                opts,
+            });
+            let work_col = self.tokens().work;
+            self.push_toast(
+                "Queued for parallel decompilation",
+                &format!("{name} added to queue ({} waiting)", self.queued_pipelines.len()),
+                work_col,
+                false,
+            );
+        }
+        true
+    }
+
+    fn drain_queued_pipelines(&mut self) {
+        while self.active_running_count() < self.max_concurrent_jobs
+            && !self.queued_pipelines.is_empty()
+        {
+            let next = self.queued_pipelines.remove(0);
+            self.spawn_pipeline_job(next.opts);
+        }
+    }
+
+    fn spawn_pipeline_job(&mut self, opts: PipelineOptions) {
+        let id = self.alloc_job_id();
         let repo_root = self.cfg.repo_root.clone();
         let project_dir = if !opts.project_dir.trim().is_empty() {
             PathBuf::from(opts.project_dir.trim())
@@ -691,11 +1002,12 @@ impl GameReCompApp {
         let capture = opts.capture_screenshots;
         let clean_objects = opts.clean_objects;
         let verify_standalone = opts.verify_standalone;
+        let auto_launch_after_build = opts.auto_launch_after_build;
         let is_dry_run = opts.dry_run;
-        let child_slot = Arc::clone(&self.running_child);
+        let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
+        let child_for_thread = Arc::clone(&child_slot);
 
         let mut backend_args = opts.to_backend_args();
-        // Force plain stage markers so GUI parses every `==> stage` and `ok 1.2s stage:` live!
         if !backend_args.iter().any(|a| a == "--no-progress") {
             backend_args.push("--no-progress".to_string());
         }
@@ -703,40 +1015,52 @@ impl GameReCompApp {
         let mut py_args = vec!["-m".to_string(), "tools.autorecomp.cli".to_string()];
         py_args.extend(backend_args);
 
-        self.running_kind = Some(WorkerKind::Pipeline);
-        self.running_stage = "inspect".to_string();
-        self.running_started = Some(Instant::now());
-        self.running_project_dir = Some(project_dir.clone());
-        self.anim_frame = 0;
-        self.current_file = Path::new(&opts.pe_file)
+        let file_name = Path::new(&opts.pe_file)
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(&opts.pe_file)
             .to_string();
-        self.current_task_detail = format!(
-            "Inspecting PE32 headers & targeting {}",
-            opts.resolved_target_summary()
-        );
-        self.compile_pct = None;
-        self.processed_files.clear();
-        self.processed_files.push(ProcessedFileItem {
-            action: "PE",
-            path: self.current_file.clone(),
-            detail: format!("Input binary -> {}", opts.resolved_target_summary()),
-            timestamp: now_hms(),
-            stage: "inspect".to_string(),
-        });
-        self.live_stages = fresh_live_stages();
-        if let Some(first) = self.live_stages.first_mut() {
+        let target_label = opts.resolved_target_summary();
+
+        let mut live_stages = fresh_live_stages();
+        if let Some(first) = live_stages.first_mut() {
             first.state = StageExecState::Running(Instant::now());
         }
-        self.live_logs.clear();
-        self.live_logs.push(format!("$ {}", opts.format_command_preview()));
-        self.push_feed("pipeline", &format!("started {}", opts.pe_file), false);
 
         let (tx, rx) = mpsc::channel();
-        self.worker_rx = Some(rx);
-        cx.notify();
+        let job = ActiveJob {
+            id,
+            kind: WorkerKind::Pipeline,
+            name: file_name.clone(),
+            pe_path: opts.pe_file.clone(),
+            target_label: target_label.clone(),
+            project_dir: Some(project_dir.clone()),
+            auto_launch_after_build,
+            is_dry_run,
+            status: JobStatus::Running,
+            stage: "inspect".to_string(),
+            started: Instant::now(),
+            finished_secs: None,
+            current_file: file_name.clone(),
+            current_task_detail: format!("Inspecting PE32 headers & targeting {target_label}"),
+            compile_pct: None,
+            processed_files: vec![ProcessedFileItem {
+                action: "PE",
+                path: file_name.clone(),
+                detail: format!("Input binary -> {target_label}"),
+                timestamp: now_hms(),
+                stage: "inspect".to_string(),
+            }],
+            live_stages,
+            live_logs: vec![format!("$ {}", opts.format_command_preview())],
+            child: child_slot,
+            rx: Some(rx),
+        };
+        self.jobs.push(job);
+        if self.selected_job_id.is_none() || self.jobs.len() == 1 {
+            self.selected_job_id = Some(id);
+        }
+        self.push_feed("pipeline", &format!("started {file_name} -> {target_label}"), false);
 
         thread::spawn(move || {
             let mut cmd = Command::new("python3");
@@ -751,7 +1075,7 @@ impl GameReCompApp {
                 cmd.env("RECOMP_SCREENSHOT", shots);
             }
 
-            let code = run_streaming_child_inner(cmd, child_slot, &tx);
+            let code = run_streaming_child_inner(cmd, child_for_thread, &tx);
 
             if !is_dry_run && clean_objects {
                 let _ = crate::tasks::clean_cmake_objects(&project_dir);
@@ -792,16 +1116,22 @@ impl GameReCompApp {
     }
 
     pub fn start_readability_agent(&mut self, cx: &mut Context<Self>) {
-        if self.running_kind.is_some() {
-            return;
-        }
         let Some(dir) = self.active_project_dir.clone() else {
             return;
         };
+        if self.jobs.iter().any(|j| {
+            j.is_running()
+                && j.kind == WorkerKind::Readability
+                && j.project_dir.as_ref() == Some(&dir)
+        }) {
+            return;
+        }
+        let id = self.alloc_job_id();
         let repo_root = self.cfg.repo_root.clone();
         let ai_cmd = self.effective_ai_cmd();
         let target_fn = self.agent_target_fn.trim().to_string();
-        let child_slot = Arc::clone(&self.running_child);
+        let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
+        let child_for_thread = Arc::clone(&child_slot);
 
         let mut args = vec![
             "-m".to_string(),
@@ -813,18 +1143,42 @@ impl GameReCompApp {
             args.push(target_fn.clone());
         }
 
-        self.running_kind = Some(WorkerKind::Readability);
-        self.running_stage = if target_fn.is_empty() {
+        let stage = if target_fn.is_empty() {
             "readability harness".to_string()
         } else {
             format!("function {target_fn}")
         };
-        self.running_started = Some(Instant::now());
-        self.live_logs.push(format!("$ python3 {}", args.join(" ")));
-        self.push_feed("agent", "started readability & provenance pass", false);
+        let proj_name = dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("project")
+            .to_string();
 
         let (tx, rx) = mpsc::channel();
-        self.worker_rx = Some(rx);
+        self.jobs.push(ActiveJob {
+            id,
+            kind: WorkerKind::Readability,
+            name: format!("Agent: {proj_name}"),
+            pe_path: String::new(),
+            target_label: stage.clone(),
+            project_dir: Some(dir.clone()),
+            auto_launch_after_build: false,
+            is_dry_run: false,
+            status: JobStatus::Running,
+            stage,
+            started: Instant::now(),
+            finished_secs: None,
+            current_file: String::new(),
+            current_task_detail: "Running readability & provenance pass".to_string(),
+            compile_pct: None,
+            processed_files: Vec::new(),
+            live_stages: fresh_live_stages(),
+            live_logs: vec![format!("$ python3 {}", args.join(" "))],
+            child: child_slot,
+            rx: Some(rx),
+        });
+        self.selected_job_id = Some(id);
+        self.push_feed("agent", &format!("started readability pass on {proj_name}"), false);
         cx.notify();
 
         thread::spawn(move || {
@@ -837,7 +1191,7 @@ impl GameReCompApp {
             if let Some(ai) = ai_cmd {
                 cmd.env("REVENG_AI_CMD", ai);
             }
-            let code = run_streaming_child_inner(cmd, child_slot, &tx);
+            let code = run_streaming_child_inner(cmd, child_for_thread, &tx);
             let _ = tx.send(WorkerMsg::Finished {
                 kind: WorkerKind::Readability,
                 code,
@@ -877,35 +1231,61 @@ impl GameReCompApp {
     }
 
     pub fn start_batch_worker(&mut self, folder: PathBuf, cx: &mut Context<Self>) {
-        if self.running_kind.is_some() {
-            return;
-        }
+        let id = self.alloc_job_id();
         let exe = self.cli_binary_path();
-        let child_slot = Arc::clone(&self.running_child);
-
-        self.running_kind = Some(WorkerKind::Batch);
-        self.running_stage = format!("scanning {}", folder.display());
-        self.running_started = Some(Instant::now());
-        self.live_stages = fresh_live_stages();
-        self.drop_state = DropState::Busy;
-        self.route = Route::Home;
-        self.live_logs.clear();
-        self.live_logs.push(format!(
-            "$ game-recomp-cli batch {} --verify-standalone",
-            folder.display()
-        ));
-        self.push_feed("batch", &format!("scanning {}", folder.display()), false);
+        let parallel = self.max_concurrent_jobs.max(1);
+        let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
+        let child_for_thread = Arc::clone(&child_slot);
+        let folder_name = folder
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("batch")
+            .to_string();
 
         let (tx, rx) = mpsc::channel();
-        self.worker_rx = Some(rx);
+        self.jobs.push(ActiveJob {
+            id,
+            kind: WorkerKind::Batch,
+            name: format!("Batch: {folder_name}"),
+            pe_path: folder.display().to_string(),
+            target_label: format!("{parallel} workers"),
+            project_dir: None,
+            auto_launch_after_build: false,
+            is_dry_run: false,
+            status: JobStatus::Running,
+            stage: format!("scanning {}", folder.display()),
+            started: Instant::now(),
+            finished_secs: None,
+            current_file: String::new(),
+            current_task_detail: format!("Running batch with {parallel} parallel workers"),
+            compile_pct: None,
+            processed_files: Vec::new(),
+            live_stages: fresh_live_stages(),
+            live_logs: vec![format!(
+                "$ game-recomp-cli batch {} --parallel {parallel} --verify-standalone",
+                folder.display()
+            )],
+            child: child_slot,
+            rx: Some(rx),
+        });
+        self.selected_job_id = Some(id);
+        self.drop_state = DropState::Idle;
+        self.route = Route::Home;
+        self.push_feed("batch", &format!("scanning {} (parallel={parallel})", folder.display()), false);
         cx.notify();
 
         thread::spawn(move || {
             let mut cmd = Command::new(exe);
-            cmd.args(["batch", &folder.display().to_string(), "--verify-standalone"])
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped());
-            let code = run_streaming_child_inner(cmd, child_slot, &tx);
+            cmd.args([
+                "batch",
+                &folder.display().to_string(),
+                "--parallel",
+                &parallel.to_string(),
+                "--verify-standalone",
+            ])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+            let code = run_streaming_child_inner(cmd, child_for_thread, &tx);
             let _ = tx.send(WorkerMsg::Finished {
                 kind: WorkerKind::Batch,
                 code,
@@ -915,18 +1295,70 @@ impl GameReCompApp {
         });
     }
 
-    pub fn stop_running_worker(&mut self) {
-        if let Ok(mut guard) = self.running_child.lock() {
-            if let Some(ref mut child) = *guard {
-                let _ = child.kill();
+    pub fn stop_job(&mut self, job_id: u64) {
+        if let Some(job) = self.jobs.iter_mut().find(|j| j.id == job_id) {
+            if let Ok(mut guard) = job.child.lock() {
+                if let Some(ref mut child) = *guard {
+                    let _ = child.kill();
+                }
+            }
+            if job.is_running() {
+                job.finished_secs = Some(job.started.elapsed().as_secs_f32());
+                job.status = JobStatus::Stopped;
+                job.rx = None;
+                job.live_logs.push("[stopped by user]".to_string());
             }
         }
         self.push_toast(
-            "Stopped",
-            "Sent terminate signal to running process.",
+            "Stopped job",
+            "Sent terminate signal to job process.",
             self.tokens().work,
             false,
         );
+        self.drain_queued_pipelines();
+    }
+
+    pub fn stop_all_jobs(&mut self) {
+        for job in &mut self.jobs {
+            if job.is_running() {
+                if let Ok(mut guard) = job.child.lock() {
+                    if let Some(ref mut child) = *guard {
+                        let _ = child.kill();
+                    }
+                }
+                job.finished_secs = Some(job.started.elapsed().as_secs_f32());
+                job.status = JobStatus::Stopped;
+                job.rx = None;
+                job.live_logs.push("[stopped by user]".to_string());
+            }
+        }
+        let cleared_q = self.queued_pipelines.len();
+        self.queued_pipelines.clear();
+        self.push_toast(
+            "Stopped all jobs",
+            &format!("Stopped running jobs and cleared {cleared_q} queued item(s)."),
+            self.tokens().work,
+            false,
+        );
+    }
+
+    pub fn remove_queued_job(&mut self, job_id: u64) {
+        self.queued_pipelines.retain(|q| q.id != job_id);
+    }
+
+    pub fn clear_finished_jobs(&mut self) {
+        self.jobs.retain(|j| j.is_running());
+        if let Some(sel) = self.selected_job_id {
+            if !self.jobs.iter().any(|j| j.id == sel) {
+                self.selected_job_id = self.jobs.first().map(|j| j.id);
+            }
+        }
+    }
+
+    pub fn clear_job_logs(&mut self, job_id: u64) {
+        if let Some(j) = self.jobs.iter_mut().find(|j| j.id == job_id) {
+            j.live_logs.clear();
+        }
     }
 
     pub fn launch_rebuilt_binary(&mut self, bin: &Path) {
@@ -1052,14 +1484,13 @@ impl GameReCompApp {
 
     fn poll_worker_and_timers(&mut self) -> bool {
         let mut changed = false;
-        if self.running_kind.is_some() {
+        let running = self.has_running_jobs();
+        if running {
             self.anim_frame = self.anim_frame.wrapping_add(1);
-            // Periodically discover newly generated C/report files in the live output directory
-            if self.anim_frame % 6 == 0 {
-                self.scan_live_generated_files();
-            }
             changed = true;
         }
+        let scan_now = running && self.anim_frame % 6 == 0;
+
         let prev_toasts = self.toasts.len();
         self.toasts
             .retain(|t| t.created.elapsed() < Duration::from_secs(6));
@@ -1067,240 +1498,229 @@ impl GameReCompApp {
             changed = true;
         }
 
-        let mut msgs = Vec::new();
-        if let Some(ref rx) = self.worker_rx {
-            while let Ok(msg) = rx.try_recv() {
-                msgs.push(msg);
+        struct FinishedEvent {
+            job_id: u64,
+            kind: WorkerKind,
+            code: i32,
+            project_dir: Option<PathBuf>,
+            auto_launch: bool,
+            is_dry_run: bool,
+            name: String,
+            summary: String,
+        }
+
+        let mut feed_events: Vec<(String, String, bool)> = Vec::new();
+        let mut finished_events: Vec<FinishedEvent> = Vec::new();
+
+        for job in &mut self.jobs {
+            if scan_now && job.is_running() {
+                scan_job_generated_files(job);
             }
-        }
-        if !msgs.is_empty() {
-            changed = true;
-        }
-
-        for msg in msgs {
-            match msg {
-                WorkerMsg::StageStart(st) => {
-                    self.running_stage = st.clone();
-                    if st == "compile" {
-                        self.compile_pct = Some(0.0);
-                    }
-                    self.current_task_detail = crate::pipeline_opts::STAGE_DESCRIPTIONS
-                        .iter()
-                        .find(|(name, _)| *name == st.as_str())
-                        .map(|(_, d)| (*d).to_string())
-                        .unwrap_or_else(|| format!("Running stage {st}"));
-                    self.push_feed("stage", &format!("==> {st}"), false);
-                    for row in &mut self.live_stages {
-                        if row.name == st {
-                            row.state = StageExecState::Running(Instant::now());
-                        } else if let StageExecState::Running(started) = row.state {
-                            row.state = StageExecState::Done(started.elapsed().as_secs_f32());
-                        }
-                    }
-                    self.scan_live_generated_files();
+            let mut msgs = Vec::new();
+            if let Some(ref rx) = job.rx {
+                while let Ok(msg) = rx.try_recv() {
+                    msgs.push(msg);
                 }
-                WorkerMsg::StageEnd(st, status, secs, detail) => {
-                    for row in &mut self.live_stages {
-                        if row.name == st {
-                            row.detail = detail.clone();
-                            row.state = if status == "failed" {
-                                StageExecState::Failed
-                            } else {
-                                StageExecState::Done(secs)
-                            };
-                        }
-                    }
-                    if st == "compile" && status == "ok" {
-                        self.compile_pct = Some(1.0);
-                    }
-                    self.current_task_detail = format!("{st}: {status} ({secs:.1}s) {detail}");
-                    self.push_feed(
-                        &st,
-                        &format!("{status} ({secs:.1}s) {detail}"),
-                        status == "ok",
-                    );
-                    self.scan_live_generated_files();
-                }
-                WorkerMsg::FileEvent {
-                    action,
-                    path,
-                    detail,
-                    compile_pct,
-                } => {
-                    self.current_file = path.clone();
-                    self.current_task_detail = detail.clone();
-                    if let Some(pct) = compile_pct {
-                        self.compile_pct = Some(pct);
-                    }
-                    let dup = self
-                        .processed_files
-                        .last()
-                        .map(|last| last.path == path && last.action == action)
-                        .unwrap_or(false);
-                    if !dup {
-                        self.processed_files.push(ProcessedFileItem {
-                            action,
-                            path,
-                            detail,
-                            timestamp: now_hms(),
-                            stage: self.running_stage.clone(),
-                        });
-                        if self.processed_files.len() > 240 {
-                            self.processed_files.remove(0);
-                        }
-                    }
-                }
-                WorkerMsg::Line(l) => {
-                    let tr = l.trim();
-                    if !tr.is_empty() && !tr.starts_with("$ ") {
-                        if tr.len() <= 140 {
-                            self.current_task_detail = tr.to_string();
-                        }
-                    }
-                    if self.live_logs.len() > 2500 {
-                        self.live_logs.remove(0);
-                    }
-                    self.live_logs.push(l);
-                }
-                WorkerMsg::Finished {
-                    kind,
-                    code,
-                    project_dir,
-                    summary,
-                } => {
-                    self.scan_live_generated_files();
-                    self.running_kind = None;
-                    self.running_started = None;
-                    self.running_project_dir = None;
-                    self.worker_rx = None;
-                    self.live_logs.push(format!("[exit {code}] {summary}"));
+            }
+            if !msgs.is_empty() {
+                changed = true;
+            }
 
-                    let ok = code == 0 || code == 3;
-                    for row in &mut self.live_stages {
-                        if let StageExecState::Running(started) = row.state {
-                            row.state = if ok {
-                                StageExecState::Done(started.elapsed().as_secs_f32())
-                            } else {
-                                StageExecState::Failed
-                            };
+            for msg in msgs {
+                match msg {
+                    WorkerMsg::StageStart(st) => {
+                        job.stage = st.clone();
+                        if st == "compile" {
+                            job.compile_pct = Some(0.0);
                         }
-                    }
-
-                    let col = if ok {
-                        self.tokens().match_fill
-                    } else {
-                        self.tokens().not_c
-                    };
-                    self.push_feed(kind.label(), &summary, ok);
-                    self.push_toast(
-                        &format!("{} finished (exit {code})", kind.label()),
-                        &summary,
-                        col,
-                        !ok,
-                    );
-                    self.refresh_projects();
-
-                    match kind {
-                        WorkerKind::Pipeline => {
-                            if let Some(dir) = project_dir {
-                                if dir.join("reports").join("report.json").is_file() {
-                                    self.drop_state = DropState::Idle;
-                                    self.last_finished_project = Some(dir.clone());
-                                    self.open_project_dir(dir.clone(), ProjectTab::Overview);
-                                    if ok && !self.opts.dry_run && self.opts.auto_launch_after_build
-                                    {
-                                        self.launch_active_project_after_build();
-                                    }
-                                } else if !ok {
-                                    self.drop_state = DropState::Error(summary);
-                                } else {
-                                    self.drop_state = DropState::Idle;
-                                }
-                            } else if !ok {
-                                self.drop_state = DropState::Error(summary);
-                            } else {
-                                self.drop_state = DropState::Picked;
+                        job.current_task_detail = crate::pipeline_opts::STAGE_DESCRIPTIONS
+                            .iter()
+                            .find(|(name, _)| *name == st.as_str())
+                            .map(|(_, d)| (*d).to_string())
+                            .unwrap_or_else(|| format!("Running stage {st}"));
+                        feed_events.push((job.name.clone(), format!("==> {st}"), false));
+                        for row in &mut job.live_stages {
+                            if row.name == st {
+                                row.state = StageExecState::Running(Instant::now());
+                            } else if let StageExecState::Running(started) = row.state {
+                                row.state = StageExecState::Done(started.elapsed().as_secs_f32());
                             }
                         }
-                        WorkerKind::Readability => {
-                            self.reload_active_project();
+                        scan_job_generated_files(job);
+                    }
+                    WorkerMsg::StageEnd(st, status, secs, detail) => {
+                        for row in &mut job.live_stages {
+                            if row.name == st {
+                                row.detail = detail.clone();
+                                row.state = if status == "failed" {
+                                    StageExecState::Failed
+                                } else {
+                                    StageExecState::Done(secs)
+                                };
+                            }
                         }
-                        WorkerKind::Batch => {
-                            self.drop_state = DropState::Idle;
+                        if st == "compile" && status == "ok" {
+                            job.compile_pct = Some(1.0);
                         }
+                        job.current_task_detail = format!("{st}: {status} ({secs:.1}s) {detail}");
+                        feed_events.push((
+                            format!("{} · {st}", job.name),
+                            format!("{status} ({secs:.1}s) {detail}"),
+                            status == "ok",
+                        ));
+                        scan_job_generated_files(job);
+                    }
+                    WorkerMsg::FileEvent {
+                        action,
+                        path,
+                        detail,
+                        compile_pct,
+                    } => {
+                        job.current_file = path.clone();
+                        job.current_task_detail = detail.clone();
+                        if let Some(pct) = compile_pct {
+                            job.compile_pct = Some(pct);
+                        }
+                        let dup = job
+                            .processed_files
+                            .last()
+                            .map(|last| last.path == path && last.action == action)
+                            .unwrap_or(false);
+                        if !dup {
+                            job.processed_files.push(ProcessedFileItem {
+                                action,
+                                path,
+                                detail,
+                                timestamp: now_hms(),
+                                stage: job.stage.clone(),
+                            });
+                            if job.processed_files.len() > 240 {
+                                job.processed_files.remove(0);
+                            }
+                        }
+                    }
+                    WorkerMsg::Line(l) => {
+                        let tr = l.trim();
+                        if !tr.is_empty() && !tr.starts_with("$ ") && tr.len() <= 140 {
+                            job.current_task_detail = tr.to_string();
+                        }
+                        if job.live_logs.len() > 2500 {
+                            job.live_logs.remove(0);
+                        }
+                        job.live_logs.push(l);
+                    }
+                    WorkerMsg::Finished {
+                        kind,
+                        code,
+                        project_dir,
+                        summary,
+                    } => {
+                        scan_job_generated_files(job);
+                        job.finished_secs = Some(job.started.elapsed().as_secs_f32());
+                        job.rx = None;
+                        let ok = code == 0 || code == 3;
+                        if !matches!(job.status, JobStatus::Stopped) {
+                            job.status = if ok {
+                                JobStatus::Done(code)
+                            } else {
+                                JobStatus::Failed(code)
+                            };
+                        }
+                        job.live_logs.push(format!("[exit {code}] {summary}"));
+                        for row in &mut job.live_stages {
+                            if let StageExecState::Running(started) = row.state {
+                                row.state = if ok {
+                                    StageExecState::Done(started.elapsed().as_secs_f32())
+                                } else {
+                                    StageExecState::Failed
+                                };
+                            }
+                        }
+                        if ok {
+                            job.compile_pct = Some(1.0);
+                        }
+                        if job.project_dir.is_none() {
+                            job.project_dir = project_dir.clone();
+                        }
+                        finished_events.push(FinishedEvent {
+                            job_id: job.id,
+                            kind,
+                            code,
+                            project_dir,
+                            auto_launch: job.auto_launch_after_build,
+                            is_dry_run: job.is_dry_run,
+                            name: job.name.clone(),
+                            summary,
+                        });
                     }
                 }
             }
         }
+
+        for (actor, msg, is_ok) in feed_events {
+            self.push_feed(&actor, &msg, is_ok);
+        }
+
+        if !finished_events.is_empty() {
+            self.refresh_projects();
+        }
+
+        for ev in finished_events {
+            let ok = ev.code == 0 || ev.code == 3;
+            let col = if ok {
+                self.tokens().match_fill
+            } else {
+                self.tokens().not_c
+            };
+            self.push_feed(&ev.name, &ev.summary, ok);
+            self.push_toast(
+                &format!("{} finished (exit {})", ev.name, ev.code),
+                &ev.summary,
+                col,
+                !ok,
+            );
+
+            match ev.kind {
+                WorkerKind::Pipeline => {
+                    if let Some(dir) = ev.project_dir {
+                        if dir.join("reports").join("report.json").is_file() {
+                            self.last_finished_project = Some(dir.clone());
+                            if self.active_project_dir.as_ref() == Some(&dir) {
+                                self.open_project_dir(dir.clone(), ProjectTab::Overview);
+                            } else if self.jobs.len() == 1
+                                && self.queued_pipelines.is_empty()
+                                && matches!(self.route, Route::Home)
+                                && matches!(self.drop_state, DropState::Idle | DropState::Busy)
+                            {
+                                self.open_project_dir(dir.clone(), ProjectTab::Overview);
+                            }
+                            if ok && !ev.is_dry_run && ev.auto_launch {
+                                self.launch_project_dir_after_build(&dir);
+                            }
+                        }
+                    }
+                }
+                WorkerKind::Readability => {
+                    self.reload_active_project();
+                }
+                WorkerKind::Batch => {}
+            }
+            let _ = ev.job_id;
+        }
+
+        // Promote next queued game(s) immediately when parallel slots free up
+        self.drain_queued_pipelines();
         changed
     }
 
-    fn launch_active_project_after_build(&mut self) {
-        let Some(ref model) = self.active_project else {
+    pub fn launch_project_dir_after_build(&mut self, dir: &Path) {
+        let Ok(model) = ProjectModel::load(dir) else {
             return;
         };
-        let dir = model.dir.clone();
         if model.has_wasm_build {
-            self.launch_or_open_wasm(&dir);
+            self.launch_or_open_wasm(dir);
         } else if let Some(bin) = model.built_binary_path() {
             self.launch_rebuilt_binary(&bin);
-        }
-    }
-
-    /// Scans the live output directory for newly generated C sources, headers, reports, and
-    /// compiled artifacts so the GUI shows each individual file in real time during decompilation.
-    fn scan_live_generated_files(&mut self) {
-        let Some(proj_dir) = self.running_project_dir.clone() else {
-            return;
-        };
-        let watch_dirs: &[(&str, &str, &str)] = &[
-            ("src/recomp/gen", "GEN", "Generated lifted C unit"),
-            ("src/highlevel", "HL", "High-level typed C module"),
-            ("reports", "REPORT", "Pipeline telemetry & report"),
-            ("screenshots", "FRAME", "Captured framebuffer frame"),
-        ];
-        for (rel_sub, action, desc) in watch_dirs {
-            let full = proj_dir.join(rel_sub);
-            let Ok(rd) = fs::read_dir(&full) else {
-                continue;
-            };
-            let mut entries: Vec<PathBuf> = rd.flatten().map(|e| e.path()).collect();
-            entries.sort();
-            for path in entries {
-                if !path.is_file() {
-                    continue;
-                }
-                let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
-                    continue;
-                };
-                let rel_display = format!("{rel_sub}/{name}");
-                if self
-                    .processed_files
-                    .iter()
-                    .any(|item| item.path == rel_display)
-                {
-                    continue;
-                }
-                let size_str = fs::metadata(&path)
-                    .map(|m| crate::cli::format_bytes(m.len()))
-                    .unwrap_or_default();
-                let detail = if size_str.is_empty() {
-                    (*desc).to_string()
-                } else {
-                    format!("{desc} ({size_str})")
-                };
-                self.current_file = rel_display.clone();
-                self.processed_files.push(ProcessedFileItem {
-                    action,
-                    path: rel_display,
-                    detail,
-                    timestamp: now_hms(),
-                    stage: self.running_stage.clone(),
-                });
-                if self.processed_files.len() > 240 {
-                    self.processed_files.remove(0);
-                }
-            }
         }
     }
 
@@ -1329,6 +1749,22 @@ impl GameReCompApp {
     fn handle_key_down(&mut self, event: &KeyDownEvent, _window: &mut Window, cx: &mut Context<Self>) {
         let key = event.keystroke.key.as_str();
         let mods = &event.keystroke.modifiers;
+
+        // Global font zoom shortcuts: Cmd/Ctrl + '+', '-', '0'
+        if mods.platform || mods.control {
+            if key == "=" || key == "+" {
+                self.step_font_scale(0.05, cx);
+                return;
+            }
+            if key == "-" {
+                self.step_font_scale(-0.05, cx);
+                return;
+            }
+            if key == "0" {
+                self.set_font_scale(1.0, cx);
+                return;
+            }
+        }
 
         if key == "escape" {
             if self.focused_input.is_some() {
@@ -1434,8 +1870,8 @@ impl GameReCompApp {
             list = list.child(
                 div()
                     .p(px(16.0))
-                    .font_family(style::FONT_SANS)
-                    .text_size(px(12.5))
+                    .font_family(t.ui_font)
+                    .text_size(px(t.ui_px(12.5)))
                     .text_color(rgb(t.muted))
                     .child("Nothing to report yet."),
             );
@@ -1470,24 +1906,24 @@ impl GameReCompApp {
                                         .justify_between()
                                         .child(
                                             div()
-                                                .font_family(style::FONT_SANS)
+                                                .font_family(t.ui_font)
                                                 .font_weight(FontWeight::BOLD)
-                                                .text_size(px(12.5))
+                                                .text_size(px(t.ui_px(12.5)))
                                                 .text_color(rgb(t.ink))
                                                 .child(n.title.clone()),
                                         )
                                         .child(
                                             div()
-                                                .font_family(style::FONT_MONO)
-                                                .text_size(px(10.5))
+                                                .font_family(t.mono_font)
+                                                .text_size(px(t.ui_px(10.5)))
                                                 .text_color(rgb(t.muted))
                                                 .child(n.timestamp.clone()),
                                         ),
                                 )
                                 .child(
                                     div()
-                                        .font_family(style::FONT_SANS)
-                                        .text_size(px(12.0))
+                                        .font_family(t.ui_font)
+                                        .text_size(px(t.ui_px(12.0)))
                                         .text_color(if n.is_error {
                                             rgb(t.miss)
                                         } else {
@@ -1529,16 +1965,16 @@ impl GameReCompApp {
                                 .gap(px(8.0))
                                 .child(
                                     div()
-                                        .font_family(style::FONT_SANS)
+                                        .font_family(t.ui_font)
                                         .font_weight(FontWeight::BOLD)
-                                        .text_size(px(14.5))
+                                        .text_size(px(t.ui_px(14.5)))
                                         .text_color(rgb(t.ink))
                                         .child("What happened"),
                                 )
                                 .child(
                                     div()
-                                        .font_family(style::FONT_SANS)
-                                        .text_size(px(11.5))
+                                        .font_family(t.ui_font)
+                                        .text_size(px(t.ui_px(11.5)))
                                         .text_color(rgb(t.muted))
                                         .child("in all projects"),
                                 ),
@@ -1623,9 +2059,9 @@ impl GameReCompApp {
                                     .justify_between()
                                     .child(
                                         div()
-                                            .font_family(style::FONT_SANS)
+                                            .font_family(t.ui_font)
                                             .font_weight(FontWeight::BOLD)
-                                            .text_size(px(12.5))
+                                            .text_size(px(t.ui_px(12.5)))
                                             .text_color(if toast.is_error {
                                                 rgb(t.miss)
                                             } else {
@@ -1635,16 +2071,16 @@ impl GameReCompApp {
                                     )
                                     .child(
                                         div()
-                                            .font_family(style::FONT_MONO)
-                                            .text_size(px(10.5))
+                                            .font_family(t.mono_font)
+                                            .text_size(px(t.ui_px(10.5)))
                                             .text_color(rgb(t.muted))
                                             .child(toast.timestamp.clone()),
                                     ),
                             )
                             .child(
                                 div()
-                                    .font_family(style::FONT_MONO)
-                                    .text_size(px(11.5))
+                                    .font_family(t.mono_font)
+                                    .text_size(px(t.ui_px(11.5)))
                                     .text_color(if toast.is_error {
                                         rgb(t.miss)
                                     } else {
@@ -1661,14 +2097,69 @@ impl GameReCompApp {
 
 impl Drop for GameReCompApp {
     fn drop(&mut self) {
-        if let Ok(mut g) = self.running_child.lock() {
-            if let Some(ref mut c) = *g {
-                let _ = c.kill();
+        for job in &self.jobs {
+            if let Ok(mut g) = job.child.lock() {
+                if let Some(ref mut c) = *g {
+                    let _ = c.kill();
+                }
             }
         }
         if let Ok(mut g) = self.wasm_server_child.lock() {
             if let Some(ref mut c) = *g {
                 let _ = c.kill();
+            }
+        }
+    }
+}
+
+/// Scans an active job's live output directory for newly generated C sources, headers, reports,
+/// and compiled artifacts so every concurrent job shows each individual file in real time.
+fn scan_job_generated_files(job: &mut ActiveJob) {
+    let Some(proj_dir) = job.project_dir.clone() else {
+        return;
+    };
+    let watch_dirs: &[(&str, &str, &str)] = &[
+        ("src/recomp/gen", "GEN", "Generated lifted C unit"),
+        ("src/highlevel", "HL", "High-level typed C module"),
+        ("reports", "REPORT", "Pipeline telemetry & report"),
+        ("screenshots", "FRAME", "Captured framebuffer frame"),
+    ];
+    for (rel_sub, action, desc) in watch_dirs {
+        let full = proj_dir.join(rel_sub);
+        let Ok(rd) = fs::read_dir(&full) else {
+            continue;
+        };
+        let mut entries: Vec<PathBuf> = rd.flatten().map(|e| e.path()).collect();
+        entries.sort();
+        for path in entries {
+            if !path.is_file() {
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            let rel_display = format!("{rel_sub}/{name}");
+            if job.processed_files.iter().any(|item| item.path == rel_display) {
+                continue;
+            }
+            let size_str = fs::metadata(&path)
+                .map(|m| crate::cli::format_bytes(m.len()))
+                .unwrap_or_default();
+            let detail = if size_str.is_empty() {
+                (*desc).to_string()
+            } else {
+                format!("{desc} ({size_str})")
+            };
+            job.current_file = rel_display.clone();
+            job.processed_files.push(ProcessedFileItem {
+                action,
+                path: rel_display,
+                detail,
+                timestamp: now_hms(),
+                stage: job.stage.clone(),
+            });
+            if job.processed_files.len() > 240 {
+                job.processed_files.remove(0);
             }
         }
     }
@@ -1702,7 +2193,7 @@ impl Render for GameReCompApp {
             .flex_row()
             .bg(rgb(t.bg))
             .text_color(rgb(t.ink))
-            .font_family(style::FONT_SANS)
+            .font_family(t.ui_font)
             .child(sidebar::render_sidebar(self, &t, cx))
             .child(main_view)
             .when_some(inspector::render_function_inspector(self, &t, cx), |el, d| {
