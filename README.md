@@ -120,7 +120,7 @@ Windows game.exe → recover & lift → generate C → compile → run → verif
 | IGI (IGI-Injector.exe) | Windows | i386 (PE32) | 2687 fns recovered; 7 units / 41.9 MiB C; binary IGI_Injector 10759 KiB [macOS arm64 (native)]; 108 imports bound, 17 unresolved; low-level 2687/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | IGI | Windows | i386 (PE32) | 7325 fns recovered; 16 units / 114.9 MiB C; binary igi 0 KiB [macOS arm64 (native)]; 128 imports bound; low-level 7325/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
 | Ikachan (dxIka.exe) | Windows | i386 (PE32) | 545 fns recovered; 3 units / 9.8 MiB C; binary dxIka 2921 KiB [macOS arm64 (native)]; 97 imports bound; low-level 543/ high-level verified 2 | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
-| NES_GameGenie (NES_GameGenieEncoder.exe) | Windows | i386 (PE32) | 84 fns recovered; 2 units / 0.3 MiB C; low-level 84/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/GameReComp/projects/NES_GameGenieEncoder/logs/com | NOT RUN |
+| NES_GameGenie (NES_GameGenieEncoder.exe) | Windows | i386 (PE32) | 84 fns recovered; 2 units / 0.3 MiB C; low-level 84/ high-level verified 0; compile failed (see local project logs) | NOT RUN |
 | Noiz2sa | Windows | i386 (PE32) | 6615 fns recovered; 14 units / 94.3 MiB C; binary noiz2sa 22293 KiB [macOS arm64 (native)]; 69 imports bound; low-level 6615/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and stayed alive until the 10s timeout; no crash observed, no oracle |
 | OpenTyrian | Windows | x86-64 | no report.json | NOT RUN |
 | PSFTP (psftp-w32.exe) | Windows | i386 (PE32) | 6093 fns recovered; 24 units / 180.2 MiB C; binary psftp_w32 48990 KiB; 149 imports bound [macOS arm64 (native)]; low-level 6093/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
@@ -279,18 +279,16 @@ You need **Rust** (to build `game-recomp-gui` and `game-recomp-cli`), **GPUI Kit
   ```bash
   xcode-select --install
   brew install cmake pkg-config sdl2 sdl2_ttf python@3.12 ffmpeg
-  python3 -m pip install capstone
   ```
 - **Linux (Ubuntu / Debian):**
   ```bash
   sudo apt-get update
   sudo apt-get install -y \
-    build-essential clang cmake pkg-config git libssl-dev \
+    build-essential clang cmake pkg-config git libssl-dev python3-venv \
     libfontconfig1-dev libfreetype-dev libexpat1-dev \
     libx11-dev libxkbcommon-dev libxkbcommon-x11-dev \
     libwayland-dev libvulkan1 vulkan-tools \
     libsdl2-dev libsdl2-ttf-dev python3 python3-pip
-  python3 -m pip install capstone
   ```
 - **Windows (x86_64 MSVC):**
   1. Install **Visual Studio Build Tools 2022** with the **Desktop development with C++** workload (MSVC v143 + Windows 10/11 SDK).
@@ -306,6 +304,12 @@ You need **Rust** (to build `game-recomp-gui` and `game-recomp-cli`), **GPUI Kit
 git clone https://github.com/heaven-hm/GameReComp.git
 cd GameReComp
 
+# macOS and Linux (Bash): macOS uses Homebrew Python 3.12 when available
+if command -v python3.12 >/dev/null 2>&1; then python3.12 -m venv .venv; else python3 -m venv .venv; fi
+. .venv/bin/activate && python3 -m pip install capstone
+# Optional: Unicorn-backed differential verification
+# python3 -m pip install unicorn
+
 # Build BOTH desktop GPUI Kit GUI and CLI (release binaries in target/release/)
 cargo build --release
 
@@ -319,6 +323,13 @@ cmake --build gui/build
 # Or run the CLI directly
 ./target/release/game-recomp-cli --version
 ./target/release/game-recomp-cli /path/to/game.exe
+```
+
+On Windows PowerShell, create and populate the environment with:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install capstone
 ```
 
 Generated projects default to `~/GameReComp/projects/<game>/` (customizable in Settings): `src/` (C), `build/` (standalone binary or WASM), and `reports/` (evidence). Supply your own legally obtained game executable and assets. [Installation & troubleshooting →](docs/GETTING_STARTED.md)

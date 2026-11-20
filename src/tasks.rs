@@ -68,7 +68,8 @@ pub fn clean_cmake_objects(project_dir: &Path) -> std::io::Result<()> {
     if obj_dir.exists() {
         fs::remove_dir_all(obj_dir)?;
     }
-    let keep_sources = project_dir.file_name().and_then(|s| s.to_str()) == Some("cavestory-doukutsu");
+    let keep_sources =
+        project_dir.file_name().and_then(|s| s.to_str()) == Some("cavestory-doukutsu");
     if !keep_sources && project_dir.join("reports").join("report.json").is_file() {
         let gen_dir = project_dir.join("src").join("recomp").join("gen");
         if gen_dir.exists() {
@@ -168,7 +169,10 @@ pub fn verify_standalone_binary(binary: &Path, timeout_ms: u64) -> Result<String
             let snippet: String = stderr_buf.lines().take(2).collect::<Vec<_>>().join(" | ");
             return Err(format!("exited 2 (boot failure): {snippet}"));
         }
-        return Ok(format!("exited {code} in {}ms", start.elapsed().as_millis()));
+        return Ok(format!(
+            "exited {code} in {}ms",
+            start.elapsed().as_millis()
+        ));
     }
 
     Ok(format!("ran cleanly for {timeout_ms}ms headless"))
@@ -478,7 +482,7 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
             gargs.push(r.project_dir.to_string_lossy().into());
         }
     }
-    let _ = Command::new("python3")
+    let _ = Command::new(crate::config::python_interpreter(&cfg.repo_root))
         .current_dir(&cfg.repo_root)
         .env("PYTHONPATH", &cfg.repo_root)
         .args(&gargs)
@@ -489,26 +493,44 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
         .map(|r| {
             JsonValue::Object(vec![
                 ("exe".into(), JsonValue::Str(r.exe_name.clone())),
-                ("project_dir".into(), JsonValue::Str(r.project_dir.to_string_lossy().into())),
+                (
+                    "project_dir".into(),
+                    JsonValue::Str(r.project_dir.to_string_lossy().into()),
+                ),
                 ("exit_code".into(), JsonValue::Number(r.exit_code as f64)),
                 ("build_passed".into(), JsonValue::Bool(r.build_passed)),
                 ("boot_passed".into(), JsonValue::Bool(r.boot_passed)),
-                ("strict_boot_passed".into(), JsonValue::Bool(r.strict_boot_passed)),
-                ("unresolved_imports".into(), JsonValue::Number(r.unresolved_imports as f64)),
-                ("unhandled_eips".into(), JsonValue::Number(r.unhandled_eips as f64)),
+                (
+                    "strict_boot_passed".into(),
+                    JsonValue::Bool(r.strict_boot_passed),
+                ),
+                (
+                    "unresolved_imports".into(),
+                    JsonValue::Number(r.unresolved_imports as f64),
+                ),
+                (
+                    "unhandled_eips".into(),
+                    JsonValue::Number(r.unhandled_eips as f64),
+                ),
                 ("standalone_ok".into(), JsonValue::Bool(r.standalone_ok)),
                 ("elapsed_secs".into(), JsonValue::Number(r.elapsed_secs)),
             ])
         })
         .collect();
     let report_obj = JsonValue::Object(vec![
-        ("timestamp".into(), JsonValue::Number(unix_timestamp_secs() as f64)),
+        (
+            "timestamp".into(),
+            JsonValue::Number(unix_timestamp_secs() as f64),
+        ),
         ("total".into(), JsonValue::Number(results.len() as f64)),
         ("results".into(), JsonValue::Array(json_rows)),
     ]);
     let report_dir = cfg.repo_root.join("reports");
     let _ = fs::create_dir_all(&report_dir);
-    let _ = fs::write(report_dir.join("batch_last.json"), report_obj.to_json_string());
+    let _ = fs::write(
+        report_dir.join("batch_last.json"),
+        report_obj.to_json_string(),
+    );
 
     let failed = results
         .iter()
@@ -544,15 +566,22 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
         );
     }
 
-    if failed.is_empty() { 0 } else { 2 }
+    if failed.is_empty() {
+        0
+    } else {
+        2
+    }
 }
 
-pub fn run_serve_command(_cfg: &AppConfig, args: &[String]) -> i32 {
+pub fn run_serve_command(cfg: &AppConfig, args: &[String]) -> i32 {
     if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
-        println!("Usage: GameReComp serve <project_dir_or_build_dir> [--port 8080]");
+        println!(
+            "Usage: GameReComp serve <project_dir_or_build_dir> [--port 8080] [--ready-file PATH]"
+        );
         return if args.is_empty() { 2 } else { 0 };
     }
     let mut dir: Option<PathBuf> = None;
+    let mut ready_file: Option<PathBuf> = None;
     let mut port = "8080".to_string();
     let mut i = 0;
     while i < args.len() {
@@ -562,6 +591,14 @@ pub fn run_serve_command(_cfg: &AppConfig, args: &[String]) -> i32 {
                 i += 2;
             } else {
                 eprintln!("error: --port requires a value");
+                return 2;
+            }
+        } else if args[i] == "--ready-file" {
+            if let Some(value) = args.get(i + 1).filter(|value| !value.starts_with('-')) {
+                ready_file = Some(PathBuf::from(value));
+                i += 2;
+            } else {
+                eprintln!("error: --ready-file requires a path");
                 return 2;
             }
         } else if dir.is_none() {
@@ -584,25 +621,86 @@ pub fn run_serve_command(_cfg: &AppConfig, args: &[String]) -> i32 {
         eprintln!("error: no build/index.html found in {} (build with --target-os web --target-arch wasm32 first)", base.display());
         return 2;
     };
-    println!("Serving WebAssembly app at http://127.0.0.1:{port}/index.html (dir: {})", serve_dir.display());
+    println!(
+        "Serving WebAssembly app at http://127.0.0.1:{port}/index.html (dir: {})",
+        serve_dir.display()
+    );
     println!("Press Ctrl+C to stop.");
-    let py = "import http.server, socketserver, functools, sys\n\
-class CoopHandler(http.server.SimpleHTTPRequestHandler):\n\
-    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.wasm': 'application/wasm'}\n\
-    def end_headers(self):\n\
-        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')\n\
-        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')\n\
-        self.send_header('Cache-Control', 'no-store')\n\
-        super().end_headers()\n\
-handler = functools.partial(CoopHandler, directory=sys.argv[1])\n\
-socketserver.TCPServer.allow_reuse_address = True\n\
-with socketserver.TCPServer(('127.0.0.1', int(sys.argv[2])), handler) as httpd:\n\
-    httpd.serve_forever()\n";
-    match Command::new("python3")
-        .arg("-c")
-        .arg(py)
-        .arg(&serve_dir)
-        .arg(&port)
+    let py = concat!(
+        "import http.server, socketserver, functools, sys, os, signal, errno, stat, secrets, ctypes\n",
+        "class CoopHandler(http.server.SimpleHTTPRequestHandler):\n",
+        "    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.wasm': 'application/wasm'}\n",
+        "    def end_headers(self):\n",
+        "        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')\n",
+        "        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')\n",
+        "        self.send_header('Cache-Control', 'no-store')\n",
+        "        super().end_headers()\n",
+        "handler = functools.partial(CoopHandler, directory=sys.argv[1])\n",
+        "socketserver.TCPServer.allow_reuse_address = True\n",
+        "def stop_server(_signum, _frame): raise SystemExit(0)\n",
+        "def process_alive(pid):\n",
+        "    if os.name != 'nt':\n",
+        "        try: os.kill(pid, 0)\n",
+        "        except OSError as error: return error.errno != errno.ESRCH\n",
+        "        return True\n",
+        "    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)\n",
+        "    kernel32.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)\n",
+        "    kernel32.OpenProcess.restype = ctypes.c_void_p\n",
+        "    kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)\n",
+        "    handle = kernel32.OpenProcess(0x1000, False, pid)\n",
+        "    if not handle: return ctypes.get_last_error() == 5\n",
+        "    kernel32.CloseHandle(handle)\n",
+        "    return True\n",
+        "signal.signal(signal.SIGTERM, stop_server)\n",
+        "def read_marker(path):\n",
+        "    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_NOFOLLOW', 0))\n",
+        "    try:\n",
+        "        info = os.fstat(fd)\n",
+        "        if not stat.S_ISREG(info.st_mode): return None\n",
+        "        return info, os.read(fd, 256).decode('ascii', 'ignore').strip()\n",
+        "    finally: os.close(fd)\n",
+        "def remove_stale_marker(path):\n",
+        "    try: info, marker = read_marker(path)\n",
+        "    except FileNotFoundError: return\n",
+        "    if not info or not marker.startswith('GameReComp-ready-v1 '): raise FileExistsError(path)\n",
+        "    try: owner = int(marker.split()[1])\n",
+        "    except (IndexError, ValueError): raise FileExistsError(path)\n",
+        "    if process_alive(owner): raise FileExistsError(path)\n",
+        "    current = os.stat(path, follow_symlinks=False)\n",
+        "    if (current.st_dev, current.st_ino) == (info.st_dev, info.st_ino): os.unlink(path)\n",
+        "if len(sys.argv) > 3: remove_stale_marker(sys.argv[3])\n",
+        "marker_owner = None\n",
+        "with socketserver.TCPServer(('127.0.0.1', int(sys.argv[2])), handler) as httpd:\n",
+        "    marker_temp = None\n",
+        "    try:\n",
+        "        if len(sys.argv) > 3:\n",
+        "            marker_owner = f'GameReComp-ready-v1 {os.getpid()} {secrets.token_hex(16)}'\n",
+        "            marker_temp = sys.argv[3] + '.' + secrets.token_hex(16) + '.tmp'\n",
+        "            fd = os.open(marker_temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)\n",
+        "            with os.fdopen(fd, 'w', encoding='ascii') as marker:\n",
+        "                marker.write(marker_owner); marker.flush(); os.fsync(marker.fileno())\n",
+        "            os.link(marker_temp, sys.argv[3])\n",
+        "            os.unlink(marker_temp); marker_temp = None\n",
+        "        httpd.serve_forever()\n",
+        "    finally:\n",
+        "        if marker_temp:\n",
+        "            try: os.unlink(marker_temp)\n",
+        "            except FileNotFoundError: pass\n",
+        "        if len(sys.argv) > 3 and marker_owner:\n",
+        "            try: info, marker = read_marker(sys.argv[3])\n",
+        "            except FileNotFoundError: info, marker = None, None\n",
+        "            if info and marker == marker_owner:\n",
+        "                try: current = os.stat(sys.argv[3], follow_symlinks=False)\n",
+        "                except FileNotFoundError: pass\n",
+        "                else:\n",
+        "                    if (current.st_dev, current.st_ino) == (info.st_dev, info.st_ino): os.unlink(sys.argv[3])\n",
+    );
+    let mut command = Command::new(crate::config::python_interpreter(&cfg.repo_root));
+    command.arg("-c").arg(py).arg(&serve_dir).arg(&port);
+    if let Some(path) = ready_file.as_ref() {
+        command.arg(path);
+    }
+    match command
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -640,26 +738,44 @@ pub fn run_tasks_command(cfg: &AppConfig, args: &[String]) -> i32 {
         .collect();
     dirs.sort();
 
-    println!("{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} {}", "Project", "Score", "Outcome", "Build", "Strict", "Bin", "Source PE");
+    println!(
+        "{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} {}",
+        "Project", "Score", "Outcome", "Build", "Strict", "Bin", "Source PE"
+    );
     println!("{}", "-".repeat(90));
     for d in dirs {
         let name = d.file_name().and_then(|s| s.to_str()).unwrap_or("");
         match ProjectModel::load(&d) {
             Ok(m) => {
-                let bin_ok = if m.built_binary_path().is_some() { "yes" } else { "no" };
+                let bin_ok = if m.built_binary_path().is_some() {
+                    "yes"
+                } else {
+                    "no"
+                };
                 println!(
                     "{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} {}",
                     name,
                     m.score,
-                    if m.verification.is_empty() { "-" } else { &m.verification },
+                    if m.verification.is_empty() {
+                        "-"
+                    } else {
+                        &m.verification
+                    },
                     if m.diag.build_passed { "ok" } else { "fail" },
-                    if m.diag.strict_boot_passed { "ok" } else { "fail" },
+                    if m.diag.strict_boot_passed {
+                        "ok"
+                    } else {
+                        "fail"
+                    },
                     bin_ok,
                     m.pe_path
                 );
             }
             Err(_) => {
-                println!("{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} -", name, "-", "unbuilt", "-", "-", "-");
+                println!(
+                    "{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} -",
+                    name, "-", "unbuilt", "-", "-", "-"
+                );
             }
         }
     }
@@ -673,7 +789,10 @@ mod tests {
 
     #[test]
     fn collects_and_sorts_exes_from_dir() {
-        let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         let dir = std::env::temp_dir().join(format!("gamerecomp-tasks-{nanos}"));
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("b.exe"), b"MZ").unwrap();

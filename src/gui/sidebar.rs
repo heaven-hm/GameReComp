@@ -1,5 +1,5 @@
 use gpui::{
-    Context, Div, FontWeight, MouseButton, MouseDownEvent, Styled, div, prelude::*, px, rgb,
+    div, prelude::*, px, rgb, Context, Div, FontWeight, MouseButton, MouseDownEvent, Styled,
 };
 
 use super::style;
@@ -94,12 +94,11 @@ pub fn render_sidebar(
             )
         });
 
-    let collapse_btn = small_icon_btn("nav_collapse_btn", t, "◧").on_click(cx.listener(
-        |this, _, _, cx| {
+    let collapse_btn =
+        small_icon_btn("nav_collapse_btn", t, "◧").on_click(cx.listener(|this, _, _, cx| {
             this.sidebar_collapsed = !this.sidebar_collapsed;
             cx.notify();
-        },
-    ));
+        }));
 
     let top_row = div()
         .flex_shrink_0()
@@ -404,17 +403,9 @@ pub fn render_sidebar(
                 .py(px(8.0))
                 .rounded(px(3.0))
                 .cursor_pointer()
-                .bg(if is_active {
-                    rgb(t.panel)
-                } else {
-                    rgb(t.nav)
-                })
+                .bg(if is_active { rgb(t.panel) } else { rgb(t.nav) })
                 .border_1()
-                .border_color(if is_active {
-                    rgb(t.faint)
-                } else {
-                    rgb(t.nav)
-                })
+                .border_color(if is_active { rgb(t.faint) } else { rgb(t.nav) })
                 .hover({
                     let bg_alt = t.bg_alt;
                     move |s| s.bg(rgb(bg_alt))
@@ -438,7 +429,14 @@ pub fn render_sidebar(
                         .flex()
                         .items_center()
                         .gap(px(6.0))
-                        .child(div().w(px(8.0)).h(px(8.0)).flex_shrink_0().rounded(px(2.0)).bg(rgb(sw_hex)))
+                        .child(
+                            div()
+                                .w(px(8.0))
+                                .h(px(8.0))
+                                .flex_shrink_0()
+                                .rounded(px(2.0))
+                                .bg(rgb(sw_hex)),
+                        )
                         .child(
                             div()
                                 .flex_1()
@@ -686,11 +684,7 @@ pub fn render_sidebar(
                     div()
                         .font_family(t.mono_font)
                         .text_size(px(t.ui_px(9.5)))
-                        .text_color(if active {
-                            rgb(t.hl_ink)
-                        } else {
-                            rgb(t.muted)
-                        })
+                        .text_color(if active { rgb(t.hl_ink) } else { rgb(t.muted) })
                         .child(if active {
                             "✓"
                         } else if mode.is_dark() {
@@ -894,13 +888,11 @@ pub fn render_sidebar(
                                 },
                             )),
                         )
-                        .child(
-                            small_icon_btn("nav_quit_btn", t, "⏻").on_click(cx.listener(
-                                |_, _, _, cx| {
-                                    cx.quit();
-                                },
-                            )),
-                        ),
+                        .child(small_icon_btn("nav_quit_btn", t, "⏻").on_click(cx.listener(
+                            |_, _, _, cx| {
+                                cx.quit();
+                            },
+                        ))),
                 ),
         );
 
@@ -988,7 +980,11 @@ fn render_collapsed_sidebar(
                 .items_center()
                 .justify_center()
                 .rounded(px(4.0))
-                .bg(if is_active { rgb(t.panel) } else { rgb(t.bg_alt) })
+                .bg(if is_active {
+                    rgb(t.panel)
+                } else {
+                    rgb(t.bg_alt)
+                })
                 .border_1()
                 .border_color(rgb(sw_hex))
                 .font_family(t.mono_font)
@@ -1036,22 +1032,18 @@ fn render_collapsed_sidebar(
                     cx.notify();
                 })),
             )
+            .child(small_icon_btn("rail_tools", t, "⚙").on_click(cx.listener(
+                |this, _, window, cx| {
+                    this.refresh_toolchain_async(window, cx);
+                    this.route = Route::Tools;
+                    cx.notify();
+                },
+            )))
             .child(
-                small_icon_btn("rail_tools", t, "⚙").on_click(cx.listener(
-                    |this, _, window, cx| {
-                        this.refresh_toolchain_async(window, cx);
-                        this.route = Route::Tools;
-                        cx.notify();
-                    },
-                )),
-            )
-            .child(
-                small_icon_btn("rail_settings", t, "☰").on_click(cx.listener(
-                    |this, _, _, cx| {
-                        this.route = Route::Settings;
-                        cx.notify();
-                    },
-                )),
+                small_icon_btn("rail_settings", t, "☰").on_click(cx.listener(|this, _, _, cx| {
+                    this.route = Route::Settings;
+                    cx.notify();
+                })),
             )
             .child(
                 small_icon_btn("rail_about", t, "ⓘ").on_click(cx.listener(|this, _, _, cx| {
@@ -1135,7 +1127,12 @@ fn nav_link(
         base.text_color(rgb(t.ink_2))
             .font_weight(FontWeight::MEDIUM)
             .hover(move |s| s.bg(rgb(bg_alt)).text_color(rgb(ink)))
-            .child(div().text_size(px(t.ui_px(13.0))).text_color(rgb(t.muted)).child(glyph))
+            .child(
+                div()
+                    .text_size(px(t.ui_px(13.0)))
+                    .text_color(rgb(t.muted))
+                    .child(glyph),
+            )
             .child(label)
     }
 }

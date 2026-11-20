@@ -34,7 +34,7 @@ process ran but no gameplay oracle proved it.
 The supplied corpus uses symlinked game directories, so use a NUL-safe loop:
 
 ```bash
-find -L /Users/haseeb-mir/Downloads/recomp-apps/games/win32 \
+find -L /path/to/recomp-apps/games/win32 \
   -type f -iname '*.exe' -print0 |
 while IFS= read -r -d '' exe; do
   ./GameReComp "$exe" \

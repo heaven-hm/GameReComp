@@ -89,7 +89,13 @@ pub fn executable_name(pe_path: &Path) -> String {
         .unwrap_or("game");
     let mut safe: String = stem
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     if safe.is_empty() || safe.as_bytes()[0].is_ascii_digit() {
         safe = format!("game_{safe}");
@@ -139,7 +145,9 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
                 i += 1;
             }
             "--profile" => {
-                let val = args.get(i + 1).ok_or("--profile requires a value (game|desktop|console)")?;
+                let val = args
+                    .get(i + 1)
+                    .ok_or("--profile requires a value (game|desktop|console)")?;
                 match val.as_str() {
                     "game" | "desktop" | "console" => {
                         out.profile = Some(val.clone());
@@ -147,7 +155,11 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
                             out.capture_screenshots = true;
                         }
                     }
-                    other => return Err(format!("unknown --profile: {other} (expected game, desktop, or console)")),
+                    other => {
+                        return Err(format!(
+                            "unknown --profile: {other} (expected game, desktop, or console)"
+                        ))
+                    }
                 }
                 i += 2;
             }
@@ -227,8 +239,8 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
                 out.backend_args.push(val.clone());
                 i += 2;
             }
-            "--assets-dir" | "--timeout" | "--oracle" | "--jobs" | "--split"
-            | "--split-bytes" | "--build-timeout" | "--highlevel" => {
+            "--assets-dir" | "--timeout" | "--oracle" | "--jobs" | "--split" | "--split-bytes"
+            | "--build-timeout" | "--highlevel" => {
                 let val = args
                     .get(i + 1)
                     .ok_or_else(|| format!("{a} requires a value"))?;
@@ -244,7 +256,9 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
             flag if flag.starts_with("--") => {
                 if let Some((k, _)) = flag.split_once('=') {
                     match k {
-                        "--project-dir" => out.project_dir = Some(PathBuf::from(&flag[k.len() + 1..])),
+                        "--project-dir" => {
+                            out.project_dir = Some(PathBuf::from(&flag[k.len() + 1..]))
+                        }
                         "--out-mode" => out.out_mode = Some(flag[k.len() + 1..].to_string()),
                         "--stages" => out.stages = Some(split_stages_csv(&flag[k.len() + 1..])),
                         "--skip-stages" => {
@@ -293,7 +307,14 @@ pub fn resolve_stages(parsed: &ParsedCli) -> Result<Vec<String>, String> {
             vec!["inspect", "recover", "translate", "project"]
         }
         Some("binary") | Some("binary-only") => {
-            vec!["inspect", "recover", "translate", "project", "compile", "report"]
+            vec![
+                "inspect",
+                "recover",
+                "translate",
+                "project",
+                "compile",
+                "report",
+            ]
         }
         Some(other) => return Err(format!("unknown --out-mode: {other}")),
     };
@@ -423,7 +444,7 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
     }
 
     // Drive Python RE/lifting/compile backend while keeping orchestration in Rust.
-    let mut cmd = Command::new("python3");
+    let mut cmd = Command::new(crate::config::python_interpreter(&cfg.repo_root));
     cmd.current_dir(&cfg.repo_root)
         .env("PYTHONPATH", &cfg.repo_root)
         .args(["-m", "tools.autorecomp.cli"])
@@ -442,7 +463,11 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
     if let Some(ref adir) = cfg.assets_dir {
         cmd.env("RECOMP_ASSETS_DIR", adir);
     }
-    if !parsed.backend_args.iter().any(|a| a == "--timeout" || a.starts_with("--timeout=")) {
+    if !parsed
+        .backend_args
+        .iter()
+        .any(|a| a == "--timeout" || a.starts_with("--timeout="))
+    {
         cmd.args(["--timeout", &format!("{}", cfg.default_timeout_secs)]);
     }
 
@@ -510,10 +535,7 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
                         "✓".green().bold()
                     ));
                 } else {
-                    pb.finish_with_message(format!(
-                        "{} failed (exit {code})",
-                        "✗".red().bold()
-                    ));
+                    pb.finish_with_message(format!("{} failed (exit {code})", "✗".red().bold()));
                 }
                 code
             }
@@ -624,7 +646,10 @@ mod tests {
 
     #[test]
     fn generates_cmake_safe_project_name() {
-        assert_eq!(executable_name(Path::new("/tmp/putty-w32.exe")), "putty_w32");
+        assert_eq!(
+            executable_name(Path::new("/tmp/putty-w32.exe")),
+            "putty_w32"
+        );
         assert_eq!(executable_name(Path::new("/tmp/123app.exe")), "game_123app");
     }
 

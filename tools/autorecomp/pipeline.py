@@ -954,7 +954,9 @@ class Pipeline:
             proc = subprocess.Popen(
                 cmd, cwd=str(self.assets_dir), env=env,
                 stdout=out, stderr=err,
-                stdin=subprocess.DEVNULL, start_new_session=(os.name != "nt"))
+                # Keep the game in the orchestrator's process group so GUI
+                # cancellation stops both the pipeline and the running game.
+                stdin=subprocess.DEVNULL, start_new_session=False)
             try:
                 rc = proc.wait(timeout=self.timeout)
             except subprocess.TimeoutExpired:

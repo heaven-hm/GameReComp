@@ -12,14 +12,38 @@ pub const ALL_STAGES: [&str; 8] = [
 ];
 
 pub const STAGE_DESCRIPTIONS: [(&str, &str); 8] = [
-    ("inspect", "Validate PE32 header, imports, entry point & SHA-256"),
-    ("recover", "Disassemble x86 code sections & recover function boundaries"),
-    ("translate", "Lift x86 instructions into portable C translation units"),
-    ("project", "Generate CMakeLists.txt, Win32 HLE runtime & project.json"),
-    ("compile", "Compile native host binary or WebAssembly wasm32 bundle"),
-    ("run", "Execute rebuilt binary under timeout & collect traces/frames"),
-    ("verify", "Evaluate oracle assertions, boot health & verification score"),
-    ("report", "Emit report.json, report.html, functions.json & manifest.json"),
+    (
+        "inspect",
+        "Validate PE32 header, imports, entry point & SHA-256",
+    ),
+    (
+        "recover",
+        "Disassemble x86 code sections & recover function boundaries",
+    ),
+    (
+        "translate",
+        "Lift x86 instructions into portable C translation units",
+    ),
+    (
+        "project",
+        "Generate CMakeLists.txt, Win32 HLE runtime & project.json",
+    ),
+    (
+        "compile",
+        "Compile native host binary or WebAssembly wasm32 bundle",
+    ),
+    (
+        "run",
+        "Execute rebuilt binary under timeout & collect traces/frames",
+    ),
+    (
+        "verify",
+        "Evaluate oracle assertions, boot health & verification score",
+    ),
+    (
+        "report",
+        "Emit report.json, report.html, functions.json & manifest.json",
+    ),
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,9 +72,13 @@ impl AppProfile {
 
     pub fn description(self) -> &'static str {
         match self {
-            Self::Game => "Optimized for 2D/3D Win32 games with framebuffer capture, audio & input.",
+            Self::Game => {
+                "Optimized for 2D/3D Win32 games with framebuffer capture, audio & input."
+            }
             Self::DesktopApp => "Standard Windows GUI applications with GDI/User32 windowing.",
-            Self::ConsoleApp => "Headless console utilities verified via stdout/stderr & exit code.",
+            Self::ConsoleApp => {
+                "Headless console utilities verified via stdout/stderr & exit code."
+            }
         }
     }
 }
@@ -511,6 +539,8 @@ mod tests {
         let mut with_ai = PipelineOptions::default();
         with_ai.pe_file = "demo.exe".to_string();
         with_ai.improve_readability_with_ai = true;
-        assert!(with_ai.format_command_preview().contains("--ai-readability"));
+        assert!(with_ai
+            .format_command_preview()
+            .contains("--ai-readability"));
     }
 }

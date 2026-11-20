@@ -1,5 +1,5 @@
 use gpui::{
-    ClipboardItem, Context, Div, FontWeight, Stateful, Styled, div, prelude::*, px, relative, rgb,
+    div, prelude::*, px, relative, rgb, ClipboardItem, Context, Div, FontWeight, Stateful, Styled,
 };
 
 use super::style;
@@ -77,7 +77,11 @@ pub fn render_function_inspector(
                 .flex()
                 .items_center()
                 .gap(px(6.0))
-                .child(style::status_badge(func.category.clone(), badge_bg, badge_fg))
+                .child(style::status_badge(
+                    func.category.clone(),
+                    badge_bg,
+                    badge_fg,
+                ))
                 .child(
                     style::option_pill(
                         "insp_star_btn",
@@ -168,18 +172,20 @@ pub fn render_function_inspector(
             div()
                 .flex()
                 .gap(px(6.0))
-                .child(style::ghost_btn("insp_copy_c", t, "Copy C").on_click(cx.listener(
-                    move |this, _, _, cx| {
-                        cx.write_to_clipboard(ClipboardItem::new_string(src_for_copy.clone()));
-                        this.push_toast(
-                            "Copied C",
-                            &format!("Copied source for {sym_for_copy}"),
-                            this.tokens().info,
-                            false,
-                        );
-                        cx.notify();
-                    },
-                )))
+                .child(
+                    style::ghost_btn("insp_copy_c", t, "Copy C").on_click(cx.listener(
+                        move |this, _, _, cx| {
+                            cx.write_to_clipboard(ClipboardItem::new_string(src_for_copy.clone()));
+                            this.push_toast(
+                                "Copied C",
+                                &format!("Copied source for {sym_for_copy}"),
+                                this.tokens().info,
+                                false,
+                            );
+                            cx.notify();
+                        },
+                    )),
+                )
                 .when_some(src_file_open.filter(|p| p.is_file()), |el, path| {
                     el.child(style::ghost_btn("insp_open_file", t, "Open file").on_click(
                         cx.listener(move |_, _, _, _| {
@@ -188,19 +194,15 @@ pub fn render_function_inspector(
                     ))
                 })
                 .child(
-                    style::ghost_btn(
-                        "insp_run_agent",
-                        t,
-                        "✨ Improve C Readability (AI)",
-                    )
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        this.agent_target_fn = addr_for_agent.clone();
-                        this.start_readability_agent_for_dir(
-                            dir_for_agent.clone(),
-                            Some(addr_for_agent.clone()),
-                            cx,
-                        );
-                    })),
+                    style::ghost_btn("insp_run_agent", t, "✨ Improve C Readability (AI)")
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.agent_target_fn = addr_for_agent.clone();
+                            this.start_readability_agent_for_dir(
+                                dir_for_agent.clone(),
+                                Some(addr_for_agent.clone()),
+                                cx,
+                            );
+                        })),
                 ),
         );
 
@@ -375,9 +377,15 @@ pub fn render_function_inspector(
                             )
                             .flex_1()
                             .min_w_0()
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.set_focus_input(Some(FocusInput::InspectorNote), window, cx);
-                            })),
+                            .on_click(cx.listener(
+                                |this, _, window, cx| {
+                                    this.set_focus_input(
+                                        Some(FocusInput::InspectorNote),
+                                        window,
+                                        cx,
+                                    );
+                                },
+                            )),
                         )
                         .child(
                             style::primary_btn("insp_add_note_btn", t, "Add note", true).on_click(

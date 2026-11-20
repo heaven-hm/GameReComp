@@ -1,13 +1,13 @@
 use gpui::{
-    ClipboardItem, Context, Div, ExternalPaths, FontWeight, MouseButton, MouseDownEvent, Stateful,
-    Styled, div, prelude::*, px, rgb,
+    div, prelude::*, px, rgb, ClipboardItem, Context, Div, ExternalPaths, FontWeight, MouseButton,
+    MouseDownEvent, Stateful, Styled,
 };
 
 use super::style;
 use super::{
     ActiveJob, DropState, FocusInput, GameReCompApp, JobStatus, ProjectTab, Route, StageExecState,
 };
-use crate::pipeline_opts::{ALL_STAGES, AppProfile, OutMode, STAGE_DESCRIPTIONS};
+use crate::pipeline_opts::{AppProfile, OutMode, ALL_STAGES, STAGE_DESCRIPTIONS};
 use crate::theme_tokens::ThemeTokens;
 
 pub fn render_home(
@@ -46,7 +46,11 @@ pub fn render_home(
     content = content.child(hero);
 
     // ------------------------------------------------------------------ Multi-Game Concurrent Queue Panel
-    if !app.jobs.is_empty() || !app.queued_pipelines.is_empty() {
+    if !app.jobs.is_empty()
+        || !app.queued_pipelines.is_empty()
+        || !app.queued_batches.is_empty()
+        || app.queue_paused
+    {
         content = content.child(render_active_jobs_panel(app, t, cx).flex_shrink_0());
     }
 
@@ -165,12 +169,7 @@ pub fn render_home(
                 ),
         );
     } else {
-        let mut grid = div()
-            .w_full()
-            .flex()
-            .flex_row()
-            .flex_wrap()
-            .gap(px(14.0));
+        let mut grid = div().w_full().flex().flex_row().flex_wrap().gap(px(14.0));
 
         for (idx, proj) in app.projects.iter().enumerate() {
             let dir = proj.dir.clone();
@@ -590,11 +589,7 @@ fn render_dropzone_card(
         .child(card)
 }
 
-fn render_drop_idle(
-    app: &GameReCompApp,
-    t: &ThemeTokens,
-    cx: &mut Context<GameReCompApp>,
-) -> Div {
+fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
     let cart = div()
         .w(px(92.0))
         .h(px(68.0))
@@ -843,7 +838,11 @@ fn render_drop_picked(
                 .flex()
                 .flex_wrap()
                 .gap(px(22.0))
-                .child(fact(t, "FORMAT", &format!("{} {}", info.magic, info.machine)))
+                .child(fact(
+                    t,
+                    "FORMAT",
+                    &format!("{} {}", info.magic, info.machine),
+                ))
                 .child(fact(t, "IMAGE BASE", &format!("0x{:08X}", info.image_base)))
                 .child(fact(t, "FILE SIZE", &sz)),
         )
@@ -952,11 +951,7 @@ fn render_drop_picked(
                     .justify_between()
                     .gap(px(6.0))
                     .child(style::eyebrow(t, "OUTPUT MACHINE & TARGET"))
-                    .child(style::status_badge(
-                        detected_summary,
-                        t.info_bg,
-                        t.info,
-                    )),
+                    .child(style::status_badge(detected_summary, t.info_bg, t.info)),
             )
             .child(
                 div()
@@ -1016,7 +1011,9 @@ fn render_drop_picked(
                                         this.opts.target_os = os_val.to_string();
                                         if os_val == "web" {
                                             this.opts.target_arch = "wasm32".to_string();
-                                        } else if os_val == "auto" && this.opts.target_arch == "wasm32" {
+                                        } else if os_val == "auto"
+                                            && this.opts.target_arch == "wasm32"
+                                        {
                                             this.opts.target_arch = "auto".to_string();
                                         }
                                         cx.notify();
@@ -1049,7 +1046,8 @@ fn render_drop_picked(
                                         this.opts.target_arch = arch_val.to_string();
                                         if arch_val == "wasm32" {
                                             this.opts.target_os = "web".to_string();
-                                        } else if arch_val == "auto" && this.opts.target_os == "web" {
+                                        } else if arch_val == "auto" && this.opts.target_os == "web"
+                                        {
                                             this.opts.target_os = "auto".to_string();
                                         }
                                         cx.notify();
@@ -1187,23 +1185,23 @@ fn render_drop_picked(
     // Live CLI Command Preview Bar
     let cmd_preview = opts.format_command_preview();
     let cmd_for_copy = cmd_preview.clone();
-    box_div = box_div.child(
-        div()
-            .w_full()
-            .min_w_0()
-            .flex()
-            .flex_col()
-            .gap(px(4.0))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap(px(8.0))
-                    .child(style::eyebrow(t, "EQUIVALENT CLI COMMAND"))
-                    .child(
-                        style::ghost_btn("copy_cli_preview", t, "Copy").on_click(cx.listener(
-                            move |this, _, _, cx| {
+    box_div =
+        box_div.child(
+            div()
+                .w_full()
+                .min_w_0()
+                .flex()
+                .flex_col()
+                .gap(px(4.0))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .gap(px(8.0))
+                        .child(style::eyebrow(t, "EQUIVALENT CLI COMMAND"))
+                        .child(style::ghost_btn("copy_cli_preview", t, "Copy").on_click(
+                            cx.listener(move |this, _, _, cx| {
                                 cx.write_to_clipboard(ClipboardItem::new_string(
                                     cmd_for_copy.clone(),
                                 ));
@@ -1214,29 +1212,28 @@ fn render_drop_picked(
                                     false,
                                 );
                                 cx.notify();
-                            },
+                            }),
                         )),
-                    ),
-            )
-            .child(
-                div()
-                    .id("cli_preview_scroll")
-                    .w_full()
-                    .min_w_0()
-                    .overflow_x_scroll()
-                    .px(px(10.0))
-                    .py(px(8.0))
-                    .rounded(px(3.0))
-                    .bg(rgb(t.code_bg))
-                    .border_1()
-                    .border_color(rgb(t.line_soft))
-                    .font_family(t.mono_font)
-                    .text_size(px(t.ui_px(11.0)))
-                    .text_color(rgb(t.ink_2))
-                    .whitespace_nowrap()
-                    .child(cmd_preview),
-            ),
-    );
+                )
+                .child(
+                    div()
+                        .id("cli_preview_scroll")
+                        .w_full()
+                        .min_w_0()
+                        .overflow_x_scroll()
+                        .px(px(10.0))
+                        .py(px(8.0))
+                        .rounded(px(3.0))
+                        .bg(rgb(t.code_bg))
+                        .border_1()
+                        .border_color(rgb(t.line_soft))
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.0)))
+                        .text_color(rgb(t.ink_2))
+                        .whitespace_nowrap()
+                        .child(cmd_preview),
+                ),
+        );
 
     // Post-Decompile Launch Option
     box_div = box_div.child(
@@ -1270,10 +1267,15 @@ fn render_drop_picked(
             format!("PARALLEL GAMES ({active_now}/{eff_limit} ACTIVE)"),
         ))
         .child(
-            style::option_pill(("pick_parallel", 0usize), t, auto_lbl, app.max_concurrent_jobs == 0)
-                .on_click(cx.listener(|this, _, _, cx| {
-                    this.set_max_concurrent_jobs(0, cx);
-                })),
+            style::option_pill(
+                ("pick_parallel", 0usize),
+                t,
+                auto_lbl,
+                app.max_concurrent_jobs == 0,
+            )
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.set_max_concurrent_jobs(0, cx);
+            })),
         );
     for n in [1usize, 2, 3, 4, 6, 8] {
         par_row = par_row.child(
@@ -1289,18 +1291,13 @@ fn render_drop_picked(
         );
     }
     box_div = box_div.child(
-        div()
-            .flex()
-            .flex_col()
-            .gap(px(4.0))
-            .child(par_row)
-            .child(
-                div()
-                    .font_family(t.mono_font)
-                    .text_size(px(t.ui_px(10.5)))
-                    .text_color(rgb(t.muted))
-                    .child(app.sys_resources.summary()),
-            ),
+        div().flex().flex_col().gap(px(4.0)).child(par_row).child(
+            div()
+                .font_family(t.mono_font)
+                .text_size(px(t.ui_px(10.5)))
+                .text_color(rgb(t.muted))
+                .child(app.sys_resources.summary()),
+        ),
     );
 
     // Ownership Confirmation Checkbox
@@ -1346,10 +1343,11 @@ fn render_drop_picked(
                 ),
             )
             .child(
-                style::ghost_btn("add_more_games_pick_btn", t, "+ Add multiple games…")
-                    .on_click(cx.listener(|this, _, window, cx| {
+                style::ghost_btn("add_more_games_pick_btn", t, "+ Add multiple games…").on_click(
+                    cx.listener(|this, _, window, cx| {
                         this.browse_for_multiple_pes(window, cx);
-                    })),
+                    }),
+                ),
             )
             .child(
                 style::ghost_btn("dry_run_btn", t, "Dry-run plan").on_click(cx.listener(
@@ -1518,27 +1516,23 @@ pub fn render_advanced_cli_options(
                 .gap(px(5.0))
                 .child(style::eyebrow(t, "OUTPUT MODE (--out-mode / --stages)"))
                 .child(
-                    div()
-                        .flex()
-                        .flex_wrap()
-                        .gap(px(5.0))
-                        .children(
-                            [
-                                OutMode::Full,
-                                OutMode::BinaryOnly,
-                                OutMode::SourceOnly,
-                                OutMode::CustomStages,
-                            ]
-                            .into_iter()
-                            .enumerate()
-                            .map(|(i, m)| {
-                                style::option_pill(("out_mode", i), t, m.short(), opts.out_mode == m)
-                                    .on_click(cx.listener(move |this, _, _, cx| {
-                                        this.opts.out_mode = m;
-                                        cx.notify();
-                                    }))
-                            }),
-                        ),
+                    div().flex().flex_wrap().gap(px(5.0)).children(
+                        [
+                            OutMode::Full,
+                            OutMode::BinaryOnly,
+                            OutMode::SourceOnly,
+                            OutMode::CustomStages,
+                        ]
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, m)| {
+                            style::option_pill(("out_mode", i), t, m.short(), opts.out_mode == m)
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.opts.out_mode = m;
+                                    cx.notify();
+                                }))
+                        }),
+                    ),
                 )
                 .when(opts.out_mode == OutMode::CustomStages, |el| {
                     el.child(stage_pills)
@@ -1672,11 +1666,16 @@ pub fn render_advanced_cli_options(
                 .flex_wrap()
                 .gap(px(6.0))
                 .child(
-                    style::option_pill("flg_inter", t, "--interactive (SDL window)", opts.interactive)
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.opts.interactive = !this.opts.interactive;
-                            cx.notify();
-                        })),
+                    style::option_pill(
+                        "flg_inter",
+                        t,
+                        "--interactive (SDL window)",
+                        opts.interactive,
+                    )
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.opts.interactive = !this.opts.interactive;
+                        cx.notify();
+                    })),
                 )
                 .child(
                     style::option_pill("flg_fresh", t, "--fresh-build", opts.fresh_build).on_click(
@@ -1762,8 +1761,8 @@ pub fn render_active_jobs_panel(
     let running_count = app.active_running_count();
     let paused_count = app.active_paused_count();
     let slot_count = app.active_slot_count();
-    let queued_count = app.queued_pipelines.len();
-    let done_count = app.jobs.len().saturating_sub(slot_count);
+    let queued_count = app.queued_pipelines.len() + app.queued_batches.len();
+    let done_count = app.jobs.iter().filter(|job| !job.is_active()).count();
     const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     let spin_glyph = SPINNER[app.anim_frame % SPINNER.len()];
 
@@ -1782,10 +1781,15 @@ pub fn render_active_jobs_panel(
                 .child("Max parallel:"),
         )
         .child(
-            style::option_pill(("queue_parallel", 0usize), t, auto_lbl, app.max_concurrent_jobs == 0)
-                .on_click(cx.listener(|this, _, _, cx| {
-                    this.set_max_concurrent_jobs(0, cx);
-                })),
+            style::option_pill(
+                ("queue_parallel", 0usize),
+                t,
+                auto_lbl,
+                app.max_concurrent_jobs == 0,
+            )
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.set_max_concurrent_jobs(0, cx);
+            })),
         );
     for n in [1usize, 2, 3, 4, 6, 8] {
         par_pills = par_pills.child(
@@ -1815,11 +1819,11 @@ pub fn render_active_jobs_panel(
             )),
         )
         .child(
-            style::ghost_btn("queue_add_games_btn", t, "+ Add More Games…").on_click(
-                cx.listener(|this, _, window, cx| {
+            style::ghost_btn("queue_add_games_btn", t, "+ Add More Games…").on_click(cx.listener(
+                |this, _, window, cx| {
                     this.browse_for_multiple_pes(window, cx);
-                }),
-            ),
+                },
+            )),
         );
 
     if running_count > 0 {
@@ -1836,7 +1840,7 @@ pub fn render_active_jobs_panel(
         hdr_actions = hdr_actions.child(
             style::primary_btn("queue_resume_all_btn", t, "▶ Resume All", true).on_click(
                 cx.listener(|this, _, _, cx| {
-                    this.resume_all_jobs();
+                    this.resume_all_jobs(cx);
                     cx.notify();
                 }),
             ),
@@ -1952,11 +1956,12 @@ pub fn render_active_jobs_panel(
                 );
         } else if matches!(job.status, JobStatus::Failed(_)) {
             quick_actions = quick_actions.child(
-                style::ghost_btn(("job_issue", job_id as usize), t, "🐛 Create Issue")
-                    .on_click(cx.listener(move |this, _, _, cx| {
+                style::ghost_btn(("job_issue", job_id as usize), t, "🐛 Create Issue").on_click(
+                    cx.listener(move |this, _, _, cx| {
                         cx.stop_propagation();
                         this.open_issue_for_job(job_id, cx);
-                    })),
+                    }),
+                ),
             );
             if let Some(ref pdir) = job.project_dir {
                 let pdir_open = pdir.clone();
@@ -2002,7 +2007,12 @@ pub fn render_active_jobs_panel(
                         style::ghost_btn(("job_run_opts", job_id as usize), t, "⚙ Run Options…")
                             .on_click(cx.listener(move |this, _, _, cx| {
                                 cx.stop_propagation();
-                                this.open_run_game_modal(pdir_opt.clone(), jname.clone(), false, cx);
+                                this.open_run_game_modal(
+                                    pdir_opt.clone(),
+                                    jname.clone(),
+                                    false,
+                                    cx,
+                                );
                             })),
                     );
             }
@@ -2032,10 +2042,18 @@ pub fn render_active_jobs_panel(
             .flex_grow(1.0)
             .p(px(12.0))
             .rounded(px(4.0))
-            .bg(if is_selected { rgb(t.bg_alt) } else { rgb(t.panel) })
+            .bg(if is_selected {
+                rgb(t.bg_alt)
+            } else {
+                rgb(t.panel)
+            })
             .border_1()
             .border_color(if is_selected {
-                if t.dark { rgb(t.hl) } else { rgb(t.btn) }
+                if t.dark {
+                    rgb(t.hl)
+                } else {
+                    rgb(t.btn)
+                }
             } else {
                 rgb(t.line)
             })
@@ -2158,6 +2176,64 @@ pub fn render_active_jobs_panel(
         );
     }
 
+    for queued in &app.queued_batches {
+        let batch_id = queued.id;
+        let folder = queued.folder.clone();
+        let label = folder
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("batch")
+            .to_string();
+        cards_grid = cards_grid.child(
+            div()
+                .id(("queued_batch_card", batch_id as usize))
+                .w(px(260.0))
+                .flex_grow(1.0)
+                .p(px(12.0))
+                .rounded(px(4.0))
+                .bg(rgb(t.code_bg))
+                .border_1()
+                .border_color(rgb(t.line_soft))
+                .flex()
+                .flex_col()
+                .gap(px(6.0))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .font_family(t.ui_font)
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(t.ui_px(13.5)))
+                                .text_color(rgb(t.ink_2))
+                                .child(format!("Batch: {label}")),
+                        )
+                        .child(style::status_badge("QUEUED", t.bg_alt, t.muted)),
+                )
+                .child(
+                    div()
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(10.5)))
+                        .text_color(rgb(t.muted))
+                        .child(folder.display().to_string()),
+                )
+                .child(
+                    style::ghost_btn(
+                        ("cancel_queued_batch", batch_id as usize),
+                        t,
+                        "Remove from queue",
+                    )
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.remove_queued_batch(batch_id);
+                        cx.notify();
+                    })),
+                ),
+        );
+    }
+
     let summary_txt = if paused_count > 0 {
         format!("{running_count} running · {paused_count} paused · {queued_count} queued · {done_count} finished")
     } else {
@@ -2168,7 +2244,11 @@ pub fn render_active_jobs_panel(
         .w_full()
         .max_w(px(1340.0))
         .border_color(if running_count > 0 {
-            if t.dark { rgb(t.hl) } else { rgb(t.btn) }
+            if t.dark {
+                rgb(t.hl)
+            } else {
+                rgb(t.btn)
+            }
         } else if paused_count > 0 {
             rgb(t.work)
         } else {
@@ -2197,7 +2277,11 @@ pub fn render_active_jobs_panel(
                         .child(style::eyebrow(t, "MULTI-GAME DECOMPILATION QUEUE"))
                         .child(style::status_badge(
                             summary_txt,
-                            if running_count > 0 { t.hl_soft } else { t.bg_alt },
+                            if running_count > 0 {
+                                t.hl_soft
+                            } else {
+                                t.bg_alt
+                            },
                             if running_count > 0 { t.ink } else { t.muted },
                         ))
                         .child(
@@ -2301,17 +2385,15 @@ pub fn render_live_stage_stepper(
     let mut eq = div().flex().items_end().gap(px(2.5)).h(px(18.0));
     for (b_idx, h_val) in bars.into_iter().enumerate() {
         let col = if b_idx % 2 == 0 {
-            if t.dark { t.hl } else { t.btn }
+            if t.dark {
+                t.hl
+            } else {
+                t.btn
+            }
         } else {
             t.match_fill
         };
-        eq = eq.child(
-            div()
-                .w(px(3.0))
-                .h(px(h_val))
-                .rounded(px(1.5))
-                .bg(rgb(col)),
-        );
+        eq = eq.child(div().w(px(3.0)).h(px(h_val)).rounded(px(1.5)).bg(rgb(col)));
     }
 
     // Active File Spotlight Card (shows exact file + live sub-step being processed!)
@@ -2690,10 +2772,12 @@ pub fn render_live_stage_stepper(
                                     "▶ Resume",
                                     true,
                                 )
-                                .on_click(cx.listener(move |this, _, _, cx| {
-                                    this.resume_job(job_id_stop);
-                                    cx.notify();
-                                })),
+                                .on_click(cx.listener(
+                                    move |this, _, _, cx| {
+                                        this.resume_job(job_id_stop);
+                                        cx.notify();
+                                    },
+                                )),
                             )
                         })
                         .when(is_active, |el| {
@@ -2708,14 +2792,10 @@ pub fn render_live_stage_stepper(
                         })
                         .when(is_failed, |el| {
                             el.child(
-                                style::ghost_btn(
-                                    ("issue_stepper_btn", jid),
-                                    t,
-                                    "🐛 Create Issue",
-                                )
-                                .on_click(cx.listener(move |this, _, _, cx| {
-                                    this.open_issue_for_job(job_id_stop, cx);
-                                })),
+                                style::ghost_btn(("issue_stepper_btn", jid), t, "🐛 Create Issue")
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.open_issue_for_job(job_id_stop, cx);
+                                    })),
                             )
                         }),
                 ),
@@ -2729,11 +2809,7 @@ pub fn render_live_stage_stepper(
         .child(files_box)
 }
 
-fn render_drop_busy(
-    app: &GameReCompApp,
-    t: &ThemeTokens,
-    cx: &mut Context<GameReCompApp>,
-) -> Div {
+fn render_drop_busy(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameReCompApp>) -> Div {
     let mut col = div().w_full().flex().flex_col().gap(px(10.0));
     if let Some(job) = app.focused_job() {
         col = col.child(render_live_stage_stepper(job, app.anim_frame, t, cx));
@@ -2870,11 +2946,7 @@ fn plat_chip(t: &ThemeTokens, label: &'static str, rec: bool) -> Div {
         .rounded(px(2.0))
         .bg(rgb(t.bg_alt))
         .border_1()
-        .border_color(if rec {
-            rgb(t.match_fill)
-        } else {
-            rgb(t.line)
-        })
+        .border_color(if rec { rgb(t.match_fill) } else { rgb(t.line) })
         .font_family(t.mono_font)
         .font_weight(FontWeight::BOLD)
         .text_size(px(t.ui_px(10.5)))

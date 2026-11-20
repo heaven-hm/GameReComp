@@ -30,7 +30,9 @@ pub fn inspect_pe_bytes(data: &[u8]) -> PeInfo {
     }
     let pe_off = u32_le(data, 0x3c) as usize;
     if pe_off < 0x40 || pe_off + 0x40 > size {
-        info.error = "the PE header offset points outside the file -- likely not a PE, or a truncated file".to_string();
+        info.error =
+            "the PE header offset points outside the file -- likely not a PE, or a truncated file"
+                .to_string();
         return info;
     }
     let pe_head = &data[pe_off..pe_off + 0x40];
@@ -169,10 +171,18 @@ pub fn run_selftest_pe(path: &Path) -> i32 {
         "PE: {} {} image base 0x{:x}{suffix}",
         info.magic, info.machine, info.image_base
     );
-    if info.pe32_x86 { 0 } else { 2 }
+    if info.pe32_x86 {
+        0
+    } else {
+        2
+    }
 }
 
-pub fn resolve_input(path: &Path, input_os: &str, input_arch: &str) -> Result<(String, String), String> {
+pub fn resolve_input(
+    path: &Path,
+    input_os: &str,
+    input_arch: &str,
+) -> Result<(String, String), String> {
     if !path.is_file() {
         return Err(format!("input executable not found: {}", path.display()));
     }
@@ -184,10 +194,14 @@ pub fn resolve_input(path: &Path, input_os: &str, input_arch: &str) -> Result<(S
     let det_arch = info.input_arch.unwrap_or_else(|| "x86".to_string());
 
     if input_os != "auto" && input_os != det_os {
-        return Err(format!("declared --input-os {input_os}, but PE header says {det_os}"));
+        return Err(format!(
+            "declared --input-os {input_os}, but PE header says {det_os}"
+        ));
     }
     if input_arch != "auto" && input_arch != det_arch {
-        return Err(format!("declared --input-arch {input_arch}, but PE header says {det_arch}"));
+        return Err(format!(
+            "declared --input-arch {input_arch}, but PE header says {det_arch}"
+        ));
     }
     if !info.pe32_x86 {
         return Err(format!(
@@ -226,12 +240,17 @@ pub fn resolve_target(target_os: &str, target_arch: &str) -> Result<(String, Str
         other => other,
     };
     if (norm_os == "web" && (norm_arch == "host" || norm_arch == "wasm32" || norm_arch == "wasm"))
-        || ((norm_arch == "wasm32" || norm_arch == "wasm") && (norm_os == "host" || norm_os == "web"))
+        || ((norm_arch == "wasm32" || norm_arch == "wasm")
+            && (norm_os == "host" || norm_os == "web"))
     {
         return Ok(("web".to_string(), "wasm32".to_string()));
     }
     let want_os = if norm_os == "host" { &host_os } else { norm_os };
-    let want_arch = if norm_arch == "host" { &host_arch } else { norm_arch };
+    let want_arch = if norm_arch == "host" {
+        &host_arch
+    } else {
+        norm_arch
+    };
     if want_os != host_os || want_arch != host_arch {
         return Err(format!(
             "cross-target builds are not supported ({want_os}/{want_arch} requested on {host_os}/{host_arch} host)"

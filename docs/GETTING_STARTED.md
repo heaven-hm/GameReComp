@@ -51,18 +51,20 @@ macOS (Homebrew):
 
 ```sh
 brew install cmake pkg-config sdl2 sdl2_ttf
-python3 -m pip install capstone
+python3 -m venv .venv && . .venv/bin/activate && python3 -m pip install capstone
 ```
 
 Debian/Ubuntu:
 
 ```sh
-sudo apt install build-essential cmake pkg-config libsdl2-dev libsdl2-ttf-dev
-python3 -m pip install capstone
+sudo apt install build-essential cmake pkg-config libsdl2-dev libsdl2-ttf-dev python3-venv
+python3 -m venv .venv && . .venv/bin/activate && python3 -m pip install capstone
 ```
 
 The generated CMake project also accepts a toolchain file, but the only tested
 configuration is a host-native build (macOS arm64 at the time of writing).
+In every fresh shell, activate the environment with `. .venv/bin/activate`
+before running GameReComp so its Python pipeline can import Capstone.
 
 ---
 

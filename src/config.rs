@@ -4,6 +4,56 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+pub fn find_python_interpreter(repo_root: &Path) -> Option<PathBuf> {
+    let repo_root = if repo_root.is_absolute() {
+        repo_root.to_path_buf()
+    } else {
+        env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(repo_root)
+    };
+    let python_rel = if cfg!(windows) {
+        PathBuf::from("Scripts").join("python.exe")
+    } else {
+        PathBuf::from("bin").join("python")
+    };
+    if let Some(active) = env::var_os("VIRTUAL_ENV") {
+        let active_python = PathBuf::from(active).join(&python_rel);
+        if is_executable_file(&active_python) {
+            return Some(absolute_path(active_python));
+        }
+    }
+    let venv_python = if cfg!(windows) {
+        repo_root.join(".venv").join("Scripts").join("python.exe")
+    } else {
+        repo_root.join(".venv").join("bin").join("python")
+    };
+    if is_executable_file(&venv_python) {
+        return Some(absolute_path(venv_python));
+    }
+    let names: &[&str] = if cfg!(windows) {
+        &["python", "python3"]
+    } else {
+        &["python3", "python"]
+    };
+    names.iter().find_map(|name| find_executable(name))
+}
+
+pub fn python_interpreter(repo_root: &Path) -> PathBuf {
+    find_python_interpreter(repo_root)
+        .unwrap_or_else(|| PathBuf::from(if cfg!(windows) { "python" } else { "python3" }))
+}
+
+fn absolute_path(path: PathBuf) -> PathBuf {
+    if path.is_absolute() {
+        path
+    } else {
+        env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(path)
+    }
+}
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -122,7 +172,10 @@ impl SystemResources {
 fn detect_total_ram_mb() -> Option<u64> {
     #[cfg(target_os = "macos")]
     {
-        let out = Command::new("sysctl").args(["-n", "hw.memsize"]).output().ok()?;
+        let out = Command::new("sysctl")
+            .args(["-n", "hw.memsize"])
+            .output()
+            .ok()?;
         let s = String::from_utf8_lossy(&out.stdout);
         let bytes = s.trim().parse::<u64>().ok()?;
         return Some((bytes / (1024 * 1024)).max(512));
@@ -138,7 +191,40 @@ fn detect_total_ram_mb() -> Option<u64> {
         }
         return None;
     }
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    #[cfg(target_os = "windows")]
+    {
+        #[repr(C)]
+        struct MemoryStatusEx {
+            length: u32,
+            memory_load: u32,
+            total_phys: u64,
+            avail_phys: u64,
+            total_page_file: u64,
+            avail_page_file: u64,
+            total_virtual: u64,
+            avail_virtual: u64,
+            avail_extended_virtual: u64,
+        }
+        #[link(name = "kernel32")]
+        extern "system" {
+            fn GlobalMemoryStatusEx(status: *mut MemoryStatusEx) -> i32;
+        }
+        let mut status = MemoryStatusEx {
+            length: std::mem::size_of::<MemoryStatusEx>() as u32,
+            memory_load: 0,
+            total_phys: 0,
+            avail_phys: 0,
+            total_page_file: 0,
+            avail_page_file: 0,
+            total_virtual: 0,
+            avail_virtual: 0,
+            avail_extended_virtual: 0,
+        };
+        // SAFETY: Windows fills the documented MEMORYSTATUSEX layout after its size is set.
+        let ok = unsafe { GlobalMemoryStatusEx(&mut status) };
+        return (ok != 0).then_some((status.total_phys / (1024 * 1024)).max(512));
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     {
         None
     }
@@ -293,7 +379,11 @@ fn walk_up_for_repo(start: &Path) -> Option<PathBuf> {
     let mut cur = Some(start);
     while let Some(dir) = cur {
         if dir.join("tools").join("autorecomp").is_dir()
-            || dir.join("reports").join("certified").join("index.json").is_file()
+            || dir
+                .join("reports")
+                .join("certified")
+                .join("index.json")
+                .is_file()
         {
             return Some(dir.to_path_buf());
         }
@@ -305,6 +395,15 @@ fn walk_up_for_repo(start: &Path) -> Option<PathBuf> {
 pub fn find_executable(name: &str) -> Option<PathBuf> {
     let path_var = env::var_os("PATH")?;
     for dir in env::split_paths(&path_var) {
+        let dir = if dir.as_os_str().is_empty() {
+            env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+        } else if dir.is_absolute() {
+            dir
+        } else {
+            env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(dir)
+        };
         let candidate = dir.join(name);
         if is_executable_file(&candidate) {
             return Some(candidate);
@@ -333,7 +432,7 @@ fn is_executable_file(path: &Path) -> bool {
     path.is_file()
 }
 
-fn probe_version(bin: &str, args: &[&str]) -> String {
+fn probe_version(bin: impl AsRef<std::ffi::OsStr>, args: &[&str]) -> String {
     Command::new(bin)
         .args(args)
         .output()
@@ -383,10 +482,16 @@ pub struct ToolchainStatus {
 
 impl ToolchainStatus {
     pub fn detect() -> Self {
+        Self::detect_for_repo(&env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+    }
+
+    pub fn detect_for_repo(repo_root: &Path) -> Self {
         let mut present = Vec::new();
         let mut missing = Vec::new();
         for name in ["python3", "cmake", "cc", "pkg-config"] {
-            if find_executable(name).is_some() {
+            if (name == "python3" && find_python_interpreter(repo_root).is_some())
+                || (name != "python3" && find_executable(name).is_some())
+            {
                 present.push(name.to_string());
             } else {
                 missing.push(name.to_string());
@@ -399,7 +504,7 @@ impl ToolchainStatus {
                 .map(|s| s.success())
                 .unwrap_or(false);
 
-        let cards = detect_tool_cards(sdl2_present);
+        let cards = detect_tool_cards(sdl2_present, repo_root);
         let agents = detect_agents();
 
         Self {
@@ -422,7 +527,11 @@ impl ToolchainStatus {
         } else {
             format!(" | missing: {}", self.missing.join(", "))
         };
-        let sdl = if self.sdl2_present { "present" } else { "MISSING" };
+        let sdl = if self.sdl2_present {
+            "present"
+        } else {
+            "MISSING"
+        };
         format!("toolchain:    {present_str}{missing_str} | sdl2: {sdl}")
     }
 
@@ -431,7 +540,7 @@ impl ToolchainStatus {
     }
 }
 
-fn detect_tool_cards(sdl2_present: bool) -> Vec<ToolCardInfo> {
+fn detect_tool_cards(sdl2_present: bool, repo_root: &Path) -> Vec<ToolCardInfo> {
     let mut cards = Vec::new();
     let specs: &[(&str, &str, &str, &str, &[&str], &str)] = &[
         (
@@ -485,9 +594,13 @@ fn detect_tool_cards(sdl2_present: bool) -> Vec<ToolCardInfo> {
     ];
 
     for &(name, cat, desc, bin, ver_args, hint) in specs {
-        let found = find_executable(bin);
+        let found = if bin == "python3" {
+            find_python_interpreter(repo_root)
+        } else {
+            find_executable(bin)
+        };
         let version = if found.is_some() {
-            probe_version(bin, ver_args)
+            probe_version(found.as_ref().unwrap(), ver_args)
         } else {
             String::new()
         };

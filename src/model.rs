@@ -198,8 +198,16 @@ impl ProjectModel {
 
         if let Some(stages_arr) = report.get("stages").and_then(|v| v.as_array()) {
             for s in stages_arr {
-                let name = s.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let status = s.get("status").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let name = s
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let status = s
+                    .get("status")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 let data = s.get("data");
                 let mut detail = data
                     .and_then(|d| d.get("detail"))
@@ -238,7 +246,11 @@ impl ProjectModel {
                             .map(|s| s.to_string());
                     }
                 }
-                model.stages.push(Stage { name, status, detail });
+                model.stages.push(Stage {
+                    name,
+                    status,
+                    detail,
+                });
             }
         }
 
@@ -447,12 +459,31 @@ impl ProjectModel {
                         .to_string();
                 }
             }
-            if let Some(funcs) = project.get("high_level_functions").and_then(|v| v.as_array()) {
+            if let Some(funcs) = project
+                .get("high_level_functions")
+                .and_then(|v| v.as_array())
+            {
                 for f in funcs {
-                    let address = f.get("address").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                    let symbol = f.get("symbol").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                    let category = f.get("category").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                    let file = f.get("module").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let address = f
+                        .get("address")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let symbol = f
+                        .get("symbol")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let category = f
+                        .get("category")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let file = f
+                        .get("module")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
                     let prov = f.get("provenance");
                     let verified_by = prov
                         .and_then(|p| p.get("verified_by"))
@@ -474,7 +505,11 @@ impl ProjectModel {
                         })
                         .unwrap_or_default();
                     let rel = format!("src/highlevel/{address}.c");
-                    let source_path = if dir.join(&rel).is_file() { rel } else { String::new() };
+                    let source_path = if dir.join(&rel).is_file() {
+                        rel
+                    } else {
+                        String::new()
+                    };
                     model.functions.push(FunctionRow {
                         address,
                         symbol,
@@ -500,18 +535,24 @@ impl ProjectModel {
         if let Some(fj) = read_json_value(&dir.join("reports").join("functions.json")) {
             model.total_instructions = fj.get("instructions").and_then(|v| v.as_u64()).unwrap_or(0);
             model.total_thunks = fj.get("thunks").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-            model.lift_errors = fj
-                .get("lift_errors")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0) as usize;
+            model.lift_errors =
+                fj.get("lift_errors").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
             if let Some(arr) = fj.get("functions").and_then(|v| v.as_array()) {
                 let mut seen = HashSet::new();
                 for f in arr {
-                    let address = f.get("address").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let address = f
+                        .get("address")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
                     let key = address.to_ascii_lowercase();
                     seen.insert(key.clone());
 
-                    let name = f.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let name = f
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
                     let size = f.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
                     let blocks = f.get("blocks").and_then(|v| v.as_u64()).unwrap_or(0);
                     let instructions = f.get("instructions").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -595,7 +636,10 @@ impl ProjectModel {
 
     pub fn load_certified_index(&mut self, repo_root: &Path) {
         self.certified.clear();
-        let idx_path = repo_root.join("reports").join("certified").join("index.json");
+        let idx_path = repo_root
+            .join("reports")
+            .join("certified")
+            .join("index.json");
         let Some(idx) = read_json_value(&idx_path) else {
             return;
         };
@@ -604,19 +648,35 @@ impl ProjectModel {
         };
         let mut cert_addrs = HashSet::new();
         for r in rows {
-            let addr = r.get("address").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let addr = r
+                .get("address")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             cert_addrs.insert(addr.to_ascii_lowercase());
             self.certified.push(CertifiedRow {
                 address: addr,
-                verdict: r.get("verdict").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                compares: r.get("compares").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                verdict: r
+                    .get("verdict")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                compares: r
+                    .get("compares")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
                 named_memory: r
                     .get("named_memory")
                     .and_then(|v| v.as_array())
                     .map(|a| a.len())
                     .unwrap_or(0),
                 cases: r.get("cases").and_then(|v| v.as_i64()).unwrap_or(0),
-                module: r.get("module").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                module: r
+                    .get("module")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
                 verdict_json: r
                     .get("verdict_json")
                     .and_then(|v| v.as_str())
@@ -625,10 +685,7 @@ impl ProjectModel {
             });
         }
         // Mark matching functions as certified only if project has high-level functions matching these addresses.
-        let is_cavestory = self
-            .name
-            .to_ascii_lowercase()
-            .contains("doukutsu")
+        let is_cavestory = self.name.to_ascii_lowercase().contains("doukutsu")
             || self.name.to_ascii_lowercase().contains("cavestory");
         for f in &mut self.all_functions {
             if f.category == "HIGH_LEVEL_VERIFIED"
@@ -640,23 +697,47 @@ impl ProjectModel {
     }
 
     pub fn built_binary_path(&self) -> Option<PathBuf> {
+        if let Some(path) = self.built_binary_path_for_current_manifest() {
+            return Some(path);
+        }
+        let manifest_is_wasm = read_json_value(&self.dir.join("manifest.json"))
+            .and_then(|manifest| {
+                manifest
+                    .get("binary")
+                    .and_then(|binary| binary.get("path"))
+                    .and_then(|path| path.as_str())
+                    .map(str::to_owned)
+            })
+            .is_some_and(|path| {
+                Path::new(&path)
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("wasm"))
+            });
+        if manifest_is_wasm || self.build.binary_path.is_empty() {
+            return native_build_fallback(&self.dir);
+        }
+        None
+    }
+
+    pub fn built_binary_path_for_current_manifest(&self) -> Option<PathBuf> {
         if !self.build.binary_path.is_empty() {
             let p = PathBuf::from(&self.build.binary_path);
-            if p.is_file() {
+            if p.extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("wasm"))
+            {
+                return None;
+            } else if p.is_file() {
                 return Some(p);
-            }
-            let rel = self.dir.join(&self.build.binary_path);
-            if rel.is_file() {
-                return Some(rel);
+            } else {
+                let rel = self.dir.join(&self.build.binary_path);
+                if rel.is_file() {
+                    return Some(rel);
+                }
             }
         }
-        let stem = self.dir.file_name()?.to_str()?;
-        let fallback = self.dir.join("build").join(stem);
-        if fallback.is_file() {
-            Some(fallback)
-        } else {
-            None
-        }
+        None
     }
 
     pub fn load_function_source(&self, row: &FunctionRow) -> (String, Option<PathBuf>) {
@@ -688,7 +769,10 @@ impl ProjectModel {
 
         // Otherwise extract the exact function body from the combined recomp_XXXX.c translation unit.
         let needle_sym = format!("{}(", row.symbol);
-        let addr_clean = row.address.trim_start_matches("0x").trim_start_matches("0X");
+        let addr_clean = row
+            .address
+            .trim_start_matches("0x")
+            .trim_start_matches("0X");
         let needle_sub = format!("sub_{addr_clean}(");
 
         let lines: Vec<&str> = content.lines().collect();
@@ -767,6 +851,43 @@ pub fn project_has_wasm(dir: &Path) -> bool {
     dir.join("build").join("index.html").is_file() || dir.join("index.html").is_file()
 }
 
+pub fn manifest_prefers_wasm(dir: &Path) -> bool {
+    let Some(path) = read_json_value(&dir.join("manifest.json")).and_then(|manifest| {
+        manifest
+            .get("binary")
+            .and_then(|binary| binary.get("path"))
+            .and_then(|path| path.as_str())
+            .map(str::to_owned)
+    }) else {
+        return false;
+    };
+    let module = PathBuf::from(path);
+    if !module
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("wasm"))
+    {
+        return false;
+    }
+    let module = if module.is_absolute() {
+        module
+    } else {
+        dir.join(module)
+    };
+    module.is_file() && project_has_wasm(dir)
+}
+
+fn native_build_fallback(dir: &Path) -> Option<PathBuf> {
+    let stem = dir.file_name()?.to_str()?;
+    let fallback = dir.join("build").join(stem);
+    let fallback = if cfg!(windows) {
+        fallback.with_extension("exe")
+    } else {
+        fallback
+    };
+    fallback.is_file().then_some(fallback)
+}
+
 pub fn find_project_binary(dir: &Path) -> Option<PathBuf> {
     let mut temp = ProjectModel::default();
     temp.dir = dir.to_path_buf();
@@ -779,7 +900,36 @@ pub fn find_project_binary(dir: &Path) -> Option<PathBuf> {
                 .to_string();
         }
     }
-    temp.built_binary_path()
+    let binary = temp.built_binary_path().or_else(|| {
+        let manifest_marks_wasm = read_json_value(&dir.join("manifest.json"))
+            .and_then(|manifest| {
+                manifest
+                    .get("binary")
+                    .and_then(|value| value.get("path"))
+                    .and_then(|value| value.as_str())
+                    .map(str::to_owned)
+            })
+            .is_some_and(|path| {
+                Path::new(&path)
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("wasm"))
+            });
+        if !manifest_marks_wasm {
+            return None;
+        }
+        native_build_fallback(dir)
+    })?;
+    if binary
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.eq_ignore_ascii_case("wasm"))
+        .unwrap_or(false)
+    {
+        None
+    } else {
+        Some(binary)
+    }
 }
 
 pub fn read_project_pe_path(dir: &Path) -> Option<String> {
@@ -884,7 +1034,11 @@ fn load_project_summary(dir: &Path, idx: usize) -> ProjectSummary {
     let verified_functions = hl_arr
         .map(|arr| {
             arr.iter()
-                .filter(|row| row.get("verified").and_then(|v| v.as_bool()).unwrap_or(false))
+                .filter(|row| {
+                    row.get("verified")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                })
                 .count()
         })
         .unwrap_or(0);
@@ -961,7 +1115,15 @@ pub fn discover_projects(projects_root: &Path, extra_dirs: &[PathBuf]) -> Vec<Pr
         let mut children: Vec<PathBuf> = rd
             .filter_map(|e| e.ok())
             .map(|e| e.path())
-            .filter(|p| p.is_dir())
+            .filter(|p| {
+                p.is_dir()
+                    && (p.join("project.json").is_file()
+                        || p.join("reports").join("report.json").is_file()
+                        || p.join("reports").join("inspect.json").is_file()
+                        || p.join("reports").join("functions.json").is_file()
+                        || project_has_wasm(p)
+                        || find_project_binary(p).is_some())
+            })
             .collect();
         children.sort();
         for c in children {
@@ -1028,7 +1190,10 @@ pub fn run_selftest(dir: &Path, repo_root: &Path) -> i32 {
         None => " (no screenshots directory)".to_string(),
     };
     println!("frames:       {}{}", model.frames.len(), frames_suffix);
-    println!("{}", ToolchainStatus::detect().format_selftest_line());
+    println!(
+        "{}",
+        ToolchainStatus::detect_for_repo(repo_root).format_selftest_line()
+    );
     0
 }
 
@@ -1069,5 +1234,34 @@ mod tests {
         assert_eq!(m.total_instructions, 42);
         assert_eq!(m.total_thunks, 1);
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn discovery_skips_unmarked_children_but_keeps_registered_unbuilt_projects() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("gamerecomp-discovery-test-{nanos}"));
+        let projects = root.join("projects");
+        let project = projects.join("valid");
+        let unrelated = projects.join("unrelated");
+        fs::create_dir_all(project.join("reports")).unwrap();
+        fs::create_dir_all(&unrelated).unwrap();
+        fs::write(project.join("reports/report.json"), "{}").unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&project, root.join("alias")).unwrap();
+
+        #[cfg(unix)]
+        let extras = vec![root.join("alias"), unrelated.clone()];
+        #[cfg(not(unix))]
+        let extras = vec![project.clone(), unrelated.clone()];
+        let found = discover_projects(&projects, &extras);
+        assert_eq!(found.len(), 2);
+        assert!(found[0].dir.ends_with("valid"));
+        assert!(found
+            .iter()
+            .any(|project| project.dir.ends_with("unrelated")));
+        let _ = fs::remove_dir_all(&root);
     }
 }

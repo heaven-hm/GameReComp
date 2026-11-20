@@ -98,6 +98,9 @@ pub enum Commands {
         args: Vec<String>,
     },
     /// Serve a built WebAssembly app over local HTTP (COOP/COEP enabled)
+    #[command(
+        long_about = "Serve a built WebAssembly app over local HTTP (COOP/COEP enabled).\n\nOptions: --port PORT, --ready-file PATH"
+    )]
     Serve {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
@@ -323,17 +326,50 @@ fn print_styled_overview(cfg: &AppConfig) {
     println!();
     println!("  {}", "COMMANDS".bright_yellow().bold());
     let rows = [
-        ("game-recomp-gui [project_dir]", "Open the native Rust GPUI desktop GUI"),
-        ("game-recomp-cli <game.exe> [opts]", "Recompile a PE32 executable to native or wasm32"),
-        ("game-recomp-cli inspect <game.exe>", "Inspect PE headers and verify PE32 x86 support"),
-        ("game-recomp-cli status [project]", "Show project scores, stages, and build health"),
-        ("game-recomp-cli setup", "Check compilers, SDL2, wasm32 tools, and AI agents"),
-        ("game-recomp-cli about", "Show architecture, WASM readiness & license info"),
-        ("game-recomp-cli serve <project>", "Serve a built WebAssembly app over local HTTP"),
-        ("game-recomp-cli batch <paths...>", "Batch recompile & verify standalone binaries"),
-        ("game-recomp-cli tasks", "List all reconstructed project statuses"),
-        ("game-recomp-cli readability <dir>", "Run gated C source readability pass (rev.ng + optional AI polish)"),
-        ("game-recomp-cli agent <dir>", "Optional AI pass — improve readable C source code only (REVENG_AI_CMD)"),
+        (
+            "game-recomp-gui [project_dir]",
+            "Open the native Rust GPUI desktop GUI",
+        ),
+        (
+            "game-recomp-cli <game.exe> [opts]",
+            "Recompile a PE32 executable to native or wasm32",
+        ),
+        (
+            "game-recomp-cli inspect <game.exe>",
+            "Inspect PE headers and verify PE32 x86 support",
+        ),
+        (
+            "game-recomp-cli status [project]",
+            "Show project scores, stages, and build health",
+        ),
+        (
+            "game-recomp-cli setup",
+            "Check compilers, SDL2, wasm32 tools, and AI agents",
+        ),
+        (
+            "game-recomp-cli about",
+            "Show architecture, WASM readiness & license info",
+        ),
+        (
+            "game-recomp-cli serve <project>",
+            "Serve a built WebAssembly app over local HTTP",
+        ),
+        (
+            "game-recomp-cli batch <paths...>",
+            "Batch recompile & verify standalone binaries",
+        ),
+        (
+            "game-recomp-cli tasks",
+            "List all reconstructed project statuses",
+        ),
+        (
+            "game-recomp-cli readability <dir>",
+            "Run gated C source readability pass (rev.ng + optional AI polish)",
+        ),
+        (
+            "game-recomp-cli agent <dir>",
+            "Optional AI pass — improve readable C source code only (REVENG_AI_CMD)",
+        ),
     ];
     for (cmd, desc) in rows {
         println!("    {:<36} {}", cmd.bold(), desc.dimmed());
@@ -365,7 +401,10 @@ pub fn run_inspect_cmd(pe_file: &Path, json_out: bool) -> i32 {
             "input_os": info.input_os,
             "input_arch": info.input_arch,
         });
-        println!("{}", serde_json::to_string_pretty(&payload).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).unwrap_or_default()
+        );
         return if !info.ok {
             1
         } else if info.pe32_x86 {
@@ -391,7 +430,11 @@ pub fn run_inspect_cmd(pe_file: &Path, json_out: bool) -> i32 {
     }
 
     let verdict = if info.pe32_x86 {
-        " SUPPORTED PE32 x86 ".black().on_bright_green().bold().to_string()
+        " SUPPORTED PE32 x86 "
+            .black()
+            .on_bright_green()
+            .bold()
+            .to_string()
     } else {
         " UNSUPPORTED TARGET ".white().on_red().bold().to_string()
     };
@@ -403,16 +446,8 @@ pub fn run_inspect_cmd(pe_file: &Path, json_out: bool) -> i32 {
         info.magic.bold(),
         info.machine
     );
-    println!(
-        "  {:<16} 0x{:08X}",
-        "Image Base".dimmed(),
-        info.image_base
-    );
-    println!(
-        "  {:<16} {}",
-        "File Size".dimmed(),
-        format_bytes(size)
-    );
+    println!("  {:<16} 0x{:08X}", "Image Base".dimmed(), info.image_base);
+    println!("  {:<16} {}", "File Size".dimmed(), format_bytes(size));
     println!(
         "  {:<16} {}",
         "Path".dimmed(),
@@ -420,7 +455,11 @@ pub fn run_inspect_cmd(pe_file: &Path, json_out: bool) -> i32 {
     );
     println!();
 
-    if info.pe32_x86 { 0 } else { 2 }
+    if info.pe32_x86 {
+        0
+    } else {
+        2
+    }
 }
 
 pub fn run_status_cmd(cfg: &AppConfig, project_dir: Option<&Path>) -> i32 {
@@ -598,7 +637,7 @@ fn print_project_detail(m: &ProjectModel) {
 }
 
 pub fn run_setup_cmd(cfg: &AppConfig) -> i32 {
-    let tc = ToolchainStatus::detect();
+    let tc = ToolchainStatus::detect_for_repo(&cfg.repo_root);
     println!();
     println!("  {}", brand_banner());
     println!(
@@ -654,11 +693,7 @@ pub fn run_setup_cmd(cfg: &AppConfig) -> i32 {
     }
 
     println!();
-    println!(
-        "  {:<16} {}",
-        "Repo root".dimmed(),
-        cfg.repo_root.display()
-    );
+    println!("  {:<16} {}", "Repo root".dimmed(), cfg.repo_root.display());
     println!(
         "  {:<16} {}",
         "REVENG_AI_CMD".dimmed(),
@@ -685,8 +720,7 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     println!("  {}", brand_banner());
     println!(
         "  {}",
-        "Pick your game and turn it to native port."
-            .dimmed()
+        "Pick your game and turn it to native port.".dimmed()
     );
     println!("  {}", "─".repeat(72).dimmed());
     println!(
@@ -730,11 +764,7 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
         std::env::consts::OS,
         std::env::consts::ARCH
     );
-    println!(
-        "  {:<18} {}",
-        "Workspace".dimmed(),
-        cfg.repo_root.display()
-    );
+    println!("  {:<18} {}", "Workspace".dimmed(), cfg.repo_root.display());
     println!();
     println!("  {}", "PIPELINE OPTIONS".bright_yellow().bold());
     println!(
@@ -744,8 +774,7 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     );
     println!(
         "    {}",
-        "--target-arch host|arm64|x86_64|wasm32  --out-mode full|binary-only|source-only"
-            .dimmed()
+        "--target-arch host|arm64|x86_64|wasm32  --out-mode full|binary-only|source-only".dimmed()
     );
     println!(
         "    {}",

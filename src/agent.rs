@@ -51,7 +51,7 @@ pub fn run_readability(cfg: &AppConfig, args: &[String]) -> i32 {
         );
     }
 
-    let mut cmd = Command::new("python3");
+    let mut cmd = Command::new(crate::config::python_interpreter(&cfg.repo_root));
     cmd.current_dir(&cfg.repo_root)
         .env("PYTHONPATH", &cfg.repo_root)
         .args(["-m", "tools.autorecomp.readability"])

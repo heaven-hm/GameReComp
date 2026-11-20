@@ -1,12 +1,9 @@
-use gpui::{
-    Context, Div, FontWeight, MouseButton, Stateful, Styled, div, prelude::*, px,
-    rgb,
-};
+use gpui::{div, prelude::*, px, rgb, Context, Div, FontWeight, MouseButton, Stateful, Styled};
 
 use super::style;
 use super::{FocusInput, GameReCompApp, JobStatus, ProjectTab};
 use crate::theme_tokens::{
-    CODE_FONT_SCALE_PRESETS, MonoFont, ThemeMode, ThemeTokens, UI_FONT_SCALE_PRESETS, UiFont,
+    MonoFont, ThemeMode, ThemeTokens, UiFont, CODE_FONT_SCALE_PRESETS, UI_FONT_SCALE_PRESETS,
 };
 
 // ============================================================================
@@ -18,7 +15,12 @@ pub fn render_agents_page(
     viewport_w: f32,
     cx: &mut Context<GameReCompApp>,
 ) -> Stateful<Div> {
-    let mut grid = div().flex().flex_row().flex_wrap().gap(px(22.0)).p(px(18.0));
+    let mut grid = div()
+        .flex()
+        .flex_row()
+        .flex_wrap()
+        .gap(px(22.0))
+        .p(px(18.0));
     for (idx, ag) in app.toolchain.agents.iter().enumerate() {
         let preset = ag.preset_cmd.clone();
         let active = app.agent_cmd_buf.trim() == ag.preset_cmd.trim();
@@ -833,12 +835,32 @@ pub fn render_about_page(
                 .flex()
                 .flex_col()
                 .gap(px(8.0))
-                .child(info_kv(t, "Esc", "Close Function Inspector, popovers, or blur text input"))
-                .child(info_kv(t, "J / K", "Next / previous function inside Function Inspector"))
-                .child(info_kv(t, "/", "Focus function search bar in Functions tab"))
+                .child(info_kv(
+                    t,
+                    "Esc",
+                    "Close Function Inspector, popovers, or blur text input",
+                ))
+                .child(info_kv(
+                    t,
+                    "J / K",
+                    "Next / previous function inside Function Inspector",
+                ))
+                .child(info_kv(
+                    t,
+                    "/",
+                    "Focus function search bar in Functions tab",
+                ))
                 .child(info_kv(t, "Cmd/Ctrl + V", "Paste into focused text field"))
-                .child(info_kv(t, "Cmd/Ctrl + +/-/0", "Increase, decrease, or reset UI font size"))
-                .child(info_kv(t, "Drag & Drop", "Drop any .exe or project folder anywhere on Home")),
+                .child(info_kv(
+                    t,
+                    "Cmd/Ctrl + +/-/0",
+                    "Increase, decrease, or reset UI font size",
+                ))
+                .child(info_kv(
+                    t,
+                    "Drag & Drop",
+                    "Drop any .exe or project folder anywhere on Home",
+                )),
         );
 
     let meta_panel = style::panel_box(t)
@@ -1030,7 +1052,11 @@ fn render_typography_settings(
                 this.step_code_font_scale(-0.05, cx);
             })),
         )
-        .child(style::chip_outlined(t, format!("{code_pct}%"), Some(t.info)))
+        .child(style::chip_outlined(
+            t,
+            format!("{code_pct}%"),
+            Some(t.info),
+        ))
         .child(
             style::ghost_btn("set_code_inc", t, "+").on_click(cx.listener(|this, _, _, cx| {
                 this.step_code_font_scale(0.05, cx);
@@ -1118,7 +1144,10 @@ fn render_typography_settings(
                 .flex()
                 .flex_col()
                 .gap(px(5.0))
-                .child(style::eyebrow(t, "UI FONT SIZE (SHORTCUT: CMD/CTRL + / - / 0)"))
+                .child(style::eyebrow(
+                    t,
+                    "UI FONT SIZE (SHORTCUT: CMD/CTRL + / - / 0)",
+                ))
                 .child(ui_size_row),
         )
         .child(
@@ -1339,12 +1368,7 @@ pub fn render_project_context_menu(
             ctx_menu_row("ctx_open", t, "↗  Open & Inspect", false).on_click(cx.listener(
                 move |this, _, window, cx| {
                     this.context_menu = None;
-                    this.open_project_dir_async(
-                        dir_open.clone(),
-                        ProjectTab::Overview,
-                        window,
-                        cx,
-                    );
+                    this.open_project_dir_async(dir_open.clone(), ProjectTab::Overview, window, cx);
                 },
             )),
         )
@@ -1357,19 +1381,20 @@ pub fn render_project_context_menu(
                         cx.notify();
                     })),
             )
-            .child(
-                ctx_menu_row("ctx_run_data", t, "📁  Run with Game Data Folder…", false)
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        this.open_run_game_modal(dir_data.clone(), name_data.clone(), true, cx);
-                    })),
-            )
         })
         .child(
-            ctx_menu_row("ctx_run_opts", t, "⚙  Run Game Options…", false).on_click(
+            ctx_menu_row("ctx_run_data", t, "📁  Run with Game Data Folder…", false).on_click(
                 cx.listener(move |this, _, _, cx| {
-                    this.open_run_game_modal(dir_opts.clone(), name_opts.clone(), false, cx);
+                    this.open_run_game_modal(dir_data.clone(), name_data.clone(), true, cx);
                 }),
             ),
+        )
+        .child(
+            ctx_menu_row("ctx_run_opts", t, "⚙  Run Game Options…", false).on_click(cx.listener(
+                move |this, _, _, cx| {
+                    this.open_run_game_modal(dir_opts.clone(), name_opts.clone(), false, cx);
+                },
+            )),
         )
         .child(div().my(px(3.0)).h(px(1.0)).w_full().bg(rgb(t.line_soft)));
 
@@ -1407,11 +1432,11 @@ pub fn render_project_context_menu(
     } else {
         card = card
             .child(
-                ctx_menu_row("ctx_rerun", t, "↻  Re-run Recompilation", false).on_click(cx.listener(
-                    move |this, _, _, cx| {
+                ctx_menu_row("ctx_rerun", t, "↻  Re-run Recompilation", false).on_click(
+                    cx.listener(move |this, _, _, cx| {
                         this.rerun_project_by_dir(dir_rerun.clone(), cx);
-                    },
-                )),
+                    }),
+                ),
             )
             .child(
                 ctx_menu_row(
@@ -1533,15 +1558,13 @@ pub fn render_run_game_modal(
     cx: &mut Context<GameReCompApp>,
 ) -> Option<Stateful<Div>> {
     let modal = app.run_game_modal.as_ref()?;
+    let browser_only = modal.has_wasm && modal.binary_path.is_none();
     let proj_dir_wasm = modal.project_dir.clone();
     let suggested = modal.suggested_pe_dir.clone();
 
     let card_style = |selected: bool| {
         if selected {
-            (
-                rgb(t.hl_soft),
-                if t.dark { rgb(t.hl) } else { rgb(t.btn) },
-            )
+            (rgb(t.hl_soft), if t.dark { rgb(t.hl) } else { rgb(t.btn) })
         } else {
             (rgb(t.code_bg), rgb(t.line))
         }
@@ -1658,18 +1681,27 @@ pub fn render_run_game_modal(
                                             .font_weight(FontWeight::BOLD)
                                             .text_size(px(t.ui_px(13.5)))
                                             .text_color(rgb(t.ink))
-                                            .child("⚡ Run Standalone (Direct)"),
+                                            .child(if browser_only {
+                                                "🌐 Run in Browser (WASM)"
+                                            } else {
+                                                "⚡ Run Standalone (Direct)"
+                                            }),
                                     )
                                     .child(
                                         div()
                                             .font_family(t.ui_font)
                                             .text_size(px(t.ui_px(12.0)))
                                             .text_color(rgb(t.muted))
-                                            .child("Launches the self-contained rebuilt binary directly using its embedded PE image (no external game folder needed)."),
+                                            .child(if browser_only {
+                                                "Opens this project in your browser using the WebAssembly build."
+                                            } else {
+                                                "Launches the self-contained rebuilt binary directly using its embedded PE image (no external game folder needed)."
+                                            }),
                                     ),
                             )
-                            .child(
-                                div()
+                            .when(modal.binary_path.is_some() || !modal.has_wasm, |el| {
+                                el.child(
+                                    div()
                                     .id("run_mode_data_dir")
                                     .p(px(12.0))
                                     .rounded(px(5.0))
@@ -1705,7 +1737,8 @@ pub fn render_run_game_modal(
                                             .text_color(rgb(t.muted))
                                             .child("Passes the selected folder via working directory, RECOMP_ASSETS_DIR, and argv[1] for games requiring external levels, textures, or saves."),
                                     ),
-                            ),
+                            )
+                            }),
                     )
                     .when(modal.use_data_dir, |el| {
                         el.child(
@@ -1833,12 +1866,10 @@ pub fn render_run_game_modal(
                                             }),
                                         ),
                                     )
-                                    .child(
-                                        style::ghost_btn("run_modal_save", t, "Save Only")
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                this.confirm_run_game_modal(false, cx);
-                                            })),
-                                    )
+                                    .child(style::ghost_btn("run_modal_save", t, "Save Only")
+                                        .on_click(cx.listener(|this, _, _, cx| {
+                                            this.confirm_run_game_modal(false, cx);
+                                        })))
                                     .child(
                                         style::primary_btn(
                                             "run_modal_launch",
@@ -1914,11 +1945,7 @@ pub fn render_rename_project_modal(
                             false,
                         )
                         .on_click(cx.listener(|this, _, window, cx| {
-                            this.set_focus_input(
-                                Some(FocusInput::QuickRenameProject),
-                                window,
-                                cx,
-                            );
+                            this.set_focus_input(Some(FocusInput::QuickRenameProject), window, cx);
                         })),
                     )
                     .child(
@@ -1957,7 +1984,11 @@ pub fn render_delete_project_modal(
         t.code_bg
     };
     let keep_bd = if !req.delete_from_disk {
-        if t.dark { t.hl } else { t.btn }
+        if t.dark {
+            t.hl
+        } else {
+            t.btn
+        }
     } else {
         t.line
     };
@@ -2173,16 +2204,17 @@ pub fn render_issue_modal(
                                             .font_weight(FontWeight::EXTRA_BOLD)
                                             .text_size(px(t.ui_px(18.0)))
                                             .text_color(rgb(t.ink))
-                                            .child(format!("Report support issue for {}", d.game_name)),
+                                            .child(format!(
+                                                "Report support issue for {}",
+                                                d.game_name
+                                            )),
                                     ),
                             )
-                            .child(
-                                style::ghost_btn("issue_modal_close", t, "✕").on_click(
-                                    cx.listener(|this, _, _, cx| {
-                                        this.close_issue_modal(cx);
-                                    }),
-                                ),
-                            ),
+                            .child(style::ghost_btn("issue_modal_close", t, "✕").on_click(
+                                cx.listener(|this, _, _, cx| {
+                                    this.close_issue_modal(cx);
+                                }),
+                            )),
                     )
                     .child(
                         div()
@@ -2190,7 +2222,11 @@ pub fn render_issue_modal(
                             .flex_wrap()
                             .gap(px(6.0))
                             .child(style::chip_inverted(t, d.pe_summary.clone()))
-                            .child(style::chip_outlined(t, d.target_summary.clone(), Some(t.info)))
+                            .child(style::chip_outlined(
+                                t,
+                                d.target_summary.clone(),
+                                Some(t.info),
+                            ))
                             .child(style::chip_outlined(
                                 t,
                                 format!("stage: {}", d.failed_stage),
@@ -2213,9 +2249,15 @@ pub fn render_issue_modal(
                                     app.focused_input == Some(FocusInput::IssueTitle),
                                     false,
                                 )
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.set_focus_input(Some(FocusInput::IssueTitle), window, cx);
-                                })),
+                                .on_click(cx.listener(
+                                    |this, _, window, cx| {
+                                        this.set_focus_input(
+                                            Some(FocusInput::IssueTitle),
+                                            window,
+                                            cx,
+                                        );
+                                    },
+                                )),
                             ),
                     )
                     .child(
@@ -2245,9 +2287,15 @@ pub fn render_issue_modal(
                                     app.focused_input == Some(FocusInput::IssueNotes),
                                     false,
                                 )
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.set_focus_input(Some(FocusInput::IssueNotes), window, cx);
-                                })),
+                                .on_click(cx.listener(
+                                    |this, _, window, cx| {
+                                        this.set_focus_input(
+                                            Some(FocusInput::IssueNotes),
+                                            window,
+                                            cx,
+                                        );
+                                    },
+                                )),
                             ),
                     )
                     .when(!d.log_tail.trim().is_empty(), |el| {
@@ -2275,13 +2323,11 @@ pub fn render_issue_modal(
                             .justify_end()
                             .gap(px(8.0))
                             .pt(px(4.0))
-                            .child(
-                                style::ghost_btn("issue_cancel_btn", t, "Cancel").on_click(
-                                    cx.listener(|this, _, _, cx| {
-                                        this.close_issue_modal(cx);
-                                    }),
-                                ),
-                            )
+                            .child(style::ghost_btn("issue_cancel_btn", t, "Cancel").on_click(
+                                cx.listener(|this, _, _, cx| {
+                                    this.close_issue_modal(cx);
+                                }),
+                            ))
                             .child(
                                 style::ghost_btn("issue_copy_md_btn", t, "Copy Markdown").on_click(
                                     cx.listener(|this, _, _, cx| {
@@ -2296,9 +2342,11 @@ pub fn render_issue_modal(
                                     "↗ Open Pre-filled GitHub Issue",
                                     true,
                                 )
-                                .on_click(cx.listener(|this, _, _, cx| {
-                                    this.submit_issue_to_github(cx);
-                                })),
+                                .on_click(cx.listener(
+                                    |this, _, _, cx| {
+                                        this.submit_issue_to_github(cx);
+                                    },
+                                )),
                             ),
                     ),
             ),

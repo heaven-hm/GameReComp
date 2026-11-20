@@ -28,7 +28,9 @@ impl JsonValue {
 
     pub fn get(&self, key: &str) -> Option<&JsonValue> {
         match self {
-            JsonValue::Object(entries) => entries.iter().rev().find(|(k, _)| k == key).map(|(_, v)| v),
+            JsonValue::Object(entries) => {
+                entries.iter().rev().find(|(k, _)| k == key).map(|(_, v)| v)
+            }
             _ => None,
         }
     }
@@ -196,7 +198,10 @@ impl<'a> Parser<'a> {
             b'[' => self.parse_array(depth + 1),
             b'{' => self.parse_object(depth + 1),
             b'-' | b'0'..=b'9' => self.parse_number(),
-            other => Err(format!("unexpected byte 0x{other:02x} at offset {}", self.pos)),
+            other => Err(format!(
+                "unexpected byte 0x{other:02x} at offset {}",
+                self.pos
+            )),
         }
     }
 
@@ -206,8 +211,8 @@ impl<'a> Parser<'a> {
         }
         let hex = std::str::from_utf8(&self.bytes[self.pos..self.pos + 4])
             .map_err(|_| "invalid UTF-8 in escape".to_string())?;
-        let val = u16::from_str_radix(hex, 16)
-            .map_err(|_| format!("invalid hex escape '{hex}'"))?;
+        let val =
+            u16::from_str_radix(hex, 16).map_err(|_| format!("invalid hex escape '{hex}'"))?;
         self.pos += 4;
         Ok(val)
     }

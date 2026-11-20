@@ -1,15 +1,15 @@
 use std::borrow::Cow;
 use std::time::Duration;
 
-use gpui::{
-    Animation, AnimationExt as _, AnyElement, App, Div, FontWeight, Hsla, IntoElement, Pixels,
-    SharedString, Stateful, Styled, bounce, div, ease_in_out, prelude::*, pulsating_between, px,
-    relative, rgb, rgba,
-};
 use gpui::component::{
-    Disableable as _, Sizable as _, Theme as KitTheme, ThemeMode as KitThemeMode,
     button::{Button, ButtonVariants as _},
     spinner::Spinner,
+    Disableable as _, Sizable as _, Theme as KitTheme, ThemeMode as KitThemeMode,
+};
+use gpui::{
+    bounce, div, ease_in_out, prelude::*, pulsating_between, px, relative, rgb, rgba, Animation,
+    AnimationExt as _, AnyElement, App, Div, FontWeight, Hsla, IntoElement, Pixels, SharedString,
+    Stateful, Styled,
 };
 
 use crate::theme_tokens::ThemeTokens;
@@ -66,7 +66,9 @@ pub fn register_fonts(cx: &App) {
         Cow::Borrowed(include_bytes!("../../assets/fonts/Archivo-SemiBold.ttf")),
         Cow::Borrowed(include_bytes!("../../assets/fonts/Archivo-Display.ttf")),
         Cow::Borrowed(include_bytes!("../../assets/fonts/IBMPlexMono-Regular.ttf")),
-        Cow::Borrowed(include_bytes!("../../assets/fonts/IBMPlexMono-SemiBold.ttf")),
+        Cow::Borrowed(include_bytes!(
+            "../../assets/fonts/IBMPlexMono-SemiBold.ttf"
+        )),
     ];
     let _ = cx.text_system().add_fonts(fonts);
 }
@@ -219,11 +221,7 @@ pub fn chip_inverted(t: &ThemeTokens, text: impl Into<SharedString>) -> Div {
         .child(text.into())
 }
 
-pub fn chip_outlined(
-    t: &ThemeTokens,
-    text: impl Into<SharedString>,
-    accent: Option<u32>,
-) -> Div {
+pub fn chip_outlined(t: &ThemeTokens, text: impl Into<SharedString>, accent: Option<u32>) -> Div {
     let fg = accent.unwrap_or(t.muted);
     let border = accent.map(|a| ca(a, 0.6)).unwrap_or_else(|| c(t.line));
     div()
@@ -313,18 +311,14 @@ pub fn toggle_checkbox(
         .text_size(px(t.ui_px(11.0)))
         .child(if checked { "✓" } else { "" });
 
-    let mut text_col = div()
-        .flex()
-        .flex_col()
-        .gap(px(1.0))
-        .child(
-            div()
-                .font_family(t.ui_font)
-                .font_weight(FontWeight::MEDIUM)
-                .text_size(px(t.ui_px(12.5)))
-                .text_color(rgb(t.ink))
-                .child(label.into()),
-        );
+    let mut text_col = div().flex().flex_col().gap(px(1.0)).child(
+        div()
+            .font_family(t.ui_font)
+            .font_weight(FontWeight::MEDIUM)
+            .text_size(px(t.ui_px(12.5)))
+            .text_color(rgb(t.ink))
+            .child(label.into()),
+    );
     if let Some(h) = hint {
         text_col = text_col.child(
             div()
@@ -391,7 +385,11 @@ pub fn progress_meter(t: &ThemeTokens, height: Pixels, frac: f32, fill_hex: u32)
 }
 
 /// Smooth GPUI animated pulsing dot (used on running stages, active sidebar projects, header pill).
-pub fn animated_pulse_dot(id: impl Into<gpui::ElementId>, color_hex: u32, size_px: f32) -> AnyElement {
+pub fn animated_pulse_dot(
+    id: impl Into<gpui::ElementId>,
+    color_hex: u32,
+    size_px: f32,
+) -> AnyElement {
     let col = c(color_hex);
     div()
         .w(px(size_px))
@@ -409,7 +407,11 @@ pub fn animated_pulse_dot(id: impl Into<gpui::ElementId>, color_hex: u32, size_p
 }
 
 /// Smooth GPUI animated sliding workbar (exact decompdecomp `.workbar` animation!).
-pub fn animated_workbar(id: impl Into<gpui::ElementId>, t: &ThemeTokens, height_px: f32) -> AnyElement {
+pub fn animated_workbar(
+    id: impl Into<gpui::ElementId>,
+    t: &ThemeTokens,
+    height_px: f32,
+) -> AnyElement {
     let bar_col = if t.dark { rgb(t.hl) } else { rgb(t.btn) };
     let track_col = rgb(t.open_cell);
     div()

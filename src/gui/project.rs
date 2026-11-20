@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use gpui::{
-    ClipboardItem, Context, Div, FontWeight, MouseButton, MouseDownEvent, Styled, div, img,
-    prelude::*, px, relative, rgb,
+    div, img, prelude::*, px, relative, rgb, ClipboardItem, Context, Div, FontWeight, MouseButton,
+    MouseDownEvent, Styled,
 };
 
 use super::home::{
@@ -151,10 +151,18 @@ fn render_project_header(
         .gap(px(6.0))
         .child(style::chip_inverted(t, pe_chip));
     if !model.inspect.subsystem.is_empty() {
-        chips = chips.child(style::chip_outlined(t, model.inspect.subsystem.clone(), None));
+        chips = chips.child(style::chip_outlined(
+            t,
+            model.inspect.subsystem.clone(),
+            None,
+        ));
     }
     if !model.inspect.image_base.is_empty() {
-        chips = chips.child(style::chip_outlined(t, model.inspect.image_base.clone(), None));
+        chips = chips.child(style::chip_outlined(
+            t,
+            model.inspect.image_base.clone(),
+            None,
+        ));
     }
     chips = chips
         .child(style::chip_outlined(t, model.runtime.clone(), None))
@@ -299,14 +307,12 @@ fn render_project_header(
                     ),
                 );
         }
-        actions = actions.child(
-            style::danger_btn("hdr_stop_btn", t, "■ Stop").on_click(cx.listener(
-                move |this, _, _, cx| {
-                    this.stop_job(jid);
-                    cx.notify();
-                },
-            )),
-        );
+        actions = actions.child(style::danger_btn("hdr_stop_btn", t, "■ Stop").on_click(
+            cx.listener(move |this, _, _, cx| {
+                this.stop_job(jid);
+                cx.notify();
+            }),
+        ));
     } else {
         if model.has_wasm_build {
             let dir = model.dir.clone();
@@ -386,25 +392,23 @@ fn render_project_header(
     let menu_dir = model.dir.clone();
     let menu_title = model.display_title().to_string();
     actions = actions
-        .child(style::ghost_btn("hdr_dir_btn", t, "📁").on_click(cx.listener(
-            move |_, _, _, _| {
-                let _ = open::that(&proj_dir);
-            },
-        )))
         .child(
-            style::ghost_btn("hdr_more_crud_btn", t, "⋯").on_mouse_down(
-                MouseButton::Left,
-                cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
-                    cx.stop_propagation();
-                    this.open_project_context_menu(
-                        menu_dir.clone(),
-                        menu_title.clone(),
-                        ev.position,
-                        cx,
-                    );
-                }),
-            ),
-        );
+            style::ghost_btn("hdr_dir_btn", t, "📁").on_click(cx.listener(move |_, _, _, _| {
+                let _ = open::that(&proj_dir);
+            })),
+        )
+        .child(style::ghost_btn("hdr_more_crud_btn", t, "⋯").on_mouse_down(
+            MouseButton::Left,
+            cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                cx.stop_propagation();
+                this.open_project_context_menu(
+                    menu_dir.clone(),
+                    menu_title.clone(),
+                    ev.position,
+                    cx,
+                );
+            }),
+        ));
 
     // Progress meter row
     let pct = (model.score.clamp(0, 100) as f32) / 100.0;
@@ -531,7 +535,14 @@ fn render_project_header(
                 .items_start()
                 .justify_between()
                 .gap(px(14.0))
-                .child(div().flex().flex_col().gap(px(7.0)).child(chips).child(title_row))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(7.0))
+                        .child(chips)
+                        .child(title_row),
+                )
                 .child(actions),
         )
         .child(progress_row)
@@ -585,28 +596,29 @@ fn render_overview_tab(
                         })),
                 )
                 .child(
-                    style::ghost_btn(
-                        "post_launch_data_btn",
-                        t,
-                        "📁 Run with Game Data Folder…",
-                    )
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        this.open_run_game_modal(
-                            proj_dir_data.clone(),
-                            proj_title_data.clone(),
-                            true,
-                            cx,
-                        );
-                    })),
+                    style::ghost_btn("post_launch_data_btn", t, "📁 Run with Game Data Folder…")
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.open_run_game_modal(
+                                proj_dir_data.clone(),
+                                proj_title_data.clone(),
+                                true,
+                                cx,
+                            );
+                        })),
                 );
         }
         if has_wasm {
             actions = actions.child(
-                style::primary_btn("post_launch_wasm_btn", t, "🌐  Play in Browser (WASM)", true)
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        this.launch_or_open_wasm(&proj_dir_wasm);
-                        cx.notify();
-                    })),
+                style::primary_btn(
+                    "post_launch_wasm_btn",
+                    t,
+                    "🌐  Play in Browser (WASM)",
+                    true,
+                )
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.launch_or_open_wasm(&proj_dir_wasm);
+                    cx.notify();
+                })),
             );
         }
         actions = actions
@@ -803,7 +815,9 @@ fn render_overview_tab(
         .child(
             div()
                 .h_full()
-                .w(relative((hl_fns.saturating_sub(verified_fns) as f32) / tot_f))
+                .w(relative(
+                    (hl_fns.saturating_sub(verified_fns) as f32) / tot_f,
+                ))
                 .bg(rgb(t.polished)),
         )
         .child(
@@ -822,7 +836,11 @@ fn render_overview_tab(
     // 8 vertical stage mini-bars
     let mut stage_bars = div().w_full().h(px(26.0)).flex().items_end().gap(px(4.0));
     for i in 0..8 {
-        let st = model.stages.get(i).map(|s| s.status.as_str()).unwrap_or("pending");
+        let st = model
+            .stages
+            .get(i)
+            .map(|s| s.status.as_str())
+            .unwrap_or("pending");
         let (h_frac, bar_col) = match st {
             "ok" => (1.0, t.match_fill),
             "running" => (0.72, t.hl),
@@ -1142,7 +1160,9 @@ fn render_overview_tab(
                 .justify_between()
                 .px(px(16.0))
                 .py(px(8.0))
-                .when(row_i > 0, |el| el.border_t_1().border_color(rgb(t.line_soft)))
+                .when(row_i > 0, |el| {
+                    el.border_t_1().border_color(rgb(t.line_soft))
+                })
                 .cursor_pointer()
                 .hover({
                     let bg_alt = t.bg_alt;
@@ -1157,7 +1177,13 @@ fn render_overview_tab(
                         .flex()
                         .items_center()
                         .gap(px(8.0))
-                        .child(div().w(px(8.0)).h(px(8.0)).rounded(px(2.0)).bg(rgb(dot_hex)))
+                        .child(
+                            div()
+                                .w(px(8.0))
+                                .h(px(8.0))
+                                .rounded(px(2.0))
+                                .bg(rgb(dot_hex)),
+                        )
                         .child(
                             div()
                                 .font_family(t.mono_font)
@@ -1425,7 +1451,12 @@ fn render_function_map_squares(
             .child("Hover any square for function address & stats · click to open Inspector")
     };
 
-    let mut wrap = div().flex().flex_col().gap(px(8.0)).child(grid).child(hover_bar);
+    let mut wrap = div()
+        .flex()
+        .flex_col()
+        .gap(px(8.0))
+        .child(grid)
+        .child(hover_bar);
     if n > max_tiles {
         wrap = wrap.child(
             div()
@@ -1482,7 +1513,11 @@ fn render_functions_tab(
             FnSort::Category => a.1.category.cmp(&b.1.category),
             FnSort::Module => a.1.file.cmp(&b.1.file),
         };
-        if app.fn_sort_desc { ord.reverse() } else { ord }
+        if app.fn_sort_desc {
+            ord.reverse()
+        } else {
+            ord
+        }
     });
 
     let limit = app.fn_table_limit.min(rows.len());
@@ -1562,11 +1597,51 @@ fn render_functions_tab(
                 .text_color(rgb(t.work))
                 .child("★"),
         )
-        .child(sort_col("th_addr", app, t, "ADDRESS", FnSort::Address, 115.0, cx))
-        .child(sort_col("th_name", app, t, "FUNCTION", FnSort::Name, 260.0, cx))
-        .child(sort_col("th_insns", app, t, "INSNS", FnSort::Instructions, 80.0, cx))
-        .child(sort_col("th_mod", app, t, "MODULE", FnSort::Module, 175.0, cx))
-        .child(sort_col("th_cat", app, t, "PROVENANCE / STATUS", FnSort::Category, 180.0, cx));
+        .child(sort_col(
+            "th_addr",
+            app,
+            t,
+            "ADDRESS",
+            FnSort::Address,
+            115.0,
+            cx,
+        ))
+        .child(sort_col(
+            "th_name",
+            app,
+            t,
+            "FUNCTION",
+            FnSort::Name,
+            260.0,
+            cx,
+        ))
+        .child(sort_col(
+            "th_insns",
+            app,
+            t,
+            "INSNS",
+            FnSort::Instructions,
+            80.0,
+            cx,
+        ))
+        .child(sort_col(
+            "th_mod",
+            app,
+            t,
+            "MODULE",
+            FnSort::Module,
+            175.0,
+            cx,
+        ))
+        .child(sort_col(
+            "th_cat",
+            app,
+            t,
+            "PROVENANCE / STATUS",
+            FnSort::Category,
+            180.0,
+            cx,
+        ));
 
     let mut tbody = div().flex().flex_col();
     if rows.is_empty() {
@@ -1596,7 +1671,11 @@ fn render_functions_tab(
                     .py(px(7.0))
                     .border_b_1()
                     .border_color(rgb(t.line_soft))
-                    .bg(if is_sel { rgb(t.match_bg) } else { rgb(t.panel) })
+                    .bg(if is_sel {
+                        rgb(t.match_bg)
+                    } else {
+                        rgb(t.panel)
+                    })
                     .cursor_pointer()
                     .hover({
                         let bg_alt = t.bg_alt;
@@ -1781,7 +1860,11 @@ fn render_stages_build_tab(
             .flex()
             .flex_col()
             .gap(px(6.0))
-            .child(kv_line(t, "Sources built", &format!("{} file(s)", b.source_files)))
+            .child(kv_line(
+                t,
+                "Sources built",
+                &format!("{} file(s)", b.source_files),
+            ))
             .child(kv_line(t, "Source SHA-256", &b.source_digest))
             .child(kv_line(
                 t,
@@ -1793,7 +1876,11 @@ fn render_stages_build_tab(
                 },
             ))
             .child(kv_line(t, "Binary SHA-256", &b.binary_sha256))
-            .child(kv_line(t, "Binary size", &crate::cli::format_bytes(b.binary_size)))
+            .child(kv_line(
+                t,
+                "Binary size",
+                &crate::cli::format_bytes(b.binary_size),
+            ))
             .child(kv_line(t, "Built from", &b.built_from_digest))
     };
 
@@ -1933,15 +2020,11 @@ fn render_agents_tab(
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
     let ai_cmd = app.effective_ai_cmd();
-    let agent_job = app
-        .jobs
-        .iter()
-        .rev()
-        .find(|j| {
-            j.is_running()
-                && j.kind == WorkerKind::Readability
-                && j.project_dir.as_deref() == Some(model.dir.as_path())
-        });
+    let agent_job = app.jobs.iter().rev().find(|j| {
+        j.is_running()
+            && j.kind == WorkerKind::Readability
+            && j.project_dir.as_deref() == Some(model.dir.as_path())
+    });
     let agent_running = agent_job.is_some();
     let agent_job_id = agent_job.map(|j| j.id).unwrap_or(0);
     let agent_stage = agent_job
@@ -2211,7 +2294,11 @@ fn render_agents_tab(
                             .text_color(rgb(t.ink))
                             .child(r.address.clone()),
                     )
-                    .child(style::status_badge(r.verdict.clone(), t.match_bg, t.match_ink))
+                    .child(style::status_badge(
+                        r.verdict.clone(),
+                        t.match_bg,
+                        t.match_ink,
+                    ))
                     .child(
                         div()
                             .font_family(t.mono_font)
@@ -2279,7 +2366,10 @@ fn render_frames_tab(
         );
     }
 
-    let sel_idx = app.selected_frame_idx.unwrap_or(0).min(model.frames.len() - 1);
+    let sel_idx = app
+        .selected_frame_idx
+        .unwrap_or(0)
+        .min(model.frames.len() - 1);
     let sel_path = model.frames[sel_idx].clone();
 
     let mut list = div()
@@ -2287,7 +2377,10 @@ fn render_frames_tab(
         .flex()
         .flex_col()
         .gap(px(4.0))
-        .child(style::eyebrow(t, format!("FRAMES ({})", model.frames.len())));
+        .child(style::eyebrow(
+            t,
+            format!("FRAMES ({})", model.frames.len()),
+        ));
 
     for (i, fp) in model.frames.iter().enumerate() {
         let name = fp
@@ -2306,34 +2399,29 @@ fn render_frames_tab(
     }
 
     style::panel_box(t).p(px(18.0)).child(
-        div()
-            .flex()
-            .flex_row()
-            .gap(px(20.0))
-            .child(list)
-            .child(
-                div()
-                    .flex_1()
-                    .flex()
-                    .flex_col()
-                    .gap(px(8.0))
-                    .child(
-                        div()
-                            .font_family(t.mono_font)
-                            .text_size(px(t.ui_px(11.5)))
-                            .text_color(rgb(t.muted))
-                            .child(sel_path.display().to_string()),
-                    )
-                    .child(
-                        div()
-                            .p(px(8.0))
-                            .rounded(px(4.0))
-                            .bg(rgb(t.code_bg))
-                            .border_1()
-                            .border_color(rgb(t.line_soft))
-                            .child(img(sel_path).max_w(px(720.0)).max_h(px(480.0))),
-                    ),
-            ),
+        div().flex().flex_row().gap(px(20.0)).child(list).child(
+            div()
+                .flex_1()
+                .flex()
+                .flex_col()
+                .gap(px(8.0))
+                .child(
+                    div()
+                        .font_family(t.mono_font)
+                        .text_size(px(t.ui_px(11.5)))
+                        .text_color(rgb(t.muted))
+                        .child(sel_path.display().to_string()),
+                )
+                .child(
+                    div()
+                        .p(px(8.0))
+                        .rounded(px(4.0))
+                        .bg(rgb(t.code_bg))
+                        .border_1()
+                        .border_color(rgb(t.line_soft))
+                        .child(img(sel_path).max_w(px(720.0)).max_h(px(480.0))),
+                ),
+        ),
     )
 }
 
@@ -2720,13 +2808,11 @@ fn render_project_settings_tab(
                         .flex()
                         .flex_wrap()
                         .gap(px(8.0))
-                        .child(
-                            style::ghost_btn("ps_open_dir", t, "Open folder").on_click(
-                                cx.listener(move |_, _, _, _| {
-                                    let _ = open::that(&dir_open);
-                                }),
-                            ),
-                        )
+                        .child(style::ghost_btn("ps_open_dir", t, "Open folder").on_click(
+                            cx.listener(move |_, _, _, _| {
+                                let _ = open::that(&dir_open);
+                            }),
+                        ))
                         .child(
                             style::ghost_btn("ps_reload", t, "Reload from disk").on_click(
                                 cx.listener(|this, _, window, cx| {
@@ -2734,18 +2820,16 @@ fn render_project_settings_tab(
                                 }),
                             ),
                         )
-                        .child(
-                            style::ghost_btn("ps_rename_proj", t, "✎ Rename…").on_click(
-                                cx.listener(move |this, _, window, cx| {
-                                    this.open_rename_project_modal(
-                                        dir_rename.clone(),
-                                        title_rename.clone(),
-                                        window,
-                                        cx,
-                                    );
-                                }),
-                            ),
-                        )
+                        .child(style::ghost_btn("ps_rename_proj", t, "✎ Rename…").on_click(
+                            cx.listener(move |this, _, window, cx| {
+                                this.open_rename_project_modal(
+                                    dir_rename.clone(),
+                                    title_rename.clone(),
+                                    window,
+                                    cx,
+                                );
+                            }),
+                        ))
                         .child(
                             style::danger_btn("ps_delete_proj", t, "🗑 Remove / Delete…").on_click(
                                 cx.listener(move |this, _, _, cx| {
