@@ -66,17 +66,24 @@ Windows game.exe → recover & lift → generate C → compile → run → verif
 - **Optional AI source readability:** Core disassembly, lifting, compilation, and execution are **100% deterministic and offline with zero AI**. AI is strictly **optional** and **only used to improve readable C source code** (naming, comments, formatting) when explicitly enabled — every edit is compile-checked and re-run against baseline execution evidence, and automatically reverted on failure.
 - Records build provenance, execution results, and verification evidence. **Currently supports PE32 (x86) inputs.**
 
-## Proof & gameplay
+## App screenshots
 
-**Cave Story (Doukutsu.exe)** — the rebuilt game reaches its frame loop and renders. **143/143 imports** bind; the run is classified **partial**, not independently verified playable gameplay.
+The Rust desktop GUI supports light, dark, and themed views. These captures show the home screen in Light, Dark, and Nord Frost.
 
 <table>
 <tr>
-<td align="center"><img src="docs/screenshots/cavestory-doukutsu-01-intro.png" alt="Cave Story captured intro frame 1" width="260"><br><sub>Intro frame</sub></td>
-<td align="center"><img src="docs/screenshots/cavestory-doukutsu-02-intro.png" alt="Cave Story captured intro frame 2" width="260"><br><sub>Animation</sub></td>
-<td align="center"><img src="docs/screenshots/cavestory-doukutsu-03-screen.png" alt="Cave Story captured later frame" width="260"><br><sub>Later captured frame</sub></td>
+<td align="center"><img src="docs/screenshots/game-recomp-gui-light.png" alt="GameReComp desktop GUI home screen in Light theme" width="420"><br><sub>Light</sub></td>
+<td align="center"><img src="docs/screenshots/game-recomp-gui-dark.png" alt="GameReComp desktop GUI home screen in Dark theme" width="420"><br><sub>Dark</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/game-recomp-gui-nord-frost.png" alt="GameReComp desktop GUI home screen in Nord Frost theme" width="420"><br><sub>Nord Frost</sub></td>
+<td align="center"><img src="docs/screenshots/game-recomp-cli-help.png" alt="GameReComp Rust CLI help output in Terminal" width="420"><br><sub>Rust CLI</sub></td>
 </tr>
 </table>
+
+## Proof & gameplay
+
+Game-specific screenshots and their verification status are kept in the separate [game screenshots page](docs/GAME_SCREENSHOTS.md).
 
 | Evidence | Current result |
 | --- | --- |
