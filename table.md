@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-19T03:27:57Z by `python -m tools.gamesdb`. Measured 120; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-20T09:43:24Z by `python -m tools.gamesdb`. Measured 120; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process launched and exited 0; no oracle supplied.
 
@@ -16,7 +16,8 @@ Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process 
 | --- | --- | --- | --- | ---: | --- | --- |
 | BusyBox | busybox-w32.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/busybox_w32/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | DoConfig.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/DoConfig/reports/report.html (host: Darwin arm64 (host build)) |
-| Cave Story | Doukutsu.exe | i386 (PE32) | Windows | 93 | partial: process launched and stayed alive until the 10s timeout; no crash observed, no oracle | projects/cavestory-doukutsu/reports/report.html (host: Darwin arm64 (host build)) |
+| Cave Story | Doukutsu.exe | i386 (PE32) | Windows | 93 | partial: process launched and stayed alive until the 10s timeout; no crash observed, no oracle | projects/Doukutsu/reports/report.html (host: Darwin arm64 (host build)) |
+| Downloads | idman643build18.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/idman643build18/reports/report.html (host: Darwin arm64 (host build)) |
 | GeneRally | TrackEditor.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/TrackEditor/reports/report.html (host: Darwin arm64 (host build)) |
 | IGI | igi.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/igi/reports/report.html (host: Darwin arm64 (host build)) |
 | Ikachan | dxIka.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/dxIka/reports/report.html (host: Darwin arm64 (host build)) |
@@ -111,7 +112,6 @@ Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process 
 | Parsec47 | p47.exe | i386 (PE32) | Windows | 77 | launch-failed: rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented | projects/p47/reports/report.html (host: Darwin arm64 (host build)) |
 | Torus Trooper | tt.exe | i386 (PE32) | Windows | 77 | launch-failed: rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented | projects/tt/reports/report.html (host: Darwin arm64 (host build)) |
 | Tumiki Fighters | tf.exe | i386 (PE32) | Windows | 77 | launch-failed: rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented | projects/tf/reports/report.html (host: Darwin arm64 (host build)) |
-| Downloads | idman643build18.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/idman643build18/reports/report.html (host: Darwin arm64 (host build)) |
 | GeneRally | GeneRally.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/GeneRally/reports/report.html (host: Darwin arm64 (host build)) |
 | Hero Core | herocore gm5.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore_gm5/reports/report.html (host: Darwin arm64 (host build)) |
 | Hero Core | herocore gm7.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore_gm7/reports/report.html (host: Darwin arm64 (host build)) |

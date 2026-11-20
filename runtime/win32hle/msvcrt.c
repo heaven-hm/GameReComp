@@ -1741,8 +1741,11 @@ static void u_terminate(void) {
  * throw, so a title that never throws (TrackEditor, GeneRally) is unaffected
  * and one that does fails where it threw rather than somewhere later. */
 static void u_cxx_throw_exception(void) {
+    /* A caught exception resumes through its owning function's setjmp
+     * checkpoint and therefore never returns here. */
+    hle_eh_cxx_throw(A32(0), A32(1));
     fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
-                    "0x%08X type 0x%08X, no guest SEH to unwind it\n",
+                    "0x%08X type 0x%08X, no compatible guest handler\n",
             A32(0), A32(1));
     hle_exit(3);
 }
@@ -2435,8 +2438,8 @@ static void c_setjmp3(void) {
     RETC(0);
 }
 static void c_longjmp(void) {
-    fprintf(stderr, "[msvcrt] longjmp(0x%08X, %d): non-local guest jump not supported in HLE\n", A32(0), (int)A32(1));
-    hle_exit(3);
+    hle_eh_longjmp(A32(0), A32(1));
+    hle_exit(3); /* invalid or unowned guest jump buffer */
 }
 
 /* ======================================================= data exports

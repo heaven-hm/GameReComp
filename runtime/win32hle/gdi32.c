@@ -135,10 +135,41 @@ static void g_GetDeviceCaps(void) {
     RET(v, 2);
 }
 
+/* Vector and region entry points used by classic control panels.  The portable
+ * backend's visible output is driven by DIB/BitBlt; these operations still
+ * need their Win32 success contracts so an application can retain the same
+ * drawing and mapping flow on a headless host. */
+static void g_draw_ok_8(void) { RET(1, 8); }             /* Arc/Chord/Pie/RoundRect */
+static void g_draw_ok_4(void) { RET(1, 4); }             /* PolyPolyline */
+static void g_draw_ok_6(void) { RET(1, 6); }             /* ExtFloodFill */
+static void g_GdiFlush(void) { RET(1, 0); }
+static void g_GetObjectType(void) { RET(A32(0) ? 10u : 0u, 1); } /* OBJ_DC */
+static void g_GetRgnBox(void) {
+    if (A32(1)) memset(APTR(1), 0, 16);
+    RET(1, 2);                                           /* NULLREGION */
+}
+static void g_CombineRgn(void) { RET(1, 4); }            /* NULLREGION */
+static void g_ExtCreatePen(void) { RET(0xD1B10001u, 5); }
+static void g_SetWindowExtEx(void) {
+    if (A32(3)) { MEM32(A32(3)) = 1; MEM32(A32(3) + 4) = 1; }
+    RET(1, 4);
+}
+static void g_SetViewportExtEx(void) {
+    if (A32(3)) { MEM32(A32(3)) = 1; MEM32(A32(3) + 4) = 1; }
+    RET(1, 4);
+}
+
 const win32hle_shim win32hle_gdi32[] = {
     { "GetDeviceCaps",      g_GetDeviceCaps },
     { "CreateDIBSection",   g_CreateDIBSection },
     { "StretchDIBits",      g_StretchDIBits },
+    { "Arc",                g_draw_ok_8 }, { "Chord", g_draw_ok_8 },
+    { "Pie",                g_draw_ok_8 }, { "RoundRect", g_draw_ok_8 },
+    { "PolyPolyline",       g_draw_ok_4 }, { "ExtFloodFill", g_draw_ok_6 },
+    { "GdiFlush",           g_GdiFlush }, { "GetObjectType", g_GetObjectType },
+    { "GetRgnBox",          g_GetRgnBox }, { "CombineRgn", g_CombineRgn },
+    { "ExtCreatePen",       g_ExtCreatePen },
+    { "SetWindowExtEx",     g_SetWindowExtEx }, { "SetViewportExtEx", g_SetViewportExtEx },
     /* CreateCompatibleDC/DeleteDC now in gdidc.c (real DCs for BitBlt) */
     { 0, 0 }
 };

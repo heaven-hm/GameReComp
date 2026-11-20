@@ -34,6 +34,7 @@ static void ok(const char *what, int cond) {
 static uint32_t VA_HeapAlloc, VA_lstrlenA, VA_GetTickCount;
 static uint32_t VA_CreateDIBSection, VA_StretchDIBits;
 #define VA_ADD 0x00401000u   /* guest_add's dispatch VA (callback target) */
+static int g_eh_landed;
 
 /* host framebuffer the DIB blits land on, and the guest's drawing scratch */
 #define FB_W 8
@@ -109,6 +110,28 @@ static void guest_add(void) {
     esp += 4 + 8;               /* pop ret addr + 2 args (callee cleans: stdcall) */
 }
 
+/* Generated-style MSVC EH landing pad.  A real exception dispatcher selects
+ * a catch continuation and resumes this checkpoint with its guest address. */
+static void guest_eh_checkpoint(void) {
+    GUEST_PROLOGUE(0x00402300u);
+    uint32_t _itail_tgt = 0;
+    RECOMP_EH_ENTER();
+    if (!g_eh_landed) {
+        recomp_ehframe_t *owner = recomp_eh_owner(esp - 1u);
+        if (owner) recomp_eh_resume(owner, 0x00402340u);
+    }
+    goto _eh_done;
+  _ljump:
+    switch (_itail_tgt) {
+      case 0x00402340u: goto L_00402340;
+      default: goto _eh_done;
+    }
+  L_00402340:
+    g_eh_landed = 1;
+  _eh_done:
+    RECOMP_EH_LEAVE();
+}
+
 /* Dispatch table the host searches (sorted by address). guest_add is reachable
  * as a callback through hle_call_guest. */
 const recomp_dispatch_entry_t recomp_dispatch_table[] = {
@@ -169,6 +192,9 @@ int main(void) {
         for (int fx = 0; fx < FB_W; fx++)
             if (g_fb[fy * FB_W + fx] != src_pixel(fx / 2, fy / 2)) blit_ok = 0;
     ok("StretchDIBits scaled the DIB into the framebuffer", blit_ok);
+
+    guest_eh_checkpoint();
+    ok("guest EH checkpoint resumed at its continuation", g_eh_landed);
 
     mach_leave();
 

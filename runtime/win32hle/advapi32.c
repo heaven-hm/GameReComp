@@ -173,6 +173,21 @@ static void r_RegQueryValueExA(void) {                   /* (key, name, 0, &type
     memcpy(APTR(4), v->data, v->size);
     RET(ERROR_SUCCESS, 6);
 }
+static void r_RegQueryValueExW(void) {
+    char name[128];
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (w && !hle_wide_to_ansi(w, name, sizeof name)) RET(ERROR_INVALID_PARAMETER, 6);
+    rkey_t *k = root_of(A32(0));
+    value_t *v = k ? find_value(k, w ? name : NULL, 0) : NULL;
+    if (!v) RET(ERROR_FILE_NOT_FOUND, 6);
+    if (A32(3)) MEM32(A32(3)) = v->type;
+    uint32_t have = A32(5) ? MEM32(A32(5)) : 0;
+    if (A32(5)) MEM32(A32(5)) = v->size;
+    if (!A32(4)) RET(ERROR_SUCCESS, 6);
+    if (have < v->size) RET(ERROR_MORE_DATA, 6);
+    memcpy(APTR(4), v->data, v->size);
+    RET(ERROR_SUCCESS, 6);
+}
 static void r_RegSetValueExA(void) {                     /* (key, name, 0, type, data, size) */
     rkey_t *k = root_of(A32(0));
     if (!k) RET(6u, 6);
@@ -184,6 +199,15 @@ static void r_RegDeleteValueA(void) {
     rkey_t *k = root_of(A32(0));
     for (value_t **v = k ? &k->values : NULL; v && *v; v = &(*v)->next)
         if (!strcasecmp((*v)->name, ASTR(1) ? ASTR(1) : "")) { value_t *d = *v; *v = d->next; free(d->data); free(d); reg_save(); RET(0, 2); }
+    RET(ERROR_FILE_NOT_FOUND, 2);
+}
+static void r_RegDeleteValueW(void) {
+    char name[128];
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (w && !hle_wide_to_ansi(w, name, sizeof name)) RET(ERROR_INVALID_PARAMETER, 2);
+    rkey_t *k = root_of(A32(0));
+    for (value_t **v = k ? &k->values : NULL; v && *v; v = &(*v)->next)
+        if (!strcasecmp((*v)->name, w ? name : "")) { value_t *d = *v; *v = d->next; free(d->data); free(d); reg_save(); RET(0, 2); }
     RET(ERROR_FILE_NOT_FOUND, 2);
 }
 static void r_RegDeleteKeyA(void) {                      /* (key, sub): a key without subkeys */
@@ -251,6 +275,19 @@ static void v_VerQueryValueA(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(0, 4); }
 /* ---- SHELL32 ---- */
 static void s_FindExecutableA(void) { if (A32(2)) MEM8(A32(2)) = 0; RET(31u, 3); }   /* SE_ERR_NOASSOC */
 static void s_ShellExecuteA(void) { fprintf(stderr, "[shell32] ShellExecuteA(%s): not on this host\n", ASTR(2) ? ASTR(2) : ""); RET(31u, 6); }
+/* There is no native folder picker in the portable HLE.  Returning NULL is
+ * the documented SHBrowseForFolderW result when the user cancels; callers must
+ * handle it before asking SHGetPathFromIDListW for a path. */
+static void s_SHBrowseForFolderW(void) { RET(0, 1); }
+static void s_SHGetPathFromIDListW(void) {
+    if (A32(1)) MEM16(A32(1)) = 0;
+    RET(0, 2);                                           /* invalid/null PIDL */
+}
+static void s_SHBrowseForFolderA(void) { RET(0, 1); }    /* user cancelled */
+static void s_SHGetPathFromIDListA(void) { if (A32(1)) MEM8(A32(1)) = 0; RET(0, 2); }
+static void s_SHGetMalloc(void) { if (A32(0)) MEM32(A32(0)) = 0; RET(0x8007000Eu, 1); }
+static void s_SHGetDesktopFolder(void) { if (A32(0)) MEM32(A32(0)) = 0; RET(0x8007000Eu, 1); }
+static void s_WNetGetConnectionA(void) { RET(2250u, 3); } /* ERROR_NOT_CONNECTED */
 
 /* CommandLineToArgvW(lpCmdLine, &argc): split a command line the way Windows
  * does - whitespace separates, a quote toggles the quoted state, and a run of n
@@ -665,8 +702,8 @@ static void il_SetDragCursorImage(void) { RET(1, 4); }
 const win32hle_shim win32hle_advapi32[] = {
     { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
     { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey }, { "RegFlushKey", adv_RegFlushKey },
-    { "RegQueryValueExA", r_RegQueryValueExA }, { "RegSetValueExA", r_RegSetValueExA },
-    { "RegDeleteValueA", r_RegDeleteValueA }, { "RegDeleteKeyA", r_RegDeleteKeyA },
+    { "RegQueryValueExA", r_RegQueryValueExA }, { "RegQueryValueExW", r_RegQueryValueExW }, { "RegSetValueExA", r_RegSetValueExA },
+    { "RegDeleteValueA", r_RegDeleteValueA }, { "RegDeleteValueW", r_RegDeleteValueW }, { "RegDeleteKeyA", r_RegDeleteKeyA },
     { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
     { "GetUserNameA", r_GetUserNameA },
     { "AllocateAndInitializeSid", adv_AllocateAndInitializeSid }, { "CopySid", adv_CopySid },
@@ -697,6 +734,10 @@ const win32hle_shim win32hle_advapi32[] = {
     { "GetFileVersionInfoSizeA", v_GetFileVersionInfoSizeA }, { "GetFileVersionInfoA", v_GetFileVersionInfoA },
     { "VerQueryValueA", v_VerQueryValueA },
     { "FindExecutableA", s_FindExecutableA }, { "ShellExecuteA", s_ShellExecuteA },
+    { "SHBrowseForFolderW", s_SHBrowseForFolderW }, { "SHGetPathFromIDListW", s_SHGetPathFromIDListW },
+    { "SHBrowseForFolderA", s_SHBrowseForFolderA }, { "SHGetPathFromIDListA", s_SHGetPathFromIDListA },
+    { "SHGetMalloc", s_SHGetMalloc }, { "SHGetDesktopFolder", s_SHGetDesktopFolder },
+    { "WNetGetConnectionA", s_WNetGetConnectionA },
     { "CommandLineToArgvW", s_CommandLineToArgvW },
     { "DragAcceptFiles", s_DragAcceptFiles }, { "DragQueryFileA", s_DragQueryFileA },
     { "DragFinish", s_DragFinish },

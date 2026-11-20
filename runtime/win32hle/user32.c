@@ -3011,6 +3011,49 @@ static void u_wsprintfA(void) {
     int n = hle_guest_format(ASTR(0), 1024, ASTR(1), g_esp + 12);   /* the arguments follow the format on the stack */
     RET((uint32_t)n, 0);
 }
+/* wsprintfW is cdecl.  Its format and %s arguments are UTF-16 guest strings,
+ * so it cannot delegate to hle_guest_format (that helper is deliberately
+ * ANSI-only).  This implements the documented wsprintf integer/string subset
+ * without handing guest pointers to the host printf implementation. */
+static void u_wsprintfW(void) {
+    uint16_t *out = (uint16_t *)APTR(0), *fmt = (uint16_t *)APTR(1);
+    uint32_t args = g_esp + 12, ai = 0;
+    size_t at = 0;
+    if (!out || !fmt) RET(0, 0);
+    for (size_t i = 0; fmt[i] && at < 1023; i++) {
+        if (fmt[i] != '%') { out[at++] = fmt[i]; continue; }
+        i++;
+        if (fmt[i] == '%') { out[at++] = '%'; continue; }
+        while (fmt[i] == '-' || fmt[i] == '+' || fmt[i] == ' ' || fmt[i] == '0' || (fmt[i] >= '0' && fmt[i] <= '9')) i++;
+        int long_arg = 0;
+        if (fmt[i] == 'l') { long_arg = 1; i++; }
+        uint32_t v = MEM32(args + 4 * ai++);
+        char tmp[64]; uint16_t wide[512]; size_t n = 0;
+        switch (fmt[i]) {
+        case 's': {
+            const uint16_t *s = (const uint16_t *)hle_ptr(v);
+            if (s) while (s[n] && at < 1023) out[at++] = s[n++];
+            break;
+        }
+        case 'S': {
+            const char *s = (const char *)hle_ptr(v);
+            if (s) { hle_ansi_to_wide(s, wide, sizeof wide / sizeof wide[0]); for (n = 0; wide[n] && at < 1023; n++) out[at++] = wide[n]; }
+            break;
+        }
+        case 'c': out[at++] = (uint16_t)v; break;
+        case 'd': case 'i': snprintf(tmp, sizeof tmp, "%d", (int32_t)v); goto copy_ansi;
+        case 'u': snprintf(tmp, sizeof tmp, "%u", v); goto copy_ansi;
+        case 'x': snprintf(tmp, sizeof tmp, "%x", v); goto copy_ansi;
+        case 'X': snprintf(tmp, sizeof tmp, "%X", v); goto copy_ansi;
+        default: out[at++] = '%'; if (long_arg && at < 1023) out[at++] = 'l'; if (at < 1023) out[at++] = fmt[i]; break;
+        }
+        continue;
+copy_ansi:
+        for (n = 0; tmp[n] && at < 1023; n++) out[at++] = (uint8_t)tmp[n];
+    }
+    out[at] = 0;
+    RET((uint32_t)at, 0);
+}
 static void u_wvsprintfA(void) {
     int n = hle_guest_format(ASTR(0), 1024, ASTR(1), A32(2));
     RET((uint32_t)n, 3);
@@ -3393,6 +3436,6 @@ const win32hle_shim win32hle_user32[] = {
     { "GetMonitorInfoA", u_GetMonitorInfoA }, { "EnumDisplayMonitors", u_EnumDisplayMonitors },
     { "MonitorFromWindow", u_MonitorFromWindow }, { "MonitorFromRect", u_MonitorFromRect },
     { "MonitorFromPoint", u_MonitorFromPoint },
-    { "DrawTextA", u_DrawTextA }, { "wsprintfA", u_wsprintfA }, { "wvsprintfA", u_wvsprintfA },
+    { "DrawTextA", u_DrawTextA }, { "wsprintfA", u_wsprintfA }, { "wsprintfW", u_wsprintfW }, { "wvsprintfA", u_wvsprintfA },
     { 0, 0 }
 };

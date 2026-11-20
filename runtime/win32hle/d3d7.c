@@ -938,11 +938,31 @@ static void d3d_write_device_desc7(uint32_t p,const uint8_t *guid,int tnl) {
     MEM32(p+216)=tnl?0x3Au:0u;                 /* material source, directional/positional lights, local viewer */
 }
 
+/* A verifier may intentionally run with SDL's dummy driver.  D3D COM and
+ * capability discovery remain valid in that mode; only rasterisation is
+ * unavailable.  Report a conservative software-compatible device so clients
+ * can finish their setup and be tested without a host GL context. */
+static void d3d_write_headless_desc7(uint32_t p) {
+    memset(hle_ptr(p), 0, D3D7_DEVICE_DESC_SIZE);
+    MEM32(p) = 0x80540u;                       /* HAL + system-memory DrawPrimitive */
+    d3d_write_prim_caps(p + 4, 16);
+    d3d_write_prim_caps(p + 60, 16);
+    MEM32(p + 116) = 0x400u;                   /* 16-bit render target */
+    MEM32(p + 120) = 0x400u;                   /* 16-bit Z buffer */
+    MEM32(p + 124) = MEM32(p + 128) = 1;
+    MEM32(p + 132) = MEM32(p + 136) = 1024;
+    MEM32(p + 140) = MEM32(p + 144) = 1024;
+    MEM32(p + 148) = 1;
+    MEM32(p + 176) = 1;
+    MEM32(p + 180) = 0xFu;
+    MEM16(p + 184) = MEM16(p + 186) = 1;
+    memcpy(hle_ptr(p + 196), g_d3d7_hal_guid, 16);
+}
+
 static void d3d_enum(void) {
     uint32_t cb=A32(1),ctx=A32(2),desc;
     static uint32_t hal_desc,hal_name,tnl_desc,tnl_name,rgb_desc,rgb_name;
     if(!cb)RET(E_POINTER,3);
-    if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,3);
     if(!hal_desc) {
         hal_desc=hle_guest_strdup("Direct3D HAL");
         hal_name=hle_guest_strdup("Direct3D HAL");
@@ -953,6 +973,13 @@ static void d3d_enum(void) {
     }
     desc=hle_va(hle_alloc(D3D7_DEVICE_DESC_SIZE));
     if(!desc)RET(D3DERR_NOTAVAILABLE,3);
+    if(!hle_screen_gl_active() || !load_gl()) {
+        d3d_write_headless_desc7(desc);
+        uint32_t args[4]={hal_desc,hal_name,desc,ctx};
+        hle_call_guest(cb,4,args);
+        hle_free(hle_ptr(desc));
+        RET(D3D_OK,3);
+    }
     int hw=gl_rasterises_on_hardware();
     if(hw) {
         d3d_write_device_desc7(desc,g_d3d7_hal_guid,0);
@@ -1849,15 +1876,15 @@ uint32_t hle_d3d7_create(void) {
     return va;
 }
 uint32_t hle_d3d7_get(void) {
-    /* The object already exists: hand it back without asking for a screen
-     * again. Headless, hle_screen_open leaves no GL context, so a second
-     * request answers 0 even though the object is perfectly usable. */
+    /* COM availability is independent of renderer availability.  A title may
+     * query IDirect3D7 while booting headless, enumerate its configuration,
+     * then create a render target later.  Returning no interface here merely
+     * because SDL's dummy driver has no GL context breaks that legal flow. */
     if (g_d3d) return hle_va(hle_ptr(g_d3d));
-    if (!hle_screen_request_opengl()) return 0;
-    if (!hle_screen_gl_active()) {
+    if (hle_screen_request_opengl() && !hle_screen_gl_active()) {
         const char *driver = getenv("SDL_VIDEODRIVER");
         int headless = driver && strcmp(driver, "dummy") == 0;
-        if (hle_screen_open("Direct3D 7 application", 0, headless) != 0) return 0;
+        if (!headless && hle_screen_open("Direct3D 7 application", 0, 0) != 0) return 0;
     }
     if(!g_d3d_vt) { static const win32hle_shim m[]={{"IDirect3D7::QueryInterface",d3d_qi},{"IDirect3D7::AddRef",d3d_addref},{"IDirect3D7::Release",d3d_release},{"IDirect3D7::EnumDevices",d3d_enum},{"IDirect3D7::CreateDevice",d3d_create_device},{"IDirect3D7::CreateVertexBuffer",d3d_create_vb},{"IDirect3D7::EnumZBufferFormats",d3d_enum_z},{"IDirect3D7::EvictManagedTextures",d3d_evict},{0,0}}; g_d3d_vt=hle_com_vtable(m); }
     /* g_d3d is the host pointer, as d3d_qi and d3d_release read it through

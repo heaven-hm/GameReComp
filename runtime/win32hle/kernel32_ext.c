@@ -380,10 +380,30 @@ static void k_GetFileAttributesA(void) {
     }
     RET(attrs_of(&st), 1);
 }
+static void k_GetFileAttributesW(void) {
+    char name[1024], path[1024];
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    if (!w || !hle_wide_to_ansi(w, name, sizeof name) || !hle_host_path(name, path, sizeof path)) {
+        hle_set_last_error(ERROR_FILE_NOT_FOUND);
+        RET(0xFFFFFFFFu, 1);
+    }
+    struct stat st;
+    if (stat(path, &st) != 0) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0xFFFFFFFFu, 1); }
+    RET(attrs_of(&st), 1);
+}
 static void k_SetFileAttributesA(void) { char path[1024]; RET(hle_host_path(ASTR(0), path, sizeof path) ? 1u : 0u, 2); }
 static void k_CreateDirectoryA(void) {
     char path[1024];
     hle_host_path_for_write(ASTR(0), path, sizeof path, 0);
+    if (mkdir(path, 0755) == 0) RET(1, 2);
+    hle_set_last_error(errno == EEXIST ? ERROR_ALREADY_EXISTS : errno_to_win(errno));
+    RET(0, 2);
+}
+static void k_CreateDirectoryW(void) {
+    char name[1024], path[1024];
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    if (!w || !hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_INVALID_NAME); RET(0, 2); }
+    hle_host_path_for_write(name, path, sizeof path, 0);
     if (mkdir(path, 0755) == 0) RET(1, 2);
     hle_set_last_error(errno == EEXIST ? ERROR_ALREADY_EXISTS : errno_to_win(errno));
     RET(0, 2);
@@ -1060,10 +1080,12 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "SetFileTime",                k_SetFileTime },
     { "GetFileInformationByHandle", k_GetFileInformationByHandle },
     { "GetFileAttributesA",         k_GetFileAttributesA },
+    { "GetFileAttributesW",         k_GetFileAttributesW },
     { "GetFileAttributesExA",       k_GetFileAttributesExA },
     { "GetFileAttributesExW",       k_GetFileAttributesExW },
     { "SetFileAttributesA",         k_SetFileAttributesA },
     { "CreateDirectoryA",           k_CreateDirectoryA },
+    { "CreateDirectoryW",           k_CreateDirectoryW },
     { "RemoveDirectoryA",           k_RemoveDirectoryA },
     { "DeleteFileA",                k_DeleteFileA }, { "DeleteFileW", k_DeleteFileW },
     { "MoveFileA",                  k_MoveFileA },
@@ -1074,6 +1096,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "FindNextFileA",              k_FindNextFileA }, { "FindNextFileW", k_FindNextFileW },
     { "FindClose",                  k_FindClose },
     { "GetDiskFreeSpaceA",          k_GetDiskFreeSpaceA },
+    { "GetDiskFreeSpaceW",          k_GetDiskFreeSpaceA },
     { "GetDiskFreeSpaceExA",        k_GetDiskFreeSpaceExA },
     { "GetDiskFreeSpaceExW",        k_GetDiskFreeSpaceExA },
     { "GetVolumeInformationA",      k_GetVolumeInformationA },

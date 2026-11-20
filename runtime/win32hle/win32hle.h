@@ -151,6 +151,11 @@ const char *hle_name(uint32_t va);
  * machine lock around the call; nests, so a shim may call it while itself
  * running inside the lifted model. */
 uint32_t hle_call_guest(uint32_t va, int nargs, const uint32_t *args);
+/* Guest C++ exception / setjmp support.  The lifter emits RECOMP_EH_ENTER for
+ * MSVC frames with a known catch continuation; these functions keep the host
+ * checkpoint list and dispatch a throw using the guest's own metadata. */
+int hle_eh_cxx_throw(uint32_t object, uint32_t throw_info);
+void hle_eh_longjmp(uint32_t jump_buffer, uint32_t value);
 
 /* ---- the machine lock ----
  * One lock serialises the global register file. A thread holds it while

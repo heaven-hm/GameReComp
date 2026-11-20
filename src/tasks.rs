@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -13,6 +13,7 @@ use crate::json::JsonValue;
 use crate::logging::unix_timestamp_secs;
 use crate::model::ProjectModel;
 use crate::orchestrator::{default_project_dir, run_pipeline_cli, EXIT_OK, EXIT_UNVERIFIED};
+use crate::pe::inspect_pe;
 
 #[derive(Debug, Clone)]
 pub struct BatchTaskResult {
@@ -32,35 +33,76 @@ pub struct BatchTaskResult {
 
 pub fn collect_exes(inputs: &[String]) -> Vec<PathBuf> {
     let mut exes = Vec::new();
+    let mut seen_files = HashSet::new();
+    let mut seen_dirs = HashSet::new();
     for raw in inputs {
-        let p = PathBuf::from(raw);
-        if p.is_file() {
-            if p.extension()
-                .and_then(|e| e.to_str())
-                .map(|s| s.eq_ignore_ascii_case("exe"))
-                .unwrap_or(false)
-            {
-                exes.push(p);
-            }
-        } else if p.is_dir() {
-            if let Ok(rd) = fs::read_dir(&p) {
-                let mut children: Vec<PathBuf> = rd
-                    .filter_map(|e| e.ok())
-                    .map(|e| e.path())
-                    .filter(|c| {
-                        c.is_file()
-                            && c.extension()
-                                .and_then(|e| e.to_str())
-                                .map(|s| s.eq_ignore_ascii_case("exe"))
-                                .unwrap_or(false)
-                    })
-                    .collect();
-                children.sort();
-                exes.extend(children);
-            }
-        }
+        collect_exes_from_path(
+            &PathBuf::from(raw),
+            &mut exes,
+            &mut seen_files,
+            &mut seen_dirs,
+        );
     }
     exes
+}
+
+fn collect_exes_from_path(
+    path: &Path,
+    exes: &mut Vec<PathBuf>,
+    seen_files: &mut HashSet<PathBuf>,
+    seen_dirs: &mut HashSet<PathBuf>,
+) {
+    if path.is_file() {
+        if !path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|s| s.eq_ignore_ascii_case("exe"))
+            .unwrap_or(false)
+        {
+            return;
+        }
+        if let Ok(canonical) = fs::canonicalize(path) {
+            if seen_files.insert(canonical) {
+                exes.push(path.to_path_buf());
+            }
+        }
+        return;
+    }
+
+    if !path.is_dir() {
+        return;
+    }
+    let Ok(canonical_dir) = fs::canonicalize(path) else {
+        return;
+    };
+    if !seen_dirs.insert(canonical_dir) {
+        return;
+    }
+    let Ok(entries) = fs::read_dir(path) else {
+        return;
+    };
+    let mut children: Vec<PathBuf> = entries
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .collect();
+    children.sort();
+    for child in children {
+        collect_exes_from_path(&child, exes, seen_files, seen_dirs);
+    }
+}
+
+fn batch_project_dir(repo_root: &Path, pe_path: &Path) -> PathBuf {
+    let canonical = fs::canonicalize(pe_path).unwrap_or_else(|_| pe_path.to_path_buf());
+    let hash = canonical
+        .to_string_lossy()
+        .bytes()
+        .fold(0x811c9dc5_u32, |hash, byte| {
+            (hash ^ byte as u32).wrapping_mul(0x01000193)
+        });
+    let base = default_project_dir(repo_root, &canonical);
+    base.with_file_name(format!(
+        "{}_{hash:08x}",
+        base.file_name().unwrap().to_string_lossy()
+    ))
 }
 
 pub fn clean_cmake_objects(project_dir: &Path) -> std::io::Result<()> {
@@ -270,7 +312,7 @@ fn run_single_batch_item(
         .and_then(|s| s.to_str())
         .unwrap_or("unknown.exe")
         .to_string();
-    let proj_dir = default_project_dir(&cfg.repo_root, exe);
+    let proj_dir = batch_project_dir(&cfg.repo_root, exe);
 
     if let Some(avail) = available_disk_mb(&cfg.repo_root) {
         if avail < 1536 {
@@ -301,6 +343,8 @@ fn run_single_batch_item(
     let t0 = Instant::now();
     let mut run_args = vec![
         exe.to_string_lossy().to_string(),
+        "--project-dir".to_string(),
+        proj_dir.to_string_lossy().to_string(),
         "--input-os".to_string(),
         "auto".to_string(),
         "--input-arch".to_string(),
@@ -383,7 +427,8 @@ fn run_single_batch_item(
 pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
     if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
         println!(
-            "Usage: game-recomp-cli batch <path_or_dir...> [--parallel N] [--timeout N] [--clean-objects] [--verify-standalone] [--limit N] [--offset N] [--skip-existing]"
+            "Usage: game-recomp-cli batch <path_or_dir...> [--parallel N] [--timeout N] [--clean-objects] [--verify-standalone] [--limit N] [--offset N] [--skip-existing]\n\
+             Recursively discovers inputs; unsupported/non-PE32-i386 executables are skipped."
         );
         return if args.is_empty() { 2 } else { 0 };
     }
@@ -396,25 +441,61 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
         }
     };
 
-    let all_exes = collect_exes(&parsed.inputs);
-    if all_exes.is_empty() {
+    let candidates = collect_exes(&parsed.inputs);
+    if candidates.is_empty() {
         eprintln!("error: no .exe files found in inputs");
         return 2;
     }
 
-    let slice: Vec<PathBuf> = all_exes
-        .into_iter()
-        .skip(parsed.offset)
-        .take(parsed.limit.unwrap_or(usize::MAX))
-        .collect();
+    let wanted = parsed.limit.unwrap_or(usize::MAX);
+    let mut slice: Vec<PathBuf> = Vec::new();
+    let mut supported_seen = 0;
+    let mut unsupported_count = 0;
+    let mut inspection_errors = 0;
+    for exe in candidates {
+        let info = inspect_pe(&exe);
+        if !info.ok
+            && (info.error == "cannot read the file" || info.error == "cannot read the PE header")
+        {
+            eprintln!("warning: cannot inspect {}: {}", exe.display(), info.error);
+            inspection_errors += 1;
+            continue;
+        }
+        if !info.pe32_x86 {
+            unsupported_count += 1;
+            continue;
+        }
+        if supported_seen >= parsed.offset {
+            slice.push(exe);
+            if slice.len() == wanted {
+                break;
+            }
+        }
+        supported_seen += 1;
+    }
+    if slice.is_empty() && supported_seen == 0 {
+        println!(
+            "batch: no supported PE32 i386 executable(s); skipped_unsupported={unsupported_count}, inspection_errors={inspection_errors}"
+        );
+        return if inspection_errors == 0 { 0 } else { 2 };
+    }
+    if slice.is_empty() {
+        eprintln!(
+            "error: offset {} is past the discovered supported PE32 i386 inputs",
+            parsed.offset
+        );
+        return 2;
+    }
 
     println!(
-        "batch: processing {} executable(s) (parallel={}, offset={}, clean_objects={}, verify_standalone={})",
+        "batch: processing {} supported PE32 i386 executable(s) (parallel={}, offset={}, clean_objects={}, verify_standalone={}, skipped_unsupported={}, inspection_errors={})",
         slice.len(),
         parsed.parallel,
         parsed.offset,
         parsed.clean_objects,
-        parsed.verify_standalone
+        parsed.verify_standalone,
+        unsupported_count,
+        inspection_errors
     );
 
     let total = slice.len();
@@ -794,15 +875,61 @@ mod tests {
             .unwrap()
             .as_nanos();
         let dir = std::env::temp_dir().join(format!("gamerecomp-tasks-{nanos}"));
-        fs::create_dir_all(&dir).unwrap();
+        fs::create_dir_all(dir.join("nested")).unwrap();
         fs::write(dir.join("b.exe"), b"MZ").unwrap();
         fs::write(dir.join("a.EXE"), b"MZ").unwrap();
+        fs::write(dir.join("nested").join("c.exe"), b"MZ").unwrap();
         fs::write(dir.join("notes.txt"), b"hi").unwrap();
         let found = collect_exes(&[dir.to_string_lossy().to_string()]);
-        assert_eq!(found.len(), 2);
+        assert_eq!(found.len(), 3);
         assert!(found[0].ends_with("a.EXE"));
         assert!(found[1].ends_with("b.exe"));
+        assert!(found[2].ends_with("c.exe"));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn classifies_short_files_as_unsupported_not_unreadable() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let file = std::env::temp_dir().join(format!("gamerecomp-short-{nanos}.exe"));
+        fs::write(&file, b"MZ").unwrap();
+        let info = inspect_pe(&file);
+        assert!(!info.ok);
+        assert_ne!(info.error, "cannot read the file");
+        let _ = fs::remove_file(file);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn deduplicates_file_aliases_and_stops_directory_loops() {
+        use std::os::unix::fs::symlink;
+
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("gamerecomp-task-links-{nanos}"));
+        fs::create_dir_all(&dir).unwrap();
+        let game = dir.join("game.exe");
+        fs::write(&game, b"MZ").unwrap();
+        symlink(&game, dir.join("game-alias.exe")).unwrap();
+        symlink(&dir, dir.join("loop")).unwrap();
+
+        let found = collect_exes(&[dir.to_string_lossy().to_string()]);
+        assert_eq!(found, vec![dir.join("game-alias.exe")]);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn gives_same_stem_executables_distinct_batch_projects() {
+        let root = Path::new("/tmp/gamerecomp-projects");
+        assert_ne!(
+            batch_project_dir(root, Path::new("/tmp/one/game.exe")),
+            batch_project_dir(root, Path::new("/tmp/two/game.exe")),
+        );
     }
 
     #[test]

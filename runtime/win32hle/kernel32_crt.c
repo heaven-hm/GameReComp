@@ -551,6 +551,13 @@ static void k_GetLogicalDrives(void){ RET(0x4u | (1u << 25), 0); } /* C: and Z: 
 static void k_GetWindowsDirectoryA(void) { snprintf(ASTR(0), A32(1), "C:\\WINDOWS"); RET(10, 2); }
 static void k_GetSystemDirectoryA(void)  { snprintf(ASTR(0), A32(1), "C:\\WINDOWS\\SYSTEM32"); RET(19, 2); }
 static void k_GetTempPathA(void) { snprintf(ASTR(1), A32(0), "C:\\WINDOWS\\TEMP\\"); RET(16, 2); }
+static void k_GetTempPathW(void) {
+    static const uint16_t path[] = { 'C', ':', '\\', 'W', 'I', 'N', 'D', 'O', 'W', 'S', '\\', 'T', 'E', 'M', 'P', '\\', 0 };
+    uint32_t cap = A32(0), out = A32(1);
+    if (!out || cap <= 16) { RET(17, 2); }
+    memcpy(APTR(1), path, sizeof path);
+    RET(16, 2);
+}
 static void k_GetComputerNameA(void) { if (A32(1) && MEM32(A32(1)) > 5) { strcpy(ASTR(0), "HLEPC"); MEM32(A32(1)) = 5; RET(1, 2); } RET(0, 2); }
 
 /* --- SEH / error hooks: the startup installs these --- */
@@ -702,6 +709,7 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "GetWindowsDirectoryA",         k_GetWindowsDirectoryA },
     { "GetSystemDirectoryA",          k_GetSystemDirectoryA },
     { "GetTempPathA",                 k_GetTempPathA },
+    { "GetTempPathW",                 k_GetTempPathW },
     { "GetComputerNameA",             k_GetComputerNameA },
     { "SetUnhandledExceptionFilter",  k_SetUnhandledExceptionFilter },
     { "UnhandledExceptionFilter",     k_UnhandledExceptionFilter },
