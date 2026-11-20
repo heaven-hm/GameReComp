@@ -1,6 +1,14 @@
-# Build output
+# Build output and generated artifacts
 build/
 out/
+/target/
+**/target/
+/dist/
+*.app/
+*.dSYM/
+*.dylib
+*.so
+*.a
 *.exe
 *.dll
 *.obj
@@ -11,17 +19,29 @@ out/
 
 # Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+coverage.xml
+htmlcov/
 .venv/
 venv/
+env/
 
-# IDE
+# IDE and editor-local state
 .vs/
 .vscode/
 *.suo
 *.user
 .idea/
+*.swp
+*.swo
+*~
 
 # Generated recomp output
 src/game/recomp/gen/
@@ -31,6 +51,8 @@ RecompiledFuncs/
 Thumbs.db
 desktop.ini
 .DS_Store
+.AppleDouble
+.LSOverride
 
 # Original binaries (never commit these)
 *.iso
@@ -101,6 +123,20 @@ gui/build/
 
 # Rust build artifacts
 /target/
+
+# Local test, benchmark, and tool output
+/benchmark-results/
+/test-results/
+*.log
+*.tmp
+*.bak
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 
 # Command Code agent state (taste, session scratch); not part of the project.
 .commandcode/
