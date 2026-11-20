@@ -1,7 +1,10 @@
+use std::collections::VecDeque;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -65,7 +68,8 @@ pub fn clean_cmake_objects(project_dir: &Path) -> std::io::Result<()> {
     if obj_dir.exists() {
         fs::remove_dir_all(obj_dir)?;
     }
-    let keep_sources = project_dir.file_name().and_then(|s| s.to_str()) == Some("cavestory-doukutsu");
+    let keep_sources =
+        project_dir.file_name().and_then(|s| s.to_str()) == Some("cavestory-doukutsu");
     if !keep_sources && project_dir.join("reports").join("report.json").is_file() {
         let gen_dir = project_dir.join("src").join("recomp").join("gen");
         if gen_dir.exists() {
@@ -165,78 +169,234 @@ pub fn verify_standalone_binary(binary: &Path, timeout_ms: u64) -> Result<String
             let snippet: String = stderr_buf.lines().take(2).collect::<Vec<_>>().join(" | ");
             return Err(format!("exited 2 (boot failure): {snippet}"));
         }
-        return Ok(format!("exited {code} in {}ms", start.elapsed().as_millis()));
+        return Ok(format!(
+            "exited {code} in {}ms",
+            start.elapsed().as_millis()
+        ));
     }
 
     Ok(format!("ran cleanly for {timeout_ms}ms headless"))
 }
 
-pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
-    if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
-        println!(
-            "Usage: GameReComp batch <path_or_dir...> [--timeout N] [--clean-objects] [--verify-standalone] [--limit N] [--offset N] [--skip-existing]"
-        );
-        return if args.is_empty() { 2 } else { 0 };
-    }
+#[derive(Debug, Clone)]
+struct BatchArgs {
+    inputs: Vec<String>,
+    timeout: String,
+    parallel: usize,
+    clean_objects: bool,
+    verify_standalone: bool,
+    skip_existing: bool,
+    limit: Option<usize>,
+    offset: usize,
+}
 
-    let mut inputs = Vec::new();
-    let mut timeout = "10".to_string();
-    let mut clean_objects = false;
-    let mut verify_standalone = false;
-    let mut skip_existing = false;
-    let mut limit: Option<usize> = None;
-    let mut offset: usize = 0;
+fn parse_batch_args(args: &[String]) -> Result<BatchArgs, String> {
+    let mut parsed = BatchArgs {
+        inputs: Vec::new(),
+        timeout: "10".to_string(),
+        parallel: 1,
+        clean_objects: false,
+        verify_standalone: false,
+        skip_existing: false,
+        limit: None,
+        offset: 0,
+    };
 
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--timeout" => {
                 if let Some(v) = args.get(i + 1) {
-                    timeout = v.clone();
+                    parsed.timeout = v.clone();
                     i += 2;
                 } else {
-                    eprintln!("error: --timeout requires a value");
-                    return 2;
+                    return Err("error: --timeout requires a value".to_string());
+                }
+            }
+            "--parallel" | "-p" => {
+                if let Some(v) = args.get(i + 1).and_then(|x| x.parse::<usize>().ok()) {
+                    parsed.parallel = v.clamp(1, 16);
+                    i += 2;
+                } else {
+                    return Err("error: --parallel requires an integer (1..=16)".to_string());
                 }
             }
             "--clean-objects" => {
-                clean_objects = true;
+                parsed.clean_objects = true;
                 i += 1;
             }
             "--verify-standalone" => {
-                verify_standalone = true;
+                parsed.verify_standalone = true;
                 i += 1;
             }
             "--skip-existing" => {
-                skip_existing = true;
+                parsed.skip_existing = true;
                 i += 1;
             }
             "--limit" => {
                 if let Some(v) = args.get(i + 1).and_then(|x| x.parse::<usize>().ok()) {
-                    limit = Some(v);
+                    parsed.limit = Some(v);
                     i += 2;
                 } else {
-                    eprintln!("error: --limit requires an integer");
-                    return 2;
+                    return Err("error: --limit requires an integer".to_string());
                 }
             }
             "--offset" => {
                 if let Some(v) = args.get(i + 1).and_then(|x| x.parse::<usize>().ok()) {
-                    offset = v;
+                    parsed.offset = v;
                     i += 2;
                 } else {
-                    eprintln!("error: --offset requires an integer");
-                    return 2;
+                    return Err("error: --offset requires an integer".to_string());
                 }
             }
             other => {
-                inputs.push(other.to_string());
+                parsed.inputs.push(other.to_string());
                 i += 1;
             }
         }
     }
+    Ok(parsed)
+}
 
-    let all_exes = collect_exes(&inputs);
+fn run_single_batch_item(
+    cfg: &AppConfig,
+    exe: &Path,
+    idx: usize,
+    total: usize,
+    opts: &BatchArgs,
+) -> Result<Option<BatchTaskResult>, i32> {
+    let exe_name = exe
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown.exe")
+        .to_string();
+    let proj_dir = default_project_dir(&cfg.repo_root, exe);
+
+    if let Some(avail) = available_disk_mb(&cfg.repo_root) {
+        if avail < 1536 {
+            eprintln!(
+                "STOP: available disk space ({avail} MiB) dropped below 1536 MiB threshold before {exe_name}"
+            );
+            return Err(2);
+        }
+    }
+
+    if opts.skip_existing {
+        if let Ok(m) = ProjectModel::load(&proj_dir) {
+            if m.diag.build_passed
+                && m.diag.strict_boot_passed
+                && m.diag.unresolved_import_count == 0
+                && m.built_binary_path().is_some()
+            {
+                if opts.clean_objects {
+                    let _ = clean_cmake_objects(&proj_dir);
+                }
+                println!("[{}/{}] SKIP (already passing): {exe_name}", idx + 1, total);
+                return Ok(None);
+            }
+        }
+    }
+
+    println!("[{}/{}] RUN {exe_name}", idx + 1, total);
+    let t0 = Instant::now();
+    let mut run_args = vec![
+        exe.to_string_lossy().to_string(),
+        "--input-os".to_string(),
+        "auto".to_string(),
+        "--input-arch".to_string(),
+        "auto".to_string(),
+        "--target-os".to_string(),
+        "auto".to_string(),
+        "--target-arch".to_string(),
+        "auto".to_string(),
+        "--timeout".to_string(),
+        opts.timeout.clone(),
+        "--no-progress".to_string(),
+        "--no-table".to_string(),
+    ];
+    if opts.clean_objects {
+        run_args.push("--clean-objects".to_string());
+    }
+
+    let code = run_pipeline_cli(cfg, &run_args);
+    if opts.clean_objects {
+        let _ = clean_cmake_objects(&proj_dir);
+    }
+
+    let model = ProjectModel::load(&proj_dir).ok();
+    let (standalone_ok, standalone_note) = if opts.verify_standalone {
+        match model.as_ref().and_then(|m| m.built_binary_path()) {
+            Some(bin) => match verify_standalone_binary(&bin, 600) {
+                Ok(msg) => (true, msg),
+                Err(err) => (false, err),
+            },
+            None => (false, "no built binary".to_string()),
+        }
+    } else {
+        (true, "not requested".to_string())
+    };
+
+    let diag = model.as_ref().map(|m| m.diag.clone()).unwrap_or_default();
+    let res = BatchTaskResult {
+        exe_name: exe_name.clone(),
+        project_dir: proj_dir,
+        exit_code: code,
+        build_passed: diag.build_passed,
+        boot_passed: diag.boot_passed,
+        strict_boot_passed: diag.strict_boot_passed,
+        unresolved_imports: diag.unresolved_import_count,
+        unhandled_eips: diag.unhandled_eip_count,
+        crash_signal: diag.crash_signal,
+        standalone_ok,
+        standalone_note: standalone_note.clone(),
+        elapsed_secs: t0.elapsed().as_secs_f64(),
+    };
+
+    let status_tag = if (res.exit_code == EXIT_OK || res.exit_code == EXIT_UNVERIFIED)
+        && res.build_passed
+        && res.strict_boot_passed
+        && res.unresolved_imports == 0
+        && res.unhandled_eips == 0
+        && res.crash_signal.is_none()
+        && res.standalone_ok
+    {
+        "PASS"
+    } else {
+        "FAIL"
+    };
+    println!(
+        "  => {status_tag} {exe_name}: rc={} build={} boot={} strict={} unresolved={} eip={} crash={:?} standalone={} ({}) [{:.1}s]",
+        res.exit_code,
+        res.build_passed,
+        res.boot_passed,
+        res.strict_boot_passed,
+        res.unresolved_imports,
+        res.unhandled_eips,
+        res.crash_signal,
+        res.standalone_ok,
+        res.standalone_note,
+        res.elapsed_secs
+    );
+    Ok(Some(res))
+}
+
+pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
+    if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
+        println!(
+            "Usage: game-recomp-cli batch <path_or_dir...> [--parallel N] [--timeout N] [--clean-objects] [--verify-standalone] [--limit N] [--offset N] [--skip-existing]"
+        );
+        return if args.is_empty() { 2 } else { 0 };
+    }
+
+    let parsed = match parse_batch_args(args) {
+        Ok(p) => p,
+        Err(msg) => {
+            eprintln!("{msg}");
+            return 2;
+        }
+    };
+
+    let all_exes = collect_exes(&parsed.inputs);
     if all_exes.is_empty() {
         eprintln!("error: no .exe files found in inputs");
         return 2;
@@ -244,131 +404,75 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
 
     let slice: Vec<PathBuf> = all_exes
         .into_iter()
-        .skip(offset)
-        .take(limit.unwrap_or(usize::MAX))
+        .skip(parsed.offset)
+        .take(parsed.limit.unwrap_or(usize::MAX))
         .collect();
 
     println!(
-        "batch: processing {} executable(s) (offset={offset}, clean_objects={clean_objects}, verify_standalone={verify_standalone})",
-        slice.len()
+        "batch: processing {} executable(s) (parallel={}, offset={}, clean_objects={}, verify_standalone={})",
+        slice.len(),
+        parsed.parallel,
+        parsed.offset,
+        parsed.clean_objects,
+        parsed.verify_standalone
     );
 
-    let mut results: Vec<BatchTaskResult> = Vec::with_capacity(slice.len());
-    for (idx, exe) in slice.iter().enumerate() {
-        let exe_name = exe
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown.exe")
-            .to_string();
-        let proj_dir = default_project_dir(&cfg.repo_root, exe);
-
-        if let Some(avail) = available_disk_mb(&cfg.repo_root) {
-            if avail < 1536 {
-                eprintln!(
-                    "STOP: available disk space ({avail} MiB) dropped below 1536 MiB threshold before {exe_name}"
-                );
-                return 2;
+    let total = slice.len();
+    let results: Vec<BatchTaskResult> = if parsed.parallel <= 1 || total <= 1 {
+        let mut seq = Vec::with_capacity(total);
+        for (idx, exe) in slice.iter().enumerate() {
+            match run_single_batch_item(cfg, exe, idx, total, &parsed) {
+                Ok(Some(res)) => seq.push(res),
+                Ok(None) => {}
+                Err(code) => return code,
             }
         }
+        seq
+    } else {
+        let queue: Mutex<VecDeque<(usize, PathBuf)>> =
+            Mutex::new(slice.into_iter().enumerate().collect());
+        let collected: Mutex<Vec<(usize, BatchTaskResult)>> = Mutex::new(Vec::with_capacity(total));
+        let aborted = AtomicBool::new(false);
+        let workers = parsed.parallel.min(total);
 
-        if skip_existing {
-            if let Ok(m) = ProjectModel::load(&proj_dir) {
-                if m.diag.build_passed
-                    && m.diag.strict_boot_passed
-                    && m.diag.unresolved_import_count == 0
-                    && m.built_binary_path().is_some()
-                {
-                    if clean_objects {
-                        let _ = clean_cmake_objects(&proj_dir);
+        thread::scope(|s| {
+            for _ in 0..workers {
+                let q_ref = &queue;
+                let c_ref = &collected;
+                let a_ref = &aborted;
+                let p_ref = &parsed;
+                s.spawn(move || {
+                    while !a_ref.load(Ordering::Relaxed) {
+                        let next = {
+                            let mut g = q_ref.lock().unwrap();
+                            g.pop_front()
+                        };
+                        let Some((idx, exe)) = next else {
+                            break;
+                        };
+                        match run_single_batch_item(cfg, &exe, idx, total, p_ref) {
+                            Ok(Some(res)) => {
+                                let mut cg = c_ref.lock().unwrap();
+                                cg.push((idx, res));
+                            }
+                            Ok(None) => {}
+                            Err(_) => {
+                                a_ref.store(true, Ordering::Relaxed);
+                                break;
+                            }
+                        }
                     }
-                    println!("[{}/{}] SKIP (already passing): {exe_name}", idx + 1, slice.len());
-                    continue;
-                }
+                });
             }
+        });
+
+        if aborted.load(Ordering::Relaxed) {
+            return 2;
         }
-
-        println!("[{}/{}] RUN {exe_name}", idx + 1, slice.len());
-        let t0 = Instant::now();
-        let mut run_args = vec![
-            exe.to_string_lossy().to_string(),
-            "--input-os".to_string(),
-            "windows".to_string(),
-            "--input-arch".to_string(),
-            "x86".to_string(),
-            "--target-os".to_string(),
-            "macos".to_string(),
-            "--target-arch".to_string(),
-            "arm64".to_string(),
-            "--timeout".to_string(),
-            timeout.clone(),
-            "--no-progress".to_string(),
-            "--no-table".to_string(),
-        ];
-        if clean_objects {
-            run_args.push("--clean-objects".to_string());
-        }
-
-        let code = run_pipeline_cli(cfg, &run_args);
-        if clean_objects {
-            let _ = clean_cmake_objects(&proj_dir);
-        }
-
-        let model = ProjectModel::load(&proj_dir).ok();
-        let (standalone_ok, standalone_note) = if verify_standalone {
-            match model.as_ref().and_then(|m| m.built_binary_path()) {
-                Some(bin) => match verify_standalone_binary(&bin, 600) {
-                    Ok(msg) => (true, msg),
-                    Err(err) => (false, err),
-                },
-                None => (false, "no built binary".to_string()),
-            }
-        } else {
-            (true, "not requested".to_string())
-        };
-
-        let diag = model.as_ref().map(|m| m.diag.clone()).unwrap_or_default();
-        let res = BatchTaskResult {
-            exe_name: exe_name.clone(),
-            project_dir: proj_dir,
-            exit_code: code,
-            build_passed: diag.build_passed,
-            boot_passed: diag.boot_passed,
-            strict_boot_passed: diag.strict_boot_passed,
-            unresolved_imports: diag.unresolved_import_count,
-            unhandled_eips: diag.unhandled_eip_count,
-            crash_signal: diag.crash_signal,
-            standalone_ok,
-            standalone_note: standalone_note.clone(),
-            elapsed_secs: t0.elapsed().as_secs_f64(),
-        };
-
-        let status_tag = if (res.exit_code == EXIT_OK || res.exit_code == EXIT_UNVERIFIED)
-            && res.build_passed
-            && res.strict_boot_passed
-            && res.unresolved_imports == 0
-            && res.unhandled_eips == 0
-            && res.crash_signal.is_none()
-            && res.standalone_ok
-        {
-            "PASS"
-        } else {
-            "FAIL"
-        };
-        println!(
-            "  => {status_tag} {exe_name}: rc={} build={} boot={} strict={} unresolved={} eip={} crash={:?} standalone={} ({}) [{:.1}s]",
-            res.exit_code,
-            res.build_passed,
-            res.boot_passed,
-            res.strict_boot_passed,
-            res.unresolved_imports,
-            res.unhandled_eips,
-            res.crash_signal,
-            res.standalone_ok,
-            res.standalone_note,
-            res.elapsed_secs
-        );
-        results.push(res);
-    }
+        let mut pairs = collected.into_inner().unwrap();
+        pairs.sort_by_key(|(idx, _)| *idx);
+        pairs.into_iter().map(|(_, r)| r).collect()
+    };
 
     // Record batch projects, sync matrix, and write structured Rust batch report
     let mut gargs: Vec<String> = vec!["-m".into(), "tools.gamesdb".into(), "--matrix".into()];
@@ -378,7 +482,7 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
             gargs.push(r.project_dir.to_string_lossy().into());
         }
     }
-    let _ = Command::new("python3")
+    let _ = Command::new(crate::config::python_interpreter(&cfg.repo_root))
         .current_dir(&cfg.repo_root)
         .env("PYTHONPATH", &cfg.repo_root)
         .args(&gargs)
@@ -389,26 +493,44 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
         .map(|r| {
             JsonValue::Object(vec![
                 ("exe".into(), JsonValue::Str(r.exe_name.clone())),
-                ("project_dir".into(), JsonValue::Str(r.project_dir.to_string_lossy().into())),
+                (
+                    "project_dir".into(),
+                    JsonValue::Str(r.project_dir.to_string_lossy().into()),
+                ),
                 ("exit_code".into(), JsonValue::Number(r.exit_code as f64)),
                 ("build_passed".into(), JsonValue::Bool(r.build_passed)),
                 ("boot_passed".into(), JsonValue::Bool(r.boot_passed)),
-                ("strict_boot_passed".into(), JsonValue::Bool(r.strict_boot_passed)),
-                ("unresolved_imports".into(), JsonValue::Number(r.unresolved_imports as f64)),
-                ("unhandled_eips".into(), JsonValue::Number(r.unhandled_eips as f64)),
+                (
+                    "strict_boot_passed".into(),
+                    JsonValue::Bool(r.strict_boot_passed),
+                ),
+                (
+                    "unresolved_imports".into(),
+                    JsonValue::Number(r.unresolved_imports as f64),
+                ),
+                (
+                    "unhandled_eips".into(),
+                    JsonValue::Number(r.unhandled_eips as f64),
+                ),
                 ("standalone_ok".into(), JsonValue::Bool(r.standalone_ok)),
                 ("elapsed_secs".into(), JsonValue::Number(r.elapsed_secs)),
             ])
         })
         .collect();
     let report_obj = JsonValue::Object(vec![
-        ("timestamp".into(), JsonValue::Number(unix_timestamp_secs() as f64)),
+        (
+            "timestamp".into(),
+            JsonValue::Number(unix_timestamp_secs() as f64),
+        ),
         ("total".into(), JsonValue::Number(results.len() as f64)),
         ("results".into(), JsonValue::Array(json_rows)),
     ]);
     let report_dir = cfg.repo_root.join("reports");
     let _ = fs::create_dir_all(&report_dir);
-    let _ = fs::write(report_dir.join("batch_last.json"), report_obj.to_json_string());
+    let _ = fs::write(
+        report_dir.join("batch_last.json"),
+        report_obj.to_json_string(),
+    );
 
     let failed = results
         .iter()
@@ -444,15 +566,22 @@ pub fn run_batch_command(cfg: &AppConfig, args: &[String]) -> i32 {
         );
     }
 
-    if failed.is_empty() { 0 } else { 2 }
+    if failed.is_empty() {
+        0
+    } else {
+        2
+    }
 }
 
-pub fn run_serve_command(_cfg: &AppConfig, args: &[String]) -> i32 {
+pub fn run_serve_command(cfg: &AppConfig, args: &[String]) -> i32 {
     if args.is_empty() || args.iter().any(|a| a == "-h" || a == "--help") {
-        println!("Usage: GameReComp serve <project_dir_or_build_dir> [--port 8080]");
+        println!(
+            "Usage: GameReComp serve <project_dir_or_build_dir> [--port 8080] [--ready-file PATH]"
+        );
         return if args.is_empty() { 2 } else { 0 };
     }
     let mut dir: Option<PathBuf> = None;
+    let mut ready_file: Option<PathBuf> = None;
     let mut port = "8080".to_string();
     let mut i = 0;
     while i < args.len() {
@@ -462,6 +591,14 @@ pub fn run_serve_command(_cfg: &AppConfig, args: &[String]) -> i32 {
                 i += 2;
             } else {
                 eprintln!("error: --port requires a value");
+                return 2;
+            }
+        } else if args[i] == "--ready-file" {
+            if let Some(value) = args.get(i + 1).filter(|value| !value.starts_with('-')) {
+                ready_file = Some(PathBuf::from(value));
+                i += 2;
+            } else {
+                eprintln!("error: --ready-file requires a path");
                 return 2;
             }
         } else if dir.is_none() {
@@ -484,25 +621,86 @@ pub fn run_serve_command(_cfg: &AppConfig, args: &[String]) -> i32 {
         eprintln!("error: no build/index.html found in {} (build with --target-os web --target-arch wasm32 first)", base.display());
         return 2;
     };
-    println!("Serving WebAssembly app at http://127.0.0.1:{port}/index.html (dir: {})", serve_dir.display());
+    println!(
+        "Serving WebAssembly app at http://127.0.0.1:{port}/index.html (dir: {})",
+        serve_dir.display()
+    );
     println!("Press Ctrl+C to stop.");
-    let py = "import http.server, socketserver, functools, sys\n\
-class CoopHandler(http.server.SimpleHTTPRequestHandler):\n\
-    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.wasm': 'application/wasm'}\n\
-    def end_headers(self):\n\
-        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')\n\
-        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')\n\
-        self.send_header('Cache-Control', 'no-store')\n\
-        super().end_headers()\n\
-handler = functools.partial(CoopHandler, directory=sys.argv[1])\n\
-socketserver.TCPServer.allow_reuse_address = True\n\
-with socketserver.TCPServer(('127.0.0.1', int(sys.argv[2])), handler) as httpd:\n\
-    httpd.serve_forever()\n";
-    match Command::new("python3")
-        .arg("-c")
-        .arg(py)
-        .arg(&serve_dir)
-        .arg(&port)
+    let py = concat!(
+        "import http.server, socketserver, functools, sys, os, signal, errno, stat, secrets, ctypes\n",
+        "class CoopHandler(http.server.SimpleHTTPRequestHandler):\n",
+        "    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.wasm': 'application/wasm'}\n",
+        "    def end_headers(self):\n",
+        "        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')\n",
+        "        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')\n",
+        "        self.send_header('Cache-Control', 'no-store')\n",
+        "        super().end_headers()\n",
+        "handler = functools.partial(CoopHandler, directory=sys.argv[1])\n",
+        "socketserver.TCPServer.allow_reuse_address = True\n",
+        "def stop_server(_signum, _frame): raise SystemExit(0)\n",
+        "def process_alive(pid):\n",
+        "    if os.name != 'nt':\n",
+        "        try: os.kill(pid, 0)\n",
+        "        except OSError as error: return error.errno != errno.ESRCH\n",
+        "        return True\n",
+        "    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)\n",
+        "    kernel32.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)\n",
+        "    kernel32.OpenProcess.restype = ctypes.c_void_p\n",
+        "    kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)\n",
+        "    handle = kernel32.OpenProcess(0x1000, False, pid)\n",
+        "    if not handle: return ctypes.get_last_error() == 5\n",
+        "    kernel32.CloseHandle(handle)\n",
+        "    return True\n",
+        "signal.signal(signal.SIGTERM, stop_server)\n",
+        "def read_marker(path):\n",
+        "    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_NOFOLLOW', 0))\n",
+        "    try:\n",
+        "        info = os.fstat(fd)\n",
+        "        if not stat.S_ISREG(info.st_mode): return None\n",
+        "        return info, os.read(fd, 256).decode('ascii', 'ignore').strip()\n",
+        "    finally: os.close(fd)\n",
+        "def remove_stale_marker(path):\n",
+        "    try: info, marker = read_marker(path)\n",
+        "    except FileNotFoundError: return\n",
+        "    if not info or not marker.startswith('GameReComp-ready-v1 '): raise FileExistsError(path)\n",
+        "    try: owner = int(marker.split()[1])\n",
+        "    except (IndexError, ValueError): raise FileExistsError(path)\n",
+        "    if process_alive(owner): raise FileExistsError(path)\n",
+        "    current = os.stat(path, follow_symlinks=False)\n",
+        "    if (current.st_dev, current.st_ino) == (info.st_dev, info.st_ino): os.unlink(path)\n",
+        "if len(sys.argv) > 3: remove_stale_marker(sys.argv[3])\n",
+        "marker_owner = None\n",
+        "with socketserver.TCPServer(('127.0.0.1', int(sys.argv[2])), handler) as httpd:\n",
+        "    marker_temp = None\n",
+        "    try:\n",
+        "        if len(sys.argv) > 3:\n",
+        "            marker_owner = f'GameReComp-ready-v1 {os.getpid()} {secrets.token_hex(16)}'\n",
+        "            marker_temp = sys.argv[3] + '.' + secrets.token_hex(16) + '.tmp'\n",
+        "            fd = os.open(marker_temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)\n",
+        "            with os.fdopen(fd, 'w', encoding='ascii') as marker:\n",
+        "                marker.write(marker_owner); marker.flush(); os.fsync(marker.fileno())\n",
+        "            os.link(marker_temp, sys.argv[3])\n",
+        "            os.unlink(marker_temp); marker_temp = None\n",
+        "        httpd.serve_forever()\n",
+        "    finally:\n",
+        "        if marker_temp:\n",
+        "            try: os.unlink(marker_temp)\n",
+        "            except FileNotFoundError: pass\n",
+        "        if len(sys.argv) > 3 and marker_owner:\n",
+        "            try: info, marker = read_marker(sys.argv[3])\n",
+        "            except FileNotFoundError: info, marker = None, None\n",
+        "            if info and marker == marker_owner:\n",
+        "                try: current = os.stat(sys.argv[3], follow_symlinks=False)\n",
+        "                except FileNotFoundError: pass\n",
+        "                else:\n",
+        "                    if (current.st_dev, current.st_ino) == (info.st_dev, info.st_ino): os.unlink(sys.argv[3])\n",
+    );
+    let mut command = Command::new(crate::config::python_interpreter(&cfg.repo_root));
+    command.arg("-c").arg(py).arg(&serve_dir).arg(&port);
+    if let Some(path) = ready_file.as_ref() {
+        command.arg(path);
+    }
+    match command
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -540,26 +738,44 @@ pub fn run_tasks_command(cfg: &AppConfig, args: &[String]) -> i32 {
         .collect();
     dirs.sort();
 
-    println!("{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} {}", "Project", "Score", "Outcome", "Build", "Strict", "Bin", "Source PE");
+    println!(
+        "{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} {}",
+        "Project", "Score", "Outcome", "Build", "Strict", "Bin", "Source PE"
+    );
     println!("{}", "-".repeat(90));
     for d in dirs {
         let name = d.file_name().and_then(|s| s.to_str()).unwrap_or("");
         match ProjectModel::load(&d) {
             Ok(m) => {
-                let bin_ok = if m.built_binary_path().is_some() { "yes" } else { "no" };
+                let bin_ok = if m.built_binary_path().is_some() {
+                    "yes"
+                } else {
+                    "no"
+                };
                 println!(
                     "{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} {}",
                     name,
                     m.score,
-                    if m.verification.is_empty() { "-" } else { &m.verification },
+                    if m.verification.is_empty() {
+                        "-"
+                    } else {
+                        &m.verification
+                    },
                     if m.diag.build_passed { "ok" } else { "fail" },
-                    if m.diag.strict_boot_passed { "ok" } else { "fail" },
+                    if m.diag.strict_boot_passed {
+                        "ok"
+                    } else {
+                        "fail"
+                    },
                     bin_ok,
                     m.pe_path
                 );
             }
             Err(_) => {
-                println!("{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} -", name, "-", "unbuilt", "-", "-", "-");
+                println!(
+                    "{:<24} {:>5}  {:<12} {:<5} {:<6} {:<6} -",
+                    name, "-", "unbuilt", "-", "-", "-"
+                );
             }
         }
     }
@@ -573,7 +789,10 @@ mod tests {
 
     #[test]
     fn collects_and_sorts_exes_from_dir() {
-        let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         let dir = std::env::temp_dir().join(format!("gamerecomp-tasks-{nanos}"));
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("b.exe"), b"MZ").unwrap();
@@ -584,5 +803,38 @@ mod tests {
         assert!(found[0].ends_with("a.EXE"));
         assert!(found[1].ends_with("b.exe"));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn parses_parallel_batch_flags_and_clamps() {
+        let args: Vec<String> = vec![
+            "/tmp/games",
+            "--parallel",
+            "4",
+            "--timeout",
+            "20",
+            "--verify-standalone",
+            "--clean-objects",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let parsed = parse_batch_args(&args).unwrap();
+        assert_eq!(parsed.parallel, 4);
+        assert_eq!(parsed.timeout, "20");
+        assert!(parsed.verify_standalone);
+        assert!(parsed.clean_objects);
+
+        let clamped: Vec<String> = vec!["/tmp/games", "-p", "99"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(parse_batch_args(&clamped).unwrap().parallel, 16);
+
+        let zero_clamped: Vec<String> = vec!["/tmp/games", "--parallel", "0"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(parse_batch_args(&zero_clamped).unwrap().parallel, 1);
     }
 }

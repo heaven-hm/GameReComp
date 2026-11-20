@@ -19,6 +19,7 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import shlex
 import shutil
 import signal
@@ -31,6 +32,72 @@ from pathlib import Path
 
 PROVEN_STATUSES = {"partial", "scenario-pass", "verified-playable-scope",
                    "trace-diverged"}
+
+STDIN_LLM_BINS = {
+    "claude",
+    "claude.exe",
+    "codex",
+    "codex.exe",
+    "agy",
+    "agy.exe",
+    "opencode",
+    "opencode.exe",
+    "cursor-agent",
+    "ollama",
+    "ollama.exe",
+    "llm",
+    "aichat",
+}
+
+
+def _is_stdin_llm_cmd(cmd_template):
+    """Return True when cmd_template invokes a known stdin prompt CLI directly."""
+    if not cmd_template:
+        return False
+    if any("{input}" in part or "{output}" in part for part in cmd_template):
+        return False
+    bin_name = Path(cmd_template[0]).name.lower()
+    return bin_name in STDIN_LLM_BINS
+
+
+def _extract_c_from_llm_output(raw_text):
+    """Extract clean C source from fenced Markdown output or raw C text."""
+    text = (raw_text or "").strip()
+    if not text:
+        return ""
+    blocks = re.findall(r"```(?:[cChH](?:pp)?)?\s*\n(.*?)```", text, flags=re.DOTALL)
+    if blocks:
+        best = max((b.strip() for b in blocks if b.strip()), key=len, default="")
+        if best:
+            return best + "\n"
+    return text + "\n"
+
+
+def _build_readability_prompt(rel, original_text, feedback="", target_function=None):
+    """Build a strict prompt scoping AI strictly to C source readability."""
+    focus = (
+        f"Focus especially on improving readability around function `{target_function}`.\n"
+        if target_function else ""
+    )
+    fb_section = (
+        f"\nPrevious compile/verification gate failure feedback (fix this cleanly):\n{feedback}\n"
+        if feedback and feedback != "none (first attempt)" else ""
+    )
+    return (
+        "You are performing GameReComp's optional AI source-readability pass.\n"
+        "AI is ONLY used to improve readable C source code (clearer local variable names,\n"
+        "concise clarifying comments, structured control flow, readable constants).\n"
+        "Strict rules:\n"
+        "1. Do NOT change function signatures, exported/dispatched symbol names, ABI,\n"
+        "   struct/memory layouts, or runtime behavior.\n"
+        "2. Return ONLY the complete compilable C source file (no prose explanation).\n"
+        f"{focus}"
+        f"File: {rel}\n"
+        f"{fb_section}\n"
+        "```c\n"
+        f"{original_text}"
+        "```\n"
+    )
 
 
 def _now():
@@ -130,12 +197,13 @@ class ReadabilityHarness:
 
     def __init__(self, project_dir, pe_path=None, max_units=1, timeout=None,
                  providers="all", max_attempts=3, max_seconds=900,
-                 provider_timeout=300):
+                 provider_timeout=300, target_function=None):
         self.project = Path(project_dir).resolve()
         self.providers = providers
         self.max_units = max(1, int(max_units))
         self.max_attempts = max(1, int(max_attempts))
         self.provider_timeout = max(10.0, float(provider_timeout))
+        self.target_function = target_function.strip() if target_function else None
         self.deadline = Deadline(max_seconds)
         self.timeout_override = timeout
         self.log_path = self.project / "logs" / "readability.log"
@@ -144,6 +212,7 @@ class ReadabilityHarness:
             "tool": "GameReComp readability harness",
             "generated_at": _now(),
             "project": str(self.project),
+            "target_function": self.target_function,
             "budget_seconds": float(max_seconds),
             "providers": {},
             "gate": {},
@@ -390,7 +459,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             self._stage("ai-readability", "blocked", provider["reason"],
                         seconds=round(time.time() - t0, 2))
             return "blocked"
-        if not self.revng_ok:
+        if self.providers != "ai" and not self.revng_ok:
             self._stage("ai-readability", "blocked",
                         "rev.ng did not produce candidates; the AI polish "
                         "pass is not a substitute for the primary provider",
@@ -472,17 +541,38 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             env = dict(os.environ)
             env["READABILITY_FEEDBACK"] = str(feedback_path)
             env["READABILITY_ATTEMPT"] = str(attempt)
+            if self.target_function:
+                env["READABILITY_TARGET_FUNCTION"] = self.target_function
             proc_log = self.project / "logs" / f"readability-ai-{unit.name}-{attempt}.log"
             timeout = self.deadline.clamp(self.provider_timeout, floor=10)
             self._log(f"ai attempt {attempt}/{self.max_attempts} for {rel} "
                       f"(timeout {timeout:.0f}s)")
             try:
-                with open(proc_log, "w") as log:
+                if _is_stdin_llm_cmd(cmd_template):
+                    prompt = _build_readability_prompt(
+                        rel, original_text, feedback, self.target_function)
                     proc = subprocess.run(
-                        cmd_template + [str(unit), str(out)],
-                        stdout=log, stderr=subprocess.STDOUT, env=env,
-                        timeout=timeout)
-                rc = proc.returncode
+                        cmd_template, input=prompt, capture_output=True,
+                        text=True, env=env, timeout=timeout)
+                    with open(proc_log, "w") as log:
+                        log.write("$ " + " ".join(cmd_template) + " [stdin prompt]\n")
+                        log.write(f"rc={proc.returncode}\n")
+                        if proc.stderr:
+                            log.write("--- stderr ---\n" + proc.stderr + "\n")
+                        if proc.stdout:
+                            log.write("--- stdout ---\n" + proc.stdout[:4000] + "\n")
+                    rc = proc.returncode
+                    if rc == 0:
+                        extracted = _extract_c_from_llm_output(proc.stdout)
+                        if extracted:
+                            out.write_text(extracted)
+                else:
+                    with open(proc_log, "w") as log:
+                        proc = subprocess.run(
+                            cmd_template + [str(unit), str(out)],
+                            stdout=log, stderr=subprocess.STDOUT, env=env,
+                            timeout=timeout)
+                    rc = proc.returncode
             except subprocess.TimeoutExpired:
                 self._record_attempt(rel, attempt, "provider", False,
                                      f"timeout after {timeout:.0f}s")
@@ -719,6 +809,56 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
                       file=sys.stderr)
         return self.report
 
+    def _select_units(self):
+        units = sorted((self.project / "src" / "recomp" / "gen").glob(
+            "recomp_*.c"))
+        if not units or not self.target_function:
+            return units[:self.max_units]
+
+        token = self.target_function.strip()
+        hex_raw = token.lower().removeprefix("sub_").removeprefix("0x")
+        markers = [token]
+        if hex_raw and all(c in "0123456789abcdef" for c in hex_raw):
+            markers.extend([
+                f"0x{hex_raw}",
+                f"sub_{hex_raw}",
+                f"sub_{hex_raw.upper()}",
+                hex_raw,
+            ])
+
+        preferred = []
+        fn_meta = _read_json(self.project / "reports" / "functions.json")
+        fn_rows = (
+            fn_meta.get("functions", [])
+            if isinstance(fn_meta, dict)
+            else (fn_meta if isinstance(fn_meta, list) else [])
+        )
+        for row in fn_rows:
+            if not isinstance(row, dict):
+                continue
+            addr = str(row.get("address", "")).lower()
+            sym = str(row.get("symbol", row.get("name", ""))).lower()
+            if any(m.lower() in (addr, sym) for m in markers):
+                sp = row.get("source_path") or row.get("file") or ""
+                if sp:
+                    cand = (self.project / sp).resolve()
+                    if cand.is_file() and cand not in preferred:
+                        preferred.append(cand)
+
+        for u in units:
+            if u in preferred:
+                continue
+            try:
+                txt = u.read_text(errors="replace")
+            except OSError:
+                continue
+            if any(m in txt for m in markers):
+                preferred.append(u)
+
+        if preferred:
+            return preferred[:self.max_units]
+        return units[:self.max_units]
+
     def _run_inner(self):
         try:
             self.baseline = self._load_baseline()
@@ -736,16 +876,19 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
 
         if self.providers in ("all", "revng"):
             self.revng_ok = self._revng()
+        elif self.providers == "ai":
+            self._stage("revng", "skipped",
+                        "rev.ng skipped: explicit optional AI readable-source-code "
+                        "pass requested")
         else:
             self._stage("revng", "skipped",
                         "rev.ng is the primary readability provider; skipping "
                         "it means no readability pass can run")
 
         ai_status = None
-        gen_units = sorted((self.project / "src" / "recomp" / "gen").glob(
-            "recomp_*.c"))[:self.max_units]
+        gen_units = self._select_units()
         if self.providers in ("all", "ai"):
-            if not self.revng_ok:
+            if self.providers == "all" and not self.revng_ok:
                 self._stage("ai-readability", "blocked",
                             "rev.ng did not produce candidates; refusing to use "
                             "AI as a substitute for the primary provider")
@@ -770,6 +913,14 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             self.report["reason"] = ("the repair loop could not produce an "
                                      "edit that passed the gate; changes were "
                                      "reverted")
+        elif self.providers == "ai" and ai_status == "blocked":
+            self.report["outcome"] = "blocked"
+            self.report["reason"] = ("REVENG_AI_CMD is not configured; "
+                                     "optional AI readability pass did not run")
+        elif self.providers == "ai" and ai_status == "no-changes":
+            self.report["outcome"] = "no-edits"
+            self.report["reason"] = ("optional AI readability pass returned "
+                                     "no source edits")
         elif self.revng_status in ("failed", "timeout"):
             self.report["outcome"] = "revng-failed"
             self.report["reason"] = "rev.ng did not complete; no readability " \
@@ -796,13 +947,17 @@ def build_parser():
     parser = argparse.ArgumentParser(
         prog="autorecomp readability",
         description="Gated readability pass over an already built and tested "
-                    "autorecomp project: rev.ng first, optional AI polish with "
-                    "a repair loop, rebuild and rerun, revert on any evidence "
+                    "autorecomp project: rev.ng first, optional AI polish "
+                    "(solely for improving readable C source code) with a "
+                    "repair loop, rebuild and rerun, revert on any evidence "
                     "change, and a hard wall-clock budget.")
     parser.add_argument("project_dir", help="autorecomp project directory")
     parser.add_argument("--pe", help="original .exe if not recorded in run.json")
     parser.add_argument("--providers", choices=("all", "revng", "ai"),
                         default="all")
+    parser.add_argument("--function",
+                        help="optional function address or symbol (e.g. 0x00402020) "
+                             "to focus readable-source edits on")
     parser.add_argument("--max-units", type=int, default=1,
                         help="AI pass: generated source units to rewrite (default 1)")
     parser.add_argument("--max-attempts", type=int, default=3,
@@ -823,7 +978,8 @@ def main(argv=None):
         args.project_dir, pe_path=args.pe, max_units=args.max_units,
         timeout=args.timeout, providers=args.providers,
         max_attempts=args.max_attempts, max_seconds=args.max_seconds,
-        provider_timeout=args.provider_timeout)
+        provider_timeout=args.provider_timeout,
+        target_function=args.function)
     report = harness.run()
     print(f"outcome:  {report['outcome']}")
     print(f"reason:   {report['reason']}")

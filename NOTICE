@@ -1,5 +1,8 @@
 Third-party code in this repository. Each file keeps its own notice; the
-licence texts are in LICENSES/. Everything else is MIT (LICENSE).
+licence texts are in LICENSES/. Everything else is licensed under the GNU Affero General Public License v3.0
+or later-compatible terms (AGPL-3.0-only, see LICENSE). Code that was published
+earlier under the MIT licence keeps its original notice in
+LICENSES/GameReComp-prior-MIT.txt.
 
 | Path | Upstream | Version | Licence |
 |---|---|---|---|

@@ -1,7 +1,11 @@
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::Instant;
+use std::time::{Duration, Instant};
+
+use indicatif::{ProgressBar, ProgressStyle};
+use owo_colors::OwoColorize;
 
 use crate::config::AppConfig;
 use crate::logging::log_project_event;
@@ -44,6 +48,9 @@ pub struct ParsedCli {
     pub json: bool,
     pub clean_objects: bool,
     pub verify_standalone: bool,
+    pub capture_screenshots: bool,
+    pub ai_readability: bool,
+    pub profile: Option<String>,
     pub backend_args: Vec<String>,
 }
 
@@ -67,6 +74,9 @@ impl Default for ParsedCli {
             json: false,
             clean_objects: false,
             verify_standalone: false,
+            capture_screenshots: false,
+            ai_readability: false,
+            profile: None,
             backend_args: Vec::new(),
         }
     }
@@ -79,7 +89,13 @@ pub fn executable_name(pe_path: &Path) -> String {
         .unwrap_or("game");
     let mut safe: String = stem
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     if safe.is_empty() || safe.as_bytes()[0].is_ascii_digit() {
         safe = format!("game_{safe}");
@@ -119,6 +135,33 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
             "--verify-standalone" => {
                 out.verify_standalone = true;
                 i += 1;
+            }
+            "--capture-screenshots" => {
+                out.capture_screenshots = true;
+                i += 1;
+            }
+            "--ai-readability" => {
+                out.ai_readability = true;
+                i += 1;
+            }
+            "--profile" => {
+                let val = args
+                    .get(i + 1)
+                    .ok_or("--profile requires a value (game|desktop|console)")?;
+                match val.as_str() {
+                    "game" | "desktop" | "console" => {
+                        out.profile = Some(val.clone());
+                        if val == "game" || val == "desktop" {
+                            out.capture_screenshots = true;
+                        }
+                    }
+                    other => {
+                        return Err(format!(
+                            "unknown --profile: {other} (expected game, desktop, or console)"
+                        ))
+                    }
+                }
+                i += 2;
             }
             "--no-table" => {
                 out.no_table = true;
@@ -196,8 +239,8 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
                 out.backend_args.push(val.clone());
                 i += 2;
             }
-            "--assets-dir" | "--timeout" | "--oracle" | "--jobs" | "--split"
-            | "--split-bytes" | "--build-timeout" | "--highlevel" => {
+            "--assets-dir" | "--timeout" | "--oracle" | "--jobs" | "--split" | "--split-bytes"
+            | "--build-timeout" | "--highlevel" => {
                 let val = args
                     .get(i + 1)
                     .ok_or_else(|| format!("{a} requires a value"))?;
@@ -213,7 +256,9 @@ pub fn parse_pipeline_args(args: &[String]) -> Result<ParsedCli, String> {
             flag if flag.starts_with("--") => {
                 if let Some((k, _)) = flag.split_once('=') {
                     match k {
-                        "--project-dir" => out.project_dir = Some(PathBuf::from(&flag[k.len() + 1..])),
+                        "--project-dir" => {
+                            out.project_dir = Some(PathBuf::from(&flag[k.len() + 1..]))
+                        }
                         "--out-mode" => out.out_mode = Some(flag[k.len() + 1..].to_string()),
                         "--stages" => out.stages = Some(split_stages_csv(&flag[k.len() + 1..])),
                         "--skip-stages" => {
@@ -262,7 +307,14 @@ pub fn resolve_stages(parsed: &ParsedCli) -> Result<Vec<String>, String> {
             vec!["inspect", "recover", "translate", "project"]
         }
         Some("binary") | Some("binary-only") => {
-            vec!["inspect", "recover", "translate", "project", "compile", "report"]
+            vec![
+                "inspect",
+                "recover",
+                "translate",
+                "project",
+                "compile",
+                "report",
+            ]
         }
         Some(other) => return Err(format!("unknown --out-mode: {other}")),
     };
@@ -376,6 +428,9 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
         println!("  target:  {target_os}/{target_arch}");
         println!("  project: {}", proj_dir.display());
         println!("  stages:  {}", stages.join(", "));
+        if parsed.ai_readability {
+            println!("  ai_opt:  optional C source readability pass enabled (compile- & evidence-verified)");
+        }
         return EXIT_OK;
     }
 
@@ -389,7 +444,7 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
     }
 
     // Drive Python RE/lifting/compile backend while keeping orchestration in Rust.
-    let mut cmd = Command::new("python3");
+    let mut cmd = Command::new(crate::config::python_interpreter(&cfg.repo_root));
     cmd.current_dir(&cfg.repo_root)
         .env("PYTHONPATH", &cfg.repo_root)
         .args(["-m", "tools.autorecomp.cli"])
@@ -400,23 +455,107 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
     }
     if let Some(ref sdir) = cfg.screenshot_dir {
         cmd.env("RECOMP_SCREENSHOT", sdir);
+    } else if parsed.capture_screenshots {
+        let shots = proj_dir.join("screenshots");
+        let _ = fs::create_dir_all(&shots);
+        cmd.env("RECOMP_SCREENSHOT", shots);
     }
     if let Some(ref adir) = cfg.assets_dir {
         cmd.env("RECOMP_ASSETS_DIR", adir);
     }
-    if !parsed.backend_args.iter().any(|a| a == "--timeout" || a.starts_with("--timeout=")) {
+    if !parsed
+        .backend_args
+        .iter()
+        .any(|a| a == "--timeout" || a.starts_with("--timeout="))
+    {
         cmd.args(["--timeout", &format!("{}", cfg.default_timeout_secs)]);
     }
 
-    cmd.stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
+    let use_spinner = !parsed.quiet && !parsed.json && !parsed.no_progress;
 
-    let exit_code = match cmd.status() {
-        Ok(st) => st.code().unwrap_or(EXIT_STAGE_FAILED),
-        Err(e) => {
-            eprintln!("error: failed to launch Python backend: {e}");
-            EXIT_STAGE_FAILED
+    let exit_code = if use_spinner {
+        let title = pe_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("executable");
+        eprintln!(
+            "  {}{}  {} {} -> {}/{}",
+            "Game".bold(),
+            "ReComp".black().on_bright_yellow().bold(),
+            title.bold(),
+            format!("({in_os}/{in_arch})").dimmed(),
+            target_os,
+            target_arch
+        );
+
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::with_template("  {spinner:.yellow} {msg}  [{elapsed_precise}]")
+                .unwrap_or_else(|_| ProgressStyle::default_spinner()),
+        );
+        pb.enable_steady_tick(Duration::from_millis(90));
+        pb.set_message("stage: inspect");
+
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        match cmd.spawn() {
+            Ok(mut child) => {
+                let pb_err = pb.clone();
+                let err_handle = child.stderr.take().map(|err| {
+                    std::thread::spawn(move || {
+                        for line in BufReader::new(err).lines().map_while(Result::ok) {
+                            if let Some(rest) = line.trim().strip_prefix("==>") {
+                                pb_err.set_message(format!("stage: {}", rest.trim()));
+                            }
+                            pb_err.println(line);
+                        }
+                    })
+                });
+                if let Some(out) = child.stdout.take() {
+                    for line in BufReader::new(out).lines().map_while(Result::ok) {
+                        if let Some(rest) = line.trim().strip_prefix("==>") {
+                            pb.set_message(format!("stage: {}", rest.trim()));
+                        }
+                        pb.println(line);
+                    }
+                }
+                if let Some(h) = err_handle {
+                    let _ = h.join();
+                }
+                let code = child
+                    .wait()
+                    .ok()
+                    .and_then(|st| st.code())
+                    .unwrap_or(EXIT_STAGE_FAILED);
+                if code == EXIT_OK || code == EXIT_UNVERIFIED {
+                    pb.finish_with_message(format!(
+                        "{} finished (exit {code})",
+                        "✓".green().bold()
+                    ));
+                } else {
+                    pb.finish_with_message(format!("{} failed (exit {code})", "✗".red().bold()));
+                }
+                code
+            }
+            Err(e) => {
+                pb.finish_and_clear();
+                eprintln!("error: failed to launch Python backend: {e}");
+                EXIT_STAGE_FAILED
+            }
+        }
+    } else {
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+        match cmd.status() {
+            Ok(st) => st.code().unwrap_or(EXIT_STAGE_FAILED),
+            Err(e) => {
+                eprintln!("error: failed to launch Python backend: {e}");
+                EXIT_STAGE_FAILED
+            }
         }
     };
 
@@ -457,6 +596,31 @@ pub fn run_pipeline_cli(cfg: &AppConfig, raw_args: &[String]) -> i32 {
         let _ = fs::create_dir_all(cfg.repo_root.join("reports").join("games"));
     }
 
+    if parsed.ai_readability && (exit_code == EXIT_OK || exit_code == EXIT_UNVERIFIED) {
+        if cfg.reveng_ai_cmd.is_some() {
+            log_project_event(
+                &proj_dir,
+                "orchestrator",
+                "running optional AI readable-source-code pass",
+            );
+            if !parsed.quiet && !parsed.json {
+                eprintln!("ai-readability: running optional C source readability pass (compile- & evidence-verified)...");
+            }
+            let _ = crate::agent::run_readability(
+                cfg,
+                &[
+                    proj_dir.display().to_string(),
+                    "--providers".to_string(),
+                    "ai".to_string(),
+                ],
+            );
+        } else if !parsed.quiet && !parsed.json {
+            eprintln!(
+                "note: --ai-readability skipped because REVENG_AI_CMD is not configured. AI is strictly optional and only used to improve readable C source code."
+            );
+        }
+    }
+
     exit_code
 }
 
@@ -482,7 +646,45 @@ mod tests {
 
     #[test]
     fn generates_cmake_safe_project_name() {
-        assert_eq!(executable_name(Path::new("/tmp/putty-w32.exe")), "putty_w32");
+        assert_eq!(
+            executable_name(Path::new("/tmp/putty-w32.exe")),
+            "putty_w32"
+        );
         assert_eq!(executable_name(Path::new("/tmp/123app.exe")), "game_123app");
+    }
+
+    #[test]
+    fn parses_profile_and_screenshot_flags() {
+        let args: Vec<String> = vec![
+            "game.exe",
+            "--profile",
+            "console",
+            "--target-os",
+            "web",
+            "--target-arch",
+            "wasm32",
+            "--capture-screenshots",
+            "--dry-run",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let parsed = parse_pipeline_args(&args).unwrap();
+        assert_eq!(parsed.profile.as_deref(), Some("console"));
+        assert_eq!(parsed.target_os, "web");
+        assert_eq!(parsed.target_arch, "wasm32");
+        assert!(parsed.capture_screenshots);
+        assert!(parsed.dry_run);
+        assert!(!parsed.ai_readability);
+    }
+
+    #[test]
+    fn parses_optional_ai_readability_flag() {
+        let args: Vec<String> = vec!["game.exe", "--ai-readability"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let parsed = parse_pipeline_args(&args).unwrap();
+        assert!(parsed.ai_readability);
     }
 }

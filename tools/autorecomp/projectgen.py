@@ -6,15 +6,66 @@ C compiler, CMake, SDL2 and (optionally) FFmpeg.
 """
 
 import json
+from contextlib import contextmanager
+import errno
 import os
 import shutil
+import stat
 import subprocess
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_ROOT = REPO_ROOT / "runtime"
 WIN32HLE = RUNTIME_ROOT / "win32hle"
 RECOMP32 = RUNTIME_ROOT / "recomp32"
+
+
+def _validate_existing_license(path: Path) -> None:
+    try:
+        license_fd = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+        try:
+            if not stat.S_ISREG(os.fstat(license_fd).st_mode):
+                raise RuntimeError(f"Existing project license is not a regular file: {path}")
+        finally:
+            os.close(license_fd)
+    except OSError as exc:
+        raise RuntimeError(f"Existing project license is not readable: {path}: {exc}") from exc
+
+
+@contextmanager
+def _project_license_lock(project_dir: Path):
+    lock_fd = os.open(project_dir / ".LICENSE.lock", os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        if os.name == "nt":
+            import msvcrt
+            if os.fstat(lock_fd).st_size == 0:
+                os.write(lock_fd, b"\0")
+            os.lseek(lock_fd, 0, os.SEEK_SET)
+            msvcrt.locking(lock_fd, msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        if os.name == "nt":
+            import msvcrt
+            os.lseek(lock_fd, 0, os.SEEK_SET)
+            msvcrt.locking(lock_fd, msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
+
+
+def _fsync_directory(path: Path) -> None:
+    if os.name == "nt":
+        return
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 MAIN_C = """\
 /* Entry point for the rebuilt game.
@@ -261,6 +312,78 @@ def write_project(project_dir, name, exe_name, pe_info, extra=None,
     project_dir = Path(project_dir)
     project_dir.mkdir(parents=True, exist_ok=True)
     (project_dir / "src").mkdir(exist_ok=True)
+    source_license = REPO_ROOT / "LICENSE"
+    output_license = project_dir / "LICENSE"
+    incomplete_marker = project_dir / ".LICENSE.incomplete"
+    with _project_license_lock(project_dir):
+        if os.path.lexists(incomplete_marker):
+            raise RuntimeError(
+                f"A prior license copy was interrupted in {project_dir}; inspect and remove {incomplete_marker} and any incomplete LICENSE before retrying"
+            )
+        if os.path.lexists(output_license):
+            _validate_existing_license(output_license)
+        else:
+            source_mode = stat.S_IMODE(source_license.stat().st_mode)
+            fd, temporary_license = tempfile.mkstemp(prefix=".LICENSE.", dir=project_dir)
+            try:
+                with os.fdopen(fd, "wb") as dst, open(source_license, "rb") as src:
+                    shutil.copyfileobj(src, dst)
+                    dst.flush()
+                    os.fsync(dst.fileno())
+                with open(temporary_license, "rb") as staged_source:
+                    os.chmod(temporary_license, source_mode)
+                    try:
+                        os.link(temporary_license, output_license)
+                    except FileExistsError:
+                        _validate_existing_license(output_license)
+                    except OSError as exc:
+                        unsupported_link = {
+                            errno.EPERM, errno.EXDEV, errno.EINVAL,
+                            getattr(errno, "EOPNOTSUPP", errno.EPERM),
+                            getattr(errno, "ENOTSUP", errno.EPERM),
+                            getattr(errno, "ENOSYS", errno.EPERM),
+                        }
+                        if exc.errno not in unsupported_link:
+                            raise
+                        marker_fd = os.open(
+                            incomplete_marker,
+                            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                            0o600,
+                        )
+                        with os.fdopen(marker_fd, "w", encoding="ascii") as marker:
+                            marker.write("GameReComp LICENSE publication in progress\n")
+                            marker.flush()
+                            os.fsync(marker.fileno())
+                        _fsync_directory(project_dir)
+                        try:
+                            output_fd = os.open(
+                                output_license,
+                                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                                0o600,
+                            )
+                        except FileExistsError:
+                            incomplete_marker.unlink()
+                            _fsync_directory(project_dir)
+                            _validate_existing_license(output_license)
+                        except OSError:
+                            incomplete_marker.unlink(missing_ok=True)
+                            _fsync_directory(project_dir)
+                            raise
+                        else:
+                            with os.fdopen(output_fd, "wb") as dst:
+                                staged_source.seek(0)
+                                shutil.copyfileobj(staged_source, dst)
+                                dst.flush()
+                                os.fsync(dst.fileno())
+                                if hasattr(os, "fchmod"):
+                                    os.fchmod(dst.fileno(), source_mode)
+                            incomplete_marker.unlink()
+                            _fsync_directory(project_dir)
+            finally:
+                try:
+                    os.unlink(temporary_license)
+                except FileNotFoundError:
+                    pass
 
     runtime = _copy_runtime(project_dir)
 

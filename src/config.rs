@@ -4,6 +4,58 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+pub fn find_python_interpreter(repo_root: &Path) -> Option<PathBuf> {
+    let repo_root = if repo_root.is_absolute() {
+        repo_root.to_path_buf()
+    } else {
+        env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(repo_root)
+    };
+    let python_rel = if cfg!(windows) {
+        PathBuf::from("Scripts").join("python.exe")
+    } else {
+        PathBuf::from("bin").join("python")
+    };
+    if let Some(active) = env::var_os("VIRTUAL_ENV") {
+        let active_python = PathBuf::from(active).join(&python_rel);
+        if is_executable_file(&active_python) {
+            return Some(absolute_path(active_python));
+        }
+    }
+    let venv_python = if cfg!(windows) {
+        repo_root.join(".venv").join("Scripts").join("python.exe")
+    } else {
+        repo_root.join(".venv").join("bin").join("python")
+    };
+    if is_executable_file(&venv_python) {
+        return Some(absolute_path(venv_python));
+    }
+    let names: &[&str] = if cfg!(windows) {
+        &["python", "python3"]
+    } else {
+        &["python3", "python"]
+    };
+    names.iter().find_map(|name| find_executable(name))
+}
+
+pub fn python_interpreter(repo_root: &Path) -> PathBuf {
+    find_python_interpreter(repo_root)
+        .unwrap_or_else(|| PathBuf::from(if cfg!(windows) { "python" } else { "python3" }))
+}
+
+fn absolute_path(path: PathBuf) -> PathBuf {
+    if path.is_absolute() {
+        path
+    } else {
+        env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(path)
+    }
+}
+
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub repo_root: PathBuf,
@@ -12,6 +64,219 @@ pub struct AppConfig {
     pub screenshot_dir: Option<PathBuf>,
     pub assets_dir: Option<PathBuf>,
     pub default_timeout_secs: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserSettings {
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    #[serde(default = "default_ui_font")]
+    pub ui_font: String,
+    #[serde(default = "default_mono_font")]
+    pub mono_font: String,
+    #[serde(default = "default_font_scale")]
+    pub font_scale: f32,
+    #[serde(default = "default_font_scale")]
+    pub code_font_scale: f32,
+    #[serde(default)]
+    pub reveng_ai_cmd: String,
+    #[serde(default)]
+    pub projects_root: String,
+    #[serde(default)]
+    pub custom_projects: Vec<String>,
+    #[serde(default)]
+    pub hidden_projects: Vec<String>,
+    #[serde(default = "default_timeout_u64")]
+    pub default_timeout_secs: u64,
+    #[serde(default = "default_max_concurrent_jobs")]
+    pub max_concurrent_jobs: usize,
+    #[serde(default)]
+    pub rom_library_dir: String,
+}
+
+fn default_theme() -> String {
+    "dark".to_string()
+}
+
+fn default_ui_font() -> String {
+    "archivo".to_string()
+}
+
+fn default_mono_font() -> String {
+    "ibm-plex-mono".to_string()
+}
+
+fn default_font_scale() -> f32 {
+    1.0
+}
+
+fn default_timeout_u64() -> u64 {
+    12
+}
+
+fn default_max_concurrent_jobs() -> usize {
+    0
+}
+
+pub fn default_user_projects_dir() -> PathBuf {
+    env::var_os("HOME")
+        .or_else(|| env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .map(|h| h.join("GameReComp").join("projects"))
+        .unwrap_or_else(|| PathBuf::from("projects"))
+}
+
+#[derive(Debug, Clone)]
+pub struct SystemResources {
+    pub cpu_cores: usize,
+    pub total_ram_mb: u64,
+    pub recommended_parallel_games: usize,
+}
+
+impl Default for SystemResources {
+    fn default() -> Self {
+        Self::detect()
+    }
+}
+
+impl SystemResources {
+    pub fn detect() -> Self {
+        let cpu_cores = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4);
+        let total_ram_mb = detect_total_ram_mb().unwrap_or(8192);
+        let recommended_parallel_games = Self::compute_recommended(cpu_cores, total_ram_mb);
+        Self {
+            cpu_cores,
+            total_ram_mb,
+            recommended_parallel_games,
+        }
+    }
+
+    pub fn compute_recommended(cpu_cores: usize, total_ram_mb: u64) -> usize {
+        let by_ram = ((total_ram_mb / 2048).max(1)) as usize;
+        let by_cpu = (cpu_cores / 2).max(1);
+        by_ram.min(by_cpu).clamp(1, 8)
+    }
+
+    pub fn summary(&self) -> String {
+        format!(
+            "Auto: {} parallel ({:.0} GB RAM · {} cores)",
+            self.recommended_parallel_games,
+            (self.total_ram_mb as f64) / 1024.0,
+            self.cpu_cores
+        )
+    }
+}
+
+fn detect_total_ram_mb() -> Option<u64> {
+    #[cfg(target_os = "macos")]
+    {
+        let out = Command::new("sysctl")
+            .args(["-n", "hw.memsize"])
+            .output()
+            .ok()?;
+        let s = String::from_utf8_lossy(&out.stdout);
+        let bytes = s.trim().parse::<u64>().ok()?;
+        return Some((bytes / (1024 * 1024)).max(512));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let meminfo = fs::read_to_string("/proc/meminfo").ok()?;
+        for line in meminfo.lines() {
+            if let Some(rest) = line.strip_prefix("MemTotal:") {
+                let kb = rest.split_whitespace().next()?.parse::<u64>().ok()?;
+                return Some((kb / 1024).max(512));
+            }
+        }
+        return None;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        #[repr(C)]
+        struct MemoryStatusEx {
+            length: u32,
+            memory_load: u32,
+            total_phys: u64,
+            avail_phys: u64,
+            total_page_file: u64,
+            avail_page_file: u64,
+            total_virtual: u64,
+            avail_virtual: u64,
+            avail_extended_virtual: u64,
+        }
+        #[link(name = "kernel32")]
+        extern "system" {
+            fn GlobalMemoryStatusEx(status: *mut MemoryStatusEx) -> i32;
+        }
+        let mut status = MemoryStatusEx {
+            length: std::mem::size_of::<MemoryStatusEx>() as u32,
+            memory_load: 0,
+            total_phys: 0,
+            avail_phys: 0,
+            total_page_file: 0,
+            avail_page_file: 0,
+            total_virtual: 0,
+            avail_virtual: 0,
+            avail_extended_virtual: 0,
+        };
+        // SAFETY: Windows fills the documented MEMORYSTATUSEX layout after its size is set.
+        let ok = unsafe { GlobalMemoryStatusEx(&mut status) };
+        return (ok != 0).then_some((status.total_phys / (1024 * 1024)).max(512));
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        None
+    }
+}
+
+impl Default for UserSettings {
+    fn default() -> Self {
+        Self {
+            theme: default_theme(),
+            ui_font: default_ui_font(),
+            mono_font: default_mono_font(),
+            font_scale: default_font_scale(),
+            code_font_scale: default_font_scale(),
+            reveng_ai_cmd: String::new(),
+            projects_root: String::new(),
+            custom_projects: Vec::new(),
+            hidden_projects: Vec::new(),
+            default_timeout_secs: default_timeout_u64(),
+            max_concurrent_jobs: default_max_concurrent_jobs(),
+            rom_library_dir: String::new(),
+        }
+    }
+}
+
+impl UserSettings {
+    pub fn settings_path() -> Option<PathBuf> {
+        let home = env::var_os("HOME")
+            .or_else(|| env::var_os("USERPROFILE"))
+            .map(PathBuf::from)?;
+        Some(home.join(".gamerecomp").join("settings.json"))
+    }
+
+    pub fn load() -> Self {
+        let Some(path) = Self::settings_path() else {
+            return Self::default();
+        };
+        let Ok(raw) = fs::read_to_string(path) else {
+            return Self::default();
+        };
+        serde_json::from_str(&raw).unwrap_or_default()
+    }
+
+    pub fn save(&self) -> Result<(), String> {
+        let Some(path) = Self::settings_path() else {
+            return Err("cannot determine home directory".to_string());
+        };
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let body = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        fs::write(&path, body).map_err(|e| e.to_string())
+    }
 }
 
 impl AppConfig {
@@ -32,10 +297,18 @@ impl AppConfig {
             }
         }
 
+        let user_settings = UserSettings::load();
         let reveng_ai_cmd = env::var("REVENG_AI_CMD")
             .ok()
             .filter(|s| !s.trim().is_empty())
-            .or_else(|| corpus_env.get("REVENG_AI_CMD").cloned());
+            .or_else(|| corpus_env.get("REVENG_AI_CMD").cloned())
+            .or_else(|| {
+                if user_settings.reveng_ai_cmd.trim().is_empty() {
+                    None
+                } else {
+                    Some(user_settings.reveng_ai_cmd.clone())
+                }
+            });
 
         let screenshot_dir = env::var("RECOMP_SCREENSHOT")
             .ok()
@@ -106,7 +379,11 @@ fn walk_up_for_repo(start: &Path) -> Option<PathBuf> {
     let mut cur = Some(start);
     while let Some(dir) = cur {
         if dir.join("tools").join("autorecomp").is_dir()
-            || dir.join("reports").join("certified").join("index.json").is_file()
+            || dir
+                .join("reports")
+                .join("certified")
+                .join("index.json")
+                .is_file()
         {
             return Some(dir.to_path_buf());
         }
@@ -118,9 +395,25 @@ fn walk_up_for_repo(start: &Path) -> Option<PathBuf> {
 pub fn find_executable(name: &str) -> Option<PathBuf> {
     let path_var = env::var_os("PATH")?;
     for dir in env::split_paths(&path_var) {
+        let dir = if dir.as_os_str().is_empty() {
+            env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+        } else if dir.is_absolute() {
+            dir
+        } else {
+            env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(dir)
+        };
         let candidate = dir.join(name);
         if is_executable_file(&candidate) {
             return Some(candidate);
+        }
+        #[cfg(windows)]
+        {
+            let exe_cand = dir.join(format!("{name}.exe"));
+            if is_executable_file(&exe_cand) {
+                return Some(exe_cand);
+            }
         }
     }
     None
@@ -139,19 +432,66 @@ fn is_executable_file(path: &Path) -> bool {
     path.is_file()
 }
 
+fn probe_version(bin: impl AsRef<std::ffi::OsStr>, args: &[&str]) -> String {
+    Command::new(bin)
+        .args(args)
+        .output()
+        .ok()
+        .and_then(|out| {
+            let txt = if out.stdout.is_empty() {
+                String::from_utf8_lossy(&out.stderr).to_string()
+            } else {
+                String::from_utf8_lossy(&out.stdout).to_string()
+            };
+            txt.lines().next().map(|l| l.trim().to_string())
+        })
+        .unwrap_or_default()
+}
+
 #[derive(Debug, Clone)]
+pub struct ToolCardInfo {
+    pub name: String,
+    pub category: String,
+    pub description: String,
+    pub installed: bool,
+    pub path: String,
+    pub version: String,
+    pub install_hint: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub struct DetectedAgentInfo {
+    pub id: String,
+    pub name: String,
+    pub binary: String,
+    pub installed: bool,
+    pub path: String,
+    pub preset_cmd: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct ToolchainStatus {
     pub present: Vec<String>,
     pub missing: Vec<String>,
     pub sdl2_present: bool,
+    pub cards: Vec<ToolCardInfo>,
+    pub agents: Vec<DetectedAgentInfo>,
 }
 
 impl ToolchainStatus {
     pub fn detect() -> Self {
+        Self::detect_for_repo(&env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+    }
+
+    pub fn detect_for_repo(repo_root: &Path) -> Self {
         let mut present = Vec::new();
         let mut missing = Vec::new();
         for name in ["python3", "cmake", "cc", "pkg-config"] {
-            if find_executable(name).is_some() {
+            if (name == "python3" && find_python_interpreter(repo_root).is_some())
+                || (name != "python3" && find_executable(name).is_some())
+            {
                 present.push(name.to_string());
             } else {
                 missing.push(name.to_string());
@@ -163,10 +503,16 @@ impl ToolchainStatus {
                 .status()
                 .map(|s| s.success())
                 .unwrap_or(false);
+
+        let cards = detect_tool_cards(sdl2_present, repo_root);
+        let agents = detect_agents();
+
         Self {
             present,
             missing,
             sdl2_present,
+            cards,
+            agents,
         }
     }
 
@@ -181,16 +527,181 @@ impl ToolchainStatus {
         } else {
             format!(" | missing: {}", self.missing.join(", "))
         };
-        let sdl = if self.sdl2_present { "present" } else { "MISSING" };
+        let sdl = if self.sdl2_present {
+            "present"
+        } else {
+            "MISSING"
+        };
         format!("toolchain:    {present_str}{missing_str} | sdl2: {sdl}")
     }
 
     pub fn is_ready(&self) -> bool {
-        self.missing
-            .iter()
-            .all(|m| m == "pkg-config")
-            && self.sdl2_present
+        self.missing.iter().all(|m| m == "pkg-config") && self.sdl2_present
     }
+}
+
+fn detect_tool_cards(sdl2_present: bool, repo_root: &Path) -> Vec<ToolCardInfo> {
+    let mut cards = Vec::new();
+    let specs: &[(&str, &str, &str, &str, &[&str], &str)] = &[
+        (
+            "Python 3",
+            "RE Backend",
+            "Drives PE inspection, x86 disassembly, lifting, and verification harness.",
+            "python3",
+            &["--version"],
+            "Install Python 3.10+ (brew install python / apt install python3)",
+        ),
+        (
+            "C Compiler (cc / clang)",
+            "Native Build",
+            "Compiles lifted x86 C translation units and the Win32 HLE runtime.",
+            "cc",
+            &["--version"],
+            "Install Xcode CLT (xcode-select --install) or clang/gcc",
+        ),
+        (
+            "CMake",
+            "Native Build",
+            "Configures and builds generated standalone C projects.",
+            "cmake",
+            &["--version"],
+            "brew install cmake / apt install cmake",
+        ),
+        (
+            "pkg-config",
+            "Native Build",
+            "Discovers SDL2 include and library paths for recompiled native games.",
+            "pkg-config",
+            &["--version"],
+            "brew install pkg-config / apt install pkg-config",
+        ),
+        (
+            "Clang (WebAssembly)",
+            "WebAssembly",
+            "Compiles lifted C and wasm32 Win32 HLE runtime to standalone .wasm.",
+            "clang",
+            &["--version"],
+            "brew install llvm / apt install clang lld",
+        ),
+        (
+            "Node.js",
+            "WebAssembly",
+            "Headless WebAssembly verification runner (run_wasm_node.mjs).",
+            "node",
+            &["--version"],
+            "brew install node / nodejs.org",
+        ),
+    ];
+
+    for &(name, cat, desc, bin, ver_args, hint) in specs {
+        let found = if bin == "python3" {
+            find_python_interpreter(repo_root)
+        } else {
+            find_executable(bin)
+        };
+        let version = if found.is_some() {
+            probe_version(found.as_ref().unwrap(), ver_args)
+        } else {
+            String::new()
+        };
+        cards.push(ToolCardInfo {
+            name: name.to_string(),
+            category: cat.to_string(),
+            description: desc.to_string(),
+            installed: found.is_some(),
+            path: found
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "not found in PATH".to_string()),
+            version,
+            install_hint: hint.to_string(),
+        });
+    }
+
+    let sdl_ver = if sdl2_present {
+        probe_version("pkg-config", &["--modversion", "sdl2"])
+    } else {
+        String::new()
+    };
+    cards.push(ToolCardInfo {
+        name: "SDL2".to_string(),
+        category: "Game Runtime".to_string(),
+        description: "Windowing, 2D/D3D framebuffer presentation, input, and audio for recompiled native games.".to_string(),
+        installed: sdl2_present,
+        path: if sdl2_present {
+            "pkg-config: sdl2".to_string()
+        } else {
+            "not found via pkg-config".to_string()
+        },
+        version: sdl_ver,
+        install_hint: "brew install sdl2 / apt install libsdl2-dev".to_string(),
+    });
+
+    cards
+}
+
+fn detect_agents() -> Vec<DetectedAgentInfo> {
+    let specs: &[(&str, &str, &str, &str, &str)] = &[
+        (
+            "claude",
+            "Claude Code",
+            "claude",
+            "claude -p",
+            "Optional Anthropic CLI agent — strictly for improving readable C source code.",
+        ),
+        (
+            "codex",
+            "Codex CLI",
+            "codex",
+            "codex exec -",
+            "Optional OpenAI Codex CLI — strictly for improving readable C source code.",
+        ),
+        (
+            "agy",
+            "Antigravity CLI",
+            "agy",
+            "agy -p",
+            "Optional Antigravity CLI — strictly for improving readable C source code.",
+        ),
+        (
+            "opencode",
+            "opencode",
+            "opencode",
+            "opencode run",
+            "Optional multi-provider terminal agent — strictly for improving readable C source code.",
+        ),
+        (
+            "cursor",
+            "Cursor Agent",
+            "cursor-agent",
+            "cursor-agent -p",
+            "Optional headless Cursor Agent — strictly for improving readable C source code.",
+        ),
+        (
+            "ollama",
+            "Ollama (Local)",
+            "ollama",
+            "ollama run qwen2.5-coder:14b",
+            "Optional local coding model — strictly for improving readable C source code offline.",
+        ),
+    ];
+
+    specs
+        .iter()
+        .map(|&(id, name, bin, preset, desc)| {
+            let found = find_executable(bin);
+            DetectedAgentInfo {
+                id: id.to_string(),
+                name: name.to_string(),
+                binary: bin.to_string(),
+                installed: found.is_some(),
+                path: found
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|| "not installed".to_string()),
+                preset_cmd: preset.to_string(),
+                description: desc.to_string(),
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -214,5 +725,13 @@ mod tests {
     fn resolves_repo_root_from_cwd() {
         let cfg = AppConfig::load(None);
         assert!(cfg.repo_root.join("tools").join("autorecomp").is_dir());
+    }
+
+    #[test]
+    fn computes_recommended_parallel_jobs_from_resources() {
+        assert_eq!(SystemResources::compute_recommended(8, 4096), 2);
+        assert_eq!(SystemResources::compute_recommended(10, 16384), 5);
+        assert_eq!(SystemResources::compute_recommended(32, 65536), 8);
+        assert_eq!(SystemResources::compute_recommended(1, 1024), 1);
     }
 }
