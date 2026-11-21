@@ -4,58 +4,108 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload assets to (e.g. v0.0.1)'
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build ${{ matrix.name }}
+    name: Build ${{ matrix.artifact }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: linux-x86_64
+          - artifact: cli-linux-x86_64
             runner: ubuntu-latest
-            binary: gamerecomp
-            archive: GameReComp-${{ github.ref_name }}-linux-x86_64.tar.gz
-          - name: macos-x86_64
-            runner: macos-13
-            binary: gamerecomp
-            archive: GameReComp-${{ github.ref_name }}-macos-x86_64.tar.gz
-          - name: windows-x86_64
+            target: x86_64-unknown-linux-gnu
+            bins: game-recomp-cli
+            archive: GameReComp-cli-${{ github.ref_name }}-linux-x86_64.tar.gz
+          - artifact: gui-linux-x86_64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bins: game-recomp-gui
+            archive: GameReComp-gui-${{ github.ref_name }}-linux-x86_64.tar.gz
+          - artifact: cli-macos-arm64
+            runner: macos-14
+            target: aarch64-apple-darwin
+            bins: game-recomp-cli
+            archive: GameReComp-cli-${{ github.ref_name }}-macos-arm64.tar.gz
+          - artifact: gui-macos-arm64
+            runner: macos-14
+            target: aarch64-apple-darwin
+            bins: game-recomp-gui
+            archive: GameReComp-gui-${{ github.ref_name }}-macos-arm64.tar.gz
+          - artifact: cli-windows-x86_64
             runner: windows-latest
-            binary: gamerecomp.exe
-            archive: GameReComp-${{ github.ref_name }}-windows-x86_64.zip
+            target: x86_64-pc-windows-msvc
+            bins: game-recomp-cli
+            archive: GameReComp-cli-${{ github.ref_name }}-windows-x86_64.zip
+          - artifact: gui-windows-x86_64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            bins: game-recomp-gui
+            archive: GameReComp-gui-${{ github.ref_name }}-windows-x86_64.zip
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --release
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux GUI dependencies
+        if: runner.os == 'Linux' && contains(matrix.artifact, 'gui')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libfontconfig1-dev libfreetype-dev libexpat1-dev \
+            libx11-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev libvulkan1 libssl-dev pkg-config
+
+      - name: Build ${{ matrix.bins }}
+        shell: bash
+        run: cargo build --release --bin ${{ matrix.bins }} --target ${{ matrix.target }}
+
       - name: Verify version
         shell: bash
-        run: ./target/release/${{ matrix.binary }} --version
+        run: |
+          bin="target/${{ matrix.target }}/release/${{ matrix.bins }}"
+          if [ "${{ runner.os }}" = "Windows" ]; then bin="${bin}.exe"; fi
+          "$bin" --version || true
+
       - name: Package Unix binary
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          staging="GameReComp-${GITHUB_REF_NAME}-${{ matrix.name }}"
+          tag="${{ inputs.tag || github.ref_name }}"
+          staging="GameReComp-${{ matrix.artifact }}-${tag}"
           mkdir "$staging"
-          cp "target/release/${{ matrix.binary }}" "$staging/GameReComp"
+          cp "target/${{ matrix.target }}/release/${{ matrix.bins }}" "$staging/"
           cp README.md CHANGELOG.md LICENSE "$staging/"
           tar -czf "${{ matrix.archive }}" "$staging"
+
       - name: Package Windows binary
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          staging="GameReComp-${GITHUB_REF_NAME}-${{ matrix.name }}"
+          tag="${{ inputs.tag || github.ref_name }}"
+          staging="GameReComp-${{ matrix.artifact }}-${tag}"
           mkdir "$staging"
-          cp "target/release/${{ matrix.binary }}" "$staging/GameReComp.exe"
+          cp "target/${{ matrix.target }}/release/${{ matrix.bins }}.exe" "$staging/"
           cp README.md CHANGELOG.md LICENSE "$staging/"
           7z a "${{ matrix.archive }}" "$staging"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.name }}
+          name: ${{ matrix.artifact }}
           path: ${{ matrix.archive }}
 
   publish:
@@ -69,7 +119,7 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          generate_release_notes: false
           prerelease: true
           files: dist/*
