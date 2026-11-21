@@ -66,18 +66,14 @@ Windows game.exe → recover & lift → generate C → compile → run → verif
 - **Optional AI source readability:** Core disassembly, lifting, compilation, and execution are **100% deterministic and offline with zero AI**. AI is strictly **optional** and **only used to improve readable C source code** (naming, comments, formatting) when explicitly enabled — every edit is compile-checked and re-run against baseline execution evidence, and automatically reverted on failure.
 - Records build provenance, execution results, and verification evidence. **Currently supports PE32 (x86) inputs.**
 
-## App screenshots
-
-The Rust desktop GUI supports light, dark, and themed views. These captures show the home screen in Light, Dark, and Nord Frost.
+## Screenshots
 
 <table>
 <tr>
-<td align="center"><img src="docs/screenshots/game-recomp-gui-light.png" alt="GameReComp desktop GUI home screen in Light theme" width="420"><br><sub>Light</sub></td>
-<td align="center"><img src="docs/screenshots/game-recomp-gui-dark.png" alt="GameReComp desktop GUI home screen in Dark theme" width="420"><br><sub>Dark</sub></td>
+<td align="center"><img src="docs/screenshots/game-recomp-gui-dark.png" alt="GameReComp desktop GUI home screen" width="820"><br><sub>Main app</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/screenshots/game-recomp-gui-nord-frost.png" alt="GameReComp desktop GUI home screen in Nord Frost theme" width="420"><br><sub>Nord Frost</sub></td>
-<td align="center"><img src="docs/screenshots/game-recomp-cli-help.png" alt="GameReComp Rust CLI help output in Terminal" width="420"><br><sub>Rust CLI</sub></td>
+<td align="center"><img src="docs/screenshots/game-recomp-cli-help.png" alt="GameReComp CLI help output" width="820"><br><sub>CLI</sub></td>
 </tr>
 </table>
 
