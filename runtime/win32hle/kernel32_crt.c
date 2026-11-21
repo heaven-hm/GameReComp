@@ -49,15 +49,31 @@ static void *thread_trampoline(void *p) {
     a->done = 1;
     return NULL;
 }
-static void k_CreateThread(void) {             /* (sa, stack, start, param, flags, &tid) */
+uint32_t hle_thread_create(uint32_t start_va, uint32_t param, uint32_t flags, uint32_t *out_tid) {
     struct thread_arg *a = (struct thread_arg *)calloc(1, sizeof *a);
-    a->start = A32(2); a->param = A32(3); a->suspend = (A32(4) & 4) != 0;   /* CREATE_SUSPENDED */
+    if (!a) return 0;
+    a->start = start_va; a->param = param; a->suspend = (flags & 4u) != 0;   /* CREATE_SUSPENDED */
     a->tid = hle_thread_id_new();
     uint32_t h = hle_handle_alloc(HLE_H_THREAD, a);
     pthread_t t;
-    if (!h || pthread_create(&t, NULL, thread_trampoline, a) != 0) { if (h) hle_handle_close(h); free(a); RET(0, 6); }
+    if (!h || pthread_create(&t, NULL, thread_trampoline, a) != 0) {
+        if (h) hle_handle_close(h);
+        free(a);
+        return 0;
+    }
     pthread_detach(t);
-    uint32_t ptid = A32(5); if (ptid) MEM32(ptid) = a->tid;
+    if (out_tid) *out_tid = a->tid;
+    return h;
+}
+void hle_thread_exit_self(uint32_t code) {
+    if (t_self) t_self->code = code, t_self->done = 1;
+    hle_block_begin();
+    pthread_exit(NULL);
+}
+static void k_CreateThread(void) {             /* (sa, stack, start, param, flags, &tid) */
+    uint32_t tid = 0, h = hle_thread_create(A32(2), A32(3), A32(4), &tid);
+    uint32_t ptid = A32(5);
+    if (h && ptid) MEM32(ptid) = tid;
     RET(h, 6);
 }
 static void k_ResumeThread(void) {
@@ -86,9 +102,7 @@ static void k_TerminateThread(void) {
 /* ExitThread from lifted code: the machine is given up first (the thread
  * will never hand it back), then the thread ends where it stands. */
 static void k_ExitThread(void) {
-    if (t_self) t_self->code = A32(0), t_self->done = 1;
-    hle_block_begin();
-    pthread_exit(NULL);
+    hle_thread_exit_self(A32(0));
 }
 static void k_GetExitCodeThread(void) {        /* (h, &code) */
     struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
@@ -576,6 +590,8 @@ static void k_SetUnhandledExceptionFilter(void) {
 static void k_UnhandledExceptionFilter(void)    { RET(0, 1); }  /* EXCEPTION_CONTINUE_SEARCH */
 static void k_RtlUnwind(void)      { RETV(4); }                 /* no guest SEH unwinding yet */
 static void k_RaiseException(void) {
+    if (A32(0) == 0xE0440001u)
+        hle_eh_d_throw(A32(0), A32(2), A32(3));
     fprintf(stderr, "[win32hle] RaiseException(0x%08X) from guest 0x%08X: guest exceptions are not handled\n",
             A32(0), g_cur_func);
     hle_exit(3);

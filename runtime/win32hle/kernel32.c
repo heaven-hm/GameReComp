@@ -231,23 +231,22 @@ static int region_of(uint32_t a) {
     return -1;
 }
 
-static void k_VirtualAlloc(void) {                       /* (addr, size, type, protect) */
-    uint32_t addr = A32(0), size = (A32(1) + 0xFFFu) & ~0xFFFu, type = A32(2);
-    if (addr && region_of(addr) >= 0) {                  /* commit inside a reservation */
-        RET(addr & ~0xFFFu, 4);
-    }
-    if (!size) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 4); }
-    uint32_t p = hle_vm_reserve(addr, size);
-    if (!p) { g_last_error = ERROR_NOT_ENOUGH_MEMORY; RET(0, 4); }
+uint32_t hle_virtual_alloc(uint32_t addr, uint32_t size, uint32_t type, uint32_t protect) {
+    uint32_t aligned = (size + 0xFFFu) & ~0xFFFu;
+    (void)protect;
+    if (addr && region_of(addr) >= 0)                    /* commit inside a reservation */
+        return addr & ~0xFFFu;
+    if (!aligned) { g_last_error = ERROR_INVALID_PARAMETER; return 0; }
+    uint32_t p = hle_vm_reserve(addr, aligned);
+    if (!p) { g_last_error = ERROR_NOT_ENOUGH_MEMORY; return 0; }
     for (int i = 0; i < MAX_REGIONS; i++)
-        if (!g_region[i].size) { g_region[i].base = p, g_region[i].size = size; break; }
+        if (!g_region[i].size) { g_region[i].base = p, g_region[i].size = aligned; break; }
     (void)type;
-    RET(p, 4);
+    return p;
 }
-static void k_VirtualFree(void) {                        /* (addr, size, type) */
-    uint32_t addr = A32(0), size = A32(1), type = A32(2);
+int hle_virtual_free(uint32_t addr, uint32_t size, uint32_t type) {
     int i = region_of(addr);
-    if (i < 0) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 3); }
+    if (i < 0) { g_last_error = ERROR_INVALID_PARAMETER; return 0; }
     if (type & MEM_RELEASE) {
         hle_vm_release(g_region[i].base, g_region[i].size);
         g_region[i].size = 0;
@@ -255,7 +254,13 @@ static void k_VirtualFree(void) {                        /* (addr, size, type) *
         uint32_t a = addr & ~0xFFFu, end = size ? (addr + size + 0xFFFu) & ~0xFFFu : g_region[i].base + g_region[i].size;
         hle_vm_zero(a, end - a);
     }
-    RET(1, 3);
+    return 1;
+}
+static void k_VirtualAlloc(void) {                       /* (addr, size, type, protect) */
+    RET(hle_virtual_alloc(A32(0), A32(1), A32(2), A32(3)), 4);
+}
+static void k_VirtualFree(void) {                        /* (addr, size, type) */
+    RET((uint32_t)hle_virtual_free(A32(0), A32(1), A32(2)), 3);
 }
 static void k_VirtualProtect(void) { if (A32(3)) MEM32(A32(3)) = 0x04u; RET(1, 4); }   /* PAGE_READWRITE before */
 static void k_VirtualQuery(void) {                       /* (addr, &MEMORY_BASIC_INFORMATION, len) */
@@ -956,6 +961,7 @@ const win32hle_shim win32hle_kernel32[] = {
     { "GetConsoleScreenBufferInfo", k_GetConsoleScreenBufferInfo },
     { "SetConsoleTextAttribute",    k_ret1_2 },
     { "SetConsoleCursorPosition",   k_ret1_2 },
+    { "SetConsoleCursorInfo",       k_ret1_2 },
     { "SetConsoleTitleA",           k_ret1_1 },
     { "GetConsoleTitleA",           k_GetConsoleTitleA },
     { "GetConsoleWindow",           k_GetConsoleWindow },

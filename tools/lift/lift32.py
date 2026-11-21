@@ -7,6 +7,7 @@ PUSH32/POP32 macros, MEM* memory access, pattern-matched condition
 generation from flag-setters to flag-consumers.
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 try:                                    # as tools.lift.lift32 (difftest) or from tools/lift
@@ -307,6 +308,7 @@ class Lifter:
         # needs RECOMP_RETADDR to be a value no such push makes. DOS mode
         # always has it.
         self.computed_ret = computed_ret
+        self._eh_labels = set()
         # Call targets whose first instruction is `pop r32` (see the call case).
         self.call_pop = call_pop or set()
         self._patched_imm = None
@@ -2285,6 +2287,9 @@ class Lifter:
 
         emitted = 0
         for insn in block.instructions:
+            if insn.address != block.start and insn.address in (self._eh_labels or ()):
+                lines.append(f"L_{insn.address:08X}:")
+                self._flag_state = None
             lifted = self.lift_instruction(insn)
             for line in lifted:
                 lines.append(f"    {line}")
@@ -2355,10 +2360,17 @@ class Lifter:
                     return True
         return False
 
-    def lift_function(self, func) -> str:
+    def lift_function(self, func, eh_resume=None) -> str:
         """Lift an entire function to C code."""
         lines = []
         name = func.name
+        eh_targets = sorted(set(eh_resume or ()))
+        all_insn_addrs = {
+            insn.address
+            for b in func.blocks.values()
+            for insn in b.instructions
+        }
+        in_body_eh = sorted(a for a in eh_targets if a in all_insn_addrs)
 
         lines.append(f"void {name}(void) {{")
         lines.append(f"    int _fpu_cmp = 0;")
@@ -2366,15 +2378,20 @@ class Lifter:
         lines.append(f"    int _df = 1;  /* direction flag (1=forward, -1=backward) */")
         lines.append(f"    uint32_t _flag_a = 0, _flag_b = 0;  /* flag-operand snapshots */")
         lines.append(f"    uint32_t _flag_k = FK_NONE;  /* which instruction wrote them */")
+        if eh_targets:
+            lines.append(f"    uint32_t _itail_tgt = 0;")
         lines.append(f"    /* _st[8]/_fp_top/_fpu_cw are GLOBAL (shared x87 stack) */")
         # Records the VA of the function currently running, so a crash names it.
         # A plain global store; the ring-buffer half only exists under -DRECOMP_TRACE.
         lines.append(f"    RECOMP_ENTER(0x{func.address:08X}u);")
+        if eh_targets:
+            lines.append(f"    RECOMP_EH_ENTER();")
         lines.append(f"")
 
         # Emit blocks in address order
-        self._labels = set(func.blocks.keys())
+        self._labels = set(func.blocks.keys()) | set(in_body_eh)
         self._jump_targets = set(getattr(func, 'jump_targets', ()) or ())
+        self._eh_labels = set(in_body_eh)
         # MSVC's `__finally`/SEH epilogue ends with `push <continuation>; ...
         # ; ret`, and that `ret` goes to the pushed address -- a label inside
         # this function or a recovered entry just past its end -- not to the
@@ -2425,5 +2442,18 @@ class Lifter:
             lines.extend(block_lines)
             lines.append("")
 
-        lines.append("}")
-        return '\n'.join(lines)
+        body_text = '\n'.join(lines)
+        if eh_targets:
+            body_text = re.sub(r'\breturn;', '{ RECOMP_EH_LEAVE(); return; }', body_text)
+            tail = [
+                '    RECOMP_EH_LEAVE();',
+                '    return;',
+                '  _ljump:',
+                '    switch (_itail_tgt) {',
+            ]
+            for a in in_body_eh:
+                tail.append(f'      case 0x{a:08X}u: goto L_{a:08X};')
+            tail.append('      default: RECOMP_EH_LEAVE(); RECOMP_ITAIL(_itail_tgt); return;')
+            tail.append('    }')
+            body_text += '\n' + '\n'.join(tail)
+        return body_text + "\n}"

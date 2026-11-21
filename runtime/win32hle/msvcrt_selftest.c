@@ -78,6 +78,7 @@ static int g_sprintf_ok, g_sscanf_ok, g_rand_ok, g_find_ok, g_fullpath_ok;
 static int g_time_ok, g_locale_ok, g_remove_ok;
 static int g_write_fd_ok, g_word_ok, g_fdopen_ok, g_setmode_ok, g_setvbuf_ok, g_freopen_ok;
 static int g_initterm_ok, g_conv_ok, g_math_ok, g_isspace_ok, g_strdup_ok, g_misc_ok, g_signal_ok;
+static int g_ext_crt_ok, g_fpos_ok;
 static uint32_t g_msize, g_read_n, g_word;
 
 /* A guest function _initterm calls: counts its runs in host state. */
@@ -299,6 +300,58 @@ static void guest(void) {
     g_remove_ok = call("remove", 1, a) == 0;
     g_open_ok = g_open_ok && access(selftest_tmpfile("msvcrt.dat"), F_OK) != 0;
 
+    /* ---- _strrev, strnlen, wcs*, rand_s, mbrtowc/mbstowcs/wcstombs, fgetpos/fsetpos ---- */
+    {
+        uint32_t srev = hle_guest_strdup("GameReComp");
+        uint32_t wbuf = hle_va(hle_alloc(64)), u8buf = hle_va(hle_alloc(64));
+        uint32_t rseed = hle_va(hle_alloc(8)), ps_va = hle_va(hle_alloc(8));
+        a[0] = srev;
+        uint32_t rrev = call("_strrev", 1, a);
+        int rev_ok = rrev == srev && !strcmp((char *)hle_ptr(srev), "pmoCeRemaG");
+        a[0] = srev, a[1] = 4;
+        int sn_ok = call("strnlen", 2, a) == 4;
+        uint32_t hi = hle_guest_strdup("Hi");
+        a[0] = wbuf, a[1] = hi, a[2] = 16;
+        uint32_t wn = call("mbstowcs", 3, a);
+        a[0] = wbuf, a[1] = 16;
+        uint32_t wlen = call("wcsnlen", 2, a);
+        uint32_t w2 = hle_va(hle_alloc(16));
+        MEM16(w2) = 'h'; MEM16(w2 + 2) = 'I'; MEM16(w2 + 4) = 0;
+        a[0] = wbuf, a[1] = w2;
+        int wcmp_ok = call("_wcsicmp", 2, a) == 0;
+        a[0] = u8buf, a[1] = wbuf, a[2] = 16;
+        uint32_t un = call("wcstombs", 3, a);
+        a[0] = rseed;
+        uint32_t rs = call("rand_s", 1, a);
+        a[0] = ps_va, a[1] = hi, a[2] = 2, a[3] = 0;
+        uint32_t mc = call("mbrtowc", 4, a);
+        call("_fpreset", 0, NULL);
+        g_ext_crt_ok = rev_ok && sn_ok && wn == 2 && wlen == 2 && wcmp_ok &&
+                       un == 2 && !strcmp((char *)hle_ptr(u8buf), "Hi") &&
+                       rs == 0 && mc == 1 && MEM16(ps_va) == 'H';
+    }
+    {
+        uint32_t fp_path = hle_guest_strdup(selftest_tmpfile("fpos.dat"));
+        uint32_t pos = hle_va(hle_alloc(8));
+        a[0] = fp_path, a[1] = g_mode_wb;
+        uint32_t f2 = call("fopen", 2, a);
+        int okp = f2 != 0;
+        if (f2) {
+            a[0] = g_wbuf, a[1] = 1, a[2] = 8, a[3] = f2;
+            call("fwrite", 4, a);
+            a[0] = f2, a[1] = pos;
+            okp = okp && call("fgetpos", 2, a) == 0 && MEM32(pos) == 8 && MEM32(pos + 4) == 0;
+            MEM32(pos) = 2; MEM32(pos + 4) = 0;
+            a[0] = f2, a[1] = pos;
+            okp = okp && call("fsetpos", 2, a) == 0;
+            a[0] = f2;
+            okp = okp && call("ftell", 1, a) == 2;
+            call("fclose", 1, a);
+        }
+        g_fpos_ok = okp;
+        remove(selftest_tmpfile("fpos.dat"));
+    }
+
     eax = 0;
 }
 
@@ -394,8 +447,11 @@ int main(void) {
     ok("time fills the guest time_t",           g_time_ok);
     ok("setlocale returns the guest's locale",  g_locale_ok);
     ok("remove deletes the file",               g_remove_ok);
+    ok("_strrev/strnlen/wcs*/mbrtowc/rand_s/_fpreset", g_ext_crt_ok);
+    ok("fgetpos/fsetpos round-trips 64-bit fpos_t", g_fpos_ok);
 
     /* exit()/atexit() in a child: the handler's line comes back on a pipe. */
+    fflush(NULL);
     {
         int fds[2];
         if (pipe(fds) == 0) {

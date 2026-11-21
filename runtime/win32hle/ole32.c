@@ -299,7 +299,12 @@ static void o_CoGetClassObject(void) {
     if (A32(4)) MEM32(A32(4)) = 0;
     RET(0x80040111u /* CLASS_E_CLASSNOTAVAILABLE */, 5);
 }
-static void o_CoTaskMemFree(void) { RETV(1); }
+static void o_CoTaskMemAlloc(void) {
+    uint32_t sz = A32(0);
+    void *p = hle_alloc(sz ? sz : 1u);
+    RET(p ? hle_va(p) : 0u, 1);
+}
+static void o_CoTaskMemFree(void) { if (A32(0)) hle_free(APTR(0)); RETV(1); }
 static void o_CreateStreamOnHGlobal(void) {
     if (A32(2)) MEM32(A32(2)) = 0;
     RET(0x80004001u /* E_NOTIMPL */, 3);
@@ -487,6 +492,7 @@ const win32hle_shim win32hle_ole32[] = {
     { "CoCreateGuid",          o_CoCreateGuid },
     { "CoCreateInstance",      o_CoCreateInstance },
     { "CoGetClassObject",      o_CoGetClassObject },
+    { "CoTaskMemAlloc",        o_CoTaskMemAlloc },
     { "CoTaskMemFree",         o_CoTaskMemFree },
     { "CreateStreamOnHGlobal", o_CreateStreamOnHGlobal },
     { "OleInitialize",         o_OleInitialize },

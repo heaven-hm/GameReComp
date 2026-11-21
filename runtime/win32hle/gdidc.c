@@ -1316,6 +1316,18 @@ static void g_GetCharWidth_impl(void) {
     RET(1, 4);
 }
 
+static void g_GetCharABCWidthsA(void) {
+    dc_t *d = DC(A32(0)); uint32_t first = A32(1), last = A32(2), buf = A32(3);
+    if (!buf || last < first) { RET(0, 4); return; }
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    for (uint32_t c = first, i = 0; c <= last; c++, i++) {
+        MEM32(buf + 12u * i) = 0;
+        MEM32(buf + 12u * i + 4u) = (uint32_t)glyph_adv(t, f, c);
+        MEM32(buf + 12u * i + 8u) = 0;
+    }
+    RET(1, 4);
+}
 static void g_GetCharABCWidthsFloatA(void) {
     dc_t *d = DC(A32(0)); uint32_t first = A32(1), last = A32(2), buf = A32(3);
     if (!buf || last < first) { RET(0, 4); return; }
@@ -1569,6 +1581,7 @@ const win32hle_shim win32hle_gdidc[] = {
     { "UnrealizeObject", g_UnrealizeObject }, { "TranslateCharsetInfo", g_TranslateCharsetInfo },
     { "GetCharWidthA", g_GetCharWidth_impl }, { "GetCharWidthW", g_GetCharWidth_impl },
     { "GetCharWidth32A", g_GetCharWidth_impl }, { "GetCharWidth32W", g_GetCharWidth_impl },
+    { "GetCharABCWidthsA", g_GetCharABCWidthsA },
     { "GetCharABCWidthsFloatA", g_GetCharABCWidthsFloatA },
     { "GetCharacterPlacementW", g_GetCharacterPlacementW },
     { "GetOutlineTextMetricsA", g_GetOutlineTextMetricsA },
@@ -1578,7 +1591,7 @@ const win32hle_shim win32hle_gdidc[] = {
     { "MaskBlt", g_MaskBlt }, { "CreateDCA", g_CreateDCA },
     { "CreateHalftonePalette", g_CreateHalftonePalette }, { "SetAbortProc", g_SetAbortProc },
     { "CreateEnhMetaFileA", g_CreateEnhMetaFileA }, { "CloseEnhMetaFile", g_CloseEnhMetaFile },
-    { "DeleteEnhMetaFile", g_DeleteEnhMetaFile }, { "CopyEnhMetaFileA", g_CopyEnhMetaFileA },
+    { "DeleteEnhMetaFile", g_DeleteEnhMetaFile }, { "DeleteMetaFile", g_DeleteEnhMetaFile }, { "CopyEnhMetaFileA", g_CopyEnhMetaFileA },
     { "PlayEnhMetaFile", g_PlayEnhMetaFile }, { "GetEnhMetaFileBits", g_GetEnhMetaFileBits },
     { "SetEnhMetaFileBits", g_SetEnhMetaFileBits }, { "GetEnhMetaFileHeader", g_GetEnhMetaFileHeader },
     { "GetEnhMetaFileDescriptionA", g_GetEnhMetaFileDescriptionA },

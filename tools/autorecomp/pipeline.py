@@ -31,7 +31,7 @@ for _sub in ("pe", "disasm", "lift"):
 
 from pe_analyze import analyze_pe, build_iat_map  # noqa: E402
 from translator import (MAX_UNIT_BYTES, discover_functions,  # noqa: E402
-                        generate_recomp_files)
+                        generate_recomp_files, make_read_va)
 
 from . import highlevel  # noqa: E402
 from . import projectgen  # noqa: E402
@@ -428,11 +428,23 @@ class Pipeline:
             for m in self.highlevel_modules for fn in m["functions"]
         }
         replaced = [a for a in self.highlevel_by_address if a in self.functions]
+        readers = [make_read_va(self.pe_data, self.info)]
+        for comp in self.companions:
+            readers.append(make_read_va(comp["path"].read_bytes(), comp["info"]))
+
+        def combined_read_va(va, n):
+            for r in readers:
+                data = r(va, n)
+                if data:
+                    return data
+            return b""
+
         with contextlib.redirect_stdout(buf):
             lifted = generate_recomp_files(
                 self.functions, self.iat_map, str(gen_dir),
                 split_size=self.split, max_unit_bytes=self.split_bytes,
-                highlevel={a: self.highlevel_by_address[a] for a in replaced})
+                highlevel={a: self.highlevel_by_address[a] for a in replaced},
+                read_va=combined_read_va)
         log_path.write_text(buf.getvalue())
         self.lifted = lifted
 

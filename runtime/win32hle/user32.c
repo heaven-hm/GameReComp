@@ -2477,6 +2477,29 @@ static void u_LoadAcceleratorsA(void) {                  /* (hinst, name) */
 }
 /* DestroyAcceleratorTable(haccel): release the table LoadAcceleratorsA made.
  * TRUE when it was one of ours, FALSE otherwise, as Windows answers. */
+static void u_CreateAcceleratorTableA(void) {          /* (ACCEL *paccel, int cAccel) */
+    uint32_t src = A32(0); int count = (int)A32(1);
+    if (!src || count <= 0) { hle_set_last_error(87); RET(0, 2); }
+    int slot = -1;
+    for (int i = 0; i < g_naccel; i++) if (!g_accel[i].handle) { slot = i; break; }
+    if (slot < 0) {
+        if (g_naccel >= (int)(sizeof g_accel / sizeof g_accel[0])) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+        slot = g_naccel++;
+    }
+    if (count > MAX_ACCEL_ENTRIES) count = MAX_ACCEL_ENTRIES;
+    accel_entry *items = (accel_entry *)calloc((size_t)count, sizeof *items);
+    if (!items) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(0, 2); }
+    for (int i = 0; i < count; i++) {
+        uint32_t e = src + (uint32_t)i * 6u;             /* ACCEL: fVirt(1), pad(1), key(2), cmd(2) */
+        items[i].fVirt = MEM8(e);
+        items[i].key = (uint16_t)(MEM8(e + 2) | (MEM8(e + 3) << 8));
+        items[i].cmd = (uint16_t)(MEM8(e + 4) | (MEM8(e + 5) << 8));
+    }
+    g_accel[slot].handle = g_accel_next++;
+    g_accel[slot].n = count;
+    g_accel[slot].items = items;
+    RET(g_accel[slot].handle, 2);
+}
 static void u_DestroyAcceleratorTable(void) {
     uint32_t h = A32(0);
     for (int i = 0; i < g_naccel; i++)
@@ -2605,14 +2628,27 @@ static void menu_add(menu_t *m, uint32_t flags, uint32_t id_or_sub, const char *
     if (flags & MF_POPUP) it->sub = id_or_sub; else it->id = id_or_sub;
     if (text && !(flags & MF_SEPARATOR)) snprintf(it->text, sizeof it->text, "%s", text);
 }
-static mitem *menu_find(menu_t *m, uint32_t id, uint32_t flags) {
+static mitem *menu_find_owner(menu_t *m, uint32_t id, uint32_t flags, menu_t **owner) {
     if (!m) return NULL;
-    if (flags & MF_BYPOSITION) return (int)id < m->n ? &m->it[id] : NULL;
+    if (flags & MF_BYPOSITION) {
+        if (id >= (uint32_t)m->n) return NULL;
+        if (owner) *owner = m;
+        return &m->it[id];
+    }
     for (int i = 0; i < m->n; i++) {
-        if (!m->it[i].sub && m->it[i].id == id) return &m->it[i];
-        if (m->it[i].sub) { mitem *r = menu_find(MENU(m->it[i].sub), id, flags); if (r) return r; }
+        if (!m->it[i].sub && m->it[i].id == id) {
+            if (owner) *owner = m;
+            return &m->it[i];
+        }
+        if (m->it[i].sub) {
+            mitem *r = menu_find_owner(MENU(m->it[i].sub), id, flags, owner);
+            if (r) return r;
+        }
     }
     return NULL;
+}
+static mitem *menu_find(menu_t *m, uint32_t id, uint32_t flags) {
+    return menu_find_owner(m, id, flags, NULL);
 }
 /* parse one level of a classic MENU template (UTF-16 text), returning a menu. */
 static uint32_t parse_menu(const uint8_t **pp) {
@@ -2645,10 +2681,28 @@ static void u_AppendMenuA(void) {
 }
 static void u_InsertMenuA(void) {
     menu_t *m = MENU(A32(0));
-    uint32_t fl = A32(2);
+    uint32_t pos = A32(1), fl = A32(2), id_or_sub = A32(3);
     const char *t = (fl & (0x4u | 0x100u | MF_SEPARATOR)) ? NULL : ASTR(4);
-    menu_add(m, fl, A32(3), t);
-    RET(m ? 1u : 0u, 5);
+    if (!m) { RET(0, 5); return; }
+    menu_t *owner = NULL;
+    int idx = -1;
+    if (fl & MF_BYPOSITION) {
+        if (pos < (uint32_t)m->n) { owner = m; idx = (int)pos; }
+    } else if (pos != 0xFFFFFFFFu) {
+        mitem *before = menu_find_owner(m, pos, 0, &owner);
+        if (before && owner) idx = (int)(before - owner->it);
+    }
+    if (owner && idx >= 0 && idx < owner->n && owner->n < 128) {
+        memmove(&owner->it[idx + 1], &owner->it[idx], (size_t)(owner->n - idx) * sizeof owner->it[0]);
+        memset(&owner->it[idx], 0, sizeof owner->it[idx]);
+        owner->it[idx].flags = fl & ~(MF_BYPOSITION | MF_END);
+        if (fl & MF_POPUP) owner->it[idx].sub = id_or_sub; else owner->it[idx].id = id_or_sub;
+        if (t && !(fl & MF_SEPARATOR)) snprintf(owner->it[idx].text, sizeof owner->it[idx].text, "%s", t);
+        owner->n++;
+    } else {
+        menu_add(m, fl, id_or_sub, t);
+    }
+    RET(1u, 5);
 }
 static void u_ModifyMenuA(void) {
     menu_t *m = MENU(A32(0));
@@ -2661,7 +2715,18 @@ static void u_ModifyMenuA(void) {
     }
     RET(it ? 1u : 0u, 5);
 }
-static void u_DeleteMenu(void)      { menu_t *m = MENU(A32(0)); mitem *it = menu_find(m, A32(1), A32(2)); if (it && m) { int i = (int)(it - m->it); memmove(&m->it[i], &m->it[i + 1], (size_t)(m->n - i - 1) * sizeof *it); m->n--; } RET(it ? 1u : 0u, 3); }
+static void u_DeleteMenu(void) {
+    menu_t *m = MENU(A32(0)), *owner = NULL;
+    mitem *it = menu_find_owner(m, A32(1), A32(2), &owner);
+    if (it && owner) {
+        int i = (int)(it - owner->it);
+        if (i >= 0 && i < owner->n) {
+            memmove(&owner->it[i], &owner->it[i + 1], (size_t)(owner->n - i - 1) * sizeof *it);
+            owner->n--;
+        }
+    }
+    RET(it ? 1u : 0u, 3);
+}
 static void u_RemoveMenu(void)      { u_DeleteMenu(); }
 static void u_GetMenuItemCount(void){ menu_t *m = MENU(A32(0)); RET(m ? (uint32_t)m->n : 0xFFFFFFFFu, 1); }
 static void u_GetSubMenu(void)      { menu_t *m = MENU(A32(0)); int p = (int)A32(1); RET(m && p >= 0 && p < m->n ? m->it[p].sub : 0u, 2); }
@@ -3211,6 +3276,29 @@ static void u_TabbedTextOutA(void) {
     RET(((cnt * 7u) & 0xFFFFu) | (13u << 16), 8);
 }
 
+static void u_EnumDisplaySettingsA(void) {             /* (lpszDeviceName, iModeNum, lpDevMode) */
+    uint32_t mode = A32(1), dm = A32(2);
+    if (!dm) { RET(0, 3); return; }
+    static const int k_modes[][2] = { {640, 480}, {800, 600}, {1024, 768}, {1280, 720}, {1920, 1080} };
+    int w = g_screen_w > 0 ? g_screen_w : 640, h = g_screen_h > 0 ? g_screen_h : 480;
+    if (mode != 0xFFFFFFFFu && mode != 0xFFFFFFFEu) {
+        size_t n = sizeof k_modes / sizeof k_modes[0];
+        if (mode >= n) { RET(0, 3); return; }
+        w = k_modes[mode][0];
+        h = k_modes[mode][1];
+    }
+    uint16_t sz = MEM16(dm + 36);
+    if (sz < 124u) sz = 156u;
+    memset(hle_ptr(dm), 0, sz);
+    memcpy(hle_ptr(dm), "DISPLAY", 8);
+    MEM16(dm + 36) = sz;                                 /* dmSize */
+    MEM32(dm + 40) = 0x1C0000u | 0x400000u;              /* DM_BITSPERPEL|DM_PELSWIDTH|DM_PELSHEIGHT|DM_DISPLAYFREQUENCY */
+    MEM32(dm + 104) = 32u;                               /* dmBitsPerPel */
+    MEM32(dm + 108) = (uint32_t)w;                       /* dmPelsWidth */
+    MEM32(dm + 112) = (uint32_t)h;                       /* dmPelsHeight */
+    MEM32(dm + 120) = 60u;                               /* dmDisplayFrequency */
+    RET(1, 3);
+}
 static void u_GetMonitorInfoA(void) {
     uint32_t mi = A32(1);
     if (!mi) { RET(0, 2); return; }
@@ -3342,7 +3430,7 @@ const win32hle_shim win32hle_user32[] = {
     { "ChooseFontA", u_ChooseFontA }, { "ChooseFontW", u_ChooseFontW },
     { "PrintDlgA", u_PrintDlgA }, { "PrintDlgW", u_PrintDlgW },
     { "CommDlgExtendedError", u_CommDlgExtendedError },
-    { "DestroyAcceleratorTable", u_DestroyAcceleratorTable },
+    { "CreateAcceleratorTableA", u_CreateAcceleratorTableA }, { "DestroyAcceleratorTable", u_DestroyAcceleratorTable },
     { "SetScrollInfo", u_SetScrollInfo }, { "GetScrollInfo", u_GetScrollInfo },
     { "LoadMenuA", u_LoadMenuA }, { "TranslateAcceleratorA", u_TranslateAcceleratorA },
     { "CreateMenu", u_CreateMenu }, { "CreatePopupMenu", u_CreatePopupMenu }, { "DestroyMenu", u_DestroyMenu },
@@ -3433,6 +3521,7 @@ const win32hle_shim win32hle_user32[] = {
     { "ReplyMessage", u_ReplyMessage }, { "MapDialogRect", u_MapDialogRect },
     { "GetMenuDefaultItem", u_GetMenuDefaultItem }, { "TabbedTextOutA", u_TabbedTextOutA },
     { "ToAsciiEx", u_ToAsciiEx },
+    { "EnumDisplaySettingsA", u_EnumDisplaySettingsA },
     { "GetMonitorInfoA", u_GetMonitorInfoA }, { "EnumDisplayMonitors", u_EnumDisplayMonitors },
     { "MonitorFromWindow", u_MonitorFromWindow }, { "MonitorFromRect", u_MonitorFromRect },
     { "MonitorFromPoint", u_MonitorFromPoint },

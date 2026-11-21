@@ -32,9 +32,12 @@ static void ok(const char *what, int cond) {
 
 /* Resolved shim VAs, filled in main() before any guest runs. */
 static uint32_t VA_HeapAlloc, VA_lstrlenA, VA_GetTickCount;
-static uint32_t VA_CreateDIBSection, VA_StretchDIBits;
-#define VA_ADD 0x00401000u   /* guest_add's dispatch VA (callback target) */
-static int g_eh_landed;
+static uint32_t VA_CreateDIBSection, VA_StretchDIBits, VA_RaiseException;
+#define VA_ADD       0x00401000u   /* guest_add's dispatch VA (callback target) */
+#define VA_D_TEST    0x00403000u   /* synthetic DMD SEH test entry */
+#define VA_D_FINALLY 0x00403100u   /* synthetic DMD finally block */
+static int g_eh_landed, g_d_finally_ran, g_d_caught;
+static uint32_t g_d_stub_va, g_d_exc_obj, g_d_args_va;
 
 /* host framebuffer the DIB blits land on, and the guest's drawing scratch */
 #define FB_W 8
@@ -132,27 +135,109 @@ static void guest_eh_checkpoint(void) {
     RECOMP_EH_LEAVE();
 }
 
+static void d_finally_fn(void) {
+    GUEST_PROLOGUE(VA_D_FINALLY);
+    g_d_finally_ran++;
+    esp += 4u;
+}
+
+static void guest_d_eh_test(void) {
+    GUEST_PROLOGUE(VA_D_TEST);
+    uint32_t _itail_tgt = 0;
+    RECOMP_EH_ENTER();
+    PUSH32(esp, ebp);
+    ebp = esp;
+    uint32_t prev = MEM32(FS_BASE);
+    PUSH32(esp, 1u);                  /* active scope 1 (inner finally -> scope 0 catch) */
+    PUSH32(esp, g_d_stub_va);
+    PUSH32(esp, prev);
+    MEM32(FS_BASE) = esp;
+    esp -= 0x20u;
+    PUSH32(esp, g_d_args_va);
+    PUSH32(esp, 1u);
+    PUSH32(esp, 1u);
+    PUSH32(esp, 0xE0440001u);
+    RECOMP_ICALL(VA_RaiseException);
+    goto _d_done;
+  _ljump:
+    switch (_itail_tgt) {
+      case 0x00403080u: goto L_00403080;
+      default: goto _d_done;
+    }
+  L_00403080:
+    /* Never read non-volatile locals modified after setjmp (C longjmp rule). */
+    g_d_caught = (MEM32(ebp - 0x1Cu) == g_d_exc_obj &&
+                  MEM32(FS_BASE) == (ebp - 12u) &&
+                  MEM32(ebp - 4u) == 0xFFFFFFFFu &&
+                  esp == ebp - 0x2Cu);
+    MEM32(FS_BASE) = MEM32(ebp - 12u);
+    esp = ebp;
+    ebp = POP32_VAL(esp);
+  _d_done:
+    RECOMP_EH_LEAVE();
+}
+
 /* Dispatch table the host searches (sorted by address). guest_add is reachable
  * as a callback through hle_call_guest. */
 const recomp_dispatch_entry_t recomp_dispatch_table[] = {
     { VA_ADD, guest_add },
+    { VA_D_TEST, guest_d_eh_test },
+    { VA_D_FINALLY, d_finally_fn },
 };
-const uint32_t recomp_dispatch_count = 1;
+const uint32_t recomp_dispatch_count = 3;
 
 int main(void) {
     win32hle_register(win32hle_kernel32);
+    win32hle_register(win32hle_kernel32_crt);
     win32hle_register(win32hle_gdi32);
+    win32hle_register(win32hle_user32);
     VA_HeapAlloc       = hle_resolve("HeapAlloc");
     VA_lstrlenA        = hle_resolve("lstrlenA");
     VA_GetTickCount    = hle_resolve("GetTickCount");
     VA_CreateDIBSection= hle_resolve("CreateDIBSection");
     VA_StretchDIBits   = hle_resolve("StretchDIBits");
+    VA_RaiseException  = hle_resolve("RaiseException");
     ok("HeapAlloc resolves",    VA_HeapAlloc != 0);
     ok("lstrlenA resolves",     VA_lstrlenA != 0);
     ok("GetTickCount resolves", VA_GetTickCount != 0);
     ok("gdi32 resolves",        VA_CreateDIBSection != 0 && VA_StretchDIBits != 0);
     ok("unknown import is 0",   hle_resolve("NoSuchApi") == 0);
     ok("hle_name round-trips",  hle_name(VA_HeapAlloc) && !strcmp(hle_name(VA_HeapAlloc), "HeapAlloc"));
+
+    /* Menu submenu removal + positional insertion regression (OrgView pattern):
+     * RemoveMenu/DeleteMenu on a parent handle referencing a submenu item ID
+     * must mutate the owning submenu rather than indexing parent->it out of bounds. */
+    {
+        uint32_t VA_CreateMenu = hle_resolve("CreateMenu");
+        uint32_t VA_CreatePopupMenu = hle_resolve("CreatePopupMenu");
+        uint32_t VA_AppendMenuA = hle_resolve("AppendMenuA");
+        uint32_t VA_InsertMenuA = hle_resolve("InsertMenuA");
+        uint32_t VA_RemoveMenu = hle_resolve("RemoveMenu");
+        uint32_t VA_DeleteMenu = hle_resolve("DeleteMenu");
+        uint32_t VA_GetMenuItemCount = hle_resolve("GetMenuItemCount");
+        uint32_t VA_GetMenuItemID = hle_resolve("GetMenuItemID");
+        uint32_t VA_DestroyMenu = hle_resolve("DestroyMenu");
+        uint32_t t1 = hle_guest_strdup("File"), t2 = hle_guest_strdup("A"), t3 = hle_guest_strdup("B"), t4 = hle_guest_strdup("C");
+        mach_enter();
+        uint32_t hm = hle_call_guest(VA_CreateMenu, 0, NULL);
+        uint32_t hs = hle_call_guest(VA_CreatePopupMenu, 0, NULL);
+        hle_call_guest(VA_AppendMenuA, 4, (uint32_t[]){ hm, 0x10u, hs, t1 }); /* MF_POPUP */
+        hle_call_guest(VA_AppendMenuA, 4, (uint32_t[]){ hs, 0u, 0x9C7Eu, t2 });
+        hle_call_guest(VA_AppendMenuA, 4, (uint32_t[]){ hs, 0u, 0x9C80u, t3 });
+        hle_call_guest(VA_InsertMenuA, 5, (uint32_t[]){ hs, 1u, 0x400u /* MF_BYPOSITION */, 0x9C7Fu, t4 });
+        uint32_t cnt_before = hle_call_guest(VA_GetMenuItemCount, 1, (uint32_t[]){ hs });
+        uint32_t mid_id = hle_call_guest(VA_GetMenuItemID, 2, (uint32_t[]){ hs, 1u });
+        uint32_t rm_ok = hle_call_guest(VA_RemoveMenu, 3, (uint32_t[]){ hm, 0x9C7Eu, 0u });
+        uint32_t del_ok = hle_call_guest(VA_DeleteMenu, 3, (uint32_t[]){ hm, 0x9C80u, 0u });
+        uint32_t cnt_after = hle_call_guest(VA_GetMenuItemCount, 1, (uint32_t[]){ hs });
+        uint32_t rem_id = hle_call_guest(VA_GetMenuItemID, 2, (uint32_t[]){ hs, 0u });
+        hle_call_guest(VA_DestroyMenu, 1, (uint32_t[]){ hs });
+        hle_call_guest(VA_DestroyMenu, 1, (uint32_t[]){ hm });
+        mach_leave();
+        ok("submenu RemoveMenu/DeleteMenu/InsertMenuA",
+           hm && hs && cnt_before == 3 && mid_id == 0x9C7Fu && rm_ok == 1 && del_ok == 1 &&
+           cnt_after == 1 && rem_id == 0x9C7Fu);
+    }
 
     /* BITMAPINFOHEADER: 4x4, top-down (negative height), 32bpp BI_RGB. */
     g_bmi = (uint8_t *)hle_alloc(40);
@@ -195,6 +280,42 @@ int main(void) {
 
     guest_eh_checkpoint();
     ok("guest EH checkpoint resumed at its continuation", g_eh_landed);
+
+    /* DMD 0xE0440001 throw -> inner finally -> ClassInfo base match -> catch */
+    {
+        uint32_t base_ci = hle_va(hle_alloc(0x40));
+        uint32_t sub_ci  = hle_va(hle_alloc(0x40));
+        uint32_t vtbl    = hle_va(hle_alloc(8));
+        uint32_t tbl     = hle_va(hle_alloc(64));
+        uint8_t *stub    = (uint8_t *)hle_alloc(16);
+        g_d_stub_va = hle_va(stub);
+        g_d_exc_obj = hle_va(hle_alloc(16));
+        g_d_args_va = hle_va(hle_alloc(8));
+        MEM32(sub_ci + 0x28u) = base_ci;         /* ClassInfo.base */
+        MEM32(vtbl) = sub_ci;                    /* vtbl[0] = ClassInfo */
+        MEM32(g_d_exc_obj) = vtbl;               /* obj->vptr = vtbl */
+        MEM32(g_d_args_va) = g_d_exc_obj;        /* args[0] = obj */
+        stub[0] = 0xB8u; memcpy(stub + 1, &tbl, 4); stub[5] = 0xE9u;
+        MEM32(tbl + 0u) = VA_D_TEST;             /* fptr */
+        MEM32(tbl + 4u) = 0x2Cu;                 /* espoffset (0xC record + 0x20 locals) */
+        MEM32(tbl + 8u) = 0x60u;                 /* retoffset */
+        /* index 0: outer catch(base_ci, bpoff=-0x1c, catch=0x00403080) at cioff=36 */
+        MEM32(tbl + 12u) = 0xFFFFFFFFu;
+        MEM32(tbl + 16u) = 36u;
+        MEM32(tbl + 20u) = 0u;
+        /* index 1: inner try-finally (prev=0, finally=VA_D_FINALLY) */
+        MEM32(tbl + 24u) = 0u;
+        MEM32(tbl + 28u) = 0u;
+        MEM32(tbl + 32u) = VA_D_FINALLY;
+        /* DCatchInfo at +36 */
+        MEM32(tbl + 36u) = 1u;
+        MEM32(tbl + 40u) = base_ci;
+        MEM32(tbl + 44u) = (uint32_t)(-0x1C);
+        MEM32(tbl + 48u) = 0x00403080u;
+        guest_d_eh_test();
+        ok("DMD RaiseException(0xE0440001) ran finally, matched base ClassInfo, resumed catch",
+           g_d_finally_ran == 1 && g_d_caught == 1);
+    }
 
     mach_leave();
 

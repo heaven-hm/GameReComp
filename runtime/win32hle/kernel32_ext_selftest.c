@@ -194,6 +194,31 @@ int main(void) {
         ok("guest format: a long spec stays in its buffer", out[0] == '7');
     }
 
+    /* ToolhelpW and foreign-process memory helpers fail closed cleanly, while
+     * current-process pseudo-handle VirtualAllocEx/WriteProcessMemory/VirtualFreeEx work. */
+    {
+        uint32_t VA_VAE = hle_resolve("VirtualAllocEx");
+        uint32_t VA_VFE = hle_resolve("VirtualFreeEx");
+        uint32_t VA_WPM = hle_resolve("WriteProcessMemory");
+        uint32_t VA_P32W = hle_resolve("Process32FirstW");
+        uint32_t VA_M32W = hle_resolve("Module32FirstW");
+        uint32_t VA_STC = hle_resolve("SetThreadContext");
+        ok("ext process/toolhelp shims resolve", VA_VAE && VA_VFE && VA_WPM && VA_P32W && VA_M32W && VA_STC);
+        uint32_t src = hle_va(hle_alloc(16)), written = hle_va(hle_alloc(4));
+        MEM32(src) = 0xCAFEBABEu;
+        mach_enter();
+        uint32_t rva = hle_call_guest(VA_VAE, 5, (uint32_t[]){ 0xFFFFFFFFu, 0u, 4096u, 0x3000u, 0x04u });
+        uint32_t w_ok = rva ? hle_call_guest(VA_WPM, 5, (uint32_t[]){ 0xFFFFFFFFu, rva, src, 4u, written }) : 0;
+        uint32_t w_for = rva ? hle_call_guest(VA_WPM, 5, (uint32_t[]){ 0x1234u, rva, src, 4u, written }) : 1;
+        uint32_t val = rva ? MEM32(rva) : 0;
+        uint32_t f_ok = rva ? hle_call_guest(VA_VFE, 4, (uint32_t[]){ 0xFFFFFFFFu, rva, 0u, 0x8000u }) : 0;
+        uint32_t p32 = hle_call_guest(VA_P32W, 2, (uint32_t[]){ 0xFFFFFFFFu, src });
+        uint32_t stc = hle_call_guest(VA_STC, 2, (uint32_t[]){ 0u, src });
+        mach_leave();
+        ok("VirtualAllocEx/WriteProcessMemory/VirtualFreeEx round-trip self and fail-closed foreign",
+           rva != 0 && w_ok == 1 && val == 0xCAFEBABEu && w_for == 0 && f_ok == 1 && p32 == 0 && stc == 0);
+    }
+
     if (fails == 0) printf("kernel32_ext_selftest: all checks passed\n");
     return fails != 0;
 }

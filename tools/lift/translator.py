@@ -25,6 +25,7 @@ for _sub in ('pe', 'disasm', 'lift'):
 from pe_analyze import analyze_pe, build_iat_map, read_bytes_at_va, export_json
 from disasm32 import Disassembler, Function
 from lift32 import Lifter
+import eh32
 
 
 def load_pe(filepath: str):
@@ -44,6 +45,28 @@ def load_pe(filepath: str):
     return info, pe_data, iat_map
 
 
+def make_read_va(pe_data: bytes, info):
+    """Build a read_va(va, size) reader over a PE image's sections in memory."""
+    base = info.image_base
+    spans = []
+    for s in getattr(info, 'sections', ()):
+        sva = base + s.virtual_address
+        vsz = max(s.virtual_size or 0, s.raw_size or 0)
+        spans.append((sva, sva + vsz, s.raw_offset, s.raw_offset + s.raw_size))
+
+    def read_va(va: int, n: int) -> bytes:
+        for lo, hi, rlo, rhi in spans:
+            if lo <= va < hi:
+                off = rlo + (va - lo)
+                if off >= rhi:
+                    return b'\x00' * n
+                chunk = pe_data[off:min(off + n, rhi)]
+                return chunk if len(chunk) == n else chunk + b'\x00' * (n - len(chunk))
+        return b''
+
+    return read_va
+
+
 def discover_functions(pe_data: bytes, info, iat_map: dict) -> dict:
     """Discover all functions in the PE's code section.
 
@@ -59,6 +82,47 @@ def discover_functions(pe_data: bytes, info, iat_map: dict) -> dict:
     seeds = [info.image_base + info.entry_point_rva]
     seeds += [info.image_base + e.rva for e in getattr(info, 'exports', []) if e.rva]
     functions = disasm.find_functions(info.code_start, info.code_end, iat_map, seeds=seeds)
+
+    # Also recover isolated EH targets (DMD finally blocks / split catch blocks /
+    # MSVC catch funclets) reachable only through SEH metadata tables.
+    read_va = make_read_va(pe_data, info)
+    from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+    extra_work = []
+    for func in list(functions.values()):
+        blk = func.blocks.get(func.address)
+        if not blk or not blk.instructions:
+            continue
+        aux = eh32.aux_code_targets(md, read_va, blk.instructions[:eh32.PROLOGUE_WINDOW], func.address)
+        if not aux:
+            continue
+        own_insns = {ins.address for b in func.blocks.values() for ins in b.instructions}
+        for tgt in aux:
+            if not (info.code_start <= tgt < info.code_end) or tgt in functions:
+                continue
+            # If a catch continuation sits cleanly inside its parent body (and is
+            # not a standalone finally/funclet), lift32 emits L_<addr> in-place.
+            if tgt in own_insns:
+                _, finallies = (set(), set())
+                h = eh32._installed_handler(blk.instructions[:eh32.PROLOGUE_WINDOW])
+                tbl = eh32.dmd_handlertable(read_va, h, func.address) if h else None
+                if tbl:
+                    _, finallies = eh32.dmd_targets(read_va, tbl)
+                if tgt not in finallies and eh32.funcinfo(read_va, h) is None:
+                    continue
+            extra_work.append(tgt)
+    seen_extra = set()
+    while extra_work:
+        tgt = extra_work.pop()
+        if tgt in seen_extra or tgt in functions or not (info.code_start <= tgt < info.code_end):
+            continue
+        seen_extra.add(tgt)
+        fn = disasm.disassemble_function(tgt, iat_map)
+        if fn and fn.blocks:
+            functions[tgt] = fn
+            for callee in getattr(fn, 'calls_to', ()):
+                if callee not in functions and callee not in seen_extra:
+                    extra_work.append(callee)
     return functions
 
 
@@ -97,7 +161,7 @@ def _write_unit(filepath, chunk, first_index, last_index):
 def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
                           split_size: int = 1000, func_names: dict = None,
                           max_unit_bytes: int = MAX_UNIT_BYTES,
-                          highlevel: dict = None):
+                          highlevel: dict = None, read_va=None):
     """
     Generate recompiled C source files from discovered functions.
 
@@ -123,6 +187,10 @@ def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
     # undeclared names fail the build; the lifted set makes them ICALLs.
     lifter = Lifter(iat_map=iat_map, func_names=func_names or {},
                     lifted=set(functions.keys()))
+    eh_md = None
+    if read_va is not None:
+        from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+        eh_md = Cs(CS_ARCH_X86, CS_MODE_32)
 
     sorted_funcs = sorted(functions.values(), key=lambda f: f.address)
     total = len(sorted_funcs)
@@ -171,7 +239,13 @@ def generate_recomp_files(functions: dict, iat_map: dict, output_dir: str,
         if high:
             func.name = high["low_level_symbol"]
         try:
-            code = lifter.lift_function(func)
+            eh_resume = None
+            if read_va is not None and eh_md is not None and not high:
+                blk = func.blocks.get(func.address) if hasattr(func, 'blocks') else None
+                if blk and blk.instructions:
+                    eh_resume = eh32.resume_points(
+                        eh_md, read_va, blk.instructions[:eh32.PROLOGUE_WINDOW], func.address)
+            code = lifter.lift_function(func, eh_resume=eh_resume) if eh_resume else lifter.lift_function(func)
             name = func.name
         except Exception as e:
             # An empty stub would let the rebuilt game run with a

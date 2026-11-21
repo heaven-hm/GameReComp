@@ -933,6 +933,29 @@ static void k_SetProcessAffinityMask(void) { RET(1, 2); }
 static void k_CreateToolhelp32Snapshot(void) { hle_set_last_error(5); RET(INVALID_HANDLE, 2); }   /* ERROR_ACCESS_DENIED */
 static void k_Process32First(void) { hle_set_last_error(18); RET(0, 2); }                     /* ERROR_NO_MORE_FILES */
 static void k_OpenProcess(void) { hle_set_last_error(5); RET(0, 3); }
+static void k_VirtualAllocEx(void) {                     /* (hProc, addr, size, type, prot) */
+    if (A32(0) != 0xFFFFFFFFu) { hle_set_last_error(5); RET(0, 5); }
+    RET(hle_virtual_alloc(A32(1), A32(2), A32(3), A32(4)), 5);
+}
+static void k_VirtualFreeEx(void) {                      /* (hProc, addr, size, type) */
+    if (A32(0) != 0xFFFFFFFFu) { hle_set_last_error(5); RET(0, 4); }
+    RET((uint32_t)hle_virtual_free(A32(1), A32(2), A32(3)), 4);
+}
+static void k_WriteProcessMemory(void) {                 /* (hProc, base, buf, size, &written) */
+    uint32_t hp = A32(0), dst = A32(1), sz = A32(3), out = A32(4);
+    const void *src = APTR(2);
+    if (out) MEM32(out) = 0;
+    if (hp != 0xFFFFFFFFu) { hle_set_last_error(5); RET(0, 5); }
+    void *dp = dst ? hle_ptr(dst) : NULL;
+    if (!dp || !src) { hle_set_last_error(87); RET(0, 5); }
+    if (sz) memcpy(dp, src, sz);
+    if (out) MEM32(out) = sz;
+    RET(1, 5);
+}
+static void k_SetThreadContext(void) {                   /* (hThread, &CONTEXT): fail closed */
+    hle_set_last_error(50);                              /* ERROR_NOT_SUPPORTED */
+    RET(0, 2);
+}
 
 /* ---- additional filesystem, pipe, mapping, and volume shims ---- */
 static void k_DeleteFileW(void) {
@@ -1052,7 +1075,12 @@ static void k_PeekNamedPipe(void)    { hle_set_last_error(ERROR_INVALID_HANDLE);
 const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetProcessAffinityMask", k_GetProcessAffinityMask }, { "SetProcessAffinityMask", k_SetProcessAffinityMask },
     { "CreateToolhelp32Snapshot", k_CreateToolhelp32Snapshot }, { "Process32First", k_Process32First },
-    { "Process32Next", k_Process32First }, { "OpenProcess", k_OpenProcess },
+    { "Process32Next", k_Process32First }, { "Process32FirstW", k_Process32First },
+    { "Process32NextW", k_Process32First }, { "Module32First", k_Process32First },
+    { "Module32Next", k_Process32First }, { "Module32FirstW", k_Process32First },
+    { "Module32NextW", k_Process32First }, { "OpenProcess", k_OpenProcess },
+    { "VirtualAllocEx", k_VirtualAllocEx }, { "VirtualFreeEx", k_VirtualFreeEx },
+    { "WriteProcessMemory", k_WriteProcessMemory }, { "SetThreadContext", k_SetThreadContext },
     { "CreateFileMappingA", k_CreateFileMappingA }, { "OpenFileMappingA", k_OpenFileMappingA },
     { "MapViewOfFile", k_MapViewOfFile }, { "UnmapViewOfFile", k_UnmapViewOfFile },
     { "CreatePipe", k_CreatePipe }, { "CreateNamedPipeA", k_CreateNamedPipeA },

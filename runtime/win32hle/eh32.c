@@ -192,6 +192,107 @@ int hle_eh_cxx_throw(uint32_t object, uint32_t throw_info) {
     return dispatch_cxx(object, throw_info);
 }
 
+/* Digital Mars D structured exception tables (DMD 1.x): handler stub is
+ * `mov eax, DHandlerTable; jmp _d_framehandler`, and table layout is
+ * { fptr, espoffset, retoffset } followed by DHandlerInfo[]:
+ * { prev_index, cioffset, finally_code } and DCatchInfo { ncatches, DCatchBlock[] }
+ * where DCatchBlock is { ClassInfo*, bpoffset, catch_code }. */
+static int dmd_isbaseof(uint32_t cls, uint32_t base) {
+    if (!cls || !base) return 0;
+    for (unsigned depth = 0; cls && depth < 64u; depth++) {
+        if (cls == base) return 1;
+        cls = MEM32(cls + 0x28u);
+    }
+    return 0;
+}
+
+static uint32_t dmd_table(uint32_t handler) {
+    if (handler < 0x10000u) return 0;
+    const uint8_t *p = hle_ptr(handler);
+    if (!p || p[0] != 0xB8u || (p[5] != 0xE9u && !(p[5] == 0xFFu && p[6] == 0x25u)))
+        return 0;
+    uint32_t tbl = read_u32_unaligned(handler + 1u);
+    if (tbl < 0x10000u) return 0;
+    uint32_t fptr = MEM32(tbl);
+    if (fptr == EH_MAGIC_VC6 || fptr == EH_MAGIC_VC7 || fptr == EH_MAGIC_VC8) return 0;
+    if (!recomp_lookup(fptr)) return 0;
+    uint32_t espoff = MEM32(tbl + 4u), retoff = MEM32(tbl + 8u);
+    if (espoff >= 0x100000u || retoff == 0u || retoff >= 0x100000u) return 0;
+    return tbl;
+}
+
+static int dmd_local_unwind(uint32_t record, uint32_t tbl, int stop_index) {
+    int idx = (int)MEM32(record + 8u);
+    for (unsigned steps = 0; idx != -1 && idx != stop_index; steps++) {
+        if (steps == EH_MAX_ITEMS || idx < 0 || idx >= 1024) return 0;
+        uint32_t ent = tbl + 12u + (uint32_t)idx * 12u;
+        int prev = (int)MEM32(ent);
+        uint32_t fva = MEM32(ent + 8u);
+        MEM32(record + 8u) = (uint32_t)prev;
+        if (fva) {
+            if (!recomp_lookup(fva)) return 0;
+            call_funclet(fva, record + 12u);
+        }
+        idx = prev;
+    }
+    return idx == stop_index;
+}
+
+int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va) {
+    if (code != 0xE0440001u || n_args < 1u || !args_va || !g_fs_base) return 0;
+    uint32_t exc_obj = MEM32(args_va);
+    if (!exc_obj) return 0;
+    uint32_t vtbl = MEM32(exc_obj);
+    uint32_t obj_ci = vtbl ? MEM32(vtbl) : 0u;
+    uint32_t top = MEM32(g_fs_base), record = top;
+    for (unsigned walked = 0; record != EH_END_CHAIN && walked < EH_MAX_CHAIN; walked++) {
+        if (!plausible_stack_record(record)) return 0;
+        uint32_t tbl = dmd_table(MEM32(record + 4u));
+        if (!tbl) { record = MEM32(record); continue; }
+        int idx = (int)MEM32(record + 8u);
+        for (unsigned s = 0; idx != -1 && s < EH_MAX_ITEMS; s++) {
+            if (idx < 0 || idx >= 1024) break;
+            uint32_t ent = tbl + 12u + (uint32_t)idx * 12u;
+            int prev = (int)MEM32(ent);
+            uint32_t cioff = MEM32(ent + 4u);
+            if (cioff >= 24u && cioff < 0x10000u) {
+                uint32_t ci = tbl + cioff;
+                uint32_t ncatches = MEM32(ci);
+                if (ncatches > 0u && ncatches <= 64u) {
+                    for (uint32_t c = 0; c < ncatches; c++) {
+                        uint32_t cb = ci + 4u + c * 12u;
+                        uint32_t wanted = MEM32(cb), catch_va = MEM32(cb + 8u);
+                        int32_t bpoff = (int32_t)MEM32(cb + 4u);
+                        if (!catch_va || !dmd_isbaseof(obj_ci, wanted)) continue;
+                        uint32_t ebp = record + 12u;
+                        recomp_ehframe_t *target_frame = NULL;
+                        for (recomp_ehframe_t *frame = g_eh_frames; frame; frame = frame->prev) {
+                            if (frame->entry_esp == ebp + 4u) { target_frame = frame; break; }
+                        }
+                        if (!target_frame) return 0;
+                        for (uint32_t above = top; above != record; above = MEM32(above)) {
+                            if (!plausible_stack_record(above)) return 0;
+                            uint32_t atbl = dmd_table(MEM32(above + 4u));
+                            if (atbl && !dmd_local_unwind(above, atbl, -1)) return 0;
+                        }
+                        if (!dmd_local_unwind(record, tbl, idx)) return 0;
+                        MEM32(g_fs_base) = record;
+                        MEM32(record + 8u) = (uint32_t)prev;
+                        MEM32(ebp + (uint32_t)bpoff) = exc_obj;
+                        g_ebp = ebp;
+                        g_esp = ebp - MEM32(tbl + 4u);
+                        recomp_eh_resume(target_frame, catch_va);
+                        return 0;
+                    }
+                }
+            }
+            idx = prev;
+        }
+        record = MEM32(record);
+    }
+    return 0;
+}
+
 void hle_eh_longjmp(uint32_t jump_buffer, uint32_t value) {
     if (!jump_buffer) return;
     uint32_t saved_esp = MEM32(jump_buffer + 16u);

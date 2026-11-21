@@ -52,6 +52,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <poll.h>
 #include <pthread.h>
 #include <sys/stat.h>
 #ifdef __APPLE__
@@ -571,6 +572,29 @@ static void c_ftell(void) {                          /* (stream) */
     long r = ftell(s->fp);
     if (r < 0) ms_seterrno(errno);
     RETC((uint32_t)(int32_t)r);
+}
+static void c_fgetpos(void) {                        /* (stream, fpos_t *pos) */
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(0));
+    uint32_t pva = A32(1);
+    if (!s || !pva) { ms_seterrno(s ? EINVAL : EBADF); RETC(0xFFFFFFFFu); }
+    off_t p = ftello(s->fp);
+    if (p < 0) { ms_seterrno(errno); RETC(0xFFFFFFFFu); }
+    uint64_t v = (uint64_t)(int64_t)p;
+    MEM32(pva) = (uint32_t)v;
+    MEM32(pva + 4u) = (uint32_t)(v >> 32);
+    RETC(0);
+}
+static void c_fsetpos(void) {                        /* (stream, const fpos_t *pos) */
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(0));
+    uint32_t pva = A32(1);
+    if (!s || !pva) { ms_seterrno(s ? EINVAL : EBADF); RETC(0xFFFFFFFFu); }
+    int64_t v = (int64_t)((uint64_t)MEM32(pva) | ((uint64_t)MEM32(pva + 4u) << 32));
+    int r = fseeko(s->fp, (off_t)v, SEEK_SET);
+    if (r != 0) ms_seterrno(errno);
+    ms_note_state(s);
+    RETC(r == 0 ? 0u : 0xFFFFFFFFu);
 }
 
 static void c_setbuf(void) {                         /* (stream, buf or NULL) */
@@ -1105,6 +1129,15 @@ static void c_memchr(void)  { const void *s = APTR(0); size_t n = A32(2); const 
 static void c_memcmp(void)  { const void *a = APTR(0), *b = APTR(1); size_t n = A32(2); RETC((!n || a == b) ? 0u : (!a || !b) ? (uint32_t)(int32_t)(a ? 1 : -1) : (uint32_t)(int32_t)memcmp(a, b, n)); }
 static int null_safe_cmp(const char *a, const char *b) { return a == b ? 0 : (a ? 1 : -1); }
 static void c_strlen(void)  { const char *s = ASTR(0); RETC(s ? (uint32_t)strlen(s) : 0u); }
+static void u_strnlen(void) { const char *s = ASTR(0); uint32_t m = A32(1); RETC(s ? (uint32_t)strnlen(s, m) : 0u); }
+static void c_strrev(void) {
+    char *s = ASTR(0);
+    if (s) {
+        size_t i = 0, j = strlen(s);
+        while (i + 1 < j) { char t = s[i]; s[i++] = s[--j]; s[j] = t; }
+    }
+    RETC(A32(0));
+}
 static void c_strcpy(void)  { char *d = ASTR(0); const char *s = ASTR(1); RETC(d ? hle_va(strcpy(d, s ? s : "")) : 0u); }
 static void c_strncpy(void) { char *d = ASTR(0); const char *s = ASTR(1); RETC(d ? hle_va(strncpy(d, s ? s : "", A32(2))) : 0u); }
 static void c_strcat(void)  { char *d = ASTR(0); const char *s = ASTR(1); RETC(d ? hle_va(strcat(d, s ? s : "")) : 0u); }
@@ -1112,6 +1145,7 @@ static void c_strncat(void) { char *d = ASTR(0); const char *s = ASTR(1); RETC(d
 static void c_strcmp(void)  { const char *a = ASTR(0), *b = ASTR(1); RETC((uint32_t)(int32_t)((!a || !b) ? null_safe_cmp(a, b) : strcmp(a, b))); }
 static void c_strncmp(void) { const char *a = ASTR(0), *b = ASTR(1); RETC((uint32_t)(int32_t)((!a || !b) ? null_safe_cmp(a, b) : strncmp(a, b, A32(2)))); }
 static void c_stricmp(void) { const char *a = ASTR(0), *b = ASTR(1); RETC((uint32_t)(int32_t)((!a || !b) ? null_safe_cmp(a, b) : strcasecmp(a, b))); }
+static void c_stricoll(void){ c_stricmp(); }
 static void c_strnicmp(void){ const char *a = ASTR(0), *b = ASTR(1); RETC((uint32_t)(int32_t)((!a || !b) ? null_safe_cmp(a, b) : strncasecmp(a, b, A32(2)))); }
 static void c_strchr(void)  { const char *s = ASTR(0); char *p = s ? strchr(s, (int)A32(1)) : NULL; RETC(p ? hle_va(p) : 0u); }
 static void c_strrchr(void) { const char *s = ASTR(0); char *p = s ? strrchr(s, (int)A32(1)) : NULL; RETC(p ? hle_va(p) : 0u); }
@@ -1200,6 +1234,30 @@ static void c_rand(void) {
     ms_init();
     g_rand = g_rand * 214013u + 2531011u;
     RETC((g_rand >> 16) & 0x7FFFu);
+}
+static void u_rand_s(void) {                         /* (unsigned int *randomValue) -> errno_t */
+    ms_init();
+    uint32_t out = A32(0);
+    if (!out) { ms_seterrno(EINVAL); RETC(EINVAL); }
+    uint32_t val = 0;
+#ifdef __APPLE__
+    val = arc4random();
+#else
+    int fd = open("/dev/urandom", O_RDONLY);
+    ssize_t got = fd >= 0 ? read(fd, &val, sizeof val) : -1;
+    if (fd >= 0) close(fd);
+    if (got != (ssize_t)sizeof val) {
+        g_rand = g_rand * 214013u + 2531011u;
+        val = (g_rand << 16) ^ (g_rand * 2654435761u);
+    }
+#endif
+    MEM32(out) = val;
+    RETC(0);
+}
+static void c_fpreset(void) {
+    g_fpu_cw = 0x027Fu;
+    g_fp_top = 0;
+    RETCV();
 }
 
 /* ================================================================= math
@@ -2107,6 +2165,152 @@ static void c_wcsnicmp(void) {
     }
     RETC(0);
 }
+static void c_wcsicmp(void) {
+    const uint16_t *a = (const uint16_t *)APTR(0), *b = (const uint16_t *)APTR(1);
+    if (!a || !b) RETC((uint32_t)(int32_t)(a == b ? 0 : (a ? 1 : -1)));
+    for (size_t i = 0;; i++) {
+        uint16_t ca = (a[i] >= 'A' && a[i] <= 'Z') ? (uint16_t)(a[i] + 32) : a[i];
+        uint16_t cb = (b[i] >= 'A' && b[i] <= 'Z') ? (uint16_t)(b[i] + 32) : b[i];
+        if (ca != cb) RETC(ca < cb ? 0xFFFFFFFFu : 1u);
+        if (!a[i]) RETC(0);
+    }
+}
+static void u_wcsnlen(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    uint32_t max = A32(1), n = 0;
+    if (w) while (n < max && w[n]) n++;
+    RETC(n);
+}
+static int utf8_next(const uint8_t *s, size_t n, uint32_t *cp) {
+    if (!n) return -2;
+    uint8_t c0 = s[0];
+    if (c0 < 0x80u) { *cp = c0; return c0 ? 1 : 0; }
+    int need = (c0 & 0xE0u) == 0xC0u ? 2 : (c0 & 0xF0u) == 0xE0u ? 3 : (c0 & 0xF8u) == 0xF0u ? 4 : -1;
+    if (need < 0) return -1;
+    if (n < (size_t)need) {
+        for (size_t k = 1; k < n; k++) if ((s[k] & 0xC0u) != 0x80u) return -1;
+        return -2;
+    }
+    uint32_t v = c0 & (need == 2 ? 0x1Fu : need == 3 ? 0x0Fu : 0x07u);
+    for (int k = 1; k < need; k++) {
+        if ((s[k] & 0xC0u) != 0x80u) return -1;
+        v = (v << 6) | (s[k] & 0x3Fu);
+    }
+    if ((need == 2 && v < 0x80u) || (need == 3 && v < 0x800u) || (need == 4 && (v < 0x10000u || v > 0x10FFFFu)) ||
+        (v >= 0xD800u && v <= 0xDFFFu))
+        return -1;
+    *cp = v;
+    return need;
+}
+static void u_mbrtowc(void) {                        /* (wchar_t *pwc, const char *s, size_t n, mbstate_t *ps) */
+    uint32_t pwc_va = A32(0), s_va = A32(1), n = A32(2);
+    (void)A32(3);
+    if (!s_va) RETC(0);
+    if (!n) RETC(0xFFFFFFFEu);
+    const uint8_t *s = (const uint8_t *)hle_ptr(s_va);
+    uint32_t cp = 0;
+    int r = utf8_next(s, n, &cp);
+    if (r == -2) RETC(0xFFFFFFFEu);
+    if (r == -1) { ms_seterrno(EILSEQ); RETC(0xFFFFFFFFu); }
+    if (pwc_va) MEM16(pwc_va) = (uint16_t)(cp <= 0xFFFFu ? cp : 0xFFFDu);
+    RETC((uint32_t)r);
+}
+static void u_mbsrtowcs(void) {                      /* (wchar_t *dst, const char **psrc, size_t len, mbstate_t *ps) */
+    uint32_t dst_va = A32(0), psrc_va = A32(1), len = A32(2);
+    (void)A32(3);
+    if (!psrc_va || !MEM32(psrc_va)) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    uint32_t src_va = MEM32(psrc_va);
+    const uint8_t *s = (const uint8_t *)hle_ptr(src_va);
+    uint16_t *dst = dst_va ? (uint16_t *)hle_ptr(dst_va) : NULL;
+    size_t slen = strlen((const char *)s) + 1u;
+    size_t pos = 0, out = 0;
+    while (!dst || out < len) {
+        uint32_t cp = 0;
+        int r = utf8_next(s + pos, slen - pos, &cp);
+        if (r < 0) { ms_seterrno(EILSEQ); if (dst) MEM32(psrc_va) = src_va + (uint32_t)pos; RETC(0xFFFFFFFFu); }
+        if (r == 0) {
+            if (dst) { dst[out] = 0; MEM32(psrc_va) = 0; }
+            RETC((uint32_t)out);
+        }
+        if (cp <= 0xFFFFu) {
+            if (dst) dst[out] = (uint16_t)cp;
+            out++;
+        } else {
+            if (dst && out + 1u >= len) break;
+            if (dst) {
+                uint32_t u = cp - 0x10000u;
+                dst[out] = (uint16_t)(0xD800u + (u >> 10));
+                dst[out + 1u] = (uint16_t)(0xDC00u + (u & 0x3FFu));
+            }
+            out += 2u;
+        }
+        pos += (size_t)r;
+    }
+    if (dst) MEM32(psrc_va) = src_va + (uint32_t)pos;
+    RETC((uint32_t)out);
+}
+static void u_mbstowcs(void) {                       /* (wchar_t *dst, const char *src, size_t n) */
+    uint32_t dst_va = A32(0), src_va = A32(1), n = A32(2);
+    if (!src_va) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    const uint8_t *s = (const uint8_t *)hle_ptr(src_va);
+    uint16_t *dst = dst_va ? (uint16_t *)hle_ptr(dst_va) : NULL;
+    size_t slen = strlen((const char *)s) + 1u, pos = 0, out = 0;
+    while (!dst || out < n) {
+        uint32_t cp = 0;
+        int r = utf8_next(s + pos, slen - pos, &cp);
+        if (r < 0) { ms_seterrno(EILSEQ); RETC(0xFFFFFFFFu); }
+        if (r == 0) { if (dst) dst[out] = 0; RETC((uint32_t)out); }
+        if (cp <= 0xFFFFu) {
+            if (dst) dst[out] = (uint16_t)cp;
+            out++;
+        } else {
+            if (dst && out + 1u >= n) break;
+            if (dst) {
+                uint32_t u = cp - 0x10000u;
+                dst[out] = (uint16_t)(0xD800u + (u >> 10));
+                dst[out + 1u] = (uint16_t)(0xDC00u + (u & 0x3FFu));
+            }
+            out += 2u;
+        }
+        pos += (size_t)r;
+    }
+    RETC((uint32_t)out);
+}
+static int encode_utf8_bmp(uint16_t wc, uint8_t out[4]) {
+    if (wc < 0x80u) { out[0] = (uint8_t)wc; return 1; }
+    if (wc < 0x800u) { out[0] = (uint8_t)(0xC0u | (wc >> 6)); out[1] = (uint8_t)(0x80u | (wc & 0x3Fu)); return 2; }
+    out[0] = (uint8_t)(0xE0u | (wc >> 12));
+    out[1] = (uint8_t)(0x80u | ((wc >> 6) & 0x3Fu));
+    out[2] = (uint8_t)(0x80u | (wc & 0x3Fu));
+    return 3;
+}
+static void u_wcrtomb(void) {                        /* (char *s, wchar_t wc, mbstate_t *ps) */
+    uint32_t s_va = A32(0); uint16_t wc = (uint16_t)A32(1);
+    (void)A32(2);
+    if (!s_va) RETC(1);
+    uint8_t buf[4];
+    int k = encode_utf8_bmp(wc, buf);
+    memcpy(hle_ptr(s_va), buf, (size_t)k);
+    RETC((uint32_t)k);
+}
+static void u_wcstombs(void) {                       /* (char *dst, const wchar_t *src, size_t n) */
+    uint32_t dst_va = A32(0), src_va = A32(1), n = A32(2);
+    if (!src_va) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    const uint16_t *w = (const uint16_t *)hle_ptr(src_va);
+    char *dst = dst_va ? (char *)hle_ptr(dst_va) : NULL;
+    size_t out = 0;
+    for (size_t i = 0;; i++) {
+        uint16_t c = w[i];
+        if (!c) { if (dst && out < n) dst[out] = 0; RETC((uint32_t)out); }
+        uint8_t buf[4];
+        int k = encode_utf8_bmp(c, buf);
+        if (dst) {
+            if (out + (size_t)k > n) RETC((uint32_t)out);
+            memcpy(dst + out, buf, (size_t)k);
+        }
+        out += (size_t)k;
+    }
+}
 static uint32_t g_lconv_va;
 static void c_localeconv(void) {
     ms_init();
@@ -2424,6 +2628,23 @@ static void c_getch(void) {
     int c = fgetc(stdin);
     RETC((uint32_t)(c == EOF ? 0 : c));
 }
+static void c_kbhit(void) {
+    ms_init();
+    if (!isatty(STDIN_FILENO)) RETC(0);
+    struct pollfd p = { STDIN_FILENO, POLLIN, 0 };
+    RETC((poll(&p, 1, 0) > 0 && (p.revents & POLLIN)) ? 1u : 0u);
+}
+static void u_beginthreadex(void) {                  /* (sec, stack, start, arg, flag, &tid) -> handle */
+    ms_init();
+    uint32_t tid = 0, h = hle_thread_create(A32(2), A32(3), A32(4), &tid);
+    if (!h) { ms_seterrno(EAGAIN); RETC(0); }
+    if (A32(5)) MEM32(A32(5)) = tid;
+    RETC(h);
+}
+static void u_endthreadex(void) {                    /* (unsigned retval) */
+    ms_init();
+    hle_thread_exit_self(A32(0));
+}
 static void c_spawnve(void) { ms_seterrno(ENOENT); RETC(0xFFFFFFFFu); }
 static void c_setjmp3(void) {
     uint32_t jb = A32(0);
@@ -2550,6 +2771,8 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "fputs",                        c_fputs },
     { "fseek",                        c_fseek },
     { "ftell",                        c_ftell },
+    { "fgetpos",                      c_fgetpos },
+    { "fsetpos",                      c_fsetpos },
     { "setbuf",                       c_setbuf },
     { "setvbuf",                      c_setvbuf },
     { "printf",                       c_printf },
@@ -2626,6 +2849,8 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "memchr",                       c_memchr },
     { "memcmp",                       c_memcmp },
     { "strlen",                       c_strlen },
+    { "strnlen",                      u_strnlen },
+    { "_strrev",                      c_strrev },
     { "strcpy",                       c_strcpy },
     { "strncpy",                      c_strncpy },
     { "strcat",                       c_strcat },
@@ -2633,6 +2858,7 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "strcmp",                       c_strcmp },
     { "strncmp",                      c_strncmp },
     { "_stricmp",                     c_stricmp },
+    { "_stricoll",                    c_stricoll },
     { "_strnicmp",                    c_strnicmp },
     { "strchr",                       c_strchr },
     { "strrchr",                      c_strrchr },
@@ -2642,7 +2868,14 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "strerror",                     c_strerror },
     { "wcscpy",                       c_wcscpy },
     { "wcsncmp",                      c_wcsncmp },
+    { "wcsnlen",                      u_wcsnlen },
+    { "_wcsicmp",                     c_wcsicmp },
     { "_wcsnicmp",                    c_wcsnicmp },
+    { "mbrtowc",                      u_mbrtowc },
+    { "mbsrtowcs",                    u_mbsrtowcs },
+    { "mbstowcs",                     u_mbstowcs },
+    { "wcrtomb",                      u_wcrtomb },
+    { "wcstombs",                     u_wcstombs },
     { "strcoll",                      c_strcoll },
     { "strxfrm",                      c_strxfrm },
     { "tolower",                      c_tolower },
@@ -2669,9 +2902,14 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "strtod",                       c_strtod },
     { "qsort",                        c_qsort },
     { "bsearch",                      c_bsearch },
-    /* rand */
+    /* rand & fpu/console/threads */
     { "rand",                         c_rand },
+    { "rand_s",                       u_rand_s },
     { "srand",                        c_srand },
+    { "_fpreset",                     c_fpreset },
+    { "_kbhit",                       c_kbhit },
+    { "_beginthreadex",               u_beginthreadex },
+    { "_endthreadex",                 u_endthreadex },
     /* math */
     { "sin",                          c_sin },
     { "cos",                          c_cos },

@@ -155,6 +155,7 @@ uint32_t hle_call_guest(uint32_t va, int nargs, const uint32_t *args);
  * MSVC frames with a known catch continuation; these functions keep the host
  * checkpoint list and dispatch a throw using the guest's own metadata. */
 int hle_eh_cxx_throw(uint32_t object, uint32_t throw_info);
+int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va);
 void hle_eh_longjmp(uint32_t jump_buffer, uint32_t value);
 
 /* ---- the machine lock ----
@@ -258,6 +259,10 @@ uint32_t hle_thread_id(void);                      /* GetCurrentThreadId's answe
 int   hle_thread_done(uint32_t h);                 /* a CreateThread handle's thread has ended */
 uint32_t hle_thread_id_new(void);                  /* an id for a thread about to start (CreateThread's) */
 void     hle_thread_id_adopt(uint32_t tid);        /* that thread, first thing: this is its id */
+uint32_t hle_thread_create(uint32_t start_va, uint32_t param, uint32_t flags, uint32_t *out_tid);
+void     hle_thread_exit_self(uint32_t code);
+uint32_t hle_virtual_alloc(uint32_t addr, uint32_t size, uint32_t type, uint32_t protect);
+int      hle_virtual_free(uint32_t addr, uint32_t size, uint32_t type);
 uint32_t hle_ticks_ms(void);                       /* GetTickCount */
 void *hle_alloc(uint32_t n);                       /* a zeroed heap block (HeapFree-able), in guest memory */
 void  hle_free(void *p);
