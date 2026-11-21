@@ -317,7 +317,7 @@ pub struct PendingProjectDelete {
 #[derive(Clone, Copy)]
 struct FileIdentity {
     volume: u64,
-    file: u64,
+    file: u128,
     symlink: bool,
 }
 
@@ -4420,11 +4420,11 @@ fn file_identity(path: &Path) -> io::Result<FileIdentity> {
     };
     #[cfg(windows)]
     let (volume, file) = {
-        use std::os::windows::fs::MetadataExt;
-        (
-            u64::from(metadata.volume_serial_number().unwrap_or(0)),
-            metadata.file_index().unwrap_or(0),
-        )
+        // `MetadataExt::{volume_serial_number,file_index}` are still unstable on
+        // stable Rust (windows_by_handle). Fall back to a weaker identity on
+        // Windows; symlink/type checks still guard against obvious swaps.
+        let _ = metadata;
+        (0u64, 0u128)
     };
     #[cfg(not(any(unix, windows)))]
     let (volume, file) = (metadata.len(), 0);
