@@ -222,13 +222,16 @@ static void k_GetProcAddress(void) {                     /* (hModule, name or or
  * entries; an offset with the top bit set is a subdirectory, else an
  * IMAGE_RESOURCE_DATA_ENTRY {rva, size, codepage, 0}. An HRSRC is the data
  * entry's address. */
-static int name_matches(uint32_t root, uint32_t entry_name, uint32_t want) {
+static int name_matches(uint32_t root, uint32_t entry_name, uint32_t want, uint32_t limit) {
     if (want < 0x10000u) return !(entry_name & 0x80000000u) && entry_name == want;
     const char *w = (const char *)hle_ptr(want);
+    if (!w) return 0;
     if (w[0] == '#') return !(entry_name & 0x80000000u) && entry_name == (uint32_t)atoi(w + 1);
     if (!(entry_name & 0x80000000u)) return 0;
     uint32_t s = root + (entry_name & 0x7FFFFFFFu);
+    if (s < root || s + 2u > limit) return 0;
     uint16_t len = MEM16(s);
+    if ((uint32_t)2u + 2u * len > limit - s) return 0;
     if (strlen(w) != len) return 0;
     for (uint16_t k = 0; k < len; k++) {
         uint16_t c = MEM16(s + 2 + 2u * k);
@@ -238,11 +241,13 @@ static int name_matches(uint32_t root, uint32_t entry_name, uint32_t want) {
 }
 /* Find `want` in the directory at dir; 0 for any (the first). Returns the
  * entry's offset word. */
-static uint32_t dir_lookup(uint32_t root, uint32_t dir, uint32_t want, int any) {
+static uint32_t dir_lookup(uint32_t root, uint32_t dir, uint32_t want, int any, uint32_t limit) {
+    if (dir < root || dir > limit || limit - dir < 16u) return 0xFFFFFFFFu;
     uint32_t n = (uint32_t)MEM16(dir + 12) + MEM16(dir + 14);
+    if (n > (limit - dir - 16u) / 8u) return 0xFFFFFFFFu;
     for (uint32_t k = 0; k < n; k++) {
         uint32_t e = dir + 16 + 8 * k;
-        if (any || name_matches(root, MEM32(e), want)) return MEM32(e + 4);
+        if (any || name_matches(root, MEM32(e), want, limit)) return MEM32(e + 4);
     }
     return 0xFFFFFFFFu;
 }
@@ -278,15 +283,26 @@ int hle_module_region(uint32_t addr, uint32_t *base, uint32_t *size) {
 }
 static uint32_t find_resource(int m, uint32_t name, uint32_t type) {
     ensure_rsrc(m);
-    if (m < 0 || !g_mod[m].rsrc) return 0;
-    uint32_t root = g_mod[m].base + g_mod[m].rsrc;
-    uint32_t t = dir_lookup(root, root, type, 0);
+    if (m < 0 || !g_mod[m].rsrc || !g_mod[m].rsrc_size) return 0;
+    uint32_t base = g_mod[m].base;
+    uint32_t root = base + g_mod[m].rsrc;
+    uint32_t limit = root + g_mod[m].rsrc_size;
+    if (limit < root) return 0;
+    if (g_mod[m].image_size && limit > base + g_mod[m].image_size)
+        limit = base + g_mod[m].image_size;
+    uint32_t t = dir_lookup(root, root, type, 0, limit);
     if (t == 0xFFFFFFFFu || !(t & 0x80000000u)) return 0;
-    uint32_t nm = dir_lookup(root, root + (t & 0x7FFFFFFFu), name, 0);
+    uint32_t sub = root + (t & 0x7FFFFFFFu);
+    if (sub < root || sub > limit) return 0;
+    uint32_t nm = dir_lookup(root, sub, name, 0, limit);
     if (nm == 0xFFFFFFFFu || !(nm & 0x80000000u)) return 0;
-    uint32_t lang = dir_lookup(root, root + (nm & 0x7FFFFFFFu), 0, 1);
+    sub = root + (nm & 0x7FFFFFFFu);
+    if (sub < root || sub > limit) return 0;
+    uint32_t lang = dir_lookup(root, sub, 0, 1, limit);
     if (lang == 0xFFFFFFFFu || (lang & 0x80000000u)) return 0;
-    return root + lang;
+    uint32_t entry = root + lang;
+    if (entry < root || entry + 16u > limit) return 0;
+    return entry;
 }
 
 uint32_t hle_find_resource(uint32_t hmod, uint32_t name, uint32_t type) {
@@ -300,8 +316,15 @@ uint32_t hle_resource_data(uint32_t hmod, uint32_t hrsrc, uint32_t *size) {
             if (g_mod[i].rsrc && hrsrc >= g_mod[i].base + g_mod[i].rsrc && hrsrc < g_mod[i].base + g_mod[i].rsrc + g_mod[i].rsrc_size) m = i;
         if (m < 0) return 0;
     }
-    if (size) *size = MEM32(hrsrc + 4);
-    return g_mod[m].base + MEM32(hrsrc);
+    ensure_rsrc(m);
+    uint32_t rstart = g_mod[m].base + g_mod[m].rsrc;
+    uint32_t rend = rstart + g_mod[m].rsrc_size;
+    if (rend < rstart || hrsrc < rstart || hrsrc + 16u > rend) return 0;
+    uint32_t rva = MEM32(hrsrc), bytes = MEM32(hrsrc + 4);
+    uint32_t image = g_mod[m].image_size;
+    if (!rva || !bytes || (image && (rva > image || bytes > image - rva))) return 0;
+    if (size) *size = bytes;
+    return g_mod[m].base + rva;
 }
 
 /* The last dialog template looked up, so a dialog made from its bytes
