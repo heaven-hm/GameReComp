@@ -197,6 +197,12 @@ static uint32_t new_buffer(dsbuf *b) {
     pthread_mutex_unlock(&g_mix);
     if (slot < 0) return 0;
     uint32_t o = hle_com_new(g_vt_buf, 12);
+    /* Public IID_IDirectSoundBuffer (Microsoft DirectX headers). */
+    static const uint8_t IID_DSBuf[16] = {
+        0x85, 0xFA, 0x9A, 0x27, 0x8E, 0x49, 0xD0, 0x11,
+        0x98, 0x28, 0x00, 0xC0, 0x4F, 0xC2, 0x97, 0x21
+    };
+    hle_com_bind_iid(o, IID_DSBuf, o);
     SLOT(o) = (uint32_t)slot;
     return o;
 }
@@ -213,6 +219,7 @@ static void b_Release(void) {
             if (--*b->data_refs == 0) { hle_free(b->data); free(b->data_refs); }
             free(b);
         }
+        hle_com_unbind_iids(self);
         hle_com_free(self);
     }
     RET(n, 1);
@@ -337,7 +344,7 @@ static void b_Restore(void) { RET(DS_OK, 1); }
 /* ---- IDirectSound ---- */
 static void d_Release(void) {
     uint32_t self = A32(0), n = --MEM32(self + 4);
-    if (!n) hle_com_free(self);
+    if (!n) { hle_com_unbind_iids(self); hle_com_free(self); }
     RET(n, 1);
 }
 static void d_CreateSoundBuffer(void) {                  /* (this, &DSBUFFERDESC, &out, outer) */
@@ -424,11 +431,18 @@ static void vtables(void) {
     g_vt_buf = hle_com_vtable(buf);
 }
 
+/* IID_IDirectSound from the public DirectX SDK headers. */
+static const uint8_t IID_DirectSound[16] = {
+    0x83, 0xFA, 0x9A, 0x27, 0x8E, 0x49, 0xD0, 0x11,
+    0x98, 0x28, 0x00, 0xC0, 0x4F, 0xC2, 0x97, 0x21
+};
 static void s_DirectSoundCreate(void) {                  /* (guid, &out, outer) */
     vtables();
     if (!A32(1)) RET(DSERR_INVALIDPARAM, 3);
     if (!audio_open()) { MEM32(A32(1)) = 0; RET(DSERR_NODRIVER, 3); }
-    MEM32(A32(1)) = hle_com_new(g_vt_ds, 12);
+    uint32_t o = hle_com_new(g_vt_ds, 12);
+    hle_com_bind_iid(o, IID_DirectSound, o);
+    MEM32(A32(1)) = o;
     RET(DS_OK, 3);
 }
 static void s_DirectSoundEnumerateA(void) {              /* (callback, context): the one device */
@@ -446,6 +460,7 @@ static uint32_t ds_create(const uint8_t *iid, uint32_t *out) {
     vtables();
     if (!audio_open()) { *out = 0; return DSERR_NODRIVER; }
     *out = hle_com_new(g_vt_ds, 12);
+    hle_com_bind_iid(*out, IID_DirectSound, *out);
     return DS_OK;
 }
 void hle_dsound_register_com(void) {
