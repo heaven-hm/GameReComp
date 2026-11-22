@@ -493,41 +493,50 @@ static void k_ReleaseMutex(void) {
     RET(1, 1);
 }
 static void k_CreateSemaphoreA(void) {                   /* (sa, initial, max, name) */
+    int32_t initial = (int32_t)A32(1), max = (int32_t)A32(2);
+    if (max <= 0 || initial < 0 || initial > max) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 4);
+    }
     hsem *s = (hsem *)calloc(1, sizeof *s);
-    s->count = (int32_t)A32(1), s->max = (int32_t)A32(2);
+    if (!s) { hle_set_last_error(8 /* ERROR_NOT_ENOUGH_MEMORY */); RET(0, 4); }
+    s->count = initial, s->max = max;
     RET(hle_handle_alloc(HLE_H_SEMAPHORE, s), 4);
 }
 static void k_ReleaseSemaphore(void) {
     hsem *s = (hsem *)hle_handle_obj(A32(0), HLE_H_SEMAPHORE);
-    if (!s) RET(0, 3);
+    int32_t add = (int32_t)A32(1);
+    if (!s || add < 0 || s->count + add > s->max) {
+        hle_set_last_error(s ? 298u /* ERROR_TOO_MANY_POSTS */ : 6u /* ERROR_INVALID_HANDLE */);
+        RET(0, 3);
+    }
     if (A32(2)) MEM32(A32(2)) = (uint32_t)s->count;
-    s->count += (int32_t)A32(1);
-    if (s->count > s->max) s->count = s->max;
+    s->count += add;
     RET(1, 3);
 }
 
 /* Try to take one object: 1 if it is signalled (and consumed, as its type
  * says), 0 if not, -1 if it is not a waitable handle. */
 int (*hle_wait_hook)(uint32_t h);        /* a host's own objects (threads, sockets) */
-static int try_take(uint32_t h) {
+static int try_take(uint32_t h, int consume) {
     if (hle_wait_hook) { int r = hle_wait_hook(h); if (r >= 0) return r; }
     switch (hle_handle_type(h)) {
     case HLE_H_EVENT: {
         hevent *e = (hevent *)hle_handle_obj(h, HLE_H_EVENT);
         if (!e->signaled) return 0;
-        if (!e->manual) e->signaled = 0;
+        if (consume && !e->manual) e->signaled = 0;
         return 1;
     }
     case HLE_H_MUTEX: {
         hmutex *m = (hmutex *)hle_handle_obj(h, HLE_H_MUTEX);
         if (m->owner && m->owner != hle_thread_id()) return 0;
-        m->owner = hle_thread_id(), m->count++;
+        if (consume) m->owner = hle_thread_id(), m->count++;
         return 1;
     }
     case HLE_H_SEMAPHORE: {
         hsem *s = (hsem *)hle_handle_obj(h, HLE_H_SEMAPHORE);
         if (s->count <= 0) return 0;
-        s->count--;
+        if (consume) s->count--;
         return 1;
     }
     case HLE_H_THREAD:
@@ -542,11 +551,18 @@ uint32_t hle_wait(int n, const uint32_t *h, int all, uint32_t timeout) {
     for (;;) {
         if (all) {
             int ready = 1;
-            for (int i = 0; i < n; i++) { int r = try_take(h[i]); if (r < 0) return WAIT_FAILED; if (!r) { ready = 0; break; } }
-            if (ready) return WAIT_OBJECT_0;           /* ponytail: takes as it checks; a partial take is not undone */
+            for (int i = 0; i < n; i++) {
+                int r = try_take(h[i], 0);
+                if (r < 0) { hle_set_last_error(ERROR_INVALID_HANDLE); return WAIT_FAILED; }
+                if (!r) { ready = 0; break; }
+            }
+            if (ready) {
+                for (int i = 0; i < n; i++) (void)try_take(h[i], 1);
+                return WAIT_OBJECT_0;
+            }
         } else {
             for (int i = 0; i < n; i++) {
-                int r = try_take(h[i]);
+                int r = try_take(h[i], 1);
                 if (r < 0) { g_last_error = ERROR_INVALID_HANDLE; return WAIT_FAILED; }
                 if (r) return WAIT_OBJECT_0 + (uint32_t)i;
             }
@@ -562,7 +578,10 @@ static void k_WaitForSingleObject(void) { uint32_t h = A32(0); RET(hle_wait(1, &
 static void k_WaitForSingleObjectEx(void) { uint32_t h = A32(0); RET(hle_wait(1, &h, 0, A32(1)), 3); }
 static void k_WaitForMultipleObjects(void) {             /* (n, handles, all, timeout) */
     uint32_t n = A32(0), hs[64];
-    if (n > 64) n = 64;
+    if (n == 0 || n > 64) {             /* MAXIMUM_WAIT_OBJECTS */
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(WAIT_FAILED, 4);
+    }
     for (uint32_t i = 0; i < n; i++) hs[i] = MEM32(A32(1) + 4 * i);
     RET(hle_wait((int)n, hs, A32(2) != 0, A32(3)), 4);
 }
@@ -589,9 +608,31 @@ static void k_TlsAlloc(void) {
     for (int i = 0; i < TLS_SLOTS; i++) if (!g_tls_used[i]) { g_tls_used[i] = 1; RET((uint32_t)i, 0); }
     RET(0xFFFFFFFFu, 0);
 }
-static void k_TlsFree(void) { uint32_t i = A32(0); if (i < TLS_SLOTS) g_tls_used[i] = 0; RET(1, 1); }
-static void k_TlsGetValue(void) { uint32_t i = A32(0); g_last_error = 0; RET(i < TLS_SLOTS ? g_tls[i] : 0u, 1); }
-static void k_TlsSetValue(void) { uint32_t i = A32(0); if (i < TLS_SLOTS) g_tls[i] = A32(1); RET(i < TLS_SLOTS ? 1u : 0u, 2); }
+static void k_TlsFree(void) {
+    uint32_t i = A32(0);
+    if (i >= TLS_SLOTS) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 1); }
+    g_tls_used[i] = 0;
+    g_tls[i] = 0;                       /* this thread's slot is cleared immediately */
+    RET(1, 1);
+}
+static void k_TlsGetValue(void) {
+    uint32_t i = A32(0);
+    if (i >= TLS_SLOTS || !g_tls_used[i]) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 1);
+    }
+    g_last_error = 0;
+    RET(g_tls[i], 1);
+}
+static void k_TlsSetValue(void) {
+    uint32_t i = A32(0);
+    if (i >= TLS_SLOTS || !g_tls_used[i]) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 2);
+    }
+    g_tls[i] = A32(1);
+    RET(1, 2);
+}
 
 /* --- fibre-local storage (FLS) ---
  * FLS is TLS with a destructor: when a thread that has a non-NULL value in a

@@ -35,7 +35,7 @@ void hle_fls_thread_exit(void);
 /* A thread's handle object: how many ResumeThreads it still waits for
  * (CREATE_SUSPENDED), and once it has ended, its exit code, so a wait on the
  * handle returns. Never freed: CloseHandle can come while it still runs. */
-struct thread_arg { uint32_t start, param, tid; volatile int suspend, done, kill; uint32_t code; };
+struct thread_arg { uint32_t start, param, tid; volatile int suspend, done, kill; uint32_t code; int priority; };
 static __thread struct thread_arg *t_self;
 static void *thread_trampoline(void *p) {
     struct thread_arg *a = (struct thread_arg *)p;
@@ -129,8 +129,22 @@ int hle_thread_done(uint32_t h) {
     struct thread_arg *a = (struct thread_arg *)hle_handle_obj(h, HLE_H_THREAD);
     return a && a->done;
 }
-static void k_SetThreadPriority(void) { RET(1, 2); }
-static void k_GetThreadPriority(void) { RET(0, 1); }
+/* Win32 guest threads are cooperatively serialised under the machine lock, so
+ * a host scheduling priority cannot express Windows priority semantics.  The
+ * requested priority is stored on the thread object and read back verbatim;
+ * an invalid handle or out-of-range value fails like the Windows API. */
+static void k_SetThreadPriority(void) {
+    struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
+    int p = (int)(int32_t)A32(1);
+    if (!a || p < -7 || p > 9) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2); }
+    a->priority = p;
+    RET(1, 2);
+}
+static void k_GetThreadPriority(void) {
+    struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
+    if (!a) { hle_set_last_error(6 /* ERROR_INVALID_HANDLE */); RET(0x80000000u, 1); }
+    RET((uint32_t)(int32_t)a->priority, 1);
+}
 static void k_GetCurrentThread(void)  { RET(0xFFFFFFFEu, 0); }
 
 /* --- standard handles --- */
