@@ -169,3 +169,37 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - No acceptance level above A3 was assigned and no issue was closed: no
   launch, frame, input, audio, save/load or original-versus-native comparison
   was performed.
+
+## Integration checkpoint 9 — 20-agent swarm (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `bc4dae8c8eaffe5944d4a88e5b4e188c64f2a97b`;
+  same commit on `feature/game-matrix-all`.
+- Twenty independent agents, each in its own worktree from base `5536865`,
+  with exclusive file ownership; all 20 branches pushed, reviewed and merged
+  with zero conflicts. Concrete outcomes:
+  - Registry `RegEnumKeyExW` (A2), COM `CoTaskMemRealloc` (A3), real Winsock
+    DNS `gethostname/gethostbyname/gethostbyaddr` (A4), `DirectInput8Create`
+    + full DI8 vtables (A5), DirectSound enumeration (A6), Bink header
+    diagnostics + `_BinkSetSoundOnOff` (A7), `SetFileAttributesA/W` (A8),
+    MSVC throw diagnostics (A9), `RtlCaptureContext` + honest unwind stubs
+    (A10), Unicode user32 messages (A11), `CreateBitmapIndirect` (A12),
+    `DirectDrawCreateClipper` (A13), D3D7 `PreLoad` with real GL tex upload
+    (A14), D3D8 corrected `IID_IDirect3DDevice8` (A15), auditor accuracy and
+    system/game-owned split (A16), matrix disk guard + resource capture
+    (A17), `SHFileOperationA` (A18), `sndPlaySoundA/W` with corrected BOOL ABI
+    (A19), acceptance ledger + schema (A20).
+  - A1 diagnosed the Gunroar DMD exception precisely (lifter missing EH
+    landing pad for a tail-call-inlined catch) and added a runtime fallback;
+    the game still faults later with unresolved VA 0 / SIGBUS, so #27 stays OPEN.
+- New issues: #26 (multi-GB generated C exhausts disk/memory) and #27
+  (Gunroar DMD exception). Both have measured evidence and pushed work.
+- Build scale: `tools/clean_generated.py` reclaimed ~7 GB; `report.json` now
+  records measured generated/binary/disk/RSS numbers; matrix runner enforces
+  a 4 GiB free-disk guard.
+- Execution evidence: `tools/game_runner` ran 3 games one at a time from their
+  own folders; Cave Story (2 frames, 640x480) and Ikachan (3 frames, 351x238)
+  rendered; Gunroar hit the DMD exception. Remaining games BLOCKED (no native
+  binary after SIGKILLed builds). Linux NOT TESTED; x64 explicitly unsupported.
+- `python3 -m pytest tests/ -q` → 213 passed, 5 skipped, 5 subtests passed.
+  `bash runtime/win32hle/build_selftests.sh` → 44 selftests ok, 0 FAIL.
+- **All 27 issues remain OPEN.** No issue was closed; no 100% claim was made.
