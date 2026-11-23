@@ -305,3 +305,22 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - Verification: feature suite **340 passed, 8 skipped, 55 subtests**;
   integration **337 passed, 11 skipped**; **52 selftests ok**.
 - All issues remain OPEN; no 100% or game-acceptance claim.
+
+## Integration checkpoint 15 — 10-agent swarm across both repositories
+
+- GameReComp `feature/integration-checkpoint` pushed/verified at
+  `bc12deed22d7cd593012d1cbfe48dd96235e9d70`.
+- SDK repository `heaven-hm/GameRecomp-Recompiler` main pushed/verified at
+  `1f58cb69f7d1b52279c204e3b547ab43cc4299e3`.
+- Five GameReComp agents merged with zero conflicts: E2E scenario matrix (A1),
+  AI provider hardening with env-only config and sanitized errors (A2),
+  readability symbol-name guard before build (A3), size-tier HTML gallery with
+  BLANK/UNPROVEN/FAIL markers (A4), and API coverage refresh from a live run
+  (A5: 2,273 shims, 13 missing system / 293 game-owned APIs).
+- Five SDK agents merged with zero conflicts: C SDK EINTR/project-dir hardening
+  (B1), C++ `Report::score()` (B2), Rust robust score parser + `report_json()`
+  (B3), Python `inspect()` + `recompile_to_path()` (B4), and SDK security /
+  contributing docs plus 2-OS CI matrix (B5).
+- Verification: GameReComp suite **385 passed, 11 skipped, 26 subtests**;
+  **52 selftests ok**. SDK: Python 13 passed, C/C++ scripts PASS, Rust 15 passed.
+- All issues remain OPEN; no 100% or game-acceptance claim.
