@@ -802,19 +802,45 @@ static void k_OpenFile(void) {
 /* GetFullPathNameA(name, buflen, buf, &filePart): a lexical absolute path (no
  * disk access). Relative names are taken against the current directory; the
  * result keeps whatever separators it had, which hle_path matches on either. */
-static void k_GetFullPathNameA(void) {
-    const char *name = ASTR(0);
-    char abs[1024];
+static uint32_t full_path_lexical(const char *name, char *abs, size_t cap, char **part) {
     if (name && (name[0] == '/' || name[0] == '\\' || (name[0] && name[1] == ':')))
-        snprintf(abs, sizeof abs, "%s", name);
-    else { char cwd[768]; if (!getcwd(cwd, sizeof cwd)) cwd[0] = 0; snprintf(abs, sizeof abs, "%s/%s", cwd, name ? name : ""); }
-    char *buf = ASTR(2); uint32_t n = A32(1);
-    if (buf && n) { strncpy(buf, abs, n - 1); buf[n - 1] = 0; }
+        snprintf(abs, cap, "%s", name);
+    else { char cwd[768]; if (!getcwd(cwd, sizeof cwd)) cwd[0] = 0; snprintf(abs, cap, "%s/%s", cwd, name ? name : ""); }
+    char *bs = strrchr(abs, '\\'), *fs = strrchr(abs, '/');
+    *part = bs > fs ? bs : fs;
+    return (uint32_t)strlen(abs);
+}
+static void k_GetFullPathNameA(void) {
+    char abs[1024]; char *part;
+    uint32_t n = full_path_lexical(ASTR(0), abs, sizeof abs, &part);
+    char *buf = ASTR(2); uint32_t cap = A32(1);
+    if (buf && cap) { strncpy(buf, abs, cap - 1); buf[cap - 1] = 0; }
     if (A32(3) && buf) {
         char *bs = strrchr(buf, '\\'), *fs = strrchr(buf, '/'), *p = bs > fs ? bs : fs;
         MEM32(A32(3)) = hle_va(p ? p + 1 : buf);
     }
-    RET(buf ? (uint32_t)strlen(buf) : (uint32_t)strlen(abs), 4);
+    RET(buf ? (uint32_t)strlen(buf) : n, 4);
+}
+/* GetFullPathNameW: the wide form used by PE32 games. The length returned is
+ * in UTF-16 code units, and the file-part pointer addresses the guest's wide
+ * buffer, not the temporary ANSI string. */
+static void k_GetFullPathNameW(void) {
+    const uint16_t *wide = (const uint16_t *)APTR(0);
+    char name[1024], abs[1024]; char *part;
+    if (!wide || !hle_wide_to_ansi(wide, name, sizeof name)) { RET(0, 4); }
+    uint32_t n = full_path_lexical(name, abs, sizeof abs, &part);
+    uint32_t out = A32(2), cap = A32(1);
+    uint32_t needed = n + 1;
+    if (out && cap) {
+        uint16_t *dst = (uint16_t *)hle_ptr(out);
+        uint32_t i;
+        for (i = 0; i < n && i < cap - 1; i++) dst[i] = (uint16_t)(unsigned char)abs[i];
+        dst[i] = 0;
+        if (A32(3)) MEM32(A32(3)) = out + 2u * (uint32_t)(part ? part + 1 - abs : 0);
+        RET(n, 4);
+    }
+    if (A32(3)) MEM32(A32(3)) = 0;
+    RET(needed, 4);
 }
 /* SearchPathA(path, file, ext, buflen, buf, &filePart): find a file on a search
  * path (NULL means the default: the current directory, then the Windows
@@ -1086,7 +1112,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "CreatePipe", k_CreatePipe }, { "CreateNamedPipeA", k_CreateNamedPipeA },
     { "ConnectNamedPipe", k_ConnectNamedPipe }, { "WaitNamedPipeA", k_WaitNamedPipeA },
     { "PeekNamedPipe", k_PeekNamedPipe },
-    { "GetFullPathNameA", k_GetFullPathNameA },
+    { "GetFullPathNameA", k_GetFullPathNameA }, { "GetFullPathNameW", k_GetFullPathNameW },
     { "SearchPathA", k_SearchPathA },
     { "OpenFile", k_OpenFile }, { "_hread", k__lread }, { "_hwrite", k__lwrite },
     { "_lopen", k__lopen }, { "_lcreat", k__lcreat }, { "_lread", k__lread },
