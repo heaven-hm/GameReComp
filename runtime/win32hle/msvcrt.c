@@ -2270,6 +2270,57 @@ static void u_wcsnlen(void) {
     if (w) while (n < max && w[n]) n++;
     RETC(n);
 }
+
+/* ---- more wide-string exports this table did not answer ----
+ * Guest wchar_t is 2 bytes (UTF-16 code units on x86 MSVC), so every routine
+ * here walks uint16_t cells in guest memory exactly like wcscpy/wcsncmp above;
+ * the host's 4-byte wchar_t is deliberately never used. Each returns a real
+ * guest address or a real comparison/termination result - a NULL input is
+ * never turned into a fake "success". All are cdecl: one RETC pops only the
+ * synthetic return address, the lifted caller drops its own arguments. */
+static void u_wcsdup(void) {                         /* (const wchar_t *s) -> wchar_t * */
+    ms_init();
+    const uint16_t *s = (const uint16_t *)APTR(0);
+    if (!s) { ms_seterrno(EINVAL); RETC(0); }
+    uint32_t n = 0;
+    while (s[n]) n++;
+    uint64_t bytes = ((uint64_t)n + 1u) * 2u;         /* the terminating NUL cell counts */
+    if (bytes > 0xFFFFFFFFull) { ms_seterrno(ENOMEM); RETC(0); }
+    uint16_t *p = (uint16_t *)hle_heap_alloc((uint32_t)bytes, 0);
+    if (!p) { ms_seterrno(ENOMEM); RETC(0); }
+    memcpy(p, s, (size_t)bytes);
+    RETC(hle_va(p));                                 /* guest-heap copy, free() can reclaim it */
+}
+static void u_wcscat(void) {                         /* (wchar_t *dst, const wchar_t *src) -> dst */
+    uint32_t dst_va = A32(0);
+    uint16_t *dst = (uint16_t *)hle_ptr(dst_va);
+    const uint16_t *src = (const uint16_t *)APTR(1);
+    if (!dst || !src) RETC(0);
+    uint32_t i = 0;
+    while (dst[i]) i++;
+    while ((dst[i++] = *src++) != 0) { }
+    RETC(dst_va);
+}
+static void u_wcsncat(void) {                        /* (wchar_t *dst, const wchar_t *src, size_t n) -> dst */
+    uint32_t dst_va = A32(0);
+    uint16_t *dst = (uint16_t *)hle_ptr(dst_va);
+    const uint16_t *src = (const uint16_t *)APTR(1);
+    uint32_t n = A32(2);
+    if (!dst || !src) RETC(0);
+    uint32_t i = 0;
+    while (dst[i]) i++;
+    for (uint32_t k = 0; k < n && src[k]; k++) dst[i++] = src[k];
+    dst[i] = 0;                                      /* wcsncat always terminates */
+    RETC(dst_va);
+}
+static void u_wcscmp(void) {                         /* (const wchar_t *a, const wchar_t *b) -> int */
+    const uint16_t *a = (const uint16_t *)APTR(0), *b = (const uint16_t *)APTR(1);
+    if (!a || !b) RETC((uint32_t)(int32_t)(a == b ? 0 : (a ? 1 : -1)));
+    for (size_t i = 0;; i++) {
+        if (a[i] != b[i]) RETC(a[i] < b[i] ? 0xFFFFFFFFu : 1u);
+        if (!a[i]) RETC(0);
+    }
+}
 static int utf8_next(const uint8_t *s, size_t n, uint32_t *cp) {
     if (!n) return -2;
     uint8_t c0 = s[0];
@@ -2963,8 +3014,12 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "strtok",                       c_strtok },
     { "strerror",                     c_strerror },
     { "wcscpy",                       c_wcscpy },
+    { "wcscat",                       u_wcscat },
+    { "wcsncat",                      u_wcsncat },
     { "wcsncmp",                      c_wcsncmp },
+    { "wcscmp",                       u_wcscmp },
     { "wcsnlen",                      u_wcsnlen },
+    { "_wcsdup",                      u_wcsdup },
     { "_wcsicmp",                     c_wcsicmp },
     { "_wcsnicmp",                    c_wcsnicmp },
     { "mbrtowc",                      u_mbrtowc },
