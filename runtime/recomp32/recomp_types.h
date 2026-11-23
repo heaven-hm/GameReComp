@@ -1094,7 +1094,35 @@ static inline void CPUID_impl(uint32_t eax_val, uint32_t ebx_val, uint32_t ecx_v
     if (eax_val == 0x80000001u) g_edx &= g_cpuid_edx_ext;
     (void)ebx_val; (void)edx_val;
 #else
-    (void)eax_val; (void)ebx_val; (void)ecx_val; (void)edx_val;
+    /* On gcc/clang (macOS arm64, Linux x86_64) there is no guest CPUID
+     * instruction to execute. Answer the leaves a PE32 guest actually probes:
+     * leaf 0 (vendor/max leaf), leaf 1 (family/features), and the extended
+     * leaf 0x80000000/1. The feature masks stay in force so a host that wants
+     * the x87 path can clear SSE/SSE2 without rebuilding. Unrecognised leaves
+     * return zeros, as Intel does for leaves above the advertised maximum. */
+    uint32_t a = 0, b = 0, c = 0, d = 0;
+    switch (eax_val) {
+    case 0u:  /* max standard leaf + "GenuineIntel" (EBX/EDX/ECX order) */
+        a = 1u; b = 0x756E6547u; d = 0x49656E69u; c = 0x6C65746Eu;
+        break;
+    case 1u:  /* family 6, SSE/SSE2 etc.; ECX has no SSE3+ bits */
+        a = 0x000006F2u;
+        d = 0x078BFBFFu & g_cpuid_edx1;
+        c = g_cpuid_ecx1 & 0x00000000u;
+        break;
+    case 0x80000000u:
+        a = 0x80000001u;
+        break;
+    case 0x80000001u:
+        /* Long mode is deliberately not advertised: the guest is PE32. */
+        d = (0x00100000u /* NX */ | 0x80000000u /* 3DNow! */) & g_cpuid_edx_ext;
+        c = 0;
+        break;
+    default:
+        break;
+    }
+    g_eax = a; g_ebx = b; g_ecx = c; g_edx = d;
+    (void)ebx_val; (void)edx_val;
 #endif
 }
 
