@@ -108,6 +108,32 @@ From `docs/ISSUE_EXECUTION_PLAN.md` "Verified common gates (latest)":
 These are build/test/CI results and support at most A3*; none is a game
 scenario oracle and none changes any issue's OPEN state.
 
+### Win32 API coverage refresh (registration audit only)
+
+Regenerated on `2026-11-23` from the live PE32 corpus at
+`/Users/haseeb-mir/Downloads/recomp-apps/games` using
+`python3 -m tools.api_coverage --corpus <corpus> --out <temp>.json --markdown docs/WIN32_API_COVERAGE.md`
+(auditor schema `1.1.0`). This is a refresh after the system/game-owned DLL
+split and the subsequent shim additions; the previously generated doc recorded
+2229 registered shims and 294 missing game-owned APIs.
+
+| Metric | Value |
+|---|---|
+| PE32 inputs analysed | 19 |
+| Registered shim names (`registered_shim_count`) | 2249 |
+| Distinct PE import names covered (`registered_import_name_count`) | 2495 |
+| Distinct DLLs | 48 (22 system, 26 game-owned) |
+| Missing Win32 system APIs (`distinct_missing_api`) | 20 |
+| Missing game-owned APIs (`game_owned_missing_api`) | 293 |
+| All missing APIs combined (`all_missing_api`) | 313 |
+| Ordinal imports (system / game-owned / all) | 0 / 0 / 0 |
+
+This supports at most **A3\*** (a machine-readable audit of the checked-in
+runtime registration tables). It is **not** a game acceptance gate: a
+registered name is not proof of behaviour, the 20 system and 293 game-owned
+missing import names are not zero, and no 100%-coverage, gameplay, rendering,
+audio or issue-closure claim follows from it. Every issue above stays OPEN.
+
 ## Game-target evidence cross-reference (`docs/GAME_MATRIX.md`, Agent 3 addendum)
 
 Per-game rows are keyed by issue number. Statuses are PASS / PARTIAL / FAIL /
@@ -160,6 +186,25 @@ Per-game `acceptance` objects validate against `tools/acceptance_schema.json`.
     "closure_count": 0,
     "complete_count": 0,
     "out_of_scope_open": [26, 27]
+  },
+  "api_coverage": {
+    "generated_at_utc": "2026-11-23T06:20:51Z",
+    "corpus": "/Users/haseeb-mir/Downloads/recomp-apps/games",
+    "command": "python3 -m tools.api_coverage --corpus <corpus> --out <temp>.json --markdown docs/WIN32_API_COVERAGE.md",
+    "schema_version": "1.1.0",
+    "inputs": 19,
+    "registered_shim_count": 2249,
+    "registered_import_name_count": 2495,
+    "system_dlls": 22,
+    "game_owned_dlls": 26,
+    "distinct_missing_api": 20,
+    "game_owned_missing_api": 293,
+    "all_missing_api": 313,
+    "ordinal_imports": 0,
+    "registration_only": true,
+    "supports_gate": "A3* (audit/build evidence only)",
+    "completion_claim": false,
+    "closes_issue": false
   },
   "issues": [
     {"number": 1, "title": "MASTER: Autonomous PCRecomp + rev.ng NON-AI-first readable C/C++, optional AI, verified native games & GUI", "github_state": "OPEN", "complete": false, "plan_status": "IN_PROGRESS", "branches": ["feature/upstream-issue-1"], "commits": ["808863ba73161755a188d79325a2643cebf84b28"], "evidence": "high-level pointer-return fix; 172 passed, 2 skipped", "highest_gate": "A3", "unit_only": true, "missing_gate": "A4–A10: no end-to-end verified native game run under the master pipeline"},
@@ -257,3 +302,8 @@ Per-game `acceptance` objects validate against `tools/acceptance_schema.json`.
 6. **No game or live injection was run.** This is a documentation-only task;
    no DLL, game binary or original Windows file was executed. No issue is
    closed or marked complete as a result of this ledger.
+7. **API coverage is a registration audit, not an oracle.** The refreshed
+   `docs/WIN32_API_COVERAGE.md` counts registered shim names against PE import
+   names; it does not execute any shim or game. The non-zero missing counts
+   (20 system, 293 game-owned) are recorded as-is and no completion claim is
+   made from them.

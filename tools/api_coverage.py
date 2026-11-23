@@ -17,6 +17,10 @@ MSVCP140.dll, VCRUNTIME140.dll, ...) are NOT Win32 system APIs.  They are
 reported separately so the "missing API" headline number is not misleading.
 
     python3 -m tools.api_coverage --corpus /path/to/games --out reports/api-coverage.json
+
+Use ``--markdown docs/WIN32_API_COVERAGE.md`` to (re)generate the human-readable
+report directly from the same JSON, so the documented numbers cannot drift from
+the auditor output.
 """
 from __future__ import annotations
 
@@ -26,6 +30,7 @@ import json
 import re
 import sys
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -243,11 +248,124 @@ def build_report(corpus: Path, shims: set[str]) -> dict:
     }
 
 
+def _sorted_pairs(rows: list[dict]) -> list[tuple[str, str, int]]:
+    """Deterministic (dll, name, files) ordering for generated tables."""
+    return sorted(
+        ((row["dll"], row["name"], row["files"]) for row in rows),
+        key=lambda row: (-row[2], row[0], row[1]),
+    )
+
+
+def render_markdown(report: dict, *, corpus=None, out=None, generated_at=None) -> str:
+    """Render the human-readable coverage doc from a JSON report.
+
+    Every number below is taken from ``report``; nothing is estimated.  The
+    renderer deliberately states that the audit is registration-only and that
+    the missing counts remain non-zero, so it cannot produce a completion or
+    100%-coverage claim.
+    """
+    s = report["summary"]
+    corpus = str(corpus) if corpus else "(RECOMP_CORPUS)"
+    out = str(out) if out else "reports/api-coverage.json"
+    generated_at = generated_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    system_missing = _sorted_pairs(report["missing_by_api"])
+    game_missing = _sorted_pairs(report["game_owned_missing_by_api"])
+    system_dlls = report["dll_classification"]["system"]
+    game_dlls = report["dll_classification"]["game_owned"]
+
+    L: list[str] = []
+    L.append("# Win32 API coverage (auditor output)")
+    L.append("")
+    L.append("Generated from real PE32 import tables by "
+             "`python3 -m tools.api_coverage`.")
+    L.append("")
+    L.append(f"- Corpus: `{corpus}`")
+    L.append(f"- JSON report: `{out}`")
+    L.append(f"- Regenerated (UTC): `{generated_at}`")
+    L.append(f"- Schema: `{report['schema_version']}`")
+    L.append("")
+    L.append("## Headline numbers")
+    L.append("")
+    L.append("| Metric | Value |")
+    L.append("|---|---|")
+    L.append(f"| PE32 inputs analysed | {s['inputs']} |")
+    L.append(f"| Registered shim names (`registered_shim_count`) | "
+             f"{report['registered_shim_count']} |")
+    L.append(f"| Distinct PE import names covered "
+             f"(`registered_import_name_count`) | "
+             f"{report['registered_import_name_count']} |")
+    L.append(f"| Distinct DLLs referenced | {s['distinct_dlls']} "
+             f"({s['system_dlls']} system, {s['game_owned_dlls']} game-owned) |")
+    L.append(f"| Missing Win32 **system** APIs (`distinct_missing_api`) | "
+             f"{s['distinct_missing_api']} |")
+    L.append(f"| Missing game-owned APIs (`game_owned_missing_api`) | "
+             f"{s['game_owned_missing_api']} |")
+    L.append(f"| All missing APIs combined (`all_missing_api`) | "
+             f"{s['all_missing_api']} |")
+    L.append(f"| Ordinal imports (system / game-owned / all) | "
+             f"{s['ordinal_imports']} / {s['game_owned_ordinal_imports']} / "
+             f"{s['all_ordinal_imports']} |")
+    L.append("")
+    L.append(f"**Counting rule:** {report['counting_rule']}")
+    L.append("")
+    L.append("**Coverage is incomplete.** Only a registered shim *name* counts "
+             f"as implemented, and {s['distinct_missing_api']} system plus "
+             f"{s['game_owned_missing_api']} game-owned import names are still "
+             "unregistered. This is a name-registration audit; per-API "
+             "selftests, not this report, are the behaviour evidence.")
+    L.append("")
+    L.append(f"**What this is not:** {report['is_not']}.")
+    L.append("")
+    L.append(f"## Missing Win32 system APIs ({len(system_missing)})")
+    L.append("")
+    L.append("| DLL | API | Files |")
+    L.append("|---|---|---|")
+    for dll, name, files in system_missing:
+        L.append(f"| `{dll}` | `{name}` | {files} |")
+    L.append("")
+    L.append(f"## Game-owned DLL imports (top 30 of "
+             f"{s['game_owned_missing_api']})")
+    L.append("")
+    L.append("These are a game's own DLLs or bundled redistributables, not "
+             "Win32 system APIs. They are listed separately and never counted "
+             "in the headline system number.")
+    L.append("")
+    L.append("| DLL | API | Files |")
+    L.append("|---|---|---|")
+    for dll, name, files in game_missing[:30]:
+        L.append(f"| `{dll}` | `{name}` | {files} |")
+    L.append("")
+    L.append("## DLL classification")
+    L.append("")
+    L.append(f"System DLLs ({len(system_dlls)}): "
+             + ", ".join(f"`{dll}`" for dll in system_dlls) + ".")
+    L.append("")
+    L.append(f"Game-owned DLLs ({len(game_dlls)}): "
+             + ", ".join(f"`{dll}`" for dll in game_dlls) + ".")
+    L.append("")
+    L.append("## How to regenerate")
+    L.append("")
+    L.append("```sh")
+    L.append("python3 -m tools.api_coverage \\")
+    L.append("    --corpus /path/to/games \\")
+    L.append("    --out reports/api-coverage.json \\")
+    L.append("    --markdown docs/WIN32_API_COVERAGE.md")
+    L.append("```")
+    L.append("")
+    L.append("Registration proves only that a name is present. This report "
+             "makes no completion, gameplay, rendering, audio or 100%-coverage "
+             "claim.")
+    L.append("")
+    return "\n".join(L)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--corpus", default=None,
                    help="directory of PE32 files (default: RECOMP_CORPUS env)")
     p.add_argument("--out", type=Path, default=ROOT / "reports/api-coverage.json")
+    p.add_argument("--markdown", type=Path, default=None,
+                   help="also write the human-readable doc from this report")
     args = p.parse_args(argv)
     corpus = args.corpus or __import__("os").environ.get("RECOMP_CORPUS")
     if not corpus:
@@ -256,11 +374,17 @@ def main(argv=None) -> int:
     report = build_report(Path(corpus), registered_shims())
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    if args.markdown:
+        args.markdown.parent.mkdir(parents=True, exist_ok=True)
+        args.markdown.write_text(render_markdown(report, corpus=corpus,
+                                                 out=args.out))
     s = report["summary"]
     print(f"api coverage: {s['inputs']} inputs, "
           f"{s['distinct_missing_api']} system missing APIs, "
           f"{s['game_owned_missing_api']} game-owned missing APIs, "
           f"{s['ordinal_imports']} system ordinal imports -> {args.out}")
+    if args.markdown:
+        print(f"markdown coverage doc -> {args.markdown}")
     return 0
 
 
