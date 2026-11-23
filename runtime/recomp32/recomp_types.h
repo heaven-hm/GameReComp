@@ -1200,6 +1200,59 @@ static inline int recomp_addr_readable(uint32_t va) {
 }
 #endif
 
+/* Report a failed indirect dispatch, once per distinct (target, caller) pair.
+ *
+ * A NULL target is NOT an unrecovered function: there is no VA to look up and
+ * no seed to add. It is the guest having called through a NULL vtable or
+ * interface pointer -- the exact shape Gunroar's `call [edx+0x58]` at
+ * 0x00409466, Tumiki Fighters' `call [ecx+0x38]` and Parsec47's virtual calls
+ * take when the object was never constructed. Naming it as "unresolved VA
+ * 0x00000000" sent the diagnosis toward function recovery (and
+ * seed_from_log) instead of the null pointer that produced it.
+ *
+ * The dedup matters too: Doukutsu's NULL interface logged 7,000 identical
+ * lines in a 15 s run, which buried every other line in the log.
+ *
+ * The pair table is per translation unit (generated C is split into chunks);
+ * that still bounds the noise to one line per site per unit. */
+static inline void recomp_icall_report_miss(uint32_t va, uint32_t caller) {
+    enum { MISS_PAIRS = 16 };
+    static uint32_t seen_va[MISS_PAIRS], seen_from[MISS_PAIRS];
+    static unsigned char seen_used[MISS_PAIRS];
+    static unsigned seen_next;
+    for (unsigned i = 0; i < MISS_PAIRS; i++)
+        if (seen_used[i] && seen_va[i] == va && seen_from[i] == caller)
+            return;
+    unsigned slot = seen_next++ % MISS_PAIRS;
+    seen_va[slot] = va;
+    seen_from[slot] = caller;
+    seen_used[slot] = 1;
+    if (va == 0u)
+        fprintf(stderr, "ICALL: null target from 0x%08X "
+                        "(NULL vtable/interface pointer; no dispatch possible)\n", caller);
+    else
+        fprintf(stderr, "ICALL: unresolved VA 0x%08X from 0x%08X\n", va, caller);
+}
+
+static inline void recomp_itail_report_miss(uint32_t va, uint32_t caller) {
+    enum { MISS_PAIRS = 16 };
+    static uint32_t seen_va[MISS_PAIRS], seen_from[MISS_PAIRS];
+    static unsigned char seen_used[MISS_PAIRS];
+    static unsigned seen_next;
+    for (unsigned i = 0; i < MISS_PAIRS; i++)
+        if (seen_used[i] && seen_va[i] == va && seen_from[i] == caller)
+            return;
+    unsigned slot = seen_next++ % MISS_PAIRS;
+    seen_va[slot] = va;
+    seen_from[slot] = caller;
+    seen_used[slot] = 1;
+    if (va == 0u)
+        fprintf(stderr, "ITAIL: null target from 0x%08X "
+                        "(NULL vtable/interface pointer; no dispatch possible)\n", caller);
+    else
+        fprintf(stderr, "ITAIL: unresolved VA 0x%08X from 0x%08X\n", va, caller);
+}
+
 /* Indirect call through dispatch */
 #define RECOMP_ICALL(target_va) do { \
     uint32_t _va = (uint32_t)(target_va); \
@@ -1227,12 +1280,15 @@ static inline int recomp_addr_readable(uint32_t va) {
         RECOMP_REGS_IN(); \
         g_cur_func = _caller;  /* the callee RECOMP_ENTER clobbered it */ \
     } else { \
-        /* Nothing was pushed on this path, so there is nothing to pop: an \
-         * `esp += 4` here shifted the caller's stack by one slot per miss. \
-         * (Nocturne's CRT init runner lost its saved registers that way and \
-         * skipped ~90 static constructors after its first unlifted entry.) */ \
-        fprintf(stderr, "ICALL: unresolved VA 0x%08X from 0x%08X\n", _va, g_cur_func); \
-        eax = 0; \
+        /* A miss is a guest-visible NO-OP: the callee never ran, so no guest \
+         * register may change. `esp += 4` here shifted the caller's stack by \
+         * one slot per miss (Nocturne's CRT init runner lost its saved \
+         * registers that way and skipped ~90 static constructors). The old \
+         * `eax = 0` was just as destructive: Borland/DMD pass `this` in EAX, \
+         * so after one unresolved virtual call the next guest dereference \
+         * read address 0 and the process died with SIGBUS. Never call NULL; \
+         * leave the register file exactly as the caller left it. */ \
+        recomp_icall_report_miss(_va, g_cur_func); \
     } \
 } while(0)
 
@@ -1249,7 +1305,7 @@ static inline int recomp_addr_readable(uint32_t va) {
     if (_fn) { RECOMP_FLAGS_OUT(); RECOMP_REGS_OUT(); _fn(); RECOMP_REGS_IN(); } \
     else if (_va == RECOMP_RETADDR) { /* setjmp and friends return by jumping \
         to the saved return address; that is a return, not a missing target. */ } \
-    else { fprintf(stderr, "ITAIL: unresolved VA 0x%08X from 0x%08X\n", _va, g_cur_func); } \
+    else recomp_itail_report_miss(_va, g_cur_func); \
 } while(0)
 
 /* `push target; ret` (Lifter dos=True): a jump to a computed address. Its own

@@ -88,6 +88,19 @@ def scan_log(text):
     return out
 
 
+def is_null_target(va):
+    """VA 0 is a NULL function pointer, never an unrecovered function entry.
+
+    A disassembly seed is an address to decode as code; address 0 is the guest's
+    NULL page and is unmapped on Windows. The D/DMD games (Gunroar, Tumiki
+    Fighters, Parsec47) call through a NULL interface pointer and print
+    `ICALL: unresolved VA 0x00000000`, which is a guest-state bug, not a
+    missing entry in the function catalog. Seeding it can only mislead the
+    next recovery round.
+    """
+    return va == 0
+
+
 def load_seeds(path):
     """Existing seed file as a list of dicts, or [] if there is not one yet."""
     if not path or not os.path.exists(path):
@@ -154,6 +167,12 @@ def main(argv=None):
     added = skipped = known = 0
     for va, (kind, caller) in sorted(candidates.items()):
         where = f" from 0x{caller:08X}" if caller else ""
+        if is_null_target(va):
+            print(f"  - 0x{va:08X}  NULL indirect target: the guest called through "
+                  f"a NULL vtable/interface{where}. Not a function to recover; "
+                  f"look at the caller's object construction.")
+            skipped += 1
+            continue
         if va in have:
             print(f"  = 0x{va:08X}  already seeded")
             continue
@@ -223,13 +242,21 @@ def demo():
         "ICALL: unresolved VA 0x004A1C30 from 0x00499999\n"   # dup, first wins
         "recomp_dispatch: unresolved 1A2B:0010\n"
         "ICALL: unresolved VA 0x004C0000\n"                   # no caller
+        "ICALL: unresolved VA 0x00000000 from 0x0040942C\n"   # NULL target
     )
     got = scan_log(log)
     assert got[0x004A1C30] == ("indirect call", 0x0048D4E0), got
     assert got[0x004B2088] == ("indirect tail call", 0x00401D10), got
     assert got[0x004C0000] == ("indirect call", None), got
     assert got[(0x1A2B << 4) + 0x10][0] == "16-bit far dispatch", got
-    assert len(got) == 4, f"one entry per target address: {got}"
+    assert got[0x00000000] == ("indirect call", 0x0040942C), got
+    assert len(got) == 5, f"one entry per target address: {got}"
+
+    # The NULL target is reported (so it is visible) but never seeded: it is
+    # a guest null-pointer call, not a function the recovery round missed.
+    assert is_null_target(0)
+    assert not is_null_target(0x004A1C30)
+    assert not is_null_target((0x1A2B << 4) + 0x10)
 
     # A log with nothing in it must not invent work.
     assert scan_log("clean run, exit 0\n") == {}
