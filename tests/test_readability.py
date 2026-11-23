@@ -90,6 +90,16 @@ class ReadabilityHelpersTests(unittest.TestCase):
             self.assertTrue((reports / "readability.json").is_file())
 
 
+    def test_revert_also_rebuilds_baseline_binary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = readability.ReadabilityHarness(Path(tmp), providers="ai")
+            with mock.patch.object(harness, '_revert_unit') as reverted, \
+                 mock.patch.object(harness, '_rebuild',
+                                   return_value={'status': 'ok', 'log': ''}) as rebuilt:
+                harness._revert_and_rebuild(Path(tmp) / 'u.c', Path(tmp) / 'bak.c')
+            self.assertEqual(reverted.call_count, 1)
+            self.assertEqual(rebuilt.call_count, 1)
+
     def test_accepted_edit_updates_manifest_digest(self):
         with tempfile.TemporaryDirectory() as tmp:
             proj = Path(tmp)

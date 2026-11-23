@@ -30,6 +30,12 @@ def scan(project: Path) -> dict:
             rec['report'] = 'unreadable'
         else:
             rec['report'] = str(report)
+    # A stale or partial build artifact is not a recompile: require a report
+    # whose compile stage actually succeeded.
+    stages = rec.get('stages') or {}
+    if stages.get('compile') != 'ok':
+        rec['status'] = 'NOT_RECOMPILED'
+        return rec
     build = project / 'build'
     if build.is_dir():
         for p in sorted(build.iterdir()):

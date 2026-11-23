@@ -22,10 +22,24 @@ class RecompileLedgerTest(unittest.TestCase):
             p = Path(d) / 'app'
             (p / 'build').mkdir(parents=True)
             (p / 'build' / 'app').write_bytes(b'x' * 200000)
+            (p / 'reports').mkdir()
+            (p / 'reports' / 'report.json').write_text(
+                '{"stages":[{"name":"compile","status":"ok"}]}')
             rec = scan(p)
             self.assertEqual(rec['status'], 'NATIVE_BINARY_PRESENT')
             self.assertEqual(rec['binary_size'], 200000)
             self.assertEqual(len(rec['binary_sha256']), 64)
+
+    def test_partial_build_without_ok_compile_is_not_recompiled(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'app'
+            (p / 'build').mkdir(parents=True)
+            (p / 'build' / 'app').write_bytes(b'x' * 200000)
+            (p / 'reports').mkdir()
+            (p / 'reports' / 'report.json').write_text(
+                '{"stages":[{"name":"compile","status":"failed"}]}')
+            rec = scan(p)
+            self.assertEqual(rec['status'], 'NOT_RECOMPILED')
 
     def test_small_files_are_not_counted_as_binaries(self):
         with tempfile.TemporaryDirectory() as d:

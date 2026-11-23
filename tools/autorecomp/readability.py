@@ -355,6 +355,19 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             "pe": pe_s,
         }
 
+    def _revert_and_rebuild(self, unit, backup) -> None:
+        """Reject an edit and restore the tested baseline binary too.
+
+        A failed build deletes the old binary; reverting only the source left
+        later runs blocked with 'baseline binary is missing' even though no
+        edit had been accepted.
+        """
+        self._revert_unit(unit, backup)
+        build = self._rebuild()
+        if build["status"] != "ok":
+            self._log("failed to rebuild baseline binary after reverting "
+                      f"{unit.name}: {_tail(build['log'], 20)}")
+
     def _update_manifest_digest(self, digest: str) -> None:
         """Record an accepted source edit as the new baseline digest."""
         path = self.project / "manifest.json"
@@ -541,7 +554,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
         last_detail = ""
         for attempt in range(1, self.max_attempts + 1):
             if self.deadline.expired():
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 return "budget-exhausted"
             out = work / f"{unit.name}.attempt{attempt}.c"
             feedback_path = work / f"{unit.name}.attempt{attempt}.feedback.txt"
@@ -594,7 +607,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
                 continue
             except OSError as exc:
                 self._record_attempt(rel, attempt, "provider", False, str(exc))
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 self._log(f"ai provider cannot run: {exc}")
                 return "failed"
             if rc != 0:
@@ -613,7 +626,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             if new_text == original_text:
                 self._record_attempt(rel, attempt, "provider", True,
                                      "no changes returned")
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 return "no-changes"
             unit.write_text(new_text)
             self._record_attempt(rel, attempt, "provider", True,
@@ -623,7 +636,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             if build["status"] != "ok":
                 detail = "build failed: " + _tail(build["log"], 40)
                 self._record_attempt(rel, attempt, "build", False, detail)
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 feedback = detail
                 last_step, last_detail = "build", detail
                 continue
@@ -635,7 +648,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
                          evidence["stdout_tail"][-1000:] + "\n" + \
                          evidence["stderr_tail"][-1000:]
                 self._record_attempt(rel, attempt, "rerun", False, detail)
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 feedback = detail
                 last_step, last_detail = "rerun", detail
                 continue
@@ -660,7 +673,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
                                     if p["file"] != str(rel)]
             return "accepted"
 
-        self._revert_unit(unit, backup)
+        self._revert_and_rebuild(unit, backup)
         self.report["edits"].append({
             "file": str(rel), "provider": "ai-readability",
             "result": f"reverted after {self.max_attempts} attempts",
