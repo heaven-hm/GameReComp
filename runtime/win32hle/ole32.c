@@ -93,18 +93,69 @@ uint32_t hle_com_new(uint32_t vtable, uint32_t size) {
     return hle_va(o);
 }
 void hle_com_free(uint32_t obj) { hle_free(hle_ptr(obj)); }
-/* IUnknown for such objects: any interface is this one (a host serves one
- * interface per object), counted at +4, freed at zero. */
+/* Interface identity: a side table keeps IID -> interface VA out of the guest
+ * object layout, so existing DirectX objects are unchanged.  Objects that
+ * never bind an IID keep the legacy single-interface answer. */
+#define MAX_COM_IIDS 256
+static struct { uint32_t obj, iface; uint8_t iid[16]; } g_iids[MAX_COM_IIDS];
+static int g_niids;
+
+int hle_com_iid_equal(const uint8_t *a, const uint8_t *b) {
+    return a && b && memcmp(a, b, 16) == 0;
+}
+void hle_com_bind_iid(uint32_t obj, const uint8_t *iid, uint32_t iface) {
+    if (!obj || !iid || !iface) return;
+    for (int i = 0; i < g_niids; i++)
+        if (g_iids[i].obj == obj && !memcmp(g_iids[i].iid, iid, 16)) {
+            g_iids[i].iface = iface;
+            return;
+        }
+    if (g_niids < MAX_COM_IIDS) {
+        g_iids[g_niids].obj = obj, g_iids[g_niids].iface = iface;
+        memcpy(g_iids[g_niids].iid, iid, 16);
+        g_niids++;
+    }
+}
+void hle_com_unbind_iids(uint32_t obj) {
+    int w = 0;
+    for (int i = 0; i < g_niids; i++) {
+        if (g_iids[i].obj == obj) continue;
+        if (w != i) g_iids[w] = g_iids[i];
+        w++;
+    }
+    g_niids = w;
+}
+static int bound_iids(uint32_t obj) {
+    for (int i = 0; i < g_niids; i++) if (g_iids[i].obj == obj) return 1;
+    return 0;
+}
+
+/* IUnknown for host-served objects: interface identity is compared against the
+ * bound IID(s); unsupported interfaces return E_NOINTERFACE with a NULL out.
+ * A NULL out or iid is E_POINTER, as required by the COM contract. */
 void hle_com_QueryInterface(void) {                      /* (this, iid, &out) */
-    uint32_t self = A32(0);
-    if (A32(2)) MEM32(A32(2)) = self;
+    uint32_t self = A32(0), iid = A32(1), out = A32(2);
+    if (!out || !iid) { if (out) MEM32(out) = 0; RET(0x80004003u, 3); } /* E_POINTER */
+    if (bound_iids(self)) {
+        const uint8_t *g = hle_ptr(iid);
+        for (int i = 0; i < g_niids; i++)
+            if (g_iids[i].obj == self && hle_com_iid_equal(g, g_iids[i].iid)) {
+                uint32_t iface = g_iids[i].iface;
+                MEM32(out) = iface;
+                MEM32(iface + 4)++;
+                RET(S_OK, 3);
+            }
+        MEM32(out) = 0;
+        RET(0x80004002u, 3);                              /* E_NOINTERFACE */
+    }
+    MEM32(out) = self;
     MEM32(self + 4)++;
     RET(S_OK, 3);
 }
 void hle_com_AddRef(void) { RET(++MEM32(A32(0) + 4), 1); }
 void hle_com_Release(void) {
     uint32_t self = A32(0), n = --MEM32(self + 4);
-    if (!n) hle_com_free(self);
+    if (!n) { hle_com_unbind_iids(self); hle_com_free(self); }
     RET(n, 1);
 }
 

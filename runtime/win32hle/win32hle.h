@@ -475,6 +475,9 @@ void hle_reg_load(const char *file);
 uint32_t hle_com_vtable(const win32hle_shim *methods);
 uint32_t hle_com_new(uint32_t vtable, uint32_t size);
 void     hle_com_free(uint32_t obj);                  /* the last Release of an hle_com_new object */
+int      hle_com_iid_equal(const uint8_t *a, const uint8_t *b);
+void     hle_com_bind_iid(uint32_t obj, const uint8_t *iid, uint32_t iface);
+void     hle_com_unbind_iids(uint32_t obj);
 void     hle_com_register_class(const uint8_t *clsid, uint32_t (*create)(const uint8_t *iid, uint32_t *out));
 void     hle_com_QueryInterface(void);
 void     hle_com_AddRef(void);
