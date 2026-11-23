@@ -244,8 +244,37 @@ static void o_CoCreateInstance(void) {                   /* (clsid, outer, ctx, 
 }
 static void o_OleInitialize(void)   { RET(S_OK, 1); }
 static void o_OleUninitialize(void) { RETV(0); }
-static void o_CoInitialize(void)    { RET(S_OK, 1); }
-static void o_CoUninitialize(void)  { RETV(0); }
+/* COM initialisation state is per guest thread. The apartment model is the
+ * only part of COM initialisation this layer models: repeated initialisation
+ * with the same model returns S_FALSE and a different model is refused with
+ * RPC_E_CHANGED_MODE, as Win32 does. No host COM apartment is created. */
+static __thread unsigned g_com_init_count;
+static __thread uint32_t g_com_model;         /* COINIT_APARTMENTTHREADED bit */
+static uint32_t com_init(uint32_t flags) {
+    uint32_t model = flags & 0x2u;              /* COINIT_APARTMENTTHREADED */
+    if (g_com_init_count) {
+        if (g_com_model != model) return 0x80010106u;    /* RPC_E_CHANGED_MODE */
+        g_com_init_count++;
+        return 1u;                              /* S_FALSE */
+    }
+    g_com_model = model;
+    g_com_init_count = 1;
+    return S_OK;
+}
+static void o_CoInitializeEx(void) {            /* (reserved, dwCoInit) */
+    if (A32(0)) { RET(0x80070057u, 2); }        /* E_INVALIDARG: must be NULL */
+    RET(com_init(A32(1)), 2);
+}
+static void o_CoInitialize(void) {              /* (reserved) */
+    if (A32(0)) { RET(0x80070057u, 1); }
+    RET(com_init(0x2u), 1);                     /* COINIT_APARTMENTTHREADED */
+}
+static void o_CoUninitialize(void) {
+    if (g_com_init_count) {
+        if (!--g_com_init_count) g_com_model = 0;
+    }
+    RETV(0);
+}
 static void o_CoRegisterClassObject(void) {              /* (clsid, unk, ctx, flags, &cookie) */
     for (int i = 0; i < MAX_GUEST_CLASSES; i++)
         if (!g_guest_class[i].unk) {
@@ -548,7 +577,7 @@ const win32hle_shim win32hle_ole32[] = {
     { "CreateStreamOnHGlobal", o_CreateStreamOnHGlobal },
     { "OleInitialize",         o_OleInitialize },
     { "OleUninitialize",       o_OleUninitialize },
-    { "CoInitialize",          o_CoInitialize },
+    { "CoInitialize",          o_CoInitialize }, { "CoInitializeEx", o_CoInitializeEx },
     { "CoUninitialize",        o_CoUninitialize },
     { "CoRegisterClassObject", o_CoRegisterClassObject },
     { "CoRevokeClassObject",   o_CoRevokeClassObject },
