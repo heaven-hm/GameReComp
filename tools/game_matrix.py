@@ -15,6 +15,7 @@ import argparse
 import concurrent.futures
 import hashlib
 import json
+import os
 import struct
 import subprocess
 import sys
@@ -48,10 +49,21 @@ def sha256(path: Path) -> str:
 
 
 def run_one(exe: Path, out: Path, jobs: int, timeout: int, run_timeout: int,
-            reuse_build: bool) -> dict:
+            reuse_build: bool, headless: bool) -> dict:
     name = exe.stem.replace(' ', '_')
     log = out / f'{name}.log'
     project = out / 'projects' / name
+    frames = out / 'frames' / name
+    frames.mkdir(parents=True, exist_ok=True)
+    if not headless:
+        # A real video driver is required: SDL's "dummy" driver has no OpenGL,
+        # so every SDL_OPENGL game exits 1 before drawing a frame. On macOS
+        # --interactive selects Cocoa; screenshots provide graphics evidence.
+        cmd_env = dict(os.environ)
+        cmd_env['RECOMP_SCREENSHOT'] = str(frames)
+        cmd_env['RECOMP_SCREENSHOT_MAX'] = '3'
+    else:
+        cmd_env = None
     cmd = [
         sys.executable, '-m', 'tools.autorecomp', str(exe),
         '--project-dir', str(project),
@@ -61,6 +73,8 @@ def run_one(exe: Path, out: Path, jobs: int, timeout: int, run_timeout: int,
         '--target-os', 'host', '--target-arch', 'host',
         '--jobs', str(jobs),
     ]
+    if not headless:
+        cmd.append('--interactive')
     if reuse_build:
         cmd.append('--reuse-build')
     started = time.time()
@@ -73,13 +87,14 @@ def run_one(exe: Path, out: Path, jobs: int, timeout: int, run_timeout: int,
     }
     try:
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              timeout=timeout, text=True, check=False)
+                              env=cmd_env, timeout=timeout, text=True, check=False)
         log.write_text(proc.stdout)
         record['returncode'] = proc.returncode
     except subprocess.TimeoutExpired as exc:
         log.write_text((exc.stdout or b'') if isinstance(exc.stdout, bytes) else (exc.stdout or ''))
         record['returncode'] = 'TIMEOUT'
     record['seconds'] = round(time.time() - started, 1)
+    record['frames'] = sorted(str(p) for p in frames.glob('*.png'))
 
     report = project / 'reports' / 'report.json'
     if report.exists():
@@ -117,6 +132,8 @@ def main(argv=None) -> int:
     p.add_argument('--timeout', type=int, default=1200, help='per-game pipeline deadline (seconds)')
     p.add_argument('--run-timeout', type=int, default=8)
     p.add_argument('--reuse-build', action='store_true')
+    p.add_argument('--headless', action='store_true',
+                   help='use SDL dummy drivers (no OpenGL; games will exit 1 before drawing)')
     p.add_argument('--parallel', type=int, default=4)
     args = p.parse_args(argv)
 
@@ -132,14 +149,15 @@ def main(argv=None) -> int:
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
         futures = {pool.submit(run_one, e, args.out, args.jobs, args.timeout,
-                               args.run_timeout, args.reuse_build): e for e in exes}
+                               args.run_timeout, args.reuse_build, args.headless): e for e in exes}
         for future in concurrent.futures.as_completed(futures):
             rec = future.result()
             results.append(rec)
             stages = ','.join(f"{s['name']}={s['status']}" for s in rec.get('stages', []))
             print(f"{rec['input'].split('/')[-1]:28} rc={rec.get('returncode')!s:>7} "
                   f"score={rec.get('score')!s:>5} outcome={rec.get('outcome_status')!s:>8} "
-                  f"exit={rec.get('run_exit_code')!s:>5} {rec['seconds']}s  {stages}", flush=True)
+                  f"exit={rec.get('run_exit_code')!s:>5} frames={len(rec.get('frames', []))} "
+                  f"{rec['seconds']}s  {stages}", flush=True)
 
     results.sort(key=lambda r: r['input'])
     summary = args.out / 'summary.json'
