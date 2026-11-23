@@ -203,3 +203,26 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - `python3 -m pytest tests/ -q` → 213 passed, 5 skipped, 5 subtests passed.
   `bash runtime/win32hle/build_selftests.sh` → 44 selftests ok, 0 FAIL.
 - **All 27 issues remain OPEN.** No issue was closed; no 100% claim was made.
+
+## Integration checkpoint 10 — downloaded games and issue #28 (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `71a5d450a144371ade4b1cfdc33c6b0dc316a884`.
+- Two legally redistributable PE32 games downloaded, hashed and rebuilt: OUCC
+  Tetris 1.3 x86 (`024dccd5…`) and Chocolate Doom 1.3.0 win32 (`d1b9dabc…`).
+  No game binary or asset committed.
+- Issue #28 was filed with 19 measured missing imports from those games. All
+  19 now resolve: SDL string/error/driver/cursor helpers, MessageBoxW,
+  LoadLibraryW, LoadCursorW, DrawTextW, CreatePatternBrush, CreateIconIndirect,
+  __initenv, Mix_SetPostMix and four MSVCRT symbols. `api_gap_selftest` covers
+  them; documented limits (fscanf ENOSYS, post-mix callback not invoked from
+  the audio thread, no pattern rasterisation) are explicit, not fake success.
+- Final execution: Tetris 97 imports / 0 unresolved / **3 frames 310×418**;
+  Chocolate Doom 166+34 imports / 0 unresolved / 0 frames because no DOOM WAD
+  is supplied. Neither is at A6+ gameplay acceptance.
+- GUI: deterministic selftest modes pass for all 15 game PE32 inputs; 2 project
+  models pass, 1 fails closed on a missing report. Real mouse clicks are
+  BLOCKED by macOS assistive access (-25211) and screencapture is blocked.
+- Full suite: pytest 216 passed / 8 skipped / 24 subtests on the feature
+  branch; 45 win32hle selftests ok, 0 FAIL. Integration: 213 passed / 11 skipped.
+- New issues: #28 (API gaps, now import-complete but Doom frame evidence needs
+  a legal WAD), #26 build scale, #27 DMD exception. **No issue closed.**
