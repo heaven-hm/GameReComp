@@ -8,6 +8,11 @@
 #
 #   sh verify.sh            # everything that can run on this machine
 #   sh verify.sh --fast     # skip the parts that need a game corpus
+#   sh verify.sh --differential  # also run the opt-in flag/memory differential gate
+#
+# The differential gate is opt-in because it drives the synthetic PE through
+# Unicorn and mutates the comparison to prove it is non-vacuous (docs/DIFF_GATE.md).
+# Its assertions also run unattended as part of `pytest tests/`.
 #
 # Exit 0 only when every check passed. A skipped check is reported as skipped with
 # its reason and does NOT fail the run -- a machine without SDL2 or Cargo is not a broken
@@ -16,7 +21,17 @@ set -u
 cd "$(dirname "$0")" || exit 1
 
 FAST=0
-[ "${1:-}" = "--fast" ] && FAST=1
+DIFFERENTIAL=0
+for arg in "$@"; do
+    case "$arg" in
+        --fast) FAST=1 ;;
+        --differential) DIFFERENTIAL=1 ;;
+        *)
+            printf 'unknown option: %s\nusage: sh verify.sh [--fast] [--differential]\n' "$arg" >&2
+            exit 2
+            ;;
+    esac
+done
 
 fail=0
 ran=0
@@ -40,6 +55,19 @@ if python3 tests/fixtures/make_pe32_fixture.py --check > /tmp/verify-fixture.log
     ok "synthetic PE32 fixture reproducible"
 else
     bad "synthetic PE32 fixture reproducible" "$(tail -2 /tmp/verify-fixture.log | tr '\n' ' ')"
+fi
+
+# ------------------------------------------------------------ differential
+# Opt-in: the flag/memory gate deliberately breaks the comparison to prove it
+# can fail. Skipped by default so the fast CI gate stays corpus- and SDL-free.
+if [ "$DIFFERENTIAL" = 1 ]; then
+    head1 "differential"
+    if python3 tests/diff/differential_gate.py --quiet --json /tmp/verify-diff-gate.json \
+         > /tmp/verify-diff-gate.log 2>&1; then
+        ok "differential gate (flags + memory)" "$(tail -1 /tmp/verify-diff-gate.log)"
+    else
+        bad "differential gate (flags + memory)" "$(tail -3 /tmp/verify-diff-gate.log | tr '\n' ' ')"
+    fi
 fi
 
 # --------------------------------------------------------------- runtime
