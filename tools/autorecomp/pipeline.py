@@ -68,6 +68,41 @@ def default_build_timeout(source_bytes):
                BUILD_TIMEOUT_BASE + BUILD_TIMEOUT_PER_MB * (source_bytes / (1 << 20)))
 
 
+# Issue #26: a parallel compile of a multi-hundred-MiB generated tree writes one
+# object per concurrent job. On a nearly full volume that fills the disk mid-build
+# and leaves a half-written tree, which looks like a compiler error. Keep a safety
+# margin and scale --parallel down to what the volume can actually hold. The
+# policy is deliberately conservative: with ample space the requested jobs are
+# returned unchanged, so normal builds are not slowed down.
+BUILD_FREE_MARGIN = 1 << 30          # 1 GiB left for the linker, OS and other agents
+BUILD_MIN_FREE = 256 << 20           # below this, even one job is risky
+
+
+def effective_build_jobs(requested_jobs, source_bytes, path=None):
+    """Return a safe --parallel value for `source_bytes` of generated C.
+
+    Pure policy: statvfs is consulted once and the result is deterministic for a
+    given (requested, source_bytes, free) triple, which makes it unit-testable.
+    Falls back to `requested_jobs` when the filesystem cannot report free space.
+    """
+    jobs = max(1, int(requested_jobs or 1))
+    if jobs == 1:
+        return 1
+    try:
+        st = os.statvfs(str(path) if path is not None else ".")
+        free = st.f_bavail * st.f_frsize
+    except (OSError, AttributeError):
+        return jobs
+    source_bytes = max(0, int(source_bytes or 0))
+    # Each job holds roughly one unit's source in an object plus temp files; use a
+    # 2x factor and a floor so tiny fixtures still get a meaningful estimate.
+    per_job = max(source_bytes // jobs, 8 << 20) * 2
+    usable = free - BUILD_FREE_MARGIN
+    if usable <= BUILD_MIN_FREE:
+        return 1
+    return max(1, min(jobs, usable // per_job))
+
+
 # The host cmake path gets incremental rebuilds from make/ninja. The wasm32
 # path has no such step: it recompiles every generated unit on every run.
 # Wire the opt-in content-addressed object cache (build_cache.py) into that
@@ -869,8 +904,14 @@ class Pipeline:
             raise StageFailure("cmake not found on PATH")
         configure = [cmake, "-S", str(self.project_dir), "-B", str(build_dir),
                      "-DCMAKE_BUILD_TYPE=Release"]
-        build = [cmake, "--build", str(build_dir), "--parallel",
-                 str(self.jobs or os.cpu_count() or 4)]
+        requested_jobs = self.jobs or os.cpu_count() or 4
+        jobs = effective_build_jobs(requested_jobs, source_bytes, build_dir)
+        if jobs != requested_jobs:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(log_path, "a") as note:
+                note.write(f"# build parallelism reduced {requested_jobs} -> {jobs} "
+                           f"(low disk for {source_bytes} bytes of generated C)\n")
+        build = [cmake, "--build", str(build_dir), "--parallel", str(jobs)]
 
         adaptive = self.build_timeout is None
         timeout = (default_build_timeout(source_bytes)
