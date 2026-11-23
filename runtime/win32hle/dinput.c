@@ -49,9 +49,9 @@ int  hle_input_replay(const char *what, void *data, size_t n);
 #define DI_OK                 0x00000000u
 #define DIERR_INVALIDPARAM    0x80070057u
 #define DIERR_NOTINITIALIZED  0x80070015u
-#define DIERR_NOTACQUIRED     0x80070005u
+#define DIERR_NOTACQUIRED     0x8007000Cu  /* ERROR_INVALID_ACCESS, Wine dinput.h */
 #define DIERR_DEVICENOTREG    0x80040154u
-#define DIERR_UNSUPPORTED     0x80004005u
+#define DIERR_UNSUPPORTED     0x80004001u  /* E_NOTIMPL, Wine dinput.h */
 #define E_NOINTERFACE         0x80004002u
 #define E_POINTER             0x80004003u
 
@@ -223,8 +223,8 @@ static void dev_GetDeviceState(void) {
     if (want < 0) want = 0;
     if (g_dev[i].kind == 1) {
         if (want > DIK_SIZE) want = DIK_SIZE;
-    } else if (want > 16) {
-        want = 16;                       /* the mouse's three axes and four buttons */
+    } else if (want > 20) {
+        want = 20;                       /* DIMOUSESTATE2: three axes and eight buttons */
     }
     /* What the guest is handed, so a replay hands back the same bytes. The
      * recorded value is the shim's answer, not the device's state: at replay
@@ -267,11 +267,11 @@ static void dev_GetDeviceState(void) {
             g_dev[i].last_x = mx, g_dev[i].last_y = my;
         }
         uint8_t *p = hle_ptr(buf);
-        memset(p, 0, (size_t)(want < 16 ? want : 16));
+        memset(p, 0, (size_t)(want < 20 ? want : 20));
         if (want >= 4) MEM32(buf + DIMOFS_X) = (uint32_t)x;
         if (want >= 8) MEM32(buf + DIMOFS_Y) = (uint32_t)y;
         if (want >= 12) MEM32(buf + DIMOFS_Z) = 0;
-        for (int b = 0; b < 4; b++)
+        for (int b = 0; b < 8; b++)
             if (want >= DIMOFS_BUTTON0 + b + 1)
                 MEM8(buf + DIMOFS_BUTTON0 + b) = (uint8_t)((buttons >> b) & 1u ? 0x80 : 0);
         if (getenv("RECOMP_DI_DIAG")) { static int n; if ((n++ % 30) == 0 || buttons) fprintf(stderr,"[di] state kind=%d want=%d coop=%u x=%d y=%d buttons=%u t=%u\n",g_dev[i].kind,g_dev[i].coop,want,x,y,buttons,SDL_GetTicks()); }
