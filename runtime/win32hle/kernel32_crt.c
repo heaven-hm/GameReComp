@@ -604,8 +604,12 @@ static void k_SetUnhandledExceptionFilter(void) {
 static void k_UnhandledExceptionFilter(void)    { RET(0, 1); }  /* EXCEPTION_CONTINUE_SEARCH */
 static void k_RtlUnwind(void)      { RETV(4); }                 /* no guest SEH unwinding yet */
 static void k_RaiseException(void) {
-    if (A32(0) == 0xE0440001u)
-        hle_eh_d_throw(A32(0), A32(2), A32(3));
+    if (A32(0) == 0xE0440001u) {
+        const char *reason = "no diagnostic";
+        int dispatched = hle_eh_d_throw(A32(0), A32(2), A32(3), &reason);
+        fprintf(stderr, "[win32hle] DMD throw dispatch=%d reason=%s from guest 0x%08X\n",
+                dispatched, reason, g_cur_func);
+    }
     fprintf(stderr, "[win32hle] RaiseException(0x%08X) from guest 0x%08X: guest exceptions are not handled\n",
             A32(0), g_cur_func);
     hle_exit(3);

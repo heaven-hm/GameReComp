@@ -155,7 +155,8 @@ uint32_t hle_call_guest(uint32_t va, int nargs, const uint32_t *args);
  * MSVC frames with a known catch continuation; these functions keep the host
  * checkpoint list and dispatch a throw using the guest's own metadata. */
 int hle_eh_cxx_throw(uint32_t object, uint32_t throw_info);
-int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va);
+int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
+                   const char **reason);
 void hle_eh_longjmp(uint32_t jump_buffer, uint32_t value);
 
 /* ---- the machine lock ----
