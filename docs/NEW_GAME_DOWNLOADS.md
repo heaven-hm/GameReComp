@@ -60,3 +60,19 @@ task. No PASS claim is made for either game.
 
 Raw logs and any frames are in `test-results/game-matrix/execution/<game>/`;
 `summary.json` lists the exact command, environment, exit code and frame list.
+
+## Rebuild progress (issue #28)
+
+After implementing `SDL_strlcpy`, `SDL_strlcat`, `SDL_SetError`,
+`SDL_VideoDriverName`, `MessageBoxW`, `WSACancelBlockingCall`, `LoadCursorW`,
+`DrawTextW` and `LoadLibraryW`, both games were rebuilt with the updated
+runtime and re-executed with the same runner/timeout:
+
+- Tetris: **7 → 3** unresolved imports. Remaining: `CreatePatternBrush`,
+  `CreateIconIndirect`, `__initenv`.
+- Chocolate Doom: **12 → 8** unresolved imports. Remaining:
+  `SDL_CreateCursor`, `SDL_GetCursor`, `SDL_SetCursor`, `Mix_SetPostMix`,
+  `_flsbuf`, `_snprintf`, `fscanf`, `vprintf`.
+
+Neither game reached a frame yet; this is an import-binding improvement, not a
+gameplay claim.
