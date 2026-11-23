@@ -1468,6 +1468,89 @@ static void k_CompareStringEx(void) {
     RET(i >= len1 && j >= len2 ? 2u : (i >= len1 ? 1u : 3u), 9);
 }
 
+/* ---- locale-name bridge: Get{User,System}DefaultLocaleName, LCID <-> name ----
+ * The Vista+ counterparts of the LCID-based NLS calls in kernel32_crt.c. As in
+ * the Ex block above, this layer backs exactly one locale (en-US / 0x0409),
+ * which is both the user and the system default, so name <-> LCID conversion
+ * can be honest without an NLS data file:
+ *   - "en-US" (and the case-insensitive "en") <-> 0x0409;
+ *   - "" (LOCALE_NAME_INVARIANT) <-> 0x007F (LOCALE_INVARIANT);
+ *   - NULL (LOCALE_NAME_USER_DEFAULT) -> the user LCID 0x0409;
+ *   - "!x-sys-default-locale" (LOCALE_NAME_SYSTEM_DEFAULT) -> the system LCID 0x0409.
+ * A neutral name ("en") maps to 0x0409 unless LOCALE_ALLOW_NEUTRAL_NAMES is
+ * set, in which case it maps to the neutral LCID 0x0009; the reverse direction
+ * does the same with "en" / "en-US". Casing of the name itself is ignored,
+ * matching Windows. Every other name or LCID fails with ERROR_INVALID_PARAMETER
+ * rather than inventing NLS data; unknown flag bits are ignored, as on Windows.
+ * All strings are UTF-16 *in guest memory*: output is one WCHAR per code unit,
+ * NUL-terminated, with a length measured in WCHARs (including that NUL), just
+ * like GetLocaleInfoEx(LOCALE_SNAME). cch == 0 is a size probe and returns the
+ * required length without touching the buffer; a present but small buffer
+ * fails with ERROR_INSUFFICIENT_BUFFER and leaves it untouched.
+ */
+#define EX_LOCALE_MAX_NAME          85u      /* LOCALE_NAME_MAX_LENGTH */
+#define EX_LOCALE_ALLOW_NEUTRAL_NAMES 0x08000000u
+#define EX_LOCALE_NEUTRAL_EN        0x0009u   /* MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_NEUTRAL)) */
+#define EX_LOCALE_INVARIANT         0x007Fu
+#define EX_LOCALE_NEUTRAL           0x0000u   /* LOCALE_NEUTRAL -> user locale */
+#define EX_LOCALE_USER_DEFAULT      0x0400u
+#define EX_LOCALE_SYSTEM_DEFAULT    0x0800u
+#define EX_LOCALE_EN_US             0x0409u
+
+/* Write a NUL-terminated ASCII locale name as UTF-16 into guest memory. */
+static uint32_t ex_write_utf16_name(const char *s, uint32_t dst, int cch) {
+    uint32_t len = (uint32_t)strlen(s) + 1u, i;  /* includes the NUL */
+    if (cch < 0) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); return 0; }
+    if (len > EX_LOCALE_MAX_NAME) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); return 0; }
+    if (!cch) return len;                        /* size probe, no write */
+    if ((uint32_t)cch < len || !dst) { hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); return 0; }
+    for (i = 0; i < len; i++) MEM16(dst + i * 2u) = (uint8_t)s[i];
+    return len;
+}
+
+/* GetUserDefaultLocaleName(localeName, cchLocaleName) */
+static void k_GetUserDefaultLocaleName(void) {
+    RET(ex_write_utf16_name("en-US", A32(0), (int)A32(1)), 2);
+}
+
+/* GetSystemDefaultLocaleName(localeName, cchLocaleName) */
+static void k_GetSystemDefaultLocaleName(void) {
+    RET(ex_write_utf16_name("en-US", A32(0), (int)A32(1)), 2);
+}
+
+/* LCIDToLocaleName(lcid, name, cchName, dwFlags) */
+static void k_LCIDToLocaleName(void) {
+    uint32_t lcid = A32(0), dst = A32(1), flags = A32(3);
+    int cch = (int)A32(2);
+    const char *name;
+    if (lcid == EX_LOCALE_INVARIANT) name = "";                       /* LOCALE_NAME_INVARIANT */
+    else if (lcid == EX_LOCALE_NEUTRAL_EN) {
+        /* A neutral LCID answers with its neutral name only when the caller
+         * opted in; otherwise Windows substitutes the default language. */
+        name = (flags & EX_LOCALE_ALLOW_NEUTRAL_NAMES) ? "en" : "en-US";
+    } else if (lcid == EX_LOCALE_EN_US || lcid == EX_LOCALE_USER_DEFAULT ||
+               lcid == EX_LOCALE_SYSTEM_DEFAULT || lcid == EX_LOCALE_NEUTRAL) {
+        name = "en-US";
+    } else {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 4);
+    }
+    RET(ex_write_utf16_name(name, dst, cch), 4);
+}
+
+/* LocaleNameToLCID(lpName, dwFlags) */
+static void k_LocaleNameToLCID(void) {
+    uint32_t va = A32(0), flags = A32(1);
+    char name[64];
+    if (!va) RET(EX_LOCALE_EN_US, 2);          /* LOCALE_NAME_USER_DEFAULT */
+    if (!ex_wide_ascii(va, name, sizeof name)) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 2); }
+    if (!*name) RET(EX_LOCALE_INVARIANT, 2);   /* LOCALE_NAME_INVARIANT */
+    if (!strcasecmp(name, "!x-sys-default-locale")) RET(EX_LOCALE_EN_US, 2); /* LOCALE_NAME_SYSTEM_DEFAULT */
+    if (!strcasecmp(name, "en-us")) RET(EX_LOCALE_EN_US, 2);
+    if (!strcasecmp(name, "en"))
+        RET((flags & EX_LOCALE_ALLOW_NEUTRAL_NAMES) ? EX_LOCALE_NEUTRAL_EN : EX_LOCALE_EN_US, 2);
+    hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 2);
+}
+
 const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetProcessAffinityMask", k_GetProcessAffinityMask }, { "SetProcessAffinityMask", k_SetProcessAffinityMask },
     { "CreateToolhelp32Snapshot", k_CreateToolhelp32Snapshot }, { "Process32First", k_Process32First },
@@ -1549,5 +1632,9 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "LCMapStringEx",              k_LCMapStringEx },
     { "GetLocaleInfoEx",            k_GetLocaleInfoEx },
     { "CompareStringEx",            k_CompareStringEx },
+    { "GetUserDefaultLocaleName",   k_GetUserDefaultLocaleName },
+    { "GetSystemDefaultLocaleName", k_GetSystemDefaultLocaleName },
+    { "LCIDToLocaleName",           k_LCIDToLocaleName },
+    { "LocaleNameToLCID",           k_LocaleNameToLCID },
     { 0, 0 }
 };
