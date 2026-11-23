@@ -86,6 +86,46 @@ def ok_frames():
     }
 
 
+def no_frames():
+    return {"runner_frame_count": 0, "joined_frame_count": 0,
+            "example": None, "frames": []}
+
+
+def ok_cli_launch(tmp, output=b"cli-ok-v1\n", exit_code=0, digest=None):
+    """A recorded process-level launch with a real on-disk log and hash."""
+    log = Path(tmp) / "run.log"
+    log.write_bytes(output)
+    return {
+        "executed": True, "exit_code": exit_code, "seconds": 0.1,
+        "evidence": str(Path(tmp)), "log": str(log),
+        "command": ["/tmp/native", "--version"],
+        "output_sha256": (hashlib.sha256(output).hexdigest()
+                          if digest is None else digest),
+        "stdout_tail": output.decode("utf-8", "replace"),
+        "mode": "cli", "reason": "",
+    }
+
+
+def ok_cli_scenario(output=b"cli-ok-v1\n", exit_code=0, args=None):
+    """A complete declared CLI scenario whose expected hash is computed, not invented."""
+    return {
+        "declared": True, "complete": True, "source": "/tmp/scenario.json",
+        "args": ["--version"] if args is None else args,
+        "expected_exit": exit_code,
+        "expected_output_sha256": hashlib.sha256(output).hexdigest(),
+        "reasons": [],
+    }
+
+
+# A stand-in for a headless CLI app: deterministic output, no screenshot frame.
+CLI_NATIVE = '''#!/usr/bin/env python3
+import sys
+print("cli-ok-v1")
+print("arg=" + ",".join(sys.argv[1:]))
+'''
+CLI_OUTPUT = b"cli-ok-v1\narg=--version\n"
+
+
 class HelpersTest(unittest.TestCase):
     def test_parse_assignment_and_bare_path(self):
         self.assertEqual(ca.parse_assignment("Game=/tmp/a.exe"), ("Game", "/tmp/a.exe"))
@@ -333,6 +373,286 @@ class IntegrationTest(unittest.TestCase):
             data = json.loads(out_json.read_text())
             self.assertEqual(data["games"][0]["status"], ca.BUILD_ONLY)
             self.assertIn("Corpus acceptance report", out_md.read_text())
+            self.assertNotIn("/Users/haseeb-mir", out_json.read_text())
+
+
+class CliHelpersTest(unittest.TestCase):
+    def test_kind_defaults_to_gui_and_only_explicit_headless_opt_in(self):
+        self.assertEqual(ca.normalize_kind(None), ca.KIND_GUI)
+        self.assertEqual(ca.normalize_kind("gui"), ca.KIND_GUI)
+        self.assertEqual(ca.normalize_kind("cli"), ca.KIND_CLI)
+        self.assertEqual(ca.normalize_kind("HEADLESS"), ca.KIND_CLI)
+        self.assertEqual(ca.normalize_kind("typo"), ca.KIND_GUI)
+
+    def test_scenario_record_requires_all_three_declared_fields(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            good = root / "good.json"
+            good.write_text(json.dumps({
+                "args": ["--version"], "expected_exit": 0,
+                "expected_output_sha256": "a" * 64}))
+            rec = ca.scenario_record(str(good))
+            self.assertTrue(rec["declared"])
+            self.assertTrue(rec["complete"])
+            self.assertEqual(rec["args"], ["--version"])
+            self.assertEqual(rec["expected_exit"], 0)
+            self.assertEqual(rec["expected_output_sha256"], "a" * 64)
+
+            for name, payload in (
+                ("no-hash.json", {"args": ["--version"], "expected_exit": 0}),
+                ("bad-args.json", {"args": "--version", "expected_exit": 0,
+                                   "expected_output_sha256": "a" * 64}),
+                ("bad-exit.json", {"args": [], "expected_exit": "0",
+                                   "expected_output_sha256": "a" * 64}),
+            ):
+                path = root / name
+                path.write_text(json.dumps(payload))
+                bad = ca.scenario_record(str(path))
+                self.assertTrue(bad["declared"])
+                self.assertFalse(bad["complete"], name)
+                self.assertTrue(bad["reasons"], name)
+
+            broken = root / "broken.json"
+            broken.write_text("{not json")
+            self.assertFalse(ca.scenario_record(str(broken))["complete"])
+            self.assertFalse(ca.scenario_record(str(root / "absent.json"))["complete"])
+            self.assertFalse(ca.scenario_record(None)["declared"])
+
+    def test_uses_cli_evidence_requires_opt_in_and_declaration(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "scenario.json"
+            path.write_text(json.dumps({
+                "args": [], "expected_exit": 0,
+                "expected_output_sha256": "a" * 64}))
+            scenario = ca.scenario_record(str(path))
+            self.assertTrue(ca.uses_cli_evidence("cli", scenario))
+            self.assertTrue(ca.uses_cli_evidence("headless", scenario))
+            self.assertFalse(ca.uses_cli_evidence("gui", scenario))
+            self.assertFalse(ca.uses_cli_evidence("cli", ca.scenario_record(None)))
+
+    def test_cli_evidence_compares_recorded_hash_and_log(self):
+        output = b"deterministic output\n"
+        scenario = ok_cli_scenario(output=output)
+        with tempfile.TemporaryDirectory() as d:
+            launch = ok_cli_launch(d, output=output)
+            ev = ca.cli_evidence(scenario, launch)
+            self.assertTrue(ev["evidence_present"])
+            self.assertTrue(ev["exit_matches"])
+            self.assertTrue(ev["output_matches"])
+            self.assertTrue(ev["reproduced"])
+
+            mismatch = ca.cli_evidence(scenario,
+                                       ok_cli_launch(d, output=b"other output\n"))
+            self.assertFalse(mismatch["output_matches"])
+            self.assertFalse(mismatch["reproduced"])
+
+            launch["log"] = str(Path(d) / "missing.log")
+            self.assertFalse(ca.cli_evidence(scenario, launch)["reproduced"])
+
+
+class CliClassifyTest(unittest.TestCase):
+    def test_declared_cli_scenario_reaches_partial_without_oracle(self):
+        output = b"cli-ok-v1\n"
+        with tempfile.TemporaryDirectory() as d:
+            status, reasons = ca.classify(
+                ok_original(), ok_pipeline(verification="not-run"), ok_native(),
+                ok_cli_launch(d, output=output), no_frames(), None,
+                kind="cli", scenario=ok_cli_scenario(output=output))
+            self.assertEqual(status, ca.PARTIAL, reasons)
+            self.assertTrue(any("render-free process-level" in r for r in reasons))
+            self.assertTrue(any("no Windows oracle" in r for r in reasons))
+            self.assertTrue(any(r.startswith("PASS withheld") for r in reasons))
+
+    def test_accepted_oracle_and_matching_output_can_reach_pass(self):
+        output = b"cli-ok-v1\n"
+        with tempfile.TemporaryDirectory() as d:
+            status, reasons = ca.classify(
+                ok_original(), ok_pipeline(), ok_native(),
+                ok_cli_launch(d, output=output), no_frames(), None,
+                kind="cli", scenario=ok_cli_scenario(output=output))
+            self.assertEqual(status, ca.PASS, reasons)
+            self.assertTrue(any("verification 'scenario-pass' matched" in r
+                                for r in reasons))
+
+    def test_bare_exit_code_without_scenario_cannot_reach_pass(self):
+        # Meta-test: even a perfect pipeline oracle cannot promote a bare exit
+        # code when no scenario was declared. Frame rules still apply.
+        with tempfile.TemporaryDirectory() as d:
+            for launch in (ok_launch(exit_code=0), ok_cli_launch(d)):
+                status, reasons = ca.classify(
+                    ok_original(), ok_pipeline(), ok_native(), launch,
+                    no_frames(), None, kind="cli", scenario=ca.scenario_record(None))
+                self.assertNotEqual(status, ca.PASS)
+                self.assertEqual(status, ca.FAIL, reasons)
+                self.assertTrue(any("render evidence" in r for r in reasons))
+
+    def test_scenario_with_no_output_hash_stays_fail(self):
+        # A scenario claiming only an exit code is not stronger than a bare
+        # exit code, so it cannot pass even with an accepted oracle.
+        scenario = {
+            "declared": True, "complete": False, "source": "/tmp/s.json",
+            "args": ["--version"], "expected_exit": 0,
+            "expected_output_sha256": None,
+            "reasons": ["'expected_output_sha256' must be a 64-character hex digest"],
+        }
+        with tempfile.TemporaryDirectory() as d:
+            status, reasons = ca.classify(
+                ok_original(), ok_pipeline(), ok_native(),
+                ok_cli_launch(d), no_frames(), None,
+                kind="cli", scenario=scenario)
+            self.assertEqual(status, ca.FAIL, reasons)
+            self.assertTrue(any("incomplete" in r for r in reasons))
+
+    def test_divergent_exit_or_output_is_fail(self):
+        with tempfile.TemporaryDirectory() as d:
+            status, reasons = ca.classify(
+                ok_original(), ok_pipeline(), ok_native(),
+                ok_cli_launch(d, exit_code=2), no_frames(), None,
+                kind="cli", scenario=ok_cli_scenario())
+            self.assertEqual(status, ca.FAIL, reasons)
+            self.assertTrue(any("did not reproduce" in r for r in reasons))
+        with tempfile.TemporaryDirectory() as d:
+            status, reasons = ca.classify(
+                ok_original(), ok_pipeline(), ok_native(),
+                ok_cli_launch(d, output=b"unexpected\n"), no_frames(), None,
+                kind="cli", scenario=ok_cli_scenario())
+            self.assertEqual(status, ca.FAIL, reasons)
+            self.assertTrue(any("did not reproduce" in r for r in reasons))
+
+    def test_missing_process_evidence_is_fail(self):
+        with tempfile.TemporaryDirectory() as d:
+            launch = ok_cli_launch(d)
+            launch["output_sha256"] = None
+            launch["log"] = str(Path(d) / "absent.log")
+            status, reasons = ca.classify(
+                ok_original(), ok_pipeline(), ok_native(), launch, no_frames(),
+                None, kind="cli", scenario=ok_cli_scenario())
+            self.assertEqual(status, ca.FAIL, reasons)
+            self.assertTrue(any("no process-level evidence" in r for r in reasons))
+
+    def test_cli_scenario_without_launch_is_build_only(self):
+        status, reasons = ca.classify(
+            ok_original(), ok_pipeline(), ok_native(),
+            {"executed": False, "exit_code": None, "reason": "not requested"},
+            no_frames(), None, kind="cli", scenario=ok_cli_scenario())
+        self.assertEqual(status, ca.BUILD_ONLY, reasons)
+
+
+class CliIntegrationTest(unittest.TestCase):
+    def _scenario_file(self, root, *, output=CLI_OUTPUT):
+        path = root / "scenario.json"
+        path.write_text(json.dumps({
+            "args": ["--version"], "expected_exit": 0,
+            "expected_output_sha256": hashlib.sha256(output).hexdigest()}))
+        return str(path)
+
+    def test_declared_cli_scenario_reaches_partial_with_recorded_evidence(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            native = root / "cli-native"
+            native.write_text(CLI_NATIVE)
+            os.chmod(native, 0o755)
+            scenario_path = self._scenario_file(root)
+            report = ca.build_acceptance([{
+                "name": "cliapp", "original": str(FIXTURE), "native": str(native),
+                "assets": str(root), "kind": "cli", "scenario": scenario_path,
+                "pipeline_report": None,
+            }], root / "evidence", timeout=3)
+            rec = report["games"][0]
+            self.assertEqual(rec["status"], ca.PARTIAL, rec["reasons"])
+            self.assertEqual(rec["kind"], "cli")
+            self.assertEqual(rec["launch"]["exit_code"], 0)
+            self.assertEqual(rec["launch"]["command"], [str(native), "--version"])
+            self.assertEqual(rec["launch"]["output_sha256"],
+                             hashlib.sha256(CLI_OUTPUT).hexdigest())
+            self.assertEqual(Path(rec["launch"]["log"]).read_bytes(), CLI_OUTPUT)
+            self.assertEqual(rec["frames"]["joined_frame_count"], 0)
+            self.assertIsNone(rec["frames"]["example"])
+            self.assertTrue(rec["cli_evidence"]["reproduced"])
+            self.assertTrue(any("render-free process-level" in r
+                                for r in rec["reasons"]))
+            markdown = ca.render_markdown(report)
+            self.assertIn("CLI scenario", markdown)
+            self.assertIn("render-free process-level evidence", markdown)
+
+    def test_divergent_cli_scenario_is_fail_end_to_end(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            native = root / "cli-native"
+            native.write_text(CLI_NATIVE)
+            os.chmod(native, 0o755)
+            scenario_path = self._scenario_file(root, output=b"wrong output\n")
+            report = ca.build_acceptance([{
+                "name": "cliapp", "original": str(FIXTURE), "native": str(native),
+                "assets": str(root), "kind": "headless", "scenario": scenario_path,
+            }], root / "evidence", timeout=3)
+            rec = report["games"][0]
+            self.assertEqual(rec["status"], ca.FAIL, rec["reasons"])
+            self.assertFalse(rec["cli_evidence"]["reproduced"])
+            self.assertTrue(any("did not reproduce" in r for r in rec["reasons"]))
+
+    def test_cli_game_without_scenario_keeps_existing_frame_rules(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            renderer = root / "renderer"
+            renderer.write_text(FAKE_NATIVE)
+            os.chmod(renderer, 0o755)
+            # kind=cli with no declared scenario: frame rules still apply.
+            renderer_report = ca.build_acceptance([{
+                "name": "render", "original": str(FIXTURE), "native": str(renderer),
+                "assets": str(root), "kind": "cli",
+            }], root / "evidence-render", timeout=3)
+            rec = renderer_report["games"][0]
+            self.assertEqual(rec["status"], ca.PARTIAL, rec["reasons"])
+            self.assertEqual(rec["frames"]["proven_frame_count"], 1)
+
+            silent = root / "silent"
+            silent.write_text(CLI_NATIVE)
+            os.chmod(silent, 0o755)
+            silent_report = ca.build_acceptance([{
+                "name": "silent", "original": str(FIXTURE), "native": str(silent),
+                "assets": str(root), "kind": "cli",
+            }], root / "evidence-silent", timeout=3)
+            rec = silent_report["games"][0]
+            self.assertEqual(rec["status"], ca.FAIL, rec["reasons"])
+            self.assertTrue(any("render evidence" in r for r in rec["reasons"]))
+
+    def test_cli_no_run_is_build_only(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            native = root / "cli-native"
+            native.write_bytes(b"binary")
+            scenario_path = self._scenario_file(root)
+            report = ca.build_acceptance([{
+                "name": "cliapp", "original": str(FIXTURE), "native": str(native),
+                "assets": str(root), "kind": "cli", "scenario": scenario_path,
+            }], root / "evidence", execute=False)
+            rec = report["games"][0]
+            self.assertEqual(rec["status"], ca.BUILD_ONLY, rec["reasons"])
+            self.assertFalse(rec["launch"]["executed"])
+
+    def test_cli_kind_and_scenario_are_supplied_as_cli_arguments(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            native = root / "cli-native"
+            native.write_text(CLI_NATIVE)
+            os.chmod(native, 0o755)
+            scenario_path = self._scenario_file(root)
+            out_json = root / "out" / "acceptance.json"
+            rc = ca.main([
+                "--out", str(root / "evidence"),
+                "--original", f"cliapp={FIXTURE}",
+                "--native", f"cliapp={native}",
+                "--assets", f"cliapp={root}",
+                "--kind", "cliapp=cli",
+                "--scenario", f"cliapp={scenario_path}",
+                "--json", str(out_json),
+            ])
+            self.assertEqual(rc, 0)
+            data = json.loads(out_json.read_text())
+            rec = data["games"][0]
+            self.assertEqual(rec["status"], ca.PARTIAL, rec["reasons"])
+            self.assertEqual(rec["kind"], "cli")
             self.assertNotIn("/Users/haseeb-mir", out_json.read_text())
 
 
