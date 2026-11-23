@@ -93,22 +93,37 @@ static void d3d9_dev_release(void) {
 
 /* One virtual adapter; geometry is the shared display mode, never a host GL
  * call, so these queries agree with ddraw/d3d7. */
+static uint32_t d3d9_display_format(void) {
+    int w = 640, h = 480, bpp = 32;
+    hle_dd_mode(&w, &h, &bpp);
+    return bpp == 16 ? D3DFMT_R5G6B5 : D3DFMT_X8R8G8B8;
+}
 static void d3d9_write_mode(uint32_t p) {
     int w = 640, h = 480, bpp = 32;
     hle_dd_mode(&w, &h, &bpp);
     MEM32(p)      = w > 0 ? (uint32_t)w : 640u;
     MEM32(p + 4)  = h > 0 ? (uint32_t)h : 480u;
     MEM32(p + 8)  = 60u;                            /* refresh rate in Hz */
-    MEM32(p + 12) = bpp == 16 ? D3DFMT_R5G6B5 : D3DFMT_X8R8G8B8;
+    MEM32(p + 12) = d3d9_display_format();
 }
 static void d3d9_d3d_get_adapter_count(void) { RET(1u, 1); }
+/* Wine's d3d9.h declares GetAdapterModeCount(UINT Adapter, D3DFORMAT Format):
+ * two arguments after `this`, so a callee must pop three words including the
+ * synthetic return address. The D3D8 version has only Adapter and pops two;
+ * copying that here left one word on the guest stack per call, which drifts
+ * ESP through a game's whole mode-enumeration loop. */
 static void d3d9_d3d_get_mode_count(void) {
-    RET(A32(1) == 0 ? 1u : 0u, 2);
+    RET(A32(1) == 0 && (!A32(2) || A32(2) == d3d9_display_format()) ? 1u : 0u, 3);
 }
 static void d3d9_d3d_enum_modes(void) {
     uint32_t mode = A32(4);
     if (!mode) RET(E_POINTER, 5);
-    if (A32(1) != 0 || A32(2) != 0) RET(D3DERR_INVALIDCALL, 5);
+    /* EnumAdapterModes(Adapter, Format, Mode, pMode) in d3d9.h adds a Format
+     * slot D3D8 does not have. Demanding Format == 0 rejected the real
+     * D3DFMT_X8R8G8B8 / D3DFMT_R5G6B5 every DX9 title passes here, and
+     * testing A32(2) as the mode index accepted out-of-range indices. */
+    if (A32(1) != 0 || A32(3) != 0) RET(D3DERR_INVALIDCALL, 5);
+    if (A32(2) && A32(2) != d3d9_display_format()) RET(D3DERR_INVALIDCALL, 5);
     d3d9_write_mode(mode);
     RET(D3D_OK, 5);
 }

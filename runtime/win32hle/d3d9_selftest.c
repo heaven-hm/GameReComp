@@ -43,6 +43,28 @@ static uint32_t call(const char *name, int argc, const uint32_t *args) {
 static uint32_t vtcall(uint32_t vt, unsigned slot, int argc, const uint32_t *args) {
     return hle_call_guest(MEM32(vt + 4u * slot), argc, args);
 }
+/* hle_call_guest restores the register file after a shim returns, so it cannot
+ * see a wrong stdcall purge. Drive the registered shim the way lifted code
+ * does (synthetic return address + args on a guest stack), call it directly,
+ * and report how many words it popped. That makes a missing argument slot in
+ * RET() a deterministic failure instead of an invisible guest-stack leak. */
+static uint32_t shim_pops(const char *name, int argc, const uint32_t *args,
+                          uint32_t *out_eax) {
+    uint32_t va = hle_resolve(name);
+    recomp_func_t fn = va ? recomp_lookup_import(va) : 0;
+    if (!fn) return 0xFFFFFFFFu;
+    uint32_t saved_esp = g_esp, saved_eax = g_eax;
+    uint32_t scratch = hle_va(hle_alloc(64));       /* ret + up to 7 args */
+    g_esp = scratch + 32;
+    for (int i = argc - 1; i >= 0; --i) { g_esp -= 4; MEM32(g_esp) = args[i]; }
+    g_esp -= 4; MEM32(g_esp) = RECOMP_RETADDR;
+    uint32_t esp_in = g_esp;
+    fn();
+    uint32_t words = (g_esp - esp_in) / 4u;
+    if (out_eax) *out_eax = g_eax;
+    g_esp = saved_esp; g_eax = saved_eax;
+    return words;
+}
 static uint32_t copy_iid(const uint8_t iid[16]) {
     uint32_t va = hle_va(hle_alloc(16));
     memcpy(hle_ptr(va), iid, 16);
@@ -102,10 +124,10 @@ int main(void) {
     ok("QI(NULL out) is E_POINTER", vtcall(vt, 0, 3,
        (uint32_t[]){ d3d, copy_iid(IID_D3D9), 0u }) == E_POINTER_VALUE);
 
-    /* Adapter queries backed by the shared display mode. */
+    /* Adapter queries backed by the shared display mode. Wine's d3d9.h gives
+     * GetAdapterModeCount(Adapter, Format) and EnumAdapterModes(Adapter,
+     * Format, Mode, pMode); D3D8's versions have no Format slot. */
     ok("GetAdapterCount", vtcall(vt, 4, 1, &d3d) == 1u);
-    ok("GetAdapterModeCount", vtcall(vt, 6, 2,
-       (uint32_t[]){ d3d, 0u }) == 1u);
     uint32_t mode = hle_va(hle_alloc(16));
     memset(hle_ptr(mode), 0, 16);
     ok("GetAdapterDisplayMode", vtcall(vt, 8, 3,
@@ -114,6 +136,35 @@ int main(void) {
     ok("display mode height", MEM32(mode + 4u) == 480u);
     /* The shared display mode decides the format: 16-bit -> R5G6B5, else X8R8G8B8. */
     ok("display mode format", MEM32(mode + 12u) == 22u || MEM32(mode + 12u) == 23u);
+    uint32_t fmt = MEM32(mode + 12u);
+
+    ok("GetAdapterModeCount(real format)", vtcall(vt, 6, 3,
+       (uint32_t[]){ d3d, 0u, fmt }) == 1u);
+    ok("GetAdapterModeCount(D3DFMT_UNKNOWN)", vtcall(vt, 6, 3,
+       (uint32_t[]){ d3d, 0u, 0u }) == 1u);
+    ok("GetAdapterModeCount(bad adapter)", vtcall(vt, 6, 3,
+       (uint32_t[]){ d3d, 1u, fmt }) == 0u);
+    uint32_t hr = 0u;
+    ok("GetAdapterModeCount pops ret + 3 args", shim_pops(
+       "D3D9::Object::GetAdapterModeCount", 3,
+       (uint32_t[]){ d3d, 0u, fmt }, &hr) == 4u);
+
+    memset(hle_ptr(mode), 0, 16);
+    ok("EnumAdapterModes(real format)", vtcall(vt, 7, 5,
+       (uint32_t[]){ d3d, 0u, fmt, 0u, mode }) == D3D_OK_VALUE);
+    ok("enumerated mode format", MEM32(mode + 12u) == fmt);
+    ok("EnumAdapterModes(bad index) is INVALIDCALL", vtcall(vt, 7, 5,
+       (uint32_t[]){ d3d, 0u, fmt, 1u, mode }) == D3DERR_INVALIDCALL_VALUE);
+    ok("EnumAdapterModes(bad format) is INVALIDCALL", vtcall(vt, 7, 5,
+       (uint32_t[]){ d3d, 0u, fmt == 22u ? 23u : 22u, 0u, mode }) == D3DERR_INVALIDCALL_VALUE);
+    ok("EnumAdapterModes(NULL out) is E_POINTER", vtcall(vt, 7, 5,
+       (uint32_t[]){ d3d, 0u, fmt, 0u, 0u }) == E_POINTER_VALUE);
+    ok("EnumAdapterModes pops ret + 5 args on success", shim_pops(
+       "D3D9::Object::EnumAdapterModes", 5,
+       (uint32_t[]){ d3d, 0u, fmt, 0u, mode }, &hr) == 6u);
+    ok("EnumAdapterModes pops ret + 5 args on failure", shim_pops(
+       "D3D9::Object::EnumAdapterModes", 5,
+       (uint32_t[]){ d3d, 0u, fmt, 1u, mode }, &hr) == 6u);
     ok("CheckDeviceType is honest NA", vtcall(vt, 9, 6,
        (uint32_t[]){ d3d, 0u, 0u, 22u, 22u, 1u }) == D3DERR_NOTAVAILABLE_VALUE);
 
@@ -188,6 +239,7 @@ int main(void) {
     ok("D3D9 final Release destroys", vtcall(vt, 2, 1, &d3d) == 0u);
 
     mach_leave();
-    printf("d3d9_selftest: all checks passed\n");
+    if (!fails) printf("d3d9_selftest: all checks passed\n");
+    else printf("d3d9_selftest: %d check(s) failed\n", fails);
     return fails != 0;
 }
