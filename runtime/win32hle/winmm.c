@@ -164,9 +164,7 @@ static void mmio_info(const hmmio *m, uint32_t info, uint32_t h) {   /* MMIOINFO
     MEM32(info + 28) = hle_va(m->data) + m->pos, MEM32(info + 32) = hle_va(m->data) + m->len;
     MEM32(info + 36) = MEM32(info + 32), MEM32(info + 40) = 0, MEM32(info + 44) = m->len, MEM32(info + 68) = h;
 }
-static void m_mmioOpenA(void) {                          /* (name, MMIOINFO*, flags) */
-    const char *name = ASTR(0);
-    uint32_t info = A32(1), flags = A32(2);
+static uint32_t mmio_open_named(const char *name, uint32_t info, uint32_t flags) {
     hmmio *m = (hmmio *)calloc(1, sizeof *m);
     if (info && MEM32(info + 4) == FOURCC_MEM && MEM32(info + 24)) {
         m->data = (uint8_t *)hle_ptr(MEM32(info + 24)), m->len = MEM32(info + 20);
@@ -180,13 +178,30 @@ static void m_mmioOpenA(void) {                          /* (name, MMIOINFO*, fl
             if (f) fclose(f);
             hle_free(m->data), free(m);
             if (info) MEM32(info + 12) = MMIOERR_CANNOTOPEN;
-            RET(0, 3);
+            return 0;
         }
         fclose(f);
     }
     uint32_t h = hle_handle_alloc(HLE_H_MMIO, m);
     if (info) MEM32(info + 12) = 0;
-    RET(h, 3);
+    return h;
+}
+/* mmioOpenW: the wide-name form used by TrackMania. Convert through the
+ * existing Win32 codepage helper; the file path handling is shared. */
+static void m_mmioOpenW(void) {                          /* (nameW, MMIOINFO*, flags) */
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024];
+    if (!w || !hle_wide_to_ansi(w, name, sizeof name)) {
+        if (A32(1)) MEM32(A32(1) + 12) = MMIOERR_CANNOTOPEN;
+        RET(0, 3);
+    }
+    uint32_t host_name = hle_va(hle_alloc((uint32_t)strlen(name) + 1));
+    if (!host_name) { RET(0, 3); }
+    memcpy(hle_ptr(host_name), name, strlen(name) + 1);
+    RET(mmio_open_named((const char *)hle_ptr(host_name), A32(1), A32(2)), 3);
+}
+static void m_mmioOpenA(void) {
+    RET(mmio_open_named(ASTR(0), A32(1), A32(2)), 3);
 }
 static void m_mmioClose(void) {
     hmmio *m = MMIO(A32(0));
@@ -281,7 +296,7 @@ static void m_mmioStringToFOURCCA(void) {
 
 const win32hle_shim win32hle_winmm[] = {
     { "mmioStringToFOURCCA",    m_mmioStringToFOURCCA },
-    { "mmioOpenA", m_mmioOpenA }, { "mmioClose", m_mmioClose }, { "mmioRead", m_mmioRead }, { "mmioWrite", m_mmioWrite },
+    { "mmioOpenA", m_mmioOpenA }, { "mmioOpenW", m_mmioOpenW }, { "mmioClose", m_mmioClose }, { "mmioRead", m_mmioRead }, { "mmioWrite", m_mmioWrite },
     { "mmioSeek", m_mmioSeek }, { "mmioDescend", m_mmioDescend }, { "mmioAscend", m_mmioAscend },
     { "mmioGetInfo", m_mmioGetInfo }, { "mmioSetInfo", m_mmioSetInfo }, { "mmioAdvance", m_mmioAdvance },
     { "mmioSetBuffer", m_mmioSetBuffer },
