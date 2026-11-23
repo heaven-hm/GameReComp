@@ -22,6 +22,16 @@ void hle_input_record(const char *what, const void *data, size_t n);
 int  hle_input_replay(const char *what, void *data, size_t n);
 void hle_input_reset(void);
 
+/* present.c's common frame sink (feature/swarm2-a24-noframes) has the exact
+ * signature below.  A weak default keeps sdl12.c linkable in trees without
+ * that layer; when present.c is linked its strong definition wins and does
+ * the publishing.  The default publishes straight to screen.c's recorder
+ * hook, which is the same frame evidence.  This mirrors host.c's pattern of
+ * a weak default replaced by a strong definition in another translation unit. */
+__attribute__((weak)) void hle_present_surface(const uint8_t *px, int w, int h, int pitch, int bpp) {
+    if (px && hle_screen_frame_hook) hle_screen_frame_hook(px, w, h, pitch, bpp);
+}
+
 /* Guest-visible SDL 1.2 structures, as SDL-1.2.15's headers lay them out on a
  * 32-bit Windows build (the ABI the games were compiled against).  A lifted
  * game reads these fields itself, so the offsets are the ABI, not a private
@@ -220,6 +230,16 @@ static void present(void) {
         error(SDL_GetError()); return;
     }
     SDL_RenderClear(g_renderer); SDL_RenderCopy(g_renderer, g_texture, NULL, NULL); SDL_RenderPresent(g_renderer);
+
+    /* One present -> one recorded frame.  Publish the surface SDL just drew:
+     * px is the guest framebuffer (hle_ptr is the guest-VA -> host mapping),
+     * and w/h/pitch/bpp all come from the video surface, never invented.  An
+     * 8-bit screen is palette-converted into the host-side g_conv texture, but
+     * the indexed guest pixels are still the frame the game produced, so they
+     * are published with their real 8bpp geometry. */
+    const uint8_t *frame = (const uint8_t *)hle_ptr(sf_pixels(g_video));
+    int pitch = sf_pitch(g_video), bpp = sf_bpp(g_video);
+    hle_present_surface(frame, w, h, pitch, bpp);
 }
 
 static void s_Init(void) { int rc = SDL_Init(A32(0)); if (rc) error(SDL_GetError()); RETC(rc); }
@@ -296,6 +316,28 @@ static void s_SetCursor(void) {
     if (!c) { error("unknown SDL cursor handle"); RETCV(); }
     SDL_SetCursor(c);
     s_current_cursor = c;
+    RETCV();
+}
+/* SDL_FreeCursor releases the host cursor AND the guest handle it was reached
+ * by, then drops the side-table slot.  Freeing the current cursor falls back
+ * to SDL's default, as SDL 1.2 does; a second free of the same handle is a
+ * harmless no-op rather than a use-after-free. */
+static void s_FreeCursor(void) {
+    uint32_t guest = A32(0);
+    if (!guest) RETCV();
+    for (int i = 0; i < S12_MAX_CURSORS; i++) {
+        if (!s_cursors[i].host || s_cursors[i].guest != guest) continue;
+        if (s_current_cursor == s_cursors[i].host) {
+            s_current_cursor = SDL_GetDefaultCursor();
+            SDL_SetCursor(s_current_cursor);
+        }
+        SDL_FreeCursor(s_cursors[i].host);
+        hle_free(hle_ptr(guest));
+        s_cursors[i].host = NULL;
+        s_cursors[i].guest = 0;
+        RETCV();
+    }
+    error("unknown SDL cursor handle");   /* same as SDL_SetCursor's bad handle */
     RETCV();
 }
 
@@ -668,7 +710,44 @@ static void s_CreateRGBSurfaceFrom(void) {
 static void s_FreeSurface(void) { uint32_t s = A32(0); if (s) { if (MEM32(s + S12_SF_UNUSED1)) hle_free(hle_ptr(sf_pixels(s))); hle_free(hle_ptr(sf_format(s))); hle_free(hle_ptr(s)); } RETCV(); }
 static void s_LockSurface(void) { RETC(A32(0) ? 0 : -1); }
 static void s_UnlockSurface(void) { RETCV(); }
-static void s_FillRect(void) { int x,y,w,h; uint32_t s=A32(0); if (!s) RETC(-1); rect(A32(1),&x,&y,&w,&h,s); for(int j=0;j<h;j++) for(int i=0;i<w;i++) pixel_write(s,x+i,y+j,A32(2)); RETC(0); }
+/* SDL 1.2's SDL_Surface.clip_rect (guest offset 32) is the one field every
+ * fill/blit shim reads through rect()/blit_rects(), so setting it here governs
+ * SDL_FillRect, SDL_BlitSurface and SDL_UpperBlit alike.  A NULL rect resets
+ * the clip to the whole surface; a non-NULL rect is clamped to its bounds. */
+static void s_SetClipRect(void) {
+    uint32_t s = A32(0), r = A32(1);
+    if (!s) RETC(0);
+    int sw = sf_w(s), sh = sf_h(s);
+    int x = 0, y = 0, w = sw, h = sh;
+    if (r) {
+        x = (int)(int16_t)get16(r);      y = (int)(int16_t)get16(r + 2);
+        w = (int)get16(r + 4);           h = (int)get16(r + 6);
+    }
+    if (x < 0) { w += x; x = 0; }
+    if (y < 0) { h += y; y = 0; }
+    if (x > sw) { x = sw; w = 0; }
+    if (y > sh) { y = sh; h = 0; }
+    if (w < 0) w = 0; if (h < 0) h = 0;
+    if (w > sw - x) w = sw - x;
+    if (h > sh - y) h = sh - y;
+    put16(s + S12_SF_CLIP, (uint16_t)x);       put16(s + S12_SF_CLIP + 2, (uint16_t)y);
+    put16(s + S12_SF_CLIP + 4, (uint16_t)w);   put16(s + S12_SF_CLIP + 6, (uint16_t)h);
+    RETC(1);                                  /* SDL_bool: SDL_TRUE on a surface */
+}
+static void s_GetClipRect(void) {
+    uint32_t s = A32(0), r = A32(1);
+    if (!s || !r) RETCV();
+    put16(r, get16(s + S12_SF_CLIP));           put16(r + 2, get16(s + S12_SF_CLIP + 2));
+    put16(r + 4, get16(s + S12_SF_CLIP + 4));   put16(r + 6, get16(s + S12_SF_CLIP + 6));
+    RETCV();
+}
+static void s_FillRect(void) {
+    int x, y, w, h; uint32_t s = A32(0);
+    if (!s) { error("SDL_FillRect: NULL surface"); RETC(-1); }
+    rect(A32(1), &x, &y, &w, &h, s);
+    for (int j = 0; j < h; j++) for (int i = 0; i < w; i++) pixel_write(s, x + i, y + j, A32(2));
+    RETC(0);
+}
 /* SDL_UpperBlit's rectangle rules: the source rectangle is clipped to the
  * source surface, the destination takes its SIZE from that source rectangle
  * (not from dstrect->w/h, which SDL treats as an output), and the pair is then
@@ -687,15 +766,13 @@ static void blit_rects(uint32_t srcrect, uint32_t dstrect, uint32_t src, uint32_
     if (*sw < 0) *sw = 0; if (*sh < 0) *sh = 0;
 }
 
-/* SDL_UpperBlit: clip both rects, then copy.  SDL 1.2's blit rules
- * (SDL_video.h): a source colour key skips matching pixels (comparing RGB,
- * ignoring alpha); SDL_SRCALPHA blends with the per-pixel alpha when the source
- * has an alpha channel, else with the per-surface alpha. */
-static void s_BlitSurface(void) {
-    int sx, sy, sw, sh, dx, dy;
-    uint32_t src = A32(0), dst = A32(2);
-    if (!src || !dst) RETC(-1);
-    blit_rects(A32(1), A32(3), src, dst, &sx, &sy, &sw, &sh, &dx, &dy);
+/* The pixel loop shared by SDL_UpperBlit (clipped) and SDL_LowerBlit (raw):
+ * colour key and alpha handling are identical, only rectangle preparation
+ * differs.  Coordinates must already be inside both surfaces when called.
+ * SDL 1.2's blit rules (SDL_video.h): a source colour key skips matching
+ * pixels (comparing RGB, ignoring alpha); SDL_SRCALPHA blends with the
+ * per-pixel alpha when the source has one, else with the per-surface alpha. */
+static int blit_pixels(uint32_t src, uint32_t dst, int sx, int sy, int dx, int dy, int sw, int sh) {
     uint32_t sf = sf_format(src), df = sf_format(dst);
     int ckey_on = (sf_flags(src) & S12_SRCCOLORKEY) != 0;
     uint32_t ckey = MEM32(sf + S12_FMT_COLORKEY);
@@ -734,12 +811,48 @@ static void s_BlitSurface(void) {
             }
             pixel_write(dst, dx + x, dy + y, out);
         }
+    return 0;
+}
+/* SDL_UpperBlit: clip both rects, then copy. */
+static void s_BlitSurface(void) {
+    int sx, sy, sw, sh, dx, dy;
+    uint32_t src = A32(0), dst = A32(2);
+    if (!src || !dst) RETC(-1);
+    blit_rects(A32(1), A32(3), src, dst, &sx, &sy, &sw, &sh, &dx, &dy);
+    if (blit_pixels(src, dst, sx, sy, dx, dy, sw, sh)) RETC(-1);
     /* "The final blit rectangles are saved in srcrect and dstrect" (SDL_video.h). */
     if (A32(1)) { put16(A32(1), (uint16_t)sx); put16(A32(1) + 2, (uint16_t)sy); put16(A32(1) + 4, (uint16_t)sw); put16(A32(1) + 6, (uint16_t)sh); }
     if (A32(3)) { put16(A32(3), (uint16_t)dx); put16(A32(3) + 2, (uint16_t)dy); put16(A32(3) + 4, (uint16_t)sw); put16(A32(3) + 6, (uint16_t)sh); }
     RETC(0);
 }
 static void s_UpperBlit(void) { s_BlitSurface(); }
+/* SDL_LowerBlit is the unclipped counterpart.  Its caller has normally
+ * prepared the rectangles with SDL_SetClipRect/SDL_UpperBlit, but the shim
+ * still intersects them with both surfaces so a game cannot make the guest
+ * read or write outside a surface.  Only dstrect's size is an output (the
+ * source rectangle is left as the caller supplied it). */
+static void s_LowerBlit(void) {
+    uint32_t src = A32(0), sr = A32(1), dst = A32(2), dr = A32(3);
+    if (!src || !dst) RETC(-1);
+    int sx = sr ? (int)(int16_t)get16(sr) : 0;
+    int sy = sr ? (int)(int16_t)get16(sr + 2) : 0;
+    int sw = sr ? (int)get16(sr + 4) : sf_w(src);
+    int sh = sr ? (int)get16(sr + 6) : sf_h(src);
+    int dx = dr ? (int)(int16_t)get16(dr) : 0;
+    int dy = dr ? (int)(int16_t)get16(dr + 2) : 0;
+    if (sx < 0) { sw += sx; sx = 0; }
+    if (sy < 0) { sh += sy; sy = 0; }
+    if (dx < 0) { sw += dx; dx = 0; }
+    if (dy < 0) { sh += dy; dy = 0; }
+    if (sx + sw > sf_w(src)) sw = sf_w(src) - sx;
+    if (sy + sh > sf_h(src)) sh = sf_h(src) - sy;
+    if (dx + sw > sf_w(dst)) sw = sf_w(dst) - dx;
+    if (dy + sh > sf_h(dst)) sh = sf_h(dst) - dy;
+    if (sw < 0) sw = 0; if (sh < 0) sh = 0;
+    if (sw > 0 && sh > 0 && blit_pixels(src, dst, sx, sy, dx, dy, sw, sh)) RETC(-1);
+    if (dr) { put16(dr + 4, (uint16_t)sw); put16(dr + 6, (uint16_t)sh); }
+    RETC(0);
+}
 
 /* ---- pixel formats: SDL_MapRGB/SDL_GetRGB and the surface converters ----
  * SDL 1.2 defines a pixel's channels by mask + shift + loss (SDL_video.c's
@@ -2032,10 +2145,12 @@ const win32hle_shim win32hle_sdl12[] = {
     { "SDL_strlcpy", s_strlcpy }, { "SDL_strlcat", s_strlcat },
     { "SDL_VideoDriverName", s_VideoDriverName },
     { "SDL_CreateCursor", s_CreateCursor }, { "SDL_GetCursor", s_GetCursor },
-    { "SDL_SetCursor", s_SetCursor },
+    { "SDL_SetCursor", s_SetCursor }, { "SDL_FreeCursor", s_FreeCursor },
     { "SDL_GetTicks", s_GetTicks }, { "SDL_Delay", s_Delay },
     { "SDL_SetVideoMode", s_SetVideoMode }, { "SDL_GetVideoSurface", s_GetVideoSurface }, { "SDL_Flip", s_Flip }, { "SDL_UpdateRect", s_UpdateRect }, { "SDL_UpdateRects", s_UpdateRects },
-    { "SDL_CreateRGBSurface", s_CreateRGBSurface }, { "SDL_CreateRGBSurfaceFrom", s_CreateRGBSurfaceFrom }, { "SDL_FreeSurface", s_FreeSurface }, { "SDL_LockSurface", s_LockSurface }, { "SDL_UnlockSurface", s_UnlockSurface }, { "SDL_FillRect", s_FillRect }, { "SDL_BlitSurface", s_BlitSurface }, { "SDL_UpperBlit", s_UpperBlit },
+    { "SDL_CreateRGBSurface", s_CreateRGBSurface }, { "SDL_CreateRGBSurfaceFrom", s_CreateRGBSurfaceFrom }, { "SDL_FreeSurface", s_FreeSurface }, { "SDL_LockSurface", s_LockSurface }, { "SDL_UnlockSurface", s_UnlockSurface },
+    { "SDL_SetClipRect", s_SetClipRect }, { "SDL_GetClipRect", s_GetClipRect },
+    { "SDL_FillRect", s_FillRect }, { "SDL_BlitSurface", s_BlitSurface }, { "SDL_UpperBlit", s_UpperBlit }, { "SDL_LowerBlit", s_LowerBlit },
     { "SDL_PollEvent", s_PollEvent }, { "SDL_PumpEvents", s_PumpEvents }, { "SDL_ShowCursor", s_ShowCursor }, { "SDL_WarpMouse", s_WarpMouse },
     { "SDL_RWFromFile", s_RWFromFile }, { "SDL_RWFromMem", s_RWFromMem }, { "SDL_RWseek", s_RWseek }, { "SDL_RWread", s_RWread },
     { "SDL_RWwrite", s_RWwrite }, { "SDL_RWclose", s_RWclose }, { "SDL_RWtell", s_RWtell },
