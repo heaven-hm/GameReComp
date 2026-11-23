@@ -228,6 +228,33 @@ static void close_video(void);
 static void s_Quit(void) { close_video(); SDL_Quit(); RETCV(); }
 static void s_QuitSubSystem(void) { SDL_QuitSubSystem(A32(0)); RETCV(); }
 static void s_WasInit(void) { RETC(SDL_WasInit(A32(0))); }
+/* SDL 1.2's BSD-style bounded string helpers. They are cdecl and return
+ * strlen(src), so a truncated copy still reports the untruncated length. */
+static void s_strlcpy(void) {
+    char *dst = ASTR(0), *src = ASTR(1);
+    size_t size = (size_t)A32(2), n = src ? strlen(src) : 0;
+    if (!dst || !src) RETC(0);
+    if (size) {
+        size_t copy = n < size - 1u ? n : size - 1u;
+        memcpy(dst, src, copy);
+        dst[copy] = 0;
+    }
+    RETC(n);
+}
+static void s_strlcat(void) {
+    char *dst = ASTR(0), *src = ASTR(1);
+    size_t size = (size_t)A32(2), dlen, n;
+    if (!dst || !src) RETC(0);
+    dlen = size ? strnlen(dst, size) : 0;
+    n = strlen(src);
+    if (size && dlen < size) {
+        size_t copy = (n < size - dlen - 1u) ? n : size - dlen - 1u;
+        memcpy(dst + dlen, src, copy);
+        dst[dlen + copy] = 0;
+    }
+    RETC(dlen + n);
+}
+static void s_SetError(void) { error(ASTR(0)); RETC(-1); }
 static void s_GetError(void) { RETC(hle_guest_strdup(g_error[0] ? g_error : SDL_GetError())); }
 static void s_ClearError(void) { g_error[0] = 0; SDL_ClearError(); RETCV(); }
 static void s_GetTicks(void) { RETC(hle_clock_ms()); }
@@ -1942,7 +1969,9 @@ static void s_WarpMouse(void) { SDL_WarpMouseInWindow(g_window,(int)A32(0),(int)
 
 const win32hle_shim win32hle_sdl12[] = {
     { "SDL_Init", s_Init }, { "SDL_InitSubSystem", s_InitSubSystem }, { "SDL_Quit", s_Quit }, { "SDL_QuitSubSystem", s_QuitSubSystem }, { "SDL_WasInit", s_WasInit },
-    { "SDL_GetError", s_GetError }, { "SDL_ClearError", s_ClearError }, { "SDL_GetTicks", s_GetTicks }, { "SDL_Delay", s_Delay },
+    { "SDL_GetError", s_GetError }, { "SDL_ClearError", s_ClearError }, { "SDL_SetError", s_SetError },
+    { "SDL_strlcpy", s_strlcpy }, { "SDL_strlcat", s_strlcat },
+    { "SDL_GetTicks", s_GetTicks }, { "SDL_Delay", s_Delay },
     { "SDL_SetVideoMode", s_SetVideoMode }, { "SDL_GetVideoSurface", s_GetVideoSurface }, { "SDL_Flip", s_Flip }, { "SDL_UpdateRect", s_UpdateRect }, { "SDL_UpdateRects", s_UpdateRects },
     { "SDL_CreateRGBSurface", s_CreateRGBSurface }, { "SDL_CreateRGBSurfaceFrom", s_CreateRGBSurfaceFrom }, { "SDL_FreeSurface", s_FreeSurface }, { "SDL_LockSurface", s_LockSurface }, { "SDL_UnlockSurface", s_UnlockSurface }, { "SDL_FillRect", s_FillRect }, { "SDL_BlitSurface", s_BlitSurface }, { "SDL_UpperBlit", s_UpperBlit },
     { "SDL_PollEvent", s_PollEvent }, { "SDL_PumpEvents", s_PumpEvents }, { "SDL_ShowCursor", s_ShowCursor }, { "SDL_WarpMouse", s_WarpMouse },

@@ -1,0 +1,65 @@
+/* api_gap_selftest.c - APIs found missing by the downloaded-game audit. */
+#define RECOMP_GENERATED_CODE
+#define _GNU_SOURCE
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "win32hle.h"
+
+const recomp_dispatch_entry_t recomp_dispatch_table[1];
+const uint32_t recomp_dispatch_count = 0;
+
+static int fails;
+static void ok(const char *what, int cond) {
+    if (!cond) { printf("FAIL %s\n", what); fails++; }
+}
+static uint32_t call(const char *name, int argc, const uint32_t *args) {
+    uint32_t fn = hle_resolve(name);
+    return fn ? hle_call_guest(fn, argc, args) : 0xFFFFFFFFu;
+}
+static uint32_t ansi(const char *s) {
+    size_t n = strlen(s) + 1, va = hle_va(hle_alloc(n));
+    memcpy(hle_ptr(va), s, n);
+    return va;
+}
+static uint32_t wide(const char *s) {
+    size_t n = strlen(s) + 1, va = hle_va(hle_alloc(n * 2u));
+    uint16_t *w = (uint16_t *)hle_ptr(va);
+    for (size_t i = 0; i < n; i++) w[i] = (uint16_t)(unsigned char)s[i];
+    return va;
+}
+
+int main(void) {
+    win32hle_register(win32hle_user32);
+    win32hle_register(win32hle_sdl12);
+    mach_enter();
+
+    /* SDL 1.2 bounded string helpers (issue #28, Chocolate Doom). */
+    ok("SDL_strlcpy registered", hle_resolve("SDL_strlcpy") != 0);
+    ok("SDL_strlcat registered", hle_resolve("SDL_strlcat") != 0);
+    uint32_t dst = hle_va(hle_alloc(32)), src = ansi("abcdefghij");
+    memset(hle_ptr(dst), 0, 32);
+    ok("strlcpy returns source length", call("SDL_strlcpy", 3,
+       (uint32_t[]){ dst, src, 5u }) == 10u);
+    ok("strlcpy truncates and NUL-terminates",
+       memcmp(hle_ptr(dst), "abcd", 5) == 0);
+    ok("strlcat returns combined length", call("SDL_strlcat", 3,
+       (uint32_t[]){ dst, src, 32u }) == 14u);
+    ok("strlcat appends", memcmp(hle_ptr(dst), "abcdabcdefghij", 15) == 0);
+    ok("SDL_SetError returns -1", call("SDL_SetError", 1,
+       (uint32_t[]){ ansi("gap fixture error") }) == 0xFFFFFFFFu);
+    uint32_t err = call("SDL_GetError", 0, NULL);
+    ok("SDL_GetError reports the set message",
+       err != 0 && strcmp((char *)hle_ptr(err), "gap fixture error") == 0);
+
+    /* MessageBoxW (issue #28, Tetris and Chocolate Doom). */
+    ok("MessageBoxW registered", hle_resolve("MessageBoxW") != 0);
+    ok("MessageBoxW answers IDOK", call("MessageBoxW", 4,
+       (uint32_t[]){ 0u, wide("Need WAD"), wide("Chocolate Doom"), 0u }) == 1u);
+    ok("MessageBoxW answers IDYES for MB_YESNO", call("MessageBoxW", 4,
+       (uint32_t[]){ 0u, wide("Continue?"), wide("Tetris"), 4u }) == 6u);
+
+    mach_leave();
+    printf("api_gap_selftest: all checks passed\n");
+    return fails != 0;
+}

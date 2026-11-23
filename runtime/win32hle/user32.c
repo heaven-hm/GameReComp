@@ -3253,6 +3253,14 @@ static void u_GetWindowTextLengthW(void) {
     RET(W(A32(0)) ? hle_send(A32(0), WM_GETTEXTLENGTH, 0, 0) : 0u, 1);
 }
 
+static void u_MessageBoxW(void) {
+    char cap[256] = "", msg[512] = "";
+    wide_to_stack_ansi(A32(1), msg, sizeof msg);
+    wide_to_stack_ansi(A32(2), cap, sizeof cap);
+    fprintf(stderr, "[MessageBoxW] %s: %s\n", cap, msg);
+    uint32_t b = A32(3) & 0xF;
+    RET(b == 4 || b == 3 ? 6u : b == 5 ? 4u : 1u, 4);   /* IDYES, IDRETRY, IDOK */
+}
 static void u_MessageBoxIndirectW(void) {
     uint32_t p = A32(0);
     char cap[256] = "", msg[512] = "";
@@ -3506,7 +3514,7 @@ const win32hle_shim win32hle_user32[] = {
     { "InvalidateRect", u_InvalidateRect }, { "ValidateRect", u_ValidateRect }, { "GetUpdateRect", u_GetUpdateRect },
     { "RedrawWindow", u_RedrawWindow }, { "UpdateWindow", u_UpdateWindow },
     { "BeginPaint", u_BeginPaint }, { "EndPaint", u_EndPaint },
-    { "MessageBoxA", u_MessageBoxA }, { "MessageBoxIndirectA", u_MessageBoxIndirectA },
+    { "MessageBoxA", u_MessageBoxA }, { "MessageBoxW", u_MessageBoxW }, { "MessageBoxIndirectA", u_MessageBoxIndirectA },
     { "RegisterClassA", u_RegisterClassA }, { "RegisterClassExA", u_RegisterClassExA },
     { "RegisterClassExW", u_RegisterClassExW }, { "UnregisterClassA", u_UnregisterClassA },
     { "GetClassInfoA", u_GetClassInfoA }, { "GetClassNameA", u_GetClassNameA },
