@@ -418,6 +418,9 @@ extern const win32hle_shim win32hle_bink[];           /* binkw32 on ffmpeg (bink
  * itself as the pump hook. headless: no window (a script drives input). */
 int  hle_screen_open(const char *title, int fullscreen, int headless);
 int  hle_screen_request_opengl(void);  /* before open: make the screen window own a GL context */
+void hle_screen_map_point(int px, int py, int pw, int ph, int ww, int wh,
+                          int dx, int dy, int dw, int dh, int gw, int gh,
+                          int *gx, int *gy);
 int  hle_screen_gl_active(void);
 void hle_screen_mouse(int *x, int *y);                                 /* the pointer in the game's pixels, clamped */
 void hle_screen_d3d7_active(int active); /* D3D7 swaps GL frames; suppress software-primary redraws */

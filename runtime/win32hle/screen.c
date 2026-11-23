@@ -202,23 +202,40 @@ static uint32_t scan_of(SDL_Scancode s) {
     return (unsigned)s < SDL_NUM_SCANCODES ? t[s] : 0;
 }
 
-/* window points -> game pixels, clamped to the picture */
+/* window points -> game pixels, clamped to the picture.
+ * Adapted from upstream PCRecomp commit a67767bed6ee1085fc6614f34c80ebfc25908f72
+ * (#195): the pointer is confined to points wholly inside the picture, so the
+ * last such point mapped a pixel or two short of the right/bottom edge. Use
+ * the last point as the game's last pixel. The pure helper is exported so the
+ * mapping can be regression-tested without a display. */
+void hle_screen_map_point(int px, int py, int pw, int ph, int ww, int wh,
+                          int dx, int dy, int dw, int dh, int gw, int gh,
+                          int *gx, int *gy) {
+    int x = px, y = py;
+    int hidpi = pw > 0 && ph > 0 && ww > 0 && wh > 0;
+    if (hidpi) x = (int)((long long)px * pw / ww), y = (int)((long long)py * ph / wh);
+    if (dw <= 0 || dh <= 0) { *gx = x, *gy = y; return; }
+    *gx = (int)((long long)(x - dx) * gw / dw);
+    *gy = (int)((long long)(y - dy) * gh / dh);
+    if (hidpi) {                       /* the picture's last point, as events count it */
+        if (px >= (int)((long long)(dx + dw) * ww / pw) - 1) *gx = gw - 1;
+        if (py >= (int)((long long)(dy + dh) * wh / ph) - 1) *gy = gh - 1;
+    }
+    if (*gx < 0) *gx = 0;
+    if (*gy < 0) *gy = 0;
+    if (*gx >= gw) *gx = gw - 1;
+    if (*gy >= gh) *gy = gh - 1;
+}
 static int g_src_w, g_src_h;                            /* the picture last shown: what the window maps to */
 static void to_game(int x, int y, int *gx, int *gy) {
-    int w = g_src_w, h = g_src_h, bpp, pw, ph, ww, wh;
+    int w = g_src_w, h = g_src_h, bpp, pw = 0, ph = 0, ww = 0, wh = 0;
     if (w <= 0 || h <= 0) hle_dd_mode(&w, &h, &bpp);
     if (g_ren && g_win) {                                /* HiDPI: the renderer counts pixels, events points */
         SDL_GetRendererOutputSize(g_ren, &pw, &ph);
         SDL_GetWindowSize(g_win, &ww, &wh);
-        if (ww > 0 && wh > 0) x = x * pw / ww, y = y * ph / wh;
     }
-    if (g_dst.w <= 0 || g_dst.h <= 0) { *gx = x, *gy = y; return; }
-    *gx = (int)((long long)(x - g_dst.x) * w / g_dst.w);
-    *gy = (int)((long long)(y - g_dst.y) * h / g_dst.h);
-    if (*gx < 0) *gx = 0;
-    if (*gy < 0) *gy = 0;
-    if (*gx >= w) *gx = w - 1;
-    if (*gy >= h) *gy = h - 1;
+    hle_screen_map_point(x, y, pw, ph, ww, wh, g_dst.x, g_dst.y, g_dst.w, g_dst.h,
+                         w, h, gx, gy);
 }
 
 static int load_present_gl(void) {
