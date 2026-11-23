@@ -603,6 +603,96 @@ static void k_SetUnhandledExceptionFilter(void) {
 }
 static void k_UnhandledExceptionFilter(void)    { RET(0, 1); }  /* EXCEPTION_CONTINUE_SEARCH */
 static void k_RtlUnwind(void)      { RETV(4); }                 /* no guest SEH unwinding yet */
+
+/* --- RtlCaptureContext / RtlLookupFunctionEntry / RtlVirtualUnwind ---
+ * These three are listed as missing in docs/WIN32_API_COVERAGE.md.  They are
+ * implemented here against the *guest* register file and guest addresses only;
+ * nothing in this layer depends on the host's registers or stack.
+ *
+ * The x86 CONTEXT of winnt.h is 0x2CC bytes.  CONTEXT_FULL (0x10007) requests
+ * CONTROL|INTEGER|SEGMENTS, so the debug registers, the x87 FLOATING_SAVE_AREA
+ * and the 512-byte ExtendedRegisters area are not part of the captured state:
+ * they are cleared rather than filled with invented values.  The caller must
+ * supply a valid 0x2CC-byte guest buffer, exactly as on Windows (where a bad
+ * pointer faults instead of being checked). */
+#define CTX_SIZE             0x2CCu
+#define CTX_CONTEXTFLAGS     0x000u
+#define CTX_SegGs            0x08Cu
+#define CTX_SegFs            0x090u
+#define CTX_SegEs            0x094u
+#define CTX_SegDs            0x098u
+#define CTX_Edi              0x09Cu
+#define CTX_Esi              0x0A0u
+#define CTX_Ebx              0x0A4u
+#define CTX_Edx              0x0A8u
+#define CTX_Ecx              0x0ACu
+#define CTX_Eax              0x0B0u
+#define CTX_Ebp              0x0B4u
+#define CTX_Eip              0x0B8u
+#define CTX_SegCs            0x0BCu
+#define CTX_EFlags           0x0C0u
+#define CTX_Esp              0x0C4u
+#define CTX_SegSs            0x0C8u
+#define CTX_FULL             0x10007u                  /* CONTROL|INTEGER|SEGMENTS */
+
+/* RtlCaptureContext(ContextRecord): snapshot the current guest register file
+ * into a guest CONTEXT.  Eip is the return address the caller pushed for this
+ * call (what Windows records as the resume address after the call); Esp is the
+ * caller's stack pointer just past that word.  The shim ABI has no callee
+ * arity, so - as in the x86 record - only the return address is accounted for.
+ * EFlags is left zero: the runtime keeps a lazy flag decomposition, not the
+ * EFLAGS word, and presenting the former as the latter would be fiction. */
+static void k_RtlCaptureContext(void) {                 /* (LPCONTEXT) */
+    uint32_t ctx = A32(0);
+    if (!ctx) { hle_set_last_error(ERROR_INVALID_PARAMETER); RETV(1); }
+    memset(hle_ptr(ctx), 0, CTX_SIZE);
+    MEM32(ctx + CTX_CONTEXTFLAGS) = CTX_FULL;
+    MEM32(ctx + CTX_SegGs) = g_seg_gs;
+    MEM32(ctx + CTX_SegFs) = g_seg_fs;
+    MEM32(ctx + CTX_SegEs) = g_seg_es;
+    MEM32(ctx + CTX_SegDs) = g_seg_ds;
+    MEM32(ctx + CTX_Edi) = g_edi;
+    MEM32(ctx + CTX_Esi) = g_esi;
+    MEM32(ctx + CTX_Ebx) = g_ebx;
+    MEM32(ctx + CTX_Edx) = g_edx;
+    MEM32(ctx + CTX_Ecx) = g_ecx;
+    MEM32(ctx + CTX_Eax) = g_eax;
+    MEM32(ctx + CTX_Ebp) = g_ebp;
+    MEM32(ctx + CTX_Eip) = MEM32(g_esp);                /* guest return address */
+    MEM32(ctx + CTX_EFlags) = 0;
+    MEM32(ctx + CTX_Esp) = g_esp + 4u;
+    MEM32(ctx + CTX_SegCs) = g_seg_cs;
+    MEM32(ctx + CTX_SegSs) = g_seg_ss;
+    RETV(1);
+}
+
+/* RtlLookupFunctionEntry(ControlPc, &ImageBase, HistoryTable): the x86 stack
+ * unwinds through FS:[0] registration records, not the .pdata RUNTIME_FUNCTION
+ * table x64 uses.  There is no RUNTIME_FUNCTION for a 32-bit guest PC to
+ * find, so the honest answer is NULL rather than a fabricated entry.  The one
+ * thing that can still be answered truthfully is the image base: for a PC in
+ * a module the loader knows, report that module's base (as the x64 call does).
+ * ERROR_CALL_NOT_IMPLEMENTED makes the missing table mechanism visible; a bare
+ * NULL would be indistinguishable from a well-formed lookup that found nothing. */
+static void k_RtlLookupFunctionEntry(void) {            /* (pc, &imageBase, history) */
+    uint32_t pc = A32(0), out = A32(1);
+    uint32_t base = 0, size = 0;
+    if (out) MEM32(out) = pc && hle_module_region(pc, &base, &size) ? base : 0;
+    hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+    RET(0, 3);                                          /* PRUNTIME_FUNCTION = NULL */
+}
+
+/* RtlVirtualUnwind(HandlerType, ImageBase, ControlPc, FunctionEntry,
+ * ContextRecord, &HandlerData, &EstablisherFrame, ContextPointers): a virtual
+ * unwind is defined by the RUNTIME_FUNCTION's unwind info, which no x86 guest
+ * image here supplies.  With no verifiable unwind data, perform NO unwind:
+ * return NULL, leave the CONTEXT and all out parameters untouched, and report
+ * the call unimplemented.  Inventing an establisher frame or handler address
+ * would only send guest unwind code into a function that does not exist. */
+static void k_RtlVirtualUnwind(void) {
+    hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+    RET(0, 8);                                          /* no handler, nothing unwound */
+}
 static void k_RaiseException(void) {
     if (A32(0) == 0xE0440001u) {
         const char *reason = "no diagnostic";
@@ -748,6 +838,9 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "SetUnhandledExceptionFilter",  k_SetUnhandledExceptionFilter },
     { "UnhandledExceptionFilter",     k_UnhandledExceptionFilter },
     { "RtlUnwind",                    k_RtlUnwind },
+    { "RtlCaptureContext",            k_RtlCaptureContext },
+    { "RtlLookupFunctionEntry",       k_RtlLookupFunctionEntry },
+    { "RtlVirtualUnwind",             k_RtlVirtualUnwind },
     { "RaiseException",               k_RaiseException },
     { "LoadModule",                   k_LoadModule },
     { "CreateThread",                 k_CreateThread },
