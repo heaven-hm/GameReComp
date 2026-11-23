@@ -1,10 +1,12 @@
 /*
- * winmm.c - win32hle WINMM: multimedia timers, joystick, waveOut audio, MCI;
- * no mixer and no recording device.
- * On libc for timing; audio is "accept and retire" (a silent device that
+ * winmm.c - win32hle WINMM: multimedia timers, joystick, waveOut audio,
+ * sndPlaySound, MCI; no mixer and no recording device.
+ * On libc for timing; waveOut is "accept and retire" (a silent device that
  * completes every buffer immediately, so a game's double-buffered mixer thread
  * keeps cycling without a real sound card); no joystick; MCI stubbed. Real SDL
  * audio can replace the waveOut path later without touching callers.
+ * sndPlaySoundA/W, unlike waveOut, already play for real: they decode RIFF/WAVE
+ * and push PCM through dsound.c's SDL audio mixer stream path.
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -294,7 +296,281 @@ static void m_mmioStringToFOURCCA(void) {
     RET(fcc, 2);
 }
 
+/* --- sndPlaySoundA/W: real RIFF/WAVE playback on the SDL audio mixer ---
+ *
+ * Like the rest of this module, these shims answer with MMSYSERR_* codes:
+ * MMSYSERR_NOERROR (0) means the sound really was started (or stopped, for a
+ * NULL name), and a nonzero MMSYSERR_* says why it was not. A missing file, a
+ * non-PCM WAV, an unsupported flag or a missing audio device is an error,
+ * never a silent success: compare with MMSYSERR_NOERROR, not truthiness.
+ *
+ * Playback uses dsound.c's hle_audio_stream_* (the SDL2 audio device and its
+ * software mixer), the same path bink.c uses for movie sound. Decoding covers
+ * the RIFF/WAVE formats sndPlaySound handles itself (PCM 8/16-bit, mono or
+ * stereo); anything else (SND_ALIAS, SND_RESOURCE, compressed WAV, ...) is
+ * reported as unsupported rather than played as silence. No system default
+ * sound is fabricated when a name cannot be resolved, with or without
+ * SND_NODEFAULT.
+ */
+#define SND_SYNC        0x00000000u
+#define SND_ASYNC       0x00000001u
+#define SND_NODEFAULT   0x00000002u
+#define SND_MEMORY      0x00000004u
+#define SND_LOOP        0x00000008u
+#define SND_NOSTOP      0x00000010u
+#define SND_PURGE       0x00000040u
+#define SND_NOWAIT      0x00002000u
+#define SND_FILENAME    0x00020000u
+/* Flags this shim implements; all others (notably SND_ALIAS, SND_ALIAS_ID,
+ * SND_RESOURCE, SND_SYSTEM, SND_APPLICATION) are honest errors. */
+#define PS_OK_FLAGS (SND_ASYNC | SND_NODEFAULT | SND_MEMORY | SND_LOOP | \
+                     SND_NOSTOP | SND_NOWAIT | SND_PURGE | SND_FILENAME)
+
+#define MMSYSERR_ALLOCATED     4u
+#define MMSYSERR_NODRIVER      6u
+#define MMSYSERR_NOMEM         7u
+#define MMSYSERR_NOTSUPPORTED  8u
+#define MMSYSERR_INVALFLAG    10u
+#define MMSYSERR_INVALPARAM   11u
+
+enum { PS_MAX_VOICES = 4, PS_CHUNK = 2048, PS_HIGH_WATER = 32768, PS_SPIN_MAX = 30000,
+       PS_MAX_WAV = 64 * 1024 * 1024 };
+
+typedef struct {
+    int used;
+    int stream;                 /* hle_audio_stream_open id */
+    int16_t *pcm;               /* host memory, interleaved frames */
+    uint32_t frames;
+    int channels;
+    int loop;
+    volatile int stop;
+    pthread_t thread;
+} ps_voice;
+static pthread_mutex_t g_ps_mtx = PTHREAD_MUTEX_INITIALIZER;
+static ps_voice g_ps_voice[PS_MAX_VOICES];
+
+static uint32_t ps_le32(const uint8_t *p) {
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+/* Feed the stream in chunks, waiting for room; a loop replays until stopped.
+ * Called on the guest thread for SND_SYNC and on a voice thread for ASYNC. */
+static void ps_feed(ps_voice *v) {
+    int stall = 0;
+    for (;;) {
+        uint32_t off = 0;
+        while (off < v->frames && !v->stop) {
+            if (hle_audio_stream_queued(v->stream) > PS_HIGH_WATER) {
+                if (++stall > PS_SPIN_MAX) return;           /* stuck device: stop instead of hanging */
+                usleep(2000);
+                continue;
+            }
+            stall = 0;
+            uint32_t n = v->frames - off;
+            if (n > PS_CHUNK) n = PS_CHUNK;
+            hle_audio_stream_push(v->stream, v->pcm + (size_t)off * (size_t)v->channels, (int)n);
+            off += n;
+        }
+        if (v->stop) return;
+        /* Let the last chunk drain: a non-looping sound ends here. */
+        int spins = 0;
+        while (hle_audio_stream_queued(v->stream) > 0 && !v->stop && spins++ < PS_SPIN_MAX) usleep(1000);
+        if (!v->loop || v->stop) return;
+    }
+}
+
+static void *ps_voice_thread(void *arg) {
+    ps_voice *v = (ps_voice *)arg;
+    ps_feed(v);
+    hle_audio_stream_close(v->stream);
+    free(v->pcm);
+    pthread_mutex_lock(&g_ps_mtx);
+    v->used = 0;
+    v->stream = -1;
+    v->pcm = NULL;
+    pthread_mutex_unlock(&g_ps_mtx);
+    return NULL;
+}
+
+/* Stop every asynchronous sound. The voice threads close their own streams,
+ * so joining here leaves no stream or PCM behind. */
+static void ps_stop_all(void) {
+    pthread_t join[PS_MAX_VOICES];
+    int n = 0;
+    pthread_mutex_lock(&g_ps_mtx);
+    for (int i = 0; i < PS_MAX_VOICES; i++)
+        if (g_ps_voice[i].used) {
+            g_ps_voice[i].stop = 1;
+            if (!pthread_equal(g_ps_voice[i].thread, pthread_self())) join[n++] = g_ps_voice[i].thread;
+        }
+    pthread_mutex_unlock(&g_ps_mtx);
+    for (int i = 0; i < n; i++) pthread_join(join[i], NULL);
+}
+
+/* Decode a RIFF/WAVE image into int16 frames for the mixer. */
+static uint32_t ps_decode(const uint8_t *data, size_t len, int16_t **out_pcm,
+                          uint32_t *out_frames, int *out_channels, int *out_rate) {
+    if (len < 12 || memcmp(data, "RIFF", 4) || memcmp(data + 8, "WAVE", 4)) {
+        fprintf(stderr, "[winmm] sndPlaySound: not a RIFF/WAVE image\n");
+        return MMSYSERR_ERROR;
+    }
+    const uint8_t *fmt = NULL, *pcm = NULL;
+    size_t fmt_len = 0, pcm_len = 0;
+    for (size_t p = 12; p + 8 <= len; ) {
+        uint32_t sz = ps_le32(data + p + 4);
+        if (sz > len - p - 8) sz = (uint32_t)(len - p - 8);
+        if (!memcmp(data + p, "fmt ", 4)) { fmt = data + p + 8; fmt_len = sz; }
+        else if (!memcmp(data + p, "data", 4)) { pcm = data + p + 8; pcm_len = sz; }
+        p += 8 + sz + (sz & 1);
+    }
+    if (!fmt || fmt_len < 16 || !pcm) {
+        fprintf(stderr, "[winmm] sndPlaySound: WAVE has no fmt/data chunk\n");
+        return MMSYSERR_ERROR;
+    }
+    unsigned tag = (unsigned)(fmt[0] | (fmt[1] << 8));
+    int ch = fmt[2] | (fmt[3] << 8);
+    int rate = (int)ps_le32(fmt + 4);
+    int bits = fmt[14] | (fmt[15] << 8);
+    if (tag != 1 || (bits != 8 && bits != 16) || (ch != 1 && ch != 2) || rate <= 0) {
+        fprintf(stderr, "[winmm] sndPlaySound: unsupported WAVE (tag %u, %d-bit, %d ch, %d Hz)\n",
+                tag, bits, ch, rate);
+        return MMSYSERR_NOTSUPPORTED;
+    }
+    size_t frame_bytes = (size_t)ch * (size_t)(bits / 8);
+    size_t frames = pcm_len / frame_bytes;
+    if (!frames) { fprintf(stderr, "[winmm] sndPlaySound: WAVE has no samples\n"); return MMSYSERR_ERROR; }
+    int16_t *out = (int16_t *)malloc(frames * (size_t)ch * sizeof(int16_t));
+    if (!out) return MMSYSERR_NOMEM;
+    for (size_t i = 0; i < frames * (size_t)ch; i++)
+        out[i] = bits == 16 ? (int16_t)(pcm[i * 2] | (pcm[i * 2 + 1] << 8))
+                            : (int16_t)(((int)pcm[i] - 128) * 256);
+    *out_pcm = out;
+    *out_frames = (uint32_t)frames;
+    *out_channels = ch;
+    *out_rate = rate;
+    return MMSYSERR_NOERROR;
+}
+
+static uint32_t ps_play(uint32_t name_va, uint32_t flags) {
+    if (flags & ~(uint32_t)PS_OK_FLAGS) {
+        fprintf(stderr, "[winmm] sndPlaySound: unsupported flags 0x%08x\n", flags);
+        return MMSYSERR_INVALFLAG;
+    }
+    if (!name_va || (flags & SND_PURGE)) { ps_stop_all(); return MMSYSERR_NOERROR; }
+    if (flags & SND_NOSTOP) {
+        pthread_mutex_lock(&g_ps_mtx);
+        int busy = 0;
+        for (int i = 0; i < PS_MAX_VOICES; i++) if (g_ps_voice[i].used && !g_ps_voice[i].stop) busy = 1;
+        pthread_mutex_unlock(&g_ps_mtx);
+        if (busy) { fprintf(stderr, "[winmm] sndPlaySound: sound already playing (SND_NOSTOP)\n"); return MMSYSERR_ALLOCATED; }
+    }
+
+    uint8_t *file_buf = NULL;
+    const uint8_t *data;
+    size_t len;
+    if (flags & SND_MEMORY) {
+        data = (const uint8_t *)hle_ptr(name_va);
+        if (!data || memcmp(data, "RIFF", 4)) {
+            fprintf(stderr, "[winmm] sndPlaySound: SND_MEMORY image is not RIFF\n");
+            return MMSYSERR_ERROR;
+        }
+        len = 8u + (size_t)ps_le32(data + 4);
+        if (len < 12 || len > PS_MAX_WAV) {
+            fprintf(stderr, "[winmm] sndPlaySound: bad in-memory WAVE size %zu\n", len);
+            return MMSYSERR_ERROR;
+        }
+    } else {
+        const char *guest = (const char *)hle_ptr(name_va);
+        char host[1024];
+        if (!hle_host_path(guest, host, sizeof host) || !*host) {
+            fprintf(stderr, "[winmm] sndPlaySound: file not found: %s\n", guest ? guest : "(null)");
+            return MMSYSERR_ERROR;
+        }
+        FILE *f = fopen(host, "rb");
+        if (!f) {
+            fprintf(stderr, "[winmm] sndPlaySound: cannot open %s (%s)\n", guest, host);
+            return MMSYSERR_ERROR;
+        }
+        if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return MMSYSERR_ERROR; }
+        long n = ftell(f);
+        if (n < 12 || n > PS_MAX_WAV) { fclose(f); return MMSYSERR_ERROR; }
+        rewind(f);
+        file_buf = (uint8_t *)malloc((size_t)n);
+        if (!file_buf || fread(file_buf, 1, (size_t)n, f) != (size_t)n) {
+            free(file_buf); fclose(f); return MMSYSERR_ERROR;
+        }
+        fclose(f);
+        fprintf(stderr, "[winmm] sndPlaySound: %s -> %s\n", guest, host);
+        data = file_buf;
+        len = (size_t)n;
+    }
+
+    int16_t *pcm = NULL;
+    uint32_t frames = 0;
+    int ch = 0, rate = 0;
+    uint32_t err = ps_decode(data, len, &pcm, &frames, &ch, &rate);
+    free(file_buf);
+    if (err != MMSYSERR_NOERROR) return err;
+
+    int stream = hle_audio_stream_open(rate, ch);
+    if (stream < 0) {
+        fprintf(stderr, "[winmm] sndPlaySound: no audio stream for %d Hz, %d ch\n", rate, ch);
+        free(pcm);
+        return MMSYSERR_NODRIVER;
+    }
+
+    if (!(flags & SND_ASYNC)) {
+        ps_voice v;
+        memset(&v, 0, sizeof v);
+        v.stream = stream; v.pcm = pcm; v.frames = frames; v.channels = ch;
+        ps_feed(&v);
+        hle_audio_stream_close(stream);
+        free(pcm);
+        return MMSYSERR_NOERROR;
+    }
+
+    pthread_mutex_lock(&g_ps_mtx);
+    int slot = -1;
+    for (int i = 0; i < PS_MAX_VOICES; i++) if (!g_ps_voice[i].used) { slot = i; break; }
+    if (slot < 0) {
+        pthread_mutex_unlock(&g_ps_mtx);
+        hle_audio_stream_close(stream);
+        free(pcm);
+        return MMSYSERR_ALLOCATED;
+    }
+    ps_voice *v = &g_ps_voice[slot];
+    v->used = 1; v->stream = stream; v->pcm = pcm; v->frames = frames;
+    v->channels = ch; v->loop = (flags & SND_LOOP) != 0; v->stop = 0;
+    if (pthread_create(&v->thread, NULL, ps_voice_thread, v) != 0) {
+        memset(v, 0, sizeof *v);
+        pthread_mutex_unlock(&g_ps_mtx);
+        hle_audio_stream_close(stream);
+        free(pcm);
+        return MMSYSERR_ERROR;
+    }
+    pthread_mutex_unlock(&g_ps_mtx);
+    return MMSYSERR_NOERROR;
+}
+
+static void m_sndPlaySoundA(void) { RET(ps_play(A32(0), A32(1)), 2); }
+static void m_sndPlaySoundW(void) {
+    uint32_t flags = A32(1);
+    if (flags & SND_MEMORY) { RET(ps_play(A32(0), flags), 2); }   /* the bytes are not a string */
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024];
+    if (!w || !hle_wide_to_ansi(w, name, sizeof name)) {
+        fprintf(stderr, "[winmm] sndPlaySoundW: bad wide name\n");
+        RET(MMSYSERR_INVALPARAM, 2);
+    }
+    uint32_t mark = hle_scratch_mark();
+    uint32_t dst = hle_scratch_copy(name, (uint32_t)strlen(name) + 1);
+    uint32_t err = dst ? ps_play(dst, flags) : MMSYSERR_NOMEM;
+    hle_scratch_release(mark);
+    RET(err, 2);
+}
+
 const win32hle_shim win32hle_winmm[] = {
+    { "sndPlaySoundA", m_sndPlaySoundA }, { "sndPlaySoundW", m_sndPlaySoundW },
     { "mmioStringToFOURCCA",    m_mmioStringToFOURCCA },
     { "mmioOpenA", m_mmioOpenA }, { "mmioOpenW", m_mmioOpenW }, { "mmioClose", m_mmioClose }, { "mmioRead", m_mmioRead }, { "mmioWrite", m_mmioWrite },
     { "mmioSeek", m_mmioSeek }, { "mmioDescend", m_mmioDescend }, { "mmioAscend", m_mmioAscend },
