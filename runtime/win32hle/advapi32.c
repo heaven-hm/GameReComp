@@ -234,6 +234,53 @@ static void r_RegEnumKeyExA(void) {                      /* (key, index, name, &
     MEM32(A32(3)) = n;
     RET(ERROR_SUCCESS, 8);
 }
+/* RegEnumKeyExW: the same subkeys, returned as UTF-16 in the guest's buffer.
+ * (key, index, name, &nameN, reserved, class, &classN, &ftLastWrite)
+ *
+ * nameN/classN are capacities in WCHARs (the terminating NUL counts) on entry;
+ * on success they receive the character count without the NUL.  A buffer that
+ * cannot hold the name plus its NUL fails with ERROR_MORE_DATA without touching
+ * the buffer or the capacity -- callers size from RegQueryInfoKey, and both
+ * Wine and ReactOS leave the word alone on this error.  lpName and lpcchName
+ * are required; lpClass, lpcchClass and lpftLastWriteTime are optional, but a
+ * class buffer needs its own capacity word. */
+static void r_RegEnumKeyExW(void) {
+    uint32_t name_va = A32(2), name_len_va = A32(3), class_va = A32(5);
+    uint32_t class_len_va = A32(6), ft_va = A32(7);
+
+    if (A32(4) || !name_va || !name_len_va || (class_va && !class_len_va)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(ERROR_INVALID_PARAMETER, 8);
+    }
+    rkey_t *k = root_of(A32(0));
+    if (!k) { hle_set_last_error(6u); RET(6u, 8); }       /* ERROR_INVALID_HANDLE */
+    rkey_t *c = k->child;
+    for (uint32_t i = 0; c && i < A32(1); i++) c = c->next;
+    if (!c) { hle_set_last_error(ERROR_NO_MORE_ITEMS); RET(ERROR_NO_MORE_ITEMS, 8); }
+
+    uint32_t chars = (uint32_t)strlen(c->name);          /* ANSI bytes in the store */
+    if (MEM32(name_len_va) <= chars) {                   /* capacity must hold the NUL */
+        hle_set_last_error(ERROR_MORE_DATA);
+        RET(ERROR_MORE_DATA, 8);
+    }
+    /* No key stores a class: the empty string needs one WCHAR for its NUL. */
+    if (class_len_va && MEM32(class_len_va) < 1u) {
+        hle_set_last_error(ERROR_MORE_DATA);
+        RET(ERROR_MORE_DATA, 8);
+    }
+    /* CP1252 bytes -> UTF-16 code units, the inverse of hle_wide_to_ansi on
+     * the RegOpenKeyExW/RegQueryValueExW input path. */
+    if (!hle_ansi_to_wide(c->name, (uint16_t *)APTR(2), MEM32(name_len_va))) {
+        hle_set_last_error(ERROR_MORE_DATA);
+        RET(ERROR_MORE_DATA, 8);
+    }
+    MEM32(name_len_va) = chars;
+    if (class_va) MEM16(class_va) = 0;
+    if (class_len_va) MEM32(class_len_va) = 0;
+    if (ft_va) { MEM32(ft_va) = 0; MEM32(ft_va + 4) = 0; } /* no timestamps are stored (as in RegQueryInfoKeyA) */
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 8);
+}
 /* RegEnumValueA/W: enumerate a key's values in insertion order. Names are
  * case-insensitive in the store but returned in their original spelling. */
 static void r_RegEnumValueA(void) {
@@ -746,7 +793,7 @@ const win32hle_shim win32hle_advapi32[] = {
     { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey }, { "RegFlushKey", adv_RegFlushKey },
     { "RegQueryValueExA", r_RegQueryValueExA }, { "RegQueryValueExW", r_RegQueryValueExW }, { "RegSetValueExA", r_RegSetValueExA },
     { "RegDeleteValueA", r_RegDeleteValueA }, { "RegDeleteValueW", r_RegDeleteValueW }, { "RegDeleteKeyA", r_RegDeleteKeyA },
-    { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumValueA", r_RegEnumValueA }, { "RegEnumValueW", r_RegEnumValueW }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
+    { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumKeyExW", r_RegEnumKeyExW }, { "RegEnumValueA", r_RegEnumValueA }, { "RegEnumValueW", r_RegEnumValueW }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
     { "GetUserNameA", r_GetUserNameA },
     { "AllocateAndInitializeSid", adv_AllocateAndInitializeSid }, { "CopySid", adv_CopySid },
     { "EqualSid", adv_EqualSid }, { "GetLengthSid", adv_GetLengthSid },
