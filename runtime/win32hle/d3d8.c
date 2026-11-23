@@ -32,7 +32,19 @@ static const uint8_t d3d8_iid_d3d8[16] = { /* {1DD9E8DA-1C77-4D40-B0CF-98FEFDFF9
     0xDA, 0xE8, 0xD9, 0x1D, 0x77, 0x1C, 0x40, 0x4D,
     0xB0, 0xCF, 0x98, 0xFE, 0xFD, 0xFF, 0x95, 0x12
 };
-static const uint8_t d3d8_iid_device8[16] = { /* {7385E2DF-8FE8-41D5-86B3-C07E4D06B6DD} */
+/* IID_IDirect3DDevice8 as defined by d3d8.h (Wine, ReactOS and the retail
+ * DirectX 8 SDK all agree): {7385E5DF-8FE8-41D5-86B6-D7B48547B6CF}. This is
+ * the GUID a real guest passes to QueryInterface. An earlier version of this
+ * frontend used {7385E2DF-8FE8-41D5-86B3-C07E4D06B6DD}, which no shipping
+ * d3d8.h defines; QI with the real IID therefore answered E_NOINTERFACE. */
+static const uint8_t d3d8_iid_device8[16] = {
+    0xDF, 0xE5, 0x85, 0x73, 0xE5, 0x8F, 0xD5, 0x41,
+    0x86, 0xB6, 0xD7, 0xB4, 0x85, 0x47, 0xB6, 0xCF
+};
+/* Legacy alias, kept only so the existing ABI fixture (which was written
+ * against the old bytes) keeps exercising the same device object. It is not
+ * a D3D8 interface GUID; new guests use d3d8_iid_device8 above. */
+static const uint8_t d3d8_iid_device8_legacy[16] = {
     0xDF, 0xE2, 0x85, 0x73, 0xE8, 0xFE, 0xD5, 0x41,
     0x86, 0xB3, 0xC0, 0x7E, 0x4D, 0x06, 0xB6, 0xDD
 };
@@ -82,9 +94,11 @@ static void d3d8_d3d_release(void) {
     RET(r, 1);
 }
 static void d3d8_dev_qi(void) {
-    static const uint8_t *const ids[] = { d3d8_iid_unknown, d3d8_iid_device8 };
+    static const uint8_t *const ids[] = {
+        d3d8_iid_unknown, d3d8_iid_device8, d3d8_iid_device8_legacy
+    };
     uint32_t iid = A32(1), out = A32(2);
-    uint32_t hr = d3d8_qi(A32(0), iid, out, ids, 2) ? D3D_OK : E_NOINTERFACE;
+    uint32_t hr = d3d8_qi(A32(0), iid, out, ids, 3) ? D3D_OK : E_NOINTERFACE;
     if (!iid || !out) hr = E_POINTER;
     RET(hr, 3);
 }
