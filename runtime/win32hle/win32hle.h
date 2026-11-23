@@ -379,6 +379,7 @@ void hle_d3d7_present_begin(void);                    /* bind the window framebu
 void hle_d3d7_present_end(void);                      /* hand the device's render target back */
 extern const win32hle_shim win32hle_d3d9[];          /* D3D9 guest COM frontend (d3d9.c) */
 extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
+extern const win32hle_shim win32hle_sdl2[];           /* SDL 2.x window/render imports on the shared present path (sdl2.c) */
 extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 audio (sdlmix.c) */
 extern const win32hle_shim win32hle_gl32[];           /* OPENGL32/GLU32 on the host's GL (gl32.c) */
 extern const win32hle_shim win32hle_msvcrt[];         /* the MSVC CRT on the host libc (msvcrt.c) */
