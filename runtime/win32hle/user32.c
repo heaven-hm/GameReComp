@@ -2355,6 +2355,13 @@ static void u_LoadCursorA(void) {                        /* (hinst, name): an id
     if (hinst && name < 0x10000u) h = load_mono_cursor(hinst, name);
     RET(h ? h : CURSOR_STANDIN, 2);
 }
+/* LoadCursorW: a numeric resource id is passed by value; a wide string names
+ * a system cursor. Both resolve to the same real cursor stand-in path. */
+static void u_LoadCursorW(void) {
+    uint32_t hinst = A32(0), name = A32(1), h = 0;
+    if (hinst && name < 0x10000u) h = load_mono_cursor(hinst, name);
+    RET(h ? h : CURSOR_STANDIN, 2);
+}
 /* LoadImageA and LoadBitmapA: a bitmap is a real DIB section, from a .bmp
  * file (LR_LOADFROMFILE) or the module's RT_BITMAP resource - so it blits,
  * and GetObjectA hands back its pixels, which is how a program that keeps its
@@ -3079,6 +3086,19 @@ static void u_DrawTextA(void) {                          /* (hdc, text, n, rect,
     if (r && (A32(4) & 0x400u)) MEM32(r + 8) = MEM32(r) + (uint32_t)(n * 6), MEM32(r + 12) = MEM32(r + 4) + 13;   /* DT_CALCRECT */
     RET(13, 5);
 }
+/* DrawTextW: UTF-16 text is converted to the same bounded ANSI text path the
+ * A form uses; the measured width and DT_CALCRECT contract stay identical. */
+static int wide_to_stack_ansi(uint32_t va, char *buf, size_t sz);
+static void u_DrawTextW(void) {
+    char text[1024] = "";
+    uint32_t t = A32(1);
+    int n = (int)A32(2);
+    uint32_t r = A32(3);
+    if (t >= 0x10000u) wide_to_stack_ansi(t, text, sizeof text);
+    if (n < 0) n = (int)strlen(text);
+    if (r && (A32(4) & 0x400u)) MEM32(r + 8) = MEM32(r) + (uint32_t)(n * 6), MEM32(r + 12) = MEM32(r + 4) + 13;
+    RET(13, 5);
+}
 
 /* wsprintfA is cdecl: the caller pops, so only the return address goes. */
 static void u_wsprintfA(void) {
@@ -3466,7 +3486,7 @@ const win32hle_shim win32hle_user32[] = {
     { "EqualRect", u_EqualRect },
     { "IsRectEmpty", u_IsRectEmpty }, { "IntersectRect", u_IntersectRect }, { "UnionRect", u_UnionRect },
     { "AdjustWindowRect", u_AdjustWindowRect }, { "AdjustWindowRectEx", u_AdjustWindowRectEx },
-    { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "LoadCursorA", u_LoadCursorA },
+    { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "LoadCursorA", u_LoadCursorA }, { "LoadCursorW", u_LoadCursorW },
     { "LoadImageA", u_LoadImageA }, { "LoadBitmapA", u_LoadBitmapA }, { "LoadAcceleratorsA", u_LoadAcceleratorsA },
     { "GetOpenFileNameA", u_GetOpenFileNameA }, { "GetOpenFileNameW", u_GetOpenFileNameW },
     { "GetSaveFileNameA", u_GetSaveFileNameA }, { "GetSaveFileNameW", u_GetSaveFileNameW },
@@ -3571,6 +3591,6 @@ const win32hle_shim win32hle_user32[] = {
     { "GetMonitorInfoA", u_GetMonitorInfoA }, { "EnumDisplayMonitors", u_EnumDisplayMonitors },
     { "MonitorFromWindow", u_MonitorFromWindow }, { "MonitorFromRect", u_MonitorFromRect },
     { "MonitorFromPoint", u_MonitorFromPoint },
-    { "DrawTextA", u_DrawTextA }, { "wsprintfA", u_wsprintfA }, { "wsprintfW", u_wsprintfW }, { "wvsprintfA", u_wvsprintfA },
+    { "DrawTextA", u_DrawTextA }, { "DrawTextW", u_DrawTextW }, { "wsprintfA", u_wsprintfA }, { "wsprintfW", u_wsprintfW }, { "wvsprintfA", u_wvsprintfA },
     { 0, 0 }
 };

@@ -33,6 +33,7 @@ int main(void) {
     win32hle_register(win32hle_user32);
     win32hle_register(win32hle_sdl12);
     win32hle_register(win32hle_wsock32);
+    win32hle_register(win32hle_module);
     mach_enter();
 
     /* SDL 1.2 bounded string helpers (issue #28, Chocolate Doom). */
@@ -73,6 +74,20 @@ int main(void) {
     ok("WSACancelBlockingCall fails honestly", call("WSACancelBlockingCall", 0, NULL)
        == 0xFFFFFFFFu);
     ok("WSAEINVAL reported", call("WSAGetLastError", 0, NULL) == 10022u);
+
+    /* More Windows W variants from the downloaded-game import audit. */
+    ok("LoadLibraryW registered", hle_resolve("LoadLibraryW") != 0);
+    ok("LoadLibraryW on a missing module fails", call("LoadLibraryW", 1,
+       (uint32_t[]){ wide("not_a_real_module.dll") }) == 0u);
+    ok("LoadCursorW registered", hle_resolve("LoadCursorW") != 0);
+    ok("LoadCursorW returns a cursor", call("LoadCursorW", 2,
+       (uint32_t[]){ 0u, 0u }) != 0u);
+    ok("DrawTextW registered", hle_resolve("DrawTextW") != 0);
+    uint32_t rect = hle_va(hle_alloc(16));
+    memset(hle_ptr(rect), 0, 16);
+    ok("DrawTextW computes text extent", call("DrawTextW", 5,
+       (uint32_t[]){ 0u, wide("abcdef"), 0xFFFFFFFFu, rect, 0x400u }) == 13u);
+    ok("DrawTextW updated DT_CALCRECT width", MEM32(rect + 8u) == 36u);
 
     mach_leave();
     printf("api_gap_selftest: all checks passed\n");

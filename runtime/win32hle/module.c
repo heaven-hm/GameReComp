@@ -182,6 +182,18 @@ static uint32_t load_library(const char *name) {
 }
 
 static void k_LoadLibraryA(void) { RET(load_library(ASTR(0)), 1); }
+/* LoadLibraryW: same module table, UTF-16 path converted with the existing
+ * bounded converter; an unreadable name fails with MOD_NOT_FOUND, never a
+ * guessed module. */
+static void k_LoadLibraryW(void) {
+    const uint16_t *w = (const uint16_t *)hle_ptr(A32(0));
+    char name[512];
+    if (!w || !hle_wide_to_ansi(w, name, sizeof name)) {
+        hle_set_last_error(ERROR_MOD_NOT_FOUND);
+        RET(0, 1);
+    }
+    RET(load_library(name), 1);
+}
 /* (name, hFile, flags): hFile is for LOAD_LIBRARY_AS_DATAFILE-style loads from
  * an open file, which this host does not support; passing one is refused
  * rather than ignored, because ignoring it would load the wrong image. */
@@ -452,6 +464,7 @@ const win32hle_shim win32hle_module[] = {
     { "GetModuleHandleExW",   k_GetModuleHandleExW },
     { "GetModuleFileNameA",   k_GetModuleFileNameA }, { "GetModuleFileNameW", k_GetModuleFileNameW },
     { "LoadLibraryA",         k_LoadLibraryA },
+    { "LoadLibraryW",         k_LoadLibraryW },
     { "LoadLibraryExA",       k_LoadLibraryExA }, { "LoadLibraryExW", k_LoadLibraryExW },
     { "FreeLibrary",          k_FreeLibrary },
     { "GetProcAddress",       k_GetProcAddress },
