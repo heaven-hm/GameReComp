@@ -693,6 +693,83 @@ static void k_RtlVirtualUnwind(void) {
     hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
     RET(0, 8);                                          /* no handler, nothing unwound */
 }
+
+/* --- interlocked S-lists, RtlPcToFileHeader, RtlUnwindEx ---
+ * These four are listed as missing in docs/WIN32_API_COVERAGE.md.  Every
+ * pointer here is a guest address.  The x86 SLIST_ENTRY is a single Next
+ * pointer (4 bytes), and the x86 SLIST_HEADER is an 8-byte, 8-byte-aligned
+ * union: word 0 is the first entry's Next pointer (SLIST_HEADER.Next.Next),
+ * word 1 packs a 16-bit Depth in its low half and a 16-bit Sequence in its
+ * high half (SLIST_HEADER.Depth / .Sequence).  This is Windows' 32-bit
+ * template, not the 16-byte amd64 one. */
+#define SLIST_NEXT_OFF   0u                 /* first entry's Next pointer */
+#define SLIST_COUNT_OFF  4u                 /* Depth:16, Sequence:16 */
+
+/* The machine lock is this layer's single serialising lock: a guest thread
+ * holds it for a whole lifted call, and a shim runs nested inside that claim.
+ * Taking it explicitly around the read-modify-write makes these the atomic
+ * S-list primitives the guest thinks it is calling (its own LOCK CMPXCHG8B
+ * buys the same exclusive access on real x86). */
+static void k_InterlockedPushEntrySList(void) {          /* (head, entry) */
+    uint32_t head = A32(0), entry = A32(1);
+    if (!head || !entry) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2); }
+    mach_enter();
+    uint32_t old = MEM32(head + SLIST_NEXT_OFF);
+    uint32_t packed = MEM32(head + SLIST_COUNT_OFF);
+    uint32_t depth = (packed & 0xFFFFu) + 1u;            /* 16-bit wrap */
+    uint32_t seq = (packed >> 16) + 1u;                  /* 16-bit wrap */
+    MEM32(entry) = old;                                  /* entry->Next = old head */
+    MEM32(head + SLIST_NEXT_OFF) = entry;
+    MEM32(head + SLIST_COUNT_OFF) = ((seq & 0xFFFFu) << 16) | (depth & 0xFFFFu);
+    mach_leave();
+    RET(old, 2);                                         /* previous first entry */
+}
+
+/* InterlockedFlushSList(head): unlink the whole list in one step and return
+ * its old first entry.  An empty list returns NULL and leaves the header
+ * untouched; otherwise Depth is cleared and Sequence is preserved, as in
+ * Windows' flush. */
+static void k_InterlockedFlushSList(void) {              /* (head) */
+    uint32_t head = A32(0);
+    if (!head) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 1); }
+    mach_enter();
+    uint32_t old = MEM32(head + SLIST_NEXT_OFF);
+    if (old) {
+        uint32_t packed = MEM32(head + SLIST_COUNT_OFF);
+        MEM32(head + SLIST_NEXT_OFF) = 0;
+        MEM32(head + SLIST_COUNT_OFF) = packed & 0xFFFF0000u; /* depth 0, sequence kept */
+    }
+    mach_leave();
+    RET(old, 1);
+}
+
+/* RtlPcToFileHeader(pc, &base): the base of the guest module that maps pc, or
+ * NULL for an unmapped pc.  Nothing is inferred from the address itself: the
+ * answer comes from the loader's own module table (hle_module_region), the
+ * same source RtlLookupFunctionEntry uses for its honest image base. */
+static void k_RtlPcToFileHeader(void) {                  /* (pc, &base) */
+    uint32_t pc = A32(0), out = A32(1);
+    uint32_t base = 0, size = 0;
+    int found = pc && hle_module_region(pc, &base, &size);
+    if (out) MEM32(out) = found ? base : 0;
+    RET(found ? base : 0, 2);
+}
+
+/* RtlUnwindEx(TargetFrame, TargetIp, ExceptionRecord, ReturnValue,
+ *             ContextRecord, HistoryTable): on Windows this never returns to
+ * its caller -- it transfers control to a target frame's handler or raises a
+ * second-chance exception.  This layer has no guest SEH unwind tables (see
+ * RtlVirtualUnwind above), so it cannot unwind truthfully.  Moving the guest's
+ * registers or stack and returning as if it had would be a fake unwind; instead
+ * report the call as unsupported and return void.  A caller must not treat the
+ * return as a completed unwind: no frame has been unwound. */
+static void k_RtlUnwindEx(void) {
+    (void)A32(0); (void)A32(1); (void)A32(2);
+    (void)A32(3); (void)A32(4); (void)A32(5);
+    hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+    RETV(6);
+}
+
 static void k_RaiseException(void) {
     if (A32(0) == 0xE0440001u) {
         const char *reason = "no diagnostic";
@@ -841,6 +918,10 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "RtlCaptureContext",            k_RtlCaptureContext },
     { "RtlLookupFunctionEntry",       k_RtlLookupFunctionEntry },
     { "RtlVirtualUnwind",             k_RtlVirtualUnwind },
+    { "InterlockedPushEntrySList",    k_InterlockedPushEntrySList },
+    { "InterlockedFlushSList",        k_InterlockedFlushSList },
+    { "RtlPcToFileHeader",            k_RtlPcToFileHeader },
+    { "RtlUnwindEx",                  k_RtlUnwindEx },
     { "RaiseException",               k_RaiseException },
     { "LoadModule",                   k_LoadModule },
     { "CreateThread",                 k_CreateThread },
