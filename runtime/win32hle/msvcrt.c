@@ -2763,6 +2763,9 @@ uint32_t hle_msvcrt_data(const char *name) {
     if (!strcmp(name, "_ctype"))       return g_ctype_va;    /* the table itself */
     if (!strcmp(name, "_fmode"))       return g_fmode_va;
     if (!strcmp(name, "__mb_cur_max")) return g_mbmax_va;
+    /* __initenv is a char **; the existing _environ cell already points at
+     * the guest environment vector, so share that real object. */
+    if (!strcmp(name, "__initenv"))   return g_environ_va;
     return 0;
 }
 

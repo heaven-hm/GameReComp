@@ -2308,6 +2308,16 @@ static void u_GetSystemMetrics(void) {
 
 /* resources the presenter does not draw: handles that are not NULL */
 static void u_LoadIconA(void)        { RET(0x1C000001u, 2); }
+/* CreateIconIndirect(ICONINFO*): validate the 20-byte guest struct and hand
+ * back the same stand-in icon identity LoadIconA uses. No rasterisation is
+ * claimed; the handle is a real guest value that DestroyIcon accepts. */
+static void u_CreateIconIndirect(void) {
+    uint32_t p = A32(0);
+    if (!p) { RET(0, 1); }
+    uint32_t hmask = MEM32(p + 12u), hcolor = MEM32(p + 16u);
+    if (!hmask && !hcolor) { RET(0, 1); }
+    RET(0x1C000001u, 1);
+}
 /* Cursors from the guest's own resources: a 32x32 monochrome cursor, as the
  * Westwood games ship, is kept as its masks so screen.c can show it. Any
  * other cursor (a system one, colour, another size) is the stand-in handle,
@@ -3486,7 +3496,7 @@ const win32hle_shim win32hle_user32[] = {
     { "EqualRect", u_EqualRect },
     { "IsRectEmpty", u_IsRectEmpty }, { "IntersectRect", u_IntersectRect }, { "UnionRect", u_UnionRect },
     { "AdjustWindowRect", u_AdjustWindowRect }, { "AdjustWindowRectEx", u_AdjustWindowRectEx },
-    { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "LoadCursorA", u_LoadCursorA }, { "LoadCursorW", u_LoadCursorW },
+    { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "CreateIconIndirect", u_CreateIconIndirect }, { "LoadCursorA", u_LoadCursorA }, { "LoadCursorW", u_LoadCursorW },
     { "LoadImageA", u_LoadImageA }, { "LoadBitmapA", u_LoadBitmapA }, { "LoadAcceleratorsA", u_LoadAcceleratorsA },
     { "GetOpenFileNameA", u_GetOpenFileNameA }, { "GetOpenFileNameW", u_GetOpenFileNameW },
     { "GetSaveFileNameA", u_GetSaveFileNameA }, { "GetSaveFileNameW", u_GetSaveFileNameW },

@@ -545,6 +545,21 @@ static void g_GetSysColorBrush(void) {
 static void g_CreateHatchBrush(void)    { RET(make_brush(A32(1), 0), 2); }     /* hatch drawn as solid */
 static void g_CreatePen(void)           { RET(make_pen((int)A32(0), (int)A32(1), A32(2)), 3); }
 static void g_CreateBrushIndirect(void) { uint32_t lb = A32(0); RET(make_brush(lb ? MEM32(lb + 4) : 0, lb && MEM32(lb) == 1 ? HS_HOLLOW : 0), 1); } /* LOGBRUSH: style, color */
+/* CreatePatternBrush(hbm): a real brush object bound to a validated bitmap.
+ * The fill path has no pattern rasterisation, so style -1 marks this as a
+ * pattern brush and the bitmap handle is recorded in the colour slot; no
+ * invented pixels are drawn. */
+static void g_CreatePatternBrush(void) {
+    uint32_t hbm = A32(0);
+    gobj_t *b = GOBJ(hbm);
+    if (!b || b->type != GO_BITMAP) RET(0, 1);
+    uint32_t h = new_obj(GO_BRUSH);
+    if (!h) RET(0, 1);
+    gobj_t *o = GOBJ(h);
+    o->style = -1;
+    o->color = hbm;
+    RET(h, 1);
+}
 static void g_CreatePenIndirect(void)   { uint32_t lp = A32(0); RET(make_pen(lp ? (int)MEM32(lp) : 0, lp ? (int)MEM32(lp + 4) : 1, lp ? MEM32(lp + 8) : 0), 1); }
 
 /* ---- palettes ----
@@ -1540,7 +1555,7 @@ const win32hle_shim win32hle_gdidc[] = {
     { "GetSysColorBrush", g_GetSysColorBrush },
     { "GetObjectA", g_GetObjectA },
     { "CreateSolidBrush", g_CreateSolidBrush }, { "CreateHatchBrush", g_CreateHatchBrush },
-    { "CreateBrushIndirect", g_CreateBrushIndirect }, { "CreatePen", g_CreatePen }, { "CreatePenIndirect", g_CreatePenIndirect },
+    { "CreateBrushIndirect", g_CreateBrushIndirect }, { "CreatePatternBrush", g_CreatePatternBrush }, { "CreatePen", g_CreatePen }, { "CreatePenIndirect", g_CreatePenIndirect },
     { "CreateCompatibleBitmap", g_CreateCompatibleBitmap }, { "CreateBitmap", g_CreateBitmap },
     { "CreateCompatibleDC", g_CreateCompatibleDC }, { "CreateICA", g_CreateICA }, { "DeleteDC", g_DeleteDC },
     { "CreatePalette", g_CreatePalette }, { "GetPaletteEntries", g_GetPaletteEntries },

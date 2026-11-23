@@ -36,6 +36,7 @@ int main(void) {
     win32hle_register(win32hle_module);
     win32hle_register(win32hle_msvcrt);
     win32hle_register(win32hle_sdlmix);
+    win32hle_register(win32hle_gdidc);
     mach_enter();
 
     /* SDL 1.2 bounded string helpers (issue #28, Chocolate Doom). */
@@ -126,6 +127,23 @@ int main(void) {
     call("Mix_SetPostMix", 2, (uint32_t[]){ 0x1234u, 0x5678u });
     ok("Mix_SetPostMix accepts NULL (unregister)", call("Mix_SetPostMix", 2,
        (uint32_t[]){ 0u, 0u }) == 0u);
+
+    /* Final Tetris gaps: pattern brush, icon-from-info and __initenv data. */
+    ok("CreatePatternBrush registered", hle_resolve("CreatePatternBrush") != 0);
+    ok("CreatePatternBrush rejects a non-bitmap", call("CreatePatternBrush", 1,
+       (uint32_t[]){ 0u }) == 0u);
+    ok("CreateIconIndirect registered", hle_resolve("CreateIconIndirect") != 0);
+    uint32_t info = hle_va(hle_alloc(20));
+    memset(hle_ptr(info), 0, 20);
+    MEM32(info + 12u) = 0x1000u;                       /* hbmMask */
+    ok("CreateIconIndirect returns an icon", call("CreateIconIndirect", 1,
+       (uint32_t[]){ info }) != 0u);
+    MEM32(info + 12u) = 0;
+    ok("CreateIconIndirect rejects empty masks", call("CreateIconIndirect", 1,
+       (uint32_t[]){ info }) == 0u);
+    uint32_t initenv = hle_msvcrt_data("__initenv");
+    ok("__initenv resolves as a data export", initenv != 0);
+    ok("__initenv points at the guest environment vector", MEM32(initenv) != 0);
 
     mach_leave();
     printf("api_gap_selftest: all checks passed\n");
