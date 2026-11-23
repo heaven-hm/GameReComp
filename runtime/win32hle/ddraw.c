@@ -438,6 +438,21 @@ static void dd_EnumDisplayModes(void) {                  /* (this, flags, desc f
 }
 static void dd_EnumSurfaces(void) { RET(DD_OK, 5); }
 static void dd_FlipToGDISurface(void) { RET(DD_OK, 1); }
+/* The surface kinds this HLE really creates: system/video-memory surfaces,
+ * primaries, flip chains, textures (including mip chains) and 3D targets.
+ *
+ * DDCAPS is versioned by dwSize. The single DDSCAPS field is at byte 132 in
+ * every version (named ddsCaps in DX3/DX5, ddsOldCaps in DX6/DX7); DX7 moves
+ * the full DDSCAPS2 to byte 364, the last 16 bytes of the 380-byte struct.
+ * The old write at byte 104 was a DDSURFACEDESC2 offset and landed inside
+ * DDCAPS.dwRops, so a DirectDraw7 caller read a zero ddsCaps.dwCaps and - in
+ * Warning Forever's DirectDrawEnumerateExA callback - rejected the device
+ * before it ever called CreateSurface, producing "ERROR: DirectDraw7". */
+#define DD_SURFCAPS_ALL (DDSCAPS_PRIMARYSURFACE | DDSCAPS_OFFSCREENPLAIN | \
+                         DDSCAPS_FLIP | DDSCAPS_COMPLEX | DDSCAPS_FRONTBUFFER | \
+                         DDSCAPS_BACKBUFFER | DDSCAPS_VISIBLE | \
+                         DDSCAPS_SYSTEMMEMORY | DDSCAPS_VIDEOMEMORY | \
+                         DDSCAPS_TEXTURE | DDSCAPS_3DDEVICE | DDSCAPS_MIPMAP)
 static void dd_GetCaps(void) {                           /* (this, &driver, &hel) */
     for (int k = 1; k <= 2; k++) {
         uint32_t c = A32(k);
@@ -449,7 +464,9 @@ static void dd_GetCaps(void) {                           /* (this, &driver, &hel
         MEM32(c + 12) = 0x00000200u;                     /* DDCKEYCAPS_SRCBLT */
         MEM32(c + 24) = 0x00000004u | 0x00000040u;       /* DDPCAPS_8BIT, PRIMARYSURFACE */
         MEM32(c + 60) = 256u << 20, MEM32(c + 64) = 192u << 20;   /* video memory: 256 MB, 192 free */
-        if (size >= 108) MEM32(c + 104) = DDSCAPS_PRIMARYSURFACE | DDSCAPS_OFFSCREENPLAIN | DDSCAPS_FLIP | DDSCAPS_SYSTEMMEMORY | DDSCAPS_VIDEOMEMORY;
+        if (size >= 108) MEM32(c + 104) = DDSCAPS_PRIMARYSURFACE | DDSCAPS_OFFSCREENPLAIN | DDSCAPS_FLIP | DDSCAPS_SYSTEMMEMORY | DDSCAPS_VIDEOMEMORY;   /* legacy DDSURFACEDESC2 offset, kept for old callers */
+        if (size >= 136) MEM32(c + 132) = DD_SURFCAPS_ALL;        /* DDSCAPS in DX3/DX5, ddsOldCaps in DX6/DX7 */
+        if (size >= 380) MEM32(c + 364) = DD_SURFCAPS_ALL;        /* DDCAPS_DX7.ddsCaps.dwCaps (DDSCAPS2) */
     }
     RET(DD_OK, 3);
 }
