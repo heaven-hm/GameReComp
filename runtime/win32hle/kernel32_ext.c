@@ -43,11 +43,18 @@ int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
 #define ERROR_INVALID_NAME    123u      /* a path the ANSI codepage cannot carry */
 #define ERROR_ALREADY_EXISTS  183u
 #define ERROR_INVALID_FUNCTION  1u
+#define ERROR_INVALID_PARAMETER  87u
+#define ERROR_WRITE_PROTECT      19u
 
 #define FILE_ATTRIBUTE_READONLY  0x01u
+#define FILE_ATTRIBUTE_HIDDEN    0x02u
+#define FILE_ATTRIBUTE_SYSTEM    0x04u
 #define FILE_ATTRIBUTE_DIRECTORY 0x10u
 #define FILE_ATTRIBUTE_ARCHIVE   0x20u
 #define FILE_ATTRIBUTE_NORMAL    0x80u
+#define FILE_ATTRIBUTE_TEMPORARY 0x100u
+#define FILE_ATTRIBUTE_OFFLINE   0x1000u
+#define FILE_ATTRIBUTE_NOT_CONTENT_INDEXED 0x2000u
 
 static uint32_t errno_to_win(int e) {
     switch (e) {
@@ -391,7 +398,57 @@ static void k_GetFileAttributesW(void) {
     if (stat(path, &st) != 0) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0xFFFFFFFFu, 1); }
     RET(attrs_of(&st), 1);
 }
-static void k_SetFileAttributesA(void) { char path[1024]; RET(hle_host_path(ASTR(0), path, sizeof path) ? 1u : 0u, 2); }
+/* ---- SetFileAttributesA/W ----
+ * SetFileAttributes replaces the file's attribute set: a requested READONLY
+ * makes it unwritable, and its absence makes it writable (NORMAL means "no
+ * other attributes", and is valid only on its own). The other settable Windows
+ * bits are accepted but have no POSIX counterpart, so they are not stored;
+ * DIRECTORY, REPARSE_POINT, SPARSE_FILE, DEVICE and the like cannot be set
+ * through this API on Windows either, and are rejected like Windows does.
+ * The W form takes a UTF-16 path and shares the ANSI path mapping, so a guest
+ * `C:\Dir\File.TXT` lands on the same host file as CreateFileW would open. */
+static uint32_t set_file_attrs(const char *name, uint32_t attrs) {
+    if (!name || !*name) { hle_set_last_error(ERROR_PATH_NOT_FOUND); return 0; }
+    const uint32_t settable = FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN |
+        FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_NORMAL |
+        FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+    if ((attrs & ~settable) ||
+        ((attrs & FILE_ATTRIBUTE_NORMAL) && (attrs & ~FILE_ATTRIBUTE_NORMAL))) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        return 0;
+    }
+    char path[1024];
+    if (!hle_host_path(name, path, sizeof path)) {
+        hle_set_last_error(ERROR_FILE_NOT_FOUND);
+        return 0;
+    }
+    /* A file under a mod's base is changed in the overlay, as a write to it
+     * would be; keep copies the game's file there first when it has no copy. */
+    hle_host_path_for_write(name, path, sizeof path, 1);
+
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        hle_set_last_error(errno == EACCES || errno == EPERM ? ERROR_ACCESS_DENIED : errno_to_win(errno));
+        return 0;
+    }
+    mode_t mode = st.st_mode;
+    if (attrs & FILE_ATTRIBUTE_READONLY) mode &= ~(mode_t)(S_IWUSR | S_IWGRP | S_IWOTH);
+    else mode |= (mode_t)S_IWUSR;                    /* attrs_of reads the owner's write bit */
+    if (mode != st.st_mode && chmod(path, mode) != 0) {
+        hle_set_last_error(errno == EROFS ? ERROR_WRITE_PROTECT : errno_to_win(errno));
+        return 0;
+    }
+    hle_set_last_error(0);
+    return 1;
+}
+static void k_SetFileAttributesA(void) { RET(set_file_attrs(ASTR(0), A32(1)), 2); }
+static void k_SetFileAttributesW(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024];
+    if (!w || !*w) { hle_set_last_error(ERROR_PATH_NOT_FOUND); RET(0, 2); }
+    if (!hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_INVALID_NAME); RET(0, 2); }
+    RET(set_file_attrs(name, A32(1)), 2);
+}
 static void k_CreateDirectoryA(void) {
     char path[1024];
     hle_host_path_for_write(ASTR(0), path, sizeof path, 0);
@@ -1138,6 +1195,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetFileAttributesExA",       k_GetFileAttributesExA },
     { "GetFileAttributesExW",       k_GetFileAttributesExW },
     { "SetFileAttributesA",         k_SetFileAttributesA },
+    { "SetFileAttributesW",         k_SetFileAttributesW },
     { "CreateDirectoryA",           k_CreateDirectoryA },
     { "CreateDirectoryW",           k_CreateDirectoryW },
     { "RemoveDirectoryA",           k_RemoveDirectoryA },
