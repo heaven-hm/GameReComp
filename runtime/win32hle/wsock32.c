@@ -117,6 +117,13 @@ static void w_WSAStartup(void) {                         /* (version, &WSADATA) 
     RET(0, 2);
 }
 static void w_WSACleanup(void)     { RET(0, 0); }
+/* Legacy WSOCK32 blocking-call cancellation: this layer has no blocking
+ * call to cancel, so report SOCKET_ERROR + WSAEINVAL rather than claiming
+ * a cancellation that never happened. */
+static void w_WSACancelBlockingCall(void) {
+    g_wsa_error = WSAEINVAL;
+    RET(0xFFFFFFFFu, 0);
+}
 static void w_WSAGetLastError(void){ RET(g_wsa_error, 0); }
 static void w_WSASetLastError(void){ g_wsa_error = A32(0); RETV(1); }
 
@@ -783,6 +790,7 @@ const win32hle_shim win32hle_wsock32[] = {
     SHIM2(101, "WSAAsyncSelect", w_WSAAsyncSelect),
     SHIM2(108, "WSACancelAsyncRequest", w_WSACancelAsyncRequest),
     SHIM2(111, "WSAGetLastError", w_WSAGetLastError),
+    SHIM2(119, "WSACancelBlockingCall", w_WSACancelBlockingCall),
     SHIM2(112, "WSASetLastError", w_WSASetLastError),
     SHIM2(115, "WSAStartup", w_WSAStartup),
     SHIM2(116, "WSACleanup", w_WSACleanup),

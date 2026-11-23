@@ -32,6 +32,7 @@ static uint32_t wide(const char *s) {
 int main(void) {
     win32hle_register(win32hle_user32);
     win32hle_register(win32hle_sdl12);
+    win32hle_register(win32hle_wsock32);
     mach_enter();
 
     /* SDL 1.2 bounded string helpers (issue #28, Chocolate Doom). */
@@ -58,6 +59,20 @@ int main(void) {
        (uint32_t[]){ 0u, wide("Need WAD"), wide("Chocolate Doom"), 0u }) == 1u);
     ok("MessageBoxW answers IDYES for MB_YESNO", call("MessageBoxW", 4,
        (uint32_t[]){ 0u, wide("Continue?"), wide("Tetris"), 4u }) == 6u);
+
+    /* Chocolate Doom's SDL 1.2 video-driver query and legacy winsock call. */
+    ok("SDL_VideoDriverName registered", hle_resolve("SDL_VideoDriverName") != 0);
+    uint32_t drv = hle_va(hle_alloc(64));
+    memset(hle_ptr(drv), 0, 64);
+    ok("SDL_VideoDriverName returns the buffer", call("SDL_VideoDriverName", 2,
+       (uint32_t[]){ drv, 64u }) == drv);
+    /* The dummy driver may report no current driver before video init; the
+     * contract is a NUL-terminated string in the guest buffer either way. */
+    ok("driver name is NUL terminated", strlen((char *)hle_ptr(drv)) < 64);
+    ok("WSACancelBlockingCall registered", hle_resolve("WSACancelBlockingCall") != 0);
+    ok("WSACancelBlockingCall fails honestly", call("WSACancelBlockingCall", 0, NULL)
+       == 0xFFFFFFFFu);
+    ok("WSAEINVAL reported", call("WSAGetLastError", 0, NULL) == 10022u);
 
     mach_leave();
     printf("api_gap_selftest: all checks passed\n");
