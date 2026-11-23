@@ -1155,6 +1155,319 @@ static void k_ConnectNamedPipe(void) { hle_set_last_error(ERROR_INVALID_HANDLE);
 static void k_WaitNamedPipeA(void)   { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0, 2); }
 static void k_PeekNamedPipe(void)    { hle_set_last_error(ERROR_INVALID_HANDLE); RET(0, 6); }
 
+/* ---- Vista+ name-based NLS: LCMapStringEx, GetLocaleInfoEx, CompareStringEx ----
+ * The UTF-16, locale-name counterparts of kernel32_crt.c's LCMapStringA,
+ * GetLocaleInfoA and CompareStringA. There are no NLS data files in this layer
+ * and exactly one locale (en-US / LCID 0x0409, what the existing
+ * GetUserDefaultLCID / GetLocaleInfoA answer), so:
+ *   - NULL (LOCALE_NAME_USER_DEFAULT), "en", "en-US" and
+ *     "!x-sys-default-locale" (LOCALE_NAME_SYSTEM_DEFAULT) select that locale;
+ *   - L"" (LOCALE_NAME_INVARIANT) gives culture-free casing and ordinal
+ *     comparison, but no locale *data* -- GetLocaleInfoEx fails for it;
+ *   - any other name fails with ERROR_INVALID_PARAMETER. No locale data is
+ *     invented for locales this layer cannot back.
+ * Casing is Unicode *simple* mapping for ASCII, Latin-1, Greek and Cyrillic:
+ * code points whose case mapping expands (e.g. U+0130) pass through unchanged.
+ * A sort key here is an opaque stream of folded, big-endian UTF-16 code units
+ * plus a 0 terminator; it sorts consistently with CompareStringEx below but is
+ * NOT a Windows NLS weight table. Flags that need real collation data (kana /
+ * width, Chinese, digits-as-numbers, SORT_STRINGSORT, LCMAP_HASH /
+ * LCMAP_SORTHANDLE, version structures and sort handles) fail closed with
+ * ERROR_INVALID_FLAGS / ERROR_INVALID_PARAMETER. NORM_IGNORENONSPACE ignores
+ * U+0300..U+036F combining marks and NORM_IGNORESYMBOLS ignores ASCII
+ * punctuation; precomposed accents are not decomposed.
+ * Strings are UTF-16 *in guest memory*; counts are WCHARs (bytes for a sort
+ * key). Failure is 0 with a Win32 last error: these APIs do not return
+ * HRESULTs, so a caller that wants one must apply HRESULT_FROM_WIN32 itself.
+ */
+#define EX_ERROR_INVALID_PARAMETER   87u
+#define EX_ERROR_NOT_ENOUGH_MEMORY   8u
+#define EX_ERROR_INSUFFICIENT_BUFFER 122u
+#define EX_ERROR_INVALID_FLAGS      1004u
+
+#define EX_LCMAP_LOWERCASE         0x00000100u
+#define EX_LCMAP_UPPERCASE         0x00000200u
+#define EX_LCMAP_SORTKEY           0x00000400u
+#define EX_LCMAP_BYTEREV           0x00000800u
+#define EX_LCMAP_LINGUISTIC_CASING 0x01000000u
+#define EX_NORM_IGNORECASE         0x00000001u
+#define EX_NORM_IGNORENONSPACE     0x00000002u
+#define EX_NORM_IGNORESYMBOLS      0x00000004u
+#define EX_LINGUISTIC_IGNORECASE   0x00000010u
+#define EX_LINGUISTIC_IGNOREDIACRITIC 0x00000020u
+#define EX_NORM_LINGUISTIC_CASING  0x08000000u
+#define EX_MAX_STRING 0x100000u                 /* guard for an unterminated guest string */
+
+enum ex_locale_kind { EX_LOCALE_BAD = 0, EX_LOCALE_DEFAULT, EX_LOCALE_INVARIANT };
+
+/* A locale name is an ASCII UTF-16 string; a non-ASCII unit cannot name one of
+ * the two locales this layer knows. */
+static int ex_wide_ascii(uint32_t va, char *out, size_t cap) {
+    size_t i;
+    if (!va) return 0;
+    for (i = 0; i + 1 < cap; i++) {
+        uint16_t c = MEM16(va + (uint32_t)i * 2u);
+        if (!c) { out[i] = 0; return 1; }
+        if (c > 0x7F) return 0;
+        out[i] = (char)c;
+    }
+    return 0;
+}
+static enum ex_locale_kind ex_locale_of(uint32_t va, char *name, size_t cap) {
+    if (!va) return EX_LOCALE_DEFAULT;          /* LOCALE_NAME_USER_DEFAULT */
+    if (!ex_wide_ascii(va, name, cap)) return EX_LOCALE_BAD;
+    if (!*name) return EX_LOCALE_INVARIANT;     /* LOCALE_NAME_INVARIANT */
+    if (!strcasecmp(name, "en") || !strcasecmp(name, "en-us") ||
+        !strcasecmp(name, "!x-sys-default-locale")) return EX_LOCALE_DEFAULT;
+    return EX_LOCALE_BAD;
+}
+static int ex_wide_len(uint32_t va, uint32_t *out) {
+    uint32_t i;
+    for (i = 0; i < EX_MAX_STRING; i++)
+        if (!MEM16(va + i * 2u)) { *out = i; return 1; }
+    return 0;
+}
+
+static uint16_t ex_lower(uint16_t c) {
+    if (c >= 'A' && c <= 'Z') return (uint16_t)(c + 32);
+    if (c >= 0x00C0 && c <= 0x00DE && c != 0x00D7) return (uint16_t)(c + 32);
+    if (c == 0x0178) return 0x00FF;
+    if (c >= 0x0391 && c <= 0x03A1) return (uint16_t)(c + 32);
+    if (c >= 0x03A3 && c <= 0x03AB) return (uint16_t)(c + 32);
+    if (c >= 0x0410 && c <= 0x042F) return (uint16_t)(c + 32);
+    if (c >= 0x0400 && c <= 0x040F) return (uint16_t)(c + 0x50);
+    return c;
+}
+static uint16_t ex_upper(uint16_t c) {
+    if (c >= 'a' && c <= 'z') return (uint16_t)(c - 32);
+    if (c >= 0x00E0 && c <= 0x00FE && c != 0x00F7) return (uint16_t)(c - 32);
+    if (c == 0x00FF) return 0x0178;
+    if (c >= 0x03B1 && c <= 0x03C1) return (uint16_t)(c - 32);
+    if (c >= 0x03C3 && c <= 0x03CB) return (uint16_t)(c - 32);
+    if (c == 0x03C2) return 0x03A3;             /* final sigma */
+    if (c >= 0x0430 && c <= 0x044F) return (uint16_t)(c - 32);
+    if (c >= 0x0450 && c <= 0x045F) return (uint16_t)(c - 0x50);
+    return c;
+}
+static int ex_is_letter(uint16_t c) {
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+           (c >= 0x00C0 && c <= 0x00FF && c != 0x00D7 && c != 0x00F7) ||
+           (c >= 0x0391 && c <= 0x03CB) || (c >= 0x0400 && c <= 0x044F);
+}
+static int ex_is_alnum(uint16_t c) {
+    return ex_is_letter(c) || (c >= '0' && c <= '9');
+}
+static int ex_is_sym(uint16_t c) {
+    return c < 0x80 && ((c >= 0x21 && c <= 0x2F) || (c >= 0x3A && c <= 0x40) ||
+                        (c >= 0x5B && c <= 0x60) || (c >= 0x7B && c <= 0x7E));
+}
+static int ex_ignore_unit(uint16_t c, uint32_t flags) {
+    if ((flags & (EX_NORM_IGNORENONSPACE | EX_LINGUISTIC_IGNOREDIACRITIC)) &&
+        c >= 0x0300 && c <= 0x036F) return 1;   /* combining diacritical marks */
+    if ((flags & EX_NORM_IGNORESYMBOLS) && ex_is_sym(c)) return 1;
+    return 0;
+}
+static uint16_t ex_cmp_unit(uint16_t c, uint32_t flags) {
+    return (flags & (EX_NORM_IGNORECASE | EX_LINGUISTIC_IGNORECASE)) ? ex_lower(c) : c;
+}
+
+/* LCMapStringEx(locale, flags, src, cchSrc, dst, cchDest, version, reserved, sortHandle) */
+static void k_LCMapStringEx(void) {
+    uint32_t va = A32(0), flags = A32(1), src = A32(2), dst = A32(4);
+    int n = (int)A32(3), dn = (int)A32(5);
+    char name[64];
+    uint32_t n_src, i, m = 0;
+    enum ex_locale_kind loc;
+    uint32_t known = EX_LCMAP_LOWERCASE | EX_LCMAP_UPPERCASE | EX_LCMAP_SORTKEY |
+                     EX_LCMAP_BYTEREV | EX_LCMAP_LINGUISTIC_CASING | EX_NORM_IGNORECASE |
+                     EX_NORM_IGNORENONSPACE | EX_NORM_IGNORESYMBOLS | EX_LINGUISTIC_IGNORECASE |
+                     EX_LINGUISTIC_IGNOREDIACRITIC | EX_NORM_LINGUISTIC_CASING;
+    if (!src || !n || dn < 0 || A32(6) || A32(7) || A32(8)) {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9);
+    }
+    if (flags & ~known) { hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 9); }
+    if ((flags & EX_LCMAP_SORTKEY) && (flags & (EX_LCMAP_LOWERCASE | EX_LCMAP_UPPERCASE))) {
+        hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 9);
+    }
+    if (!(flags & EX_LCMAP_SORTKEY) &&
+        (flags & (EX_NORM_IGNORECASE | EX_LINGUISTIC_IGNORECASE | EX_NORM_LINGUISTIC_CASING))) {
+        hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 9);
+    }
+    loc = ex_locale_of(va, name, sizeof name);
+    if (loc == EX_LOCALE_BAD) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+    if (n < 0) {
+        if (!ex_wide_len(src, &n_src)) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+        n_src++;                                /* include the terminating NUL */
+    } else {
+        if ((uint32_t)n > EX_MAX_STRING) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+        n_src = (uint32_t)n;
+    }
+    (void)loc;                                  /* casing here is locale-independent */
+
+    if (flags & EX_LCMAP_SORTKEY) {
+        uint8_t *key = (uint8_t *)malloc((size_t)n_src * 2u + 1u);
+        if (!key) { hle_set_last_error(EX_ERROR_NOT_ENOUGH_MEMORY); RET(0, 9); }
+        for (i = 0; i < n_src; i++) {
+            uint16_t c = MEM16(src + i * 2u);
+            if (ex_ignore_unit(c, flags)) continue;
+            c = ex_cmp_unit(c, flags);
+            key[m++] = (uint8_t)(c >> 8);       /* big-endian code unit */
+            key[m++] = (uint8_t)c;
+        }
+        key[m++] = 0;                           /* the opaque stream's terminator */
+        if (flags & EX_LCMAP_BYTEREV)
+            for (i = 0; i + 1 < m; i += 2) { uint8_t t = key[i]; key[i] = key[i + 1]; key[i + 1] = t; }
+        if (!dn) { free(key); RET(m, 9); }
+        if (dn < 0 || (uint32_t)dn < m || !dst) {
+            free(key); hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(0, 9);
+        }
+        for (i = 0; i < m; i++) MEM8(dst + i) = key[i];
+        free(key);
+        RET(m, 9);
+    }
+
+    {
+        uint16_t *out = (uint16_t *)malloc((size_t)n_src * 2u);
+        int title = (flags & (EX_LCMAP_LOWERCASE | EX_LCMAP_UPPERCASE)) ==
+                    (EX_LCMAP_LOWERCASE | EX_LCMAP_UPPERCASE);
+        int word_start = 1;
+        if (!out) { hle_set_last_error(EX_ERROR_NOT_ENOUGH_MEMORY); RET(0, 9); }
+        for (i = 0; i < n_src; i++) {
+            uint16_t c = MEM16(src + i * 2u);
+            if (ex_ignore_unit(c, flags)) continue;
+            if (title) {
+                c = ex_is_letter(c) ? (word_start ? ex_upper(c) : ex_lower(c)) : c;
+                word_start = !ex_is_alnum(c);
+            } else if (flags & EX_LCMAP_LOWERCASE) c = ex_lower(c);
+            else if (flags & EX_LCMAP_UPPERCASE) c = ex_upper(c);
+            if (flags & EX_LCMAP_BYTEREV) c = (uint16_t)((c >> 8) | (c << 8));
+            out[m++] = c;
+        }
+        if (!dn) { free(out); RET(m, 9); }
+        if ((uint32_t)dn < m || !dst) {
+            free(out); hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(0, 9);
+        }
+        for (i = 0; i < m; i++) MEM16(dst + i * 2u) = out[i];
+        free(out);
+        RET(m, 9);
+    }
+}
+
+/* GetLocaleInfoEx(locale, LCType, data, cchData) */
+static void k_GetLocaleInfoEx(void) {
+    uint32_t va = A32(0), lctype = A32(1), data = A32(2);
+    int dn = (int)A32(3), is_num = 0, hex = 0;
+    char name[64], tmp[64];
+    uint32_t num = 0;
+    uint32_t t = lctype & 0x0FFFFFFFu;           /* NOUSEROVERRIDE/RETURN_NUMBER/etc. */
+    const char *s = NULL;
+    static const char *const day[] = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+    static const char *const mon[] = { "January", "February", "March", "April", "May", "June", "July", "August",
+                                       "September", "October", "November", "December" };
+    if (dn < 0 || ex_locale_of(va, name, sizeof name) != EX_LOCALE_DEFAULT) {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 4);
+    }
+    if ((lctype & 0x20000000u) && !t) {          /* RETURN_NUMBER needs an LCType */
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 4);
+    }
+    /* The one locale's values, mirroring kernel32_crt.c's GetLocaleInfoA table
+     * (same LCID 0x0409), plus the name constants that Ex callers use. */
+    switch (t) {
+    case 0x01: case 0x09: num = 0x0409; is_num = 1; hex = 1; break; /* ILANGUAGE, IDEFAULTLANGUAGE */
+    case 0x05: case 0x0A: num = 1; is_num = 1; break;              /* ICOUNTRY, IDEFAULTCOUNTRY */
+    case 0x0B: num = 437; is_num = 1; break;                       /* IDEFAULTCODEPAGE */
+    case 0x0D: num = 1; is_num = 1; break;                         /* IMEASURE */
+    case 0x11: case 0x19: case 0x1A: num = 2; is_num = 1; break;   /* IDIGITS, ICURRDIGITS */
+    case 0x12: num = 1; is_num = 1; break;                         /* ILZERO */
+    case 0x1B: case 0x1C: case 0x21: case 0x22: case 0x23: case 0x24:
+    case 0x25: case 0x26: case 0x27: num = 0; is_num = 1; break;
+    case 0x1004: num = 1252; is_num = 1; break;                    /* IDEFAULTANSICODEPAGE */
+    case 0x1009: num = 1; is_num = 1; break;                       /* ICALENDARTYPE */
+    case 0x100C: num = 0; is_num = 1; break;                       /* IFIRSTDAYOFWEEK */
+    default:
+        if (t >= 0x2A && t <= 0x30) s = day[t - 0x2A];
+        else if (t >= 0x31 && t <= 0x37) { snprintf(tmp, sizeof tmp, "%.3s", day[t - 0x31]); s = tmp; }
+        else if (t >= 0x38 && t <= 0x43) s = mon[t - 0x38];
+        else if (t >= 0x44 && t <= 0x4F) { snprintf(tmp, sizeof tmp, "%.3s", mon[t - 0x44]); s = tmp; }
+        else switch (t) {
+        case 0x02: case 0x04: case 0x1001: s = "English"; break;
+        case 0x03: s = "ENU"; break;
+        case 0x06: case 0x08: case 0x1002: s = "United States"; break;
+        case 0x07: s = "USA"; break;
+        case 0x0C: case 0x0F: case 0x17: s = ","; break;
+        case 0x0E: case 0x16: s = "."; break;
+        case 0x10: case 0x18: s = "3;0"; break;
+        case 0x14: s = "$"; break;
+        case 0x15: s = "USD"; break;
+        case 0x1D: s = "/"; break;
+        case 0x1E: s = ":"; break;
+        case 0x1F: s = "M/d/yyyy"; break;
+        case 0x20: s = "dddd, MMMM dd, yyyy"; break;
+        case 0x28: s = "AM"; break;
+        case 0x29: s = "PM"; break;
+        case 0x50: s = ""; break;
+        case 0x51: s = "-"; break;
+        case 0x59: case 0x67: s = "en"; break; /* SISO639LANGNAME, ...NAME2 */
+        case 0x5A: case 0x68: s = "US"; break; /* SISO3166CTRYNAME, ...NAME2 */
+        case 0x5C: s = "en-US"; break;         /* SNAME */
+        case 0x6D: s = "en"; break;            /* SPARENT */
+        case 0x1003: s = "h:mm:ss tt"; break;  /* STIMEFORMAT */
+        default: break;
+        }
+        break;
+    }
+    if (!is_num && !s) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 4); }
+    if (lctype & 0x20000000u) {                 /* LOCALE_RETURN_NUMBER: a DWORD in 2 WCHARs */
+        if (!is_num) { hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 4); }
+        if (!dn) RET(2, 4);
+        if (dn < 2 || !data) { hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(0, 4); }
+        MEM32(data) = num;
+        RET(2, 4);
+    }
+    if (is_num) { snprintf(tmp, sizeof tmp, hex ? "%04X" : "%u", num); s = tmp; }
+    {
+        uint32_t len = (uint32_t)strlen(s) + 1u, i;
+        if (!dn) RET(len, 4);
+        if ((uint32_t)dn < len || !data) { hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(0, 4); }
+        for (i = 0; i < len; i++) MEM16(data + i * 2u) = (uint8_t)s[i];
+        RET(len, 4);
+    }
+}
+
+/* CompareStringEx(locale, flags, s1, cch1, s2, cch2, version, reserved, lParam) */
+static void k_CompareStringEx(void) {
+    uint32_t va = A32(0), flags = A32(1), s1 = A32(2), s2 = A32(4);
+    int n1 = (int)A32(3), n2 = (int)A32(5);
+    uint32_t len1, len2, i = 0, j = 0;
+    char name[64];
+    uint32_t supported = EX_NORM_IGNORECASE | EX_NORM_IGNORENONSPACE | EX_NORM_IGNORESYMBOLS |
+                         EX_LINGUISTIC_IGNORECASE | EX_LINGUISTIC_IGNOREDIACRITIC |
+                         EX_NORM_LINGUISTIC_CASING;
+    if (!s1 || !s2 || A32(6) || A32(7) || A32(8)) {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9);
+    }
+    if (flags & ~supported) { hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 9); }
+    if (ex_locale_of(va, name, sizeof name) == EX_LOCALE_BAD) {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9);
+    }
+    if (n1 < 0 && !ex_wide_len(s1, &len1)) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+    if (n2 < 0 && !ex_wide_len(s2, &len2)) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+    if (n1 >= 0) len1 = (uint32_t)n1;
+    if (n2 >= 0) len2 = (uint32_t)n2;
+    if (len1 > EX_MAX_STRING || len2 > EX_MAX_STRING) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+    for (;;) {
+        uint16_t a, b;
+        while (i < len1 && ex_ignore_unit(MEM16(s1 + i * 2u), flags)) i++;
+        while (j < len2 && ex_ignore_unit(MEM16(s2 + j * 2u), flags)) j++;
+        if (i >= len1 || j >= len2) break;
+        a = ex_cmp_unit(MEM16(s1 + i * 2u), flags);
+        b = ex_cmp_unit(MEM16(s2 + j * 2u), flags);
+        if (a != b) RET(a < b ? 1u : 3u, 9);    /* CSTR_LESS_THAN / CSTR_GREATER_THAN */
+        i++; j++;
+    }
+    RET(i >= len1 && j >= len2 ? 2u : (i >= len1 ? 1u : 3u), 9);
+}
+
 const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetProcessAffinityMask", k_GetProcessAffinityMask }, { "SetProcessAffinityMask", k_SetProcessAffinityMask },
     { "CreateToolhelp32Snapshot", k_CreateToolhelp32Snapshot }, { "Process32First", k_Process32First },
@@ -1233,5 +1546,8 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetPrivateProfileStringA",   k_GetPrivateProfileStringA },
     { "GetPrivateProfileIntA",      k_GetPrivateProfileIntA },
     { "WritePrivateProfileStringA", k_WritePrivateProfileStringA },
+    { "LCMapStringEx",              k_LCMapStringEx },
+    { "GetLocaleInfoEx",            k_GetLocaleInfoEx },
+    { "CompareStringEx",            k_CompareStringEx },
     { 0, 0 }
 };
