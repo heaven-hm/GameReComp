@@ -63,6 +63,42 @@ def default_build_timeout(source_bytes):
     return min(BUILD_TIMEOUT_CAP,
                BUILD_TIMEOUT_BASE + BUILD_TIMEOUT_PER_MB * (source_bytes / (1 << 20)))
 
+
+def resource_footprint(project_dir: Path, stages: list, binary: Path | None) -> dict:
+    """Measured build resources for one autorecomp run (issue #26).
+
+    Every value is observed, never estimated: generated C bytes come from the
+    translate stage, binary bytes from the compiled file, project disk bytes
+    from a walk of the project tree, and peak RSS from the host's resource
+    accounting. macOS reports ru_maxrss in bytes, Linux in KiB; both are
+    normalised to bytes here.
+    """
+    generated = 0
+    for stage in stages:
+        if stage.get("name") == "translate":
+            generated = int((stage.get("data") or {}).get("source_bytes", 0))
+    disk = 0
+    try:
+        for path in project_dir.rglob("*"):
+            if path.is_file() and not path.is_symlink():
+                disk += path.stat().st_size
+    except (OSError, ValueError):
+        pass
+    peak_rss = None
+    try:
+        import resource  # POSIX; the pipeline already targets macOS/Linux
+        raw = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+        peak_rss = raw if sys.platform == "darwin" else raw * 1024
+    except (ImportError, ValueError, OSError):
+        pass
+    return {
+        "generated_source_bytes": generated,
+        "binary_bytes": int(binary.stat().st_size) if binary and binary.exists() else 0,
+        "project_disk_bytes": disk,
+        "peak_rss_bytes": peak_rss,
+        "stage_seconds_total": round(sum(float(s.get("seconds") or 0) for s in stages), 2),
+    }
+
 CATEGORIES = ("HIGH_LEVEL_VERIFIED", "HIGH_LEVEL_UNVERIFIED",
               "LOW_LEVEL_FALLBACK", "UNRESOLVED")
 
@@ -1145,6 +1181,7 @@ class Pipeline:
             "input": str(self.pe_path),
             "project": str(self.project_dir),
             "stages": self.stages,
+            "resources": resource_footprint(self.project_dir, self.stages, self.binary),
             "outcome": self.verification or {"status": "not-run", "reason": "verification did not run"},
             "score": self.score(include_report=True),
             "manifest": "manifest.json",
