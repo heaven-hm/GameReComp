@@ -27,9 +27,10 @@
 #define ERROR_FILE_NOT_FOUND 2u
 #define ERROR_MORE_DATA    234u
 #define ERROR_NO_MORE_ITEMS 259u
-#define REG_SZ     1u
-#define REG_BINARY 3u
-#define REG_DWORD  4u
+#define REG_SZ         1u
+#define REG_EXPAND_SZ  2u
+#define REG_BINARY     3u
+#define REG_DWORD      4u
 
 typedef struct value { char name[128]; uint32_t type, size; uint8_t *data; struct value *next; } value_t;
 typedef struct key { char name[128]; struct key *parent, *child, *next; value_t *values; } rkey_t;
@@ -80,6 +81,24 @@ static void set_value(rkey_t *k, const char *name, uint32_t type, const void *da
     memcpy(v->data, data, size);
     v->data[size] = v->data[size + 1] = 0;
     v->type = type, v->size = size;
+}
+
+/* A REG_SZ/REG_EXPAND_SZ written through the W API arrives as UTF-16 with an
+ * explicit byte count.  The store keeps CP1252 bytes with a trailing NUL, so
+ * convert through the shared codepage helper.  Bound a temporary copy by
+ * cbData first: hle_wide_to_ansi walks to a NUL and must not read past the
+ * data the guest says it supplied.  Returns 0 on malformed/unrepresentable
+ * input (odd byte count, no NUL, codepage miss, or too long for out). */
+static int reg_wide_sz_to_ansi(const uint16_t *w, uint32_t cb, char *out, size_t outsz) {
+    if (!w || !out || !outsz || (cb & 1u) || cb < 2u) return 0;
+    uint32_t n = cb / 2u;
+    uint16_t *tmp = (uint16_t *)malloc((size_t)n * 2u);
+    if (!tmp) return 0;
+    memcpy(tmp, w, cb);
+    tmp[n - 1] = 0;                              /* force termination in-bounds */
+    int ok = hle_wide_to_ansi(tmp, out, outsz);
+    free(tmp);
+    return ok;
 }
 
 /* Detach every value and every descendant key of k, leaving k itself in
@@ -234,6 +253,136 @@ static void r_RegSetValueExA(void) {                     /* (key, name, 0, type,
     set_value(k, ASTR(1), A32(3), APTR(4), A32(5));
     reg_save();
     RET(ERROR_SUCCESS, 6);
+}
+
+/* ---- Registry persistence APIs used by late-90s/2000s games -------------
+ * Games of this era save settings either through the Unicode *Ex entry
+ * points (localised installers) or through the legacy default-value API
+ * (RegSetValue/RegQueryValue with an unnamed value).  All five functions
+ * below convert at the ANSI/UTF-16 boundary into the store's CP1252 bytes
+ * and persist through the same line-based file as RegSetValueExA, so the
+ * existing hle_reg_load/hle_reg_save format stays the single source of
+ * truth.  No host.c or header change is required. */
+
+/* RegSetValueExW(hKey, lpValueName, 0, dwType, lpData, cbData). */
+static void r_RegSetValueExW(void) {
+    rkey_t *k = root_of(A32(0));
+    if (!k) { hle_set_last_error(6u); RET(6u, 6); }       /* ERROR_INVALID_HANDLE */
+    char name[256];
+    const uint16_t *wn = (const uint16_t *)APTR(1);
+    if (wn && !hle_wide_to_ansi(wn, name, sizeof name)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 6);
+    }
+    uint32_t type = A32(3), cb = A32(5);
+    const void *data = APTR(4);
+    if (cb && !data) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 6); }
+    if ((type == REG_SZ || type == REG_EXPAND_SZ) && cb) {
+        char ansi[2048];
+        if (!reg_wide_sz_to_ansi((const uint16_t *)data, cb, ansi, sizeof ansi)) {
+            hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 6);
+        }
+        set_value(k, wn ? name : NULL, type, ansi, (uint32_t)strlen(ansi) + 1u);
+    } else {
+        set_value(k, wn ? name : NULL, type, data ? data : "", cb);
+    }
+    reg_save();
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 6);
+}
+
+/* RegCreateKeyExW(hKey, lpSubKey, 0, lpClass, opts, sam, sa, &out, &disp). */
+static void r_RegCreateKeyExW(void) {
+    char sub[256];
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (w && !hle_wide_to_ansi(w, sub, sizeof sub)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 9);
+    }
+    rkey_t *p = root_of(A32(0));
+    int existed = p && subkey(p, w ? sub : NULL, 0) != NULL;
+    uint32_t r = open_key(A32(0), w ? sub : NULL, A32(7), 1);
+    if (A32(8)) MEM32(A32(8)) = existed ? 2u : 1u;       /* OPENED_EXISTING / CREATED_NEW */
+    RET(r, 9);
+}
+
+/* RegQueryValueA(hKey, lpValueName, lpData, lpcbData).  The legacy API reads
+ * the default (unnamed) value.  If lpValueName names a subkey, Windows
+ * redirects to that subkey's default value -- an edge case the *Ex form has
+ * no equivalent for.  lpcbData is required and is in bytes. */
+static void r_RegQueryValueA(void) {
+    uint32_t cb_va = A32(3);
+    if (!cb_va) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 4); }
+    rkey_t *k = root_of(A32(0));
+    if (!k) { MEM32(cb_va) = 0; hle_set_last_error(6u); RET(6u, 4); }
+    rkey_t *target = k;
+    const char *which = ASTR(1);
+    if (which && *which) { rkey_t *sk = subkey(k, which, 0); if (sk) target = sk; }
+    value_t *v = find_value(target, NULL, 0);
+    if (!v) { MEM32(cb_va) = 0; hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(ERROR_FILE_NOT_FOUND, 4); }
+    uint32_t need = v->size, have = MEM32(cb_va);
+    MEM32(cb_va) = need;
+    if (!A32(2)) { hle_set_last_error(ERROR_SUCCESS); RET(ERROR_SUCCESS, 4); }
+    if (have < need) { hle_set_last_error(ERROR_MORE_DATA); RET(ERROR_MORE_DATA, 4); }
+    memcpy(APTR(2), v->data, need);
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 4);
+}
+
+/* RegQueryValueW(hKey, lpValueName, lpData, lpcbData).  Same default-value
+ * and subkey-redirect semantics as the ANSI form; REG_SZ/REG_EXPAND_SZ data
+ * is widened back to UTF-16 (lpcbData stays a byte count), other types are
+ * copied verbatim. */
+static void r_RegQueryValueW(void) {
+    char name[256];
+    const uint16_t *wn = (const uint16_t *)APTR(1);
+    uint32_t cb_va = A32(3);
+    if (!cb_va || (wn && !hle_wide_to_ansi(wn, name, sizeof name))) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 4);
+    }
+    rkey_t *k = root_of(A32(0));
+    if (!k) { MEM32(cb_va) = 0; hle_set_last_error(6u); RET(6u, 4); }
+    rkey_t *target = k;
+    if (wn && *wn) { rkey_t *sk = subkey(k, name, 0); if (sk) target = sk; }
+    value_t *v = find_value(target, NULL, 0);
+    if (!v) { MEM32(cb_va) = 0; hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(ERROR_FILE_NOT_FOUND, 4); }
+
+    uint16_t *wide = NULL;
+    uint32_t need = v->size;
+    const void *out = v->data;
+    if ((v->type == REG_SZ || v->type == REG_EXPAND_SZ) && v->size >= 2u) {
+        uint32_t chars = (uint32_t)strlen((const char *)v->data) + 1u;
+        need = chars * 2u;
+        wide = (uint16_t *)malloc(need);
+        if (!wide) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(ERROR_NOT_ENOUGH_MEMORY, 4); }
+        hle_ansi_to_wide((const char *)v->data, wide, chars);
+        out = wide;
+    }
+    uint32_t have = MEM32(cb_va);
+    MEM32(cb_va) = need;
+    if (!A32(2)) { free(wide); hle_set_last_error(ERROR_SUCCESS); RET(ERROR_SUCCESS, 4); }
+    if (have < need) { free(wide); hle_set_last_error(ERROR_MORE_DATA); RET(ERROR_MORE_DATA, 4); }
+    memcpy(APTR(2), out, need);
+    free(wide);
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 4);
+}
+
+/* RegSetValueA(hKey, lpSubKey, dwType, lpData, cbData): legacy writer for
+ * the default (unnamed) value, always stored as REG_SZ.  A non-NULL lpSubKey
+ * selects a subkey (legacy semantics); cbData == 0xFFFFFFFF means "strlen+1". */
+static void r_RegSetValueA(void) {
+    rkey_t *k = root_of(A32(0));
+    if (!k) { hle_set_last_error(6u); RET(6u, 5); }
+    rkey_t *target = k;
+    const char *which = ASTR(1);
+    if (which && *which) { rkey_t *sk = subkey(k, which, 0); if (sk) target = sk; }
+    const char *s = ASTR(3) ? ASTR(3) : "";
+    uint32_t avail = (uint32_t)strlen(s) + 1u;
+    uint32_t n = A32(4) == 0xFFFFFFFFu ? avail : A32(4);
+    if (n > avail) n = avail;                            /* never read past the guest buffer */
+    set_value(target, NULL, REG_SZ, s, n);
+    reg_save();
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 5);
 }
 static void r_RegDeleteValueA(void) {
     rkey_t *k = root_of(A32(0));
@@ -1130,6 +1279,8 @@ const win32hle_shim win32hle_advapi32[] = {
     { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyExW", r_RegOpenKeyExW }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
     { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey }, { "RegFlushKey", adv_RegFlushKey },
     { "RegQueryValueExA", r_RegQueryValueExA }, { "RegQueryValueExW", r_RegQueryValueExW }, { "RegSetValueExA", r_RegSetValueExA },
+    { "RegSetValueExW", r_RegSetValueExW }, { "RegCreateKeyExW", r_RegCreateKeyExW },
+    { "RegQueryValueA", r_RegQueryValueA }, { "RegQueryValueW", r_RegQueryValueW }, { "RegSetValueA", r_RegSetValueA },
     { "RegDeleteValueA", r_RegDeleteValueA }, { "RegDeleteValueW", r_RegDeleteValueW }, { "RegDeleteKeyA", r_RegDeleteKeyA },
     { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumKeyExW", r_RegEnumKeyExW }, { "RegEnumValueA", r_RegEnumValueA }, { "RegEnumValueW", r_RegEnumValueW }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
     { "RegQueryInfoKeyW", r_RegQueryInfoKeyW }, { "RegDeleteTreeA", r_RegDeleteTreeA }, { "RegDeleteTreeW", r_RegDeleteTreeW },
