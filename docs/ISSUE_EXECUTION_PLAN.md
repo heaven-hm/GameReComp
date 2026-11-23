@@ -70,3 +70,17 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - mmioOpenW `feature/mmio-openw` at `23aad3c…`: real on-disk RIFF fixture.
 - No issue was closed: remaining acceptance criteria (live gameplay per game,
   Linux target, GUI agent integration) are not yet verified.
+
+## Integration checkpoint 3 (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `da1e0e46e5dc1a66b9e37ae2a2f2cc4c74a65553`.
+- Engine branch `feature/engine-lifter` at `da1e0e4` implements CPUID on
+  non-MSVC hosts with a register/mask selftest (`cpuid_selftest.c`).
+- `python3 -m pytest tests/ -q` → 173 passed, 2 skipped, 26 subtests passed.
+- `bash runtime/win32hle/build_selftests.sh` → 18 selftests ok.
+- Unsupported instruction scan on IGI/Cave Story/Noiz2sa found 16 rare
+  mnemonics (das, iretd, into, bound, aad, arpl, aas, int, salc, daa, insb,
+  insd, fldenv, aaa, sti, lcall); most are in data regions, and none are
+  claimed as supported. They remain on the unsupported list.
+- Still no issue closure: game acceptance, Linux target and original-Windows
+  oracle evidence remain incomplete.
