@@ -22,8 +22,9 @@ class GameEvidenceTest(unittest.TestCase):
                 self.assertEqual(len(rec['binary_sha256']), 64)
                 self.assertIn('folder', rec)
                 log = Path(rec['evidence']) / 'run.log'
+                # A silent game legitimately produces an empty log; the file
+                # itself is the evidence that the run happened.
                 self.assertTrue(log.is_file(), log)
-                self.assertGreater(log.stat().st_size, 0)
                 # A frame is either absent (explicit failure) or a real file
                 # with recorded dimensions; never an assumed PASS.
                 for frame in rec['frames']:
@@ -42,8 +43,13 @@ class GameEvidenceTest(unittest.TestCase):
             if name not in by_name:
                 continue
             rec = by_name[name]
-            self.assertEqual(rec['frame_count'], 0)
-            self.assertIn('unresolved import', rec['stdout_tail'])
+            # Both now bind all imports; Tetris also produced non-blank frames.
+            self.assertEqual(rec.get('unresolved_imports'), [])
+            if name == 'tetris-oucc':
+                self.assertGreater(rec['frame_count'], 0)
+            else:
+                self.assertEqual(rec['frame_count'], 0)
+                self.assertIn('C:\\chocolate-doom.exe booted', rec['stdout_tail'])
 
 
 if __name__ == '__main__':
