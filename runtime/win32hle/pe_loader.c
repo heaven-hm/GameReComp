@@ -122,6 +122,8 @@ static int pe_map_buffer(const char *label, const uint8_t *file, size_t flen, pe
     img->span = span;
     img->entry = base + opt->AddressOfEntryPoint;
     img->import_rva = opt->DataDirectory[PE_DIR_IMPORT].VirtualAddress;
+    img->delay_import_rva = opt->NumberOfRvaAndSizes > PE_DIR_DELAY_IMPORT
+                            ? opt->DataDirectory[PE_DIR_DELAY_IMPORT].VirtualAddress : 0;
     img->resource_rva = opt->DataDirectory[PE_DIR_RESOURCE].VirtualAddress;
     img->resource_size = opt->DataDirectory[PE_DIR_RESOURCE].Size;
     img->stamp = nt->FileHeader.TimeDateStamp;
@@ -133,47 +135,119 @@ int recomp_pe_bind(const pe_image *img, uint32_t (*resolve)(const char *name)) {
     return recomp_pe_bind_companions(img, resolve, NULL);
 }
 
-/* The companion-aware bind: for each descriptor, `comp_resolve(dll, name)` is
+/* Resolve one thunk through the same chain for ordinary and delay imports.
+ * `name_va` is the address of a hint/name pair; by-ordinal thunks carry the
+ * ordinal in the low 16 bits. A bundled DLL's lifted export is preferred over
+ * a shim of the same name; only when it does not answer does the shim run. */
+static uint32_t bind_thunk(const char *dll, uint32_t name_va,
+                           uint32_t (*resolve)(const char *name),
+                           uint32_t (*comp_resolve)(const char *dll, const char *name)) {
+    if (name_va & PE_ORDINAL_FLAG) {
+        /* win32hle keys shims by name, so the resolver is asked for "dll#N"
+         * (lower-cased DLL name), which a module registers as an alias
+         * (dsound.dll#1 is DirectSoundCreate). The name outlives the bind:
+         * a permissive resolver keeps it for its stub. */
+        char nm[96];
+        size_t k = 0;
+        for (; dll[k] && k < 80; k++) nm[k] = (char)(dll[k] >= 'A' && dll[k] <= 'Z' ? dll[k] + 32 : dll[k]);
+        snprintf(nm + k, sizeof nm - k, "#%u", name_va & 0xFFFFu);
+        char *name = strdup(nm);
+        uint32_t va = comp_resolve ? comp_resolve(dll, name) : 0;
+        if (!va) va = resolve(name);
+        if (!va) fprintf(stderr, "[pe] unresolved import %s\n", name);
+        return va;
+    }
+    const char *name = (const char *)hle_ptr(name_va + 2); /* skip hint word */
+    uint32_t va = comp_resolve ? comp_resolve(dll, name) : 0;
+    if (!va) va = resolve(name);
+    if (!va) fprintf(stderr, "[pe] unresolved import %s!%s\n", dll, name);
+    return va;
+}
+
+/* Delay imports (data directory 13): the IAT slots hold the address of a
+ * __delayLoadHelper thunk until first use in the original image. Static
+ * recompilation has no such helper and no lazy-load step, so bind these slots
+ * eagerly at boot through the very same resolver chain as ordinary imports.
+ * Without this, a recompiled call through a delay slot dispatches to guest
+ * code that was never lifted (or, permissively, to a silent no-op). */
+static int bind_delay_imports(const pe_image *img,
+                              uint32_t (*resolve)(const char *name),
+                              uint32_t (*comp_resolve)(const char *dll, const char *name),
+                              int *bound, int *unresolved) {
+    if (!img->delay_import_rva) return 0;
+    uint32_t base = img->base, span = img->span, image_base = img->image_base;
+    uint32_t dva = base + img->delay_import_rva;
+    const uint32_t limit = base + span;
+    int slots = 0;
+    while (dva + sizeof(pe_delay_import_descriptor) <= limit) {
+        const pe_delay_import_descriptor *d = (const pe_delay_import_descriptor *)hle_ptr(dva);
+        if (!(d->szName || d->pIAT || d->pINT)) break;   /* terminator */
+        int rva_based = (d->grAttrs & PE_DELAY_ATTR_RVA) != 0;
+        uint32_t name_rva = d->szName, iat_rva = d->pIAT, int_rva = d->pINT;
+        if (!rva_based) {                               /* old linkers: VAs, not RVAs */
+            if (name_rva >= image_base) name_rva -= image_base;
+            if (iat_rva >= image_base) iat_rva -= image_base;
+            if (int_rva >= image_base) int_rva -= image_base;
+        }
+        if (!name_rva || name_rva >= span || !iat_rva || iat_rva >= span) break;
+        const char *dll = (const char *)hle_ptr(base + name_rva);
+        uint32_t lookup = int_rva ? int_rva : iat_rva;  /* some omit the INT */
+        if (lookup >= span) break;
+        uint32_t ilt_va = base + lookup, iat_va = base + iat_rva;
+        while (ilt_va + 4 <= limit && iat_va + 4 <= limit) {
+            uint32_t thunk = MEM32(ilt_va);
+            if (!thunk) break;
+            int by_ordinal = (thunk & PE_ORDINAL_FLAG) != 0;
+            uint32_t slot = thunk;
+            if (!rva_based && !by_ordinal && slot >= image_base) slot -= image_base;
+            if (!by_ordinal && slot >= span) break;
+            uint32_t va = bind_thunk(dll, by_ordinal ? thunk : base + slot,
+                                     resolve, comp_resolve);
+            MEM32(iat_va) = va;
+            if (va) (*bound)++; else (*unresolved)++;
+            slots++;
+            ilt_va += 4, iat_va += 4;
+        }
+        dva += sizeof *d;
+    }
+    return slots;
+}
+
+/* The companion-aware bind: each descriptor's `comp_resolve(dll, name)` is
  * asked first, so an import from a bundled DLL binds to that DLL's lifted
- * export instead of a shim of the same name (or the unresolved stub). Only
- * when it answers 0 does the ordinary resolver run. */
+ * export instead of a shim of the same name (or the unresolved stub). Both the
+ * ordinary and the delay-import directory go through this one chain. */
 int recomp_pe_bind_companions(const pe_image *img,
                              uint32_t (*resolve)(const char *name),
                              uint32_t (*comp_resolve)(const char *dll, const char *name)) {
-    if (!img->import_rva) return 0;
     uint32_t base = img->base;
     int unresolved = 0, bound = 0;
-    pe_import_descriptor *d = (pe_import_descriptor *)hle_ptr(base + img->import_rva);
-    for (; d->Name; d++) {
-        const char *dll = (const char *)hle_ptr(base + d->Name);
-        uint32_t *ilt = (uint32_t *)hle_ptr(base + (d->OriginalFirstThunk ? d->OriginalFirstThunk : d->FirstThunk));
-        uint32_t *iat = (uint32_t *)hle_ptr(base + d->FirstThunk);
-        for (; *ilt; ilt++, iat++) {
-            uint32_t va = 0;
-            if (*ilt & PE_ORDINAL_FLAG) {
-                /* by ordinal: win32hle keys shims by name, so the resolver is
-                 * asked for "dll#N" (the DLL's name in lower case), which a
-                 * module registers as an alias (dsound.dll#1 is
-                 * DirectSoundCreate). The name outlives the bind: a permissive
-                 * resolver keeps it for its stub. */
-                char nm[96];
-                size_t k = 0;
-                for (; dll[k] && k < 80; k++) nm[k] = (char)(dll[k] >= 'A' && dll[k] <= 'Z' ? dll[k] + 32 : dll[k]);
-                snprintf(nm + k, sizeof nm - k, "#%u", *ilt & 0xFFFFu);
-                char *name = strdup(nm);
-                va = comp_resolve ? comp_resolve(dll, name) : 0;
-                if (!va) va = resolve(name);
-                if (!va) fprintf(stderr, "[pe] unresolved import %s\n", name);
-            } else {
-                const char *name = (const char *)hle_ptr(base + *ilt + 2); /* skip hint word */
-                va = comp_resolve ? comp_resolve(dll, name) : 0;
-                if (!va) va = resolve(name);
-                if (!va) fprintf(stderr, "[pe] unresolved import %s!%s\n", dll, name);
+    if (img->import_rva) {
+        const uint32_t limit = base + img->span;
+        uint32_t dva = base + img->import_rva;
+        while (dva + sizeof(pe_import_descriptor) <= limit) {
+            const pe_import_descriptor *d = (const pe_import_descriptor *)hle_ptr(dva);
+            if (!d->Name) break;
+            uint32_t name_off = d->Name < img->span ? d->Name : 0;
+            uint32_t ilt_off = d->OriginalFirstThunk ? d->OriginalFirstThunk : d->FirstThunk;
+            if (!name_off || ilt_off >= img->span || d->FirstThunk >= img->span) break;
+            const char *dll = (const char *)hle_ptr(base + name_off);
+            uint32_t ilt_va = base + ilt_off, iat_va = base + d->FirstThunk;
+            while (ilt_va + 4 <= limit && iat_va + 4 <= limit) {
+                uint32_t thunk = MEM32(ilt_va);
+                if (!thunk) break;
+                int by_ordinal = (thunk & PE_ORDINAL_FLAG) != 0;
+                if (!by_ordinal && thunk >= img->span) break;
+                uint32_t va = bind_thunk(dll, by_ordinal ? thunk : base + thunk,
+                                         resolve, comp_resolve);
+                MEM32(iat_va) = va;
+                if (va) bound++; else unresolved++;
+                ilt_va += 4, iat_va += 4;
             }
-            if (va) bound++; else unresolved++;
-            *iat = va;
+            dva += sizeof *d;
         }
     }
-    fprintf(stderr, "[pe] bound %d imports, %d unresolved\n", bound, unresolved);
+    int delay = bind_delay_imports(img, resolve, comp_resolve, &bound, &unresolved);
+    fprintf(stderr, "[pe] bound %d imports (%d delay), %d unresolved\n", bound, delay, unresolved);
     return unresolved;
 }
