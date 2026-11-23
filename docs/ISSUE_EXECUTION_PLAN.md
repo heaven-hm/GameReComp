@@ -84,3 +84,16 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
   claimed as supported. They remain on the unsupported list.
 - Still no issue closure: game acceptance, Linux target and original-Windows
   oracle evidence remain incomplete.
+
+## Integration checkpoint 4 (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `a3a054cdf9706611f028065de13eee8e54405800`.
+- `feature/api-coverage` (`3885dab`, `a3a054c`): machine-readable PE32 import
+  auditor keyed by input SHA-256 (`tools/api_coverage.py`), 4 auditor tests,
+  `docs/WIN32_API_COVERAGE.md`, implemented `GetFullPathNameW` and
+  `InitializeCriticalSectionEx` with guest ABI selftests.
+- `python3 -m pytest tests/ -q` → 177 passed, 2 skipped, 26 subtests passed.
+- `bash runtime/win32hle/build_selftests.sh` → 20 selftests ok.
+- Auditor on 19 game PE32s found 322 missing distinct imports overall (mostly
+  game-owned DLLs/C++ runtime); 22 are Win32 system APIs, listed in the report.
+- No issue closed: behavioural correctness and game acceptance remain open.
