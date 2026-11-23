@@ -90,5 +90,17 @@ class ReadabilityHelpersTests(unittest.TestCase):
             self.assertTrue((reports / "readability.json").is_file())
 
 
+    def test_accepted_edit_updates_manifest_digest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            proj = Path(tmp)
+            (proj / "manifest.json").write_text(
+                json.dumps({"source_digest_sha256": "old", "other": "kept"}))
+            harness = readability.ReadabilityHarness(proj, providers="ai")
+            harness._update_manifest_digest("new-digest")
+            data = json.loads((proj / "manifest.json").read_text())
+            self.assertEqual(data["source_digest_sha256"], "new-digest")
+            self.assertEqual(data["other"], "kept")
+
+
 if __name__ == "__main__":
     unittest.main()

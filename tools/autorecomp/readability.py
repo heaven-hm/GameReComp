@@ -355,6 +355,14 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             "pe": pe_s,
         }
 
+    def _update_manifest_digest(self, digest: str) -> None:
+        """Record an accepted source edit as the new baseline digest."""
+        path = self.project / "manifest.json"
+        manifest = _read_json(path)
+        if isinstance(manifest, dict):
+            manifest["source_digest_sha256"] = digest
+            path.write_text(json.dumps(manifest, indent=2) + "\n")
+
     # -- rev.ng --------------------------------------------------------
 
     def _revng(self):
@@ -504,6 +512,11 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
 
         if final == "accepted":
             self.report["source_digest_after"] = source_digest(self.project)
+            # An accepted edit changes the source tree. The manifest is the
+            # baseline digest the next run checks, so it must follow the
+            # accepted source or every subsequent pass blocks with a false
+            # "source tree changed" gate failure.
+            self._update_manifest_digest(self.report["source_digest_after"])
             self._stage("ai-readability", "accepted",
                         "readable-source edit(s) built and reproduced the "
                         "baseline process evidence",
