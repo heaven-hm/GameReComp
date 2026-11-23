@@ -255,6 +255,50 @@ static void s_strlcat(void) {
     RETC(dlen + n);
 }
 static void s_SetError(void) { error(ASTR(0)); RETC(-1); }
+/* SDL 1.2 cursor objects. The guest sees only opaque 32-bit handles; the
+ * host SDL_Cursor pointers live in this side table, never in guest memory. */
+#define S12_MAX_CURSORS 16
+static struct { uint32_t guest; SDL_Cursor *host; } s_cursors[S12_MAX_CURSORS];
+static SDL_Cursor *s_current_cursor;
+static void s_CreateCursor(void) {
+    const uint8_t *data = (const uint8_t *)hle_ptr(A32(0));
+    const uint8_t *mask = (const uint8_t *)hle_ptr(A32(1));
+    int w = (int)A32(2), h = (int)A32(3), hx = (int)A32(4), hy = (int)A32(5);
+    size_t need = ((size_t)(w + 7u) / 8u) * (size_t)h;
+    if (!data || !mask || w <= 0 || h <= 0 || need == 0 || need > 65536u ||
+        hx < 0 || hx >= w || hy < 0 || hy >= h) { error("invalid SDL cursor"); RETC(0); }
+    SDL_Cursor *c = SDL_CreateCursor(data, mask, w, h, hx, hy);
+    if (!c) { error(SDL_GetError()); RETC(0); }
+    int slot = -1;
+    for (int i = 0; i < S12_MAX_CURSORS; i++) if (!s_cursors[i].host) { slot = i; break; }
+    if (slot < 0) { SDL_FreeCursor(c); error("too many SDL cursors"); RETC(0); }
+    uint32_t guest = hle_va(hle_alloc(4));
+    if (!guest) { SDL_FreeCursor(c); RETC(0); }
+    s_cursors[slot].guest = guest;
+    s_cursors[slot].host = c;
+    RETC(guest);
+}
+static SDL_Cursor *s_cursor_for(uint32_t guest) {
+    for (int i = 0; i < S12_MAX_CURSORS; i++)
+        if (s_cursors[i].host && s_cursors[i].guest == guest) return s_cursors[i].host;
+    return NULL;
+}
+static void s_GetCursor(void) {
+    uint32_t out = A32(0);
+    uint32_t guest = 0;
+    for (int i = 0; i < S12_MAX_CURSORS; i++)
+        if (s_cursors[i].host == s_current_cursor) { guest = s_cursors[i].guest; break; }
+    if (out) MEM32(out) = guest;
+    RETC(guest);
+}
+static void s_SetCursor(void) {
+    SDL_Cursor *c = s_cursor_for(A32(0));
+    if (!c) { error("unknown SDL cursor handle"); RETCV(); }
+    SDL_SetCursor(c);
+    s_current_cursor = c;
+    RETCV();
+}
+
 /* SDL 1.2 SDL_VideoDriverName(char *buf, int maxlen) returns buf. */
 static void s_VideoDriverName(void) {
     uint32_t buf = A32(0);
@@ -1987,6 +2031,8 @@ const win32hle_shim win32hle_sdl12[] = {
     { "SDL_GetError", s_GetError }, { "SDL_ClearError", s_ClearError }, { "SDL_SetError", s_SetError },
     { "SDL_strlcpy", s_strlcpy }, { "SDL_strlcat", s_strlcat },
     { "SDL_VideoDriverName", s_VideoDriverName },
+    { "SDL_CreateCursor", s_CreateCursor }, { "SDL_GetCursor", s_GetCursor },
+    { "SDL_SetCursor", s_SetCursor },
     { "SDL_GetTicks", s_GetTicks }, { "SDL_Delay", s_Delay },
     { "SDL_SetVideoMode", s_SetVideoMode }, { "SDL_GetVideoSurface", s_GetVideoSurface }, { "SDL_Flip", s_Flip }, { "SDL_UpdateRect", s_UpdateRect }, { "SDL_UpdateRects", s_UpdateRects },
     { "SDL_CreateRGBSurface", s_CreateRGBSurface }, { "SDL_CreateRGBSurfaceFrom", s_CreateRGBSurfaceFrom }, { "SDL_FreeSurface", s_FreeSurface }, { "SDL_LockSurface", s_LockSurface }, { "SDL_UnlockSurface", s_UnlockSurface }, { "SDL_FillRect", s_FillRect }, { "SDL_BlitSurface", s_BlitSurface }, { "SDL_UpperBlit", s_UpperBlit },

@@ -71,6 +71,23 @@ int main(void) {
     /* The dummy driver may report no current driver before video init; the
      * contract is a NUL-terminated string in the guest buffer either way. */
     ok("driver name is NUL terminated", strlen((char *)hle_ptr(drv)) < 64);
+    ok("SDL_Init(VIDEO) for cursor fixture", call("SDL_Init", 1,
+       (uint32_t[]){ 0x20u }) == 0u);
+    uint32_t bits = hle_va(hle_alloc(8)), mask = hle_va(hle_alloc(8));
+    memset(hle_ptr(bits), 0, 8);
+    memset(hle_ptr(mask), 0xFF, 8);
+    ok("SDL_CreateCursor registered", hle_resolve("SDL_CreateCursor") != 0);
+    uint32_t cur = call("SDL_CreateCursor", 6,
+       (uint32_t[]){ bits, mask, 8u, 8u, 0u, 0u });
+    ok("SDL_CreateCursor returns a guest handle", cur != 0);
+    call("SDL_SetCursor", 1, (uint32_t[]){ cur });
+    uint32_t got = hle_va(hle_alloc(4));
+    MEM32(got) = 0;
+    ok("SDL_GetCursor returns the set handle", call("SDL_GetCursor", 1,
+       (uint32_t[]){ got }) == cur);
+    ok("SDL_CreateCursor rejects bad geometry", call("SDL_CreateCursor", 6,
+       (uint32_t[]){ bits, mask, 0u, 8u, 0u, 0u }) == 0u);
+    call("SDL_Quit", 0, NULL);
     ok("WSACancelBlockingCall registered", hle_resolve("WSACancelBlockingCall") != 0);
     ok("WSACancelBlockingCall fails honestly", call("WSACancelBlockingCall", 0, NULL)
        == 0xFFFFFFFFu);
