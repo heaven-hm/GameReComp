@@ -1,12 +1,14 @@
 /*
  * winmm.c - win32hle WINMM: multimedia timers, joystick, waveOut audio,
- * sndPlaySound, MCI; no mixer and no recording device.
+ * sndPlaySound, MCI; no mixer, no recording device and no MIDI device.
  * On libc for timing; waveOut is "accept and retire" (a silent device that
  * completes every buffer immediately, so a game's double-buffered mixer thread
  * keeps cycling without a real sound card); no joystick; MCI stubbed. Real SDL
  * audio can replace the waveOut path later without touching callers.
  * sndPlaySoundA/W, unlike waveOut, already play for real: they decode RIFF/WAVE
  * and push PCM through dsound.c's SDL audio mixer stream path.
+ * The MIDI-in/out family reports zero devices and documented errors: no
+ * pretend MIDI handle, no fabricated capabilities, no second audio backend.
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -20,6 +22,9 @@
 
 #define MMSYSERR_NOERROR  0u
 #define MMSYSERR_ERROR    1u
+#define MMSYSERR_BADDEVICEID  2u
+#define MMSYSERR_INVALHANDLE  5u
+#define MMSYSERR_NOTSUPPORTED 8u
 #define JOYERR_UNPLUGGED  167u
 #define WHDR_DONE         0x00000001u
 #define WHDR_INQUEUE      0x00000010u
@@ -134,8 +139,6 @@ static void m_waveOutGetID(void)      { if (A32(1)) MEM32(A32(1)) = 0; RET(MMSYS
  * 0 refused as a bad id, and anything given a handle told it is not one. A
  * program that sets its card's levels through the mixer, or enumerates
  * inputs for a record page, carries on without them. */
-#define MMSYSERR_BADDEVICEID  2u
-#define MMSYSERR_INVALHANDLE  5u
 static void m_none0(void)       { RET(0, 0); }                        /* mixerGetNumDevs, waveInGetNumDevs */
 static void m_mixerOpen(void)   { if (A32(0)) MEM32(A32(0)) = 0; RET(MMSYSERR_BADDEVICEID, 5); }
 static void m_waveInOpen(void)  { if (A32(0)) MEM32(A32(0)) = 0; RET(MMSYSERR_BADDEVICEID, 6); }
@@ -147,6 +150,104 @@ static void m_mciSendStringA(void)     { RET(MMSYSERR_ERROR, 4); }
 static void m_mciGetErrorStringA(void) { RET(0, 3); }          /* FALSE: no string */
 static void m_mciSendCommandA(void)    { RET(MCIERR_UNSUPPORTED_FUNCTION, 4); }
 static void m_mixerGetDevCapsA(void)   { RET(MMSYSERR_BADDEVICEID, 3); }
+
+/* --- MIDI mapper: no devices, and no pretend device either ---
+ * On a machine with no MIDI hardware the mapper reports zero devices. Every
+ * call that would need one fails with the documented MMSYSERR_BADDEVICEID,
+ * including the handle-taking calls (with no device there can be no valid
+ * handle). A caps query never fabricates capabilities: it zeroes at most the
+ * real ANSI caps structure, bounded by the caller's cb, and returns the error.
+ * The error-text helpers are the exception: they only format a code, so they
+ * work without a device and return MMSYSERR_NOERROR.
+ *
+ * Exactly one diagnostic is printed, on the first failing MIDI call, naming
+ * the API that got there first. A game that checks GetNumDevs and carries on
+ * stays quiet; a game that assumes a device exists gets an explicit reason on
+ * stderr rather than a fake success that would strand it later.
+ *
+ * No MIDI synthesis is attempted. Games that only want sound keep using the
+ * waveOut/sndPlaySound paths above (dsound.c's SDL mixer); this subset opens
+ * no SDL stream of its own and introduces no second audio backend.
+ */
+#define WINMM_MIDI_OUT_CAPS_A 52u   /* sizeof(MIDIOUTCAPSA) on x86 */
+#define WINMM_MIDI_IN_CAPS_A  44u   /* sizeof(MIDIINCAPSA)  on x86 */
+static int g_midi_warned;
+static void midi_no_device(const char *api) {
+    if (g_midi_warned) return;
+    g_midi_warned = 1;
+    fprintf(stderr, "[winmm] MIDI: no MIDI devices present; %s -> MMSYSERR_BADDEVICEID "
+            "(MIDI is not emulated; PCM audio still works via waveOut/sndPlaySound)\n", api);
+}
+static void midi_zero_caps(void *caps, uint32_t cb, uint32_t real_size) {
+    uint32_t n;
+    if (!caps) return;
+    n = cb < real_size ? cb : real_size;
+    if (n) memset(caps, 0, n);
+}
+static const char *midi_err_text(uint32_t e) {
+    switch (e) {
+    case MMSYSERR_NOERROR:      return "No error";
+    case MMSYSERR_ERROR:        return "Unspecified error";
+    case MMSYSERR_BADDEVICEID:  return "Bad device ID";
+    case MMSYSERR_INVALHANDLE:  return "Invalid handle";
+    case MMSYSERR_NOTSUPPORTED: return "Function not supported";
+    default:                    return "Unknown MIDI error";
+    }
+}
+static uint32_t midi_get_error_text(void) {      /* (MMRESULT, LPSTR, UINT) */
+    const char *s = midi_err_text(A32(0));
+    uint32_t dst = A32(1), cb = A32(2);
+    size_t n = strlen(s);
+    char *out;
+    if (!dst || !cb) return MMSYSERR_NOERROR;
+    if (n >= cb) n = (size_t)cb - 1;
+    out = (char *)APTR(1);
+    memcpy(out, s, n);
+    out[n] = 0;
+    return MMSYSERR_NOERROR;
+}
+
+static void m_midiOutGetNumDevs(void) { RET(0, 0); }
+static void m_midiInGetNumDevs(void)  { RET(0, 0); }
+static void m_midiOutGetDevCapsA(void) {          /* (uDeviceID, LPMIDIOUTCAPSA, cb) */
+    midi_no_device("midiOutGetDevCapsA");
+    midi_zero_caps(APTR(1), A32(2), WINMM_MIDI_OUT_CAPS_A);
+    RET(MMSYSERR_BADDEVICEID, 3);
+}
+static void m_midiInGetDevCapsA(void) {           /* (uDeviceID, LPMIDIINCAPSA, cb) */
+    midi_no_device("midiInGetDevCapsA");
+    midi_zero_caps(APTR(1), A32(2), WINMM_MIDI_IN_CAPS_A);
+    RET(MMSYSERR_BADDEVICEID, 3);
+}
+static void m_midiOutOpen(void) {                 /* (lphmo, dev, callback, instance, flags) */
+    midi_no_device("midiOutOpen");
+    if (A32(0)) MEM32(A32(0)) = 0;                /* no handle on failure */
+    RET(MMSYSERR_BADDEVICEID, 5);
+}
+static void m_midiInOpen(void) {                  /* (lphmi, dev, callback, instance, flags) */
+    midi_no_device("midiInOpen");
+    if (A32(0)) MEM32(A32(0)) = 0;
+    RET(MMSYSERR_BADDEVICEID, 5);
+}
+static void m_midiOutClose(void)            { midi_no_device("midiOutClose"); RET(MMSYSERR_BADDEVICEID, 1); }
+static void m_midiInClose(void)             { midi_no_device("midiInClose"); RET(MMSYSERR_BADDEVICEID, 1); }
+static void m_midiOutShortMsg(void)         { midi_no_device("midiOutShortMsg"); RET(MMSYSERR_BADDEVICEID, 2); }
+static void m_midiOutLongMsg(void)          { midi_no_device("midiOutLongMsg"); RET(MMSYSERR_BADDEVICEID, 3); }
+static void m_midiOutReset(void)            { midi_no_device("midiOutReset"); RET(MMSYSERR_BADDEVICEID, 1); }
+static void m_midiOutGetVolume(void)        { midi_no_device("midiOutGetVolume"); RET(MMSYSERR_BADDEVICEID, 2); }
+static void m_midiOutSetVolume(void)        { midi_no_device("midiOutSetVolume"); RET(MMSYSERR_BADDEVICEID, 2); }
+static void m_midiOutPrepareHeader(void)    { midi_no_device("midiOutPrepareHeader"); RET(MMSYSERR_BADDEVICEID, 3); }
+static void m_midiOutUnprepareHeader(void)  { midi_no_device("midiOutUnprepareHeader"); RET(MMSYSERR_BADDEVICEID, 3); }
+static void m_midiInPrepareHeader(void)     { midi_no_device("midiInPrepareHeader"); RET(MMSYSERR_BADDEVICEID, 3); }
+static void m_midiInUnprepareHeader(void)   { midi_no_device("midiInUnprepareHeader"); RET(MMSYSERR_BADDEVICEID, 3); }
+static void m_midiInAddBuffer(void)         { midi_no_device("midiInAddBuffer"); RET(MMSYSERR_BADDEVICEID, 3); }
+static void m_midiInStart(void)             { midi_no_device("midiInStart"); RET(MMSYSERR_BADDEVICEID, 1); }
+static void m_midiInStop(void)              { midi_no_device("midiInStop"); RET(MMSYSERR_BADDEVICEID, 1); }
+static void m_midiInReset(void)             { midi_no_device("midiInReset"); RET(MMSYSERR_BADDEVICEID, 1); }
+static void m_midiOutGetID(void)            { midi_no_device("midiOutGetID"); RET(MMSYSERR_BADDEVICEID, 2); }
+static void m_midiInGetID(void)             { midi_no_device("midiInGetID"); RET(MMSYSERR_BADDEVICEID, 2); }
+static void m_midiOutGetErrorTextA(void)    { RET(midi_get_error_text(), 3); }
+static void m_midiInGetErrorTextA(void)     { RET(midi_get_error_text(), 3); }
 
 /* --- mmio: RIFF files (WAVs) for reading ---
  * A file is read whole into memory at mmioOpenA, or a caller's buffer is
@@ -333,7 +434,6 @@ static void m_mmioStringToFOURCCA(void) {
 #define MMSYSERR_ALLOCATED     4u
 #define MMSYSERR_NODRIVER      6u
 #define MMSYSERR_NOMEM         7u
-#define MMSYSERR_NOTSUPPORTED  8u
 #define MMSYSERR_INVALFLAG    10u
 #define MMSYSERR_INVALPARAM   11u
 
@@ -641,6 +741,31 @@ const win32hle_shim win32hle_winmm[] = {
     { "waveInUnprepareHeader",  m_badhandle3 },
     { "waveInAddBuffer",        m_badhandle3 },
     { "waveInGetPosition",      m_badhandle3 },
+    { "midiOutGetNumDevs",      m_midiOutGetNumDevs },
+    { "midiInGetNumDevs",       m_midiInGetNumDevs },
+    { "midiOutGetDevCapsA",     m_midiOutGetDevCapsA },
+    { "midiInGetDevCapsA",      m_midiInGetDevCapsA },
+    { "midiOutOpen",            m_midiOutOpen },
+    { "midiInOpen",             m_midiInOpen },
+    { "midiOutClose",           m_midiOutClose },
+    { "midiInClose",            m_midiInClose },
+    { "midiOutShortMsg",        m_midiOutShortMsg },
+    { "midiOutLongMsg",         m_midiOutLongMsg },
+    { "midiOutReset",           m_midiOutReset },
+    { "midiOutGetVolume",       m_midiOutGetVolume },
+    { "midiOutSetVolume",       m_midiOutSetVolume },
+    { "midiOutPrepareHeader",   m_midiOutPrepareHeader },
+    { "midiOutUnprepareHeader", m_midiOutUnprepareHeader },
+    { "midiInPrepareHeader",    m_midiInPrepareHeader },
+    { "midiInUnprepareHeader",  m_midiInUnprepareHeader },
+    { "midiInAddBuffer",        m_midiInAddBuffer },
+    { "midiInStart",            m_midiInStart },
+    { "midiInStop",             m_midiInStop },
+    { "midiInReset",            m_midiInReset },
+    { "midiOutGetID",           m_midiOutGetID },
+    { "midiInGetID",            m_midiInGetID },
+    { "midiOutGetErrorTextA",   m_midiOutGetErrorTextA },
+    { "midiInGetErrorTextA",    m_midiInGetErrorTextA },
     { "mciSendStringA",         m_mciSendStringA },
     { "mciGetErrorStringA",     m_mciGetErrorStringA },
     { "mciSendCommandA",        m_mciSendCommandA },
