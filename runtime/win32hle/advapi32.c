@@ -27,6 +27,11 @@
 #define ERROR_FILE_NOT_FOUND 2u
 #define ERROR_MORE_DATA    234u
 #define ERROR_NO_MORE_ITEMS 259u
+#define ERROR_INVALID_HANDLE 6u
+#define ERROR_INSUFFICIENT_BUFFER 122u
+#define ERROR_NOT_ALL_ASSIGNED 1300u
+#define ERROR_NO_SUCH_PRIVILEGE 1313u
+#define E_INVALIDARG       0x80070057u     /* HRESULT, not a GetLastError code */
 #define REG_SZ         1u
 #define REG_EXPAND_SZ  2u
 #define REG_BINARY     3u
@@ -618,6 +623,51 @@ static void v_VerQueryValueA(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(0, 4); }
 static void s_FindExecutableA(void) { if (A32(2)) MEM8(A32(2)) = 0; RET(31u, 3); }   /* SE_ERR_NOASSOC */
 static void s_ShellExecuteA(void) { fprintf(stderr, "[shell32] ShellExecuteA(%s): not on this host\n", ASTR(2) ? ASTR(2) : ""); RET(31u, 6); }
 
+/* SHGetFolderPathW(hwndOwner, nFolder, hToken, dwFlags, pszPath) -> HRESULT.
+ *
+ * Only the handful of well-known folders a typical 2000-era game asks for is
+ * mapped. The strings follow the same C: convention as GetWindowsDirectoryA /
+ * GetSystemDirectoryA in kernel32_crt.c (a classic "Documents and Settings"
+ * profile), and are widened into the guest's fixed MAX_PATH WCHAR buffer with
+ * the shared codepage helper. Anything else is refused with E_INVALIDARG
+ * rather than guessing: a wrong-but-plausible path is worse than a clean
+ * failure this host can report. */
+#define CSIDL_DESKTOP          0x0000u
+#define CSIDL_PERSONAL         0x0005u
+#define CSIDL_LOCAL_APPDATA    0x001Cu
+#define CSIDL_WINDOWS          0x0024u
+#define CSIDL_SYSTEM           0x0025u
+#define CSIDL_PROGRAM_FILES    0x0026u
+#define SHGFP_TYPE_CURRENT     0u
+#define SHGFP_TYPE_DEFAULT     1u
+#define SHGFP_PATH_MAX         260u                 /* MAX_PATH, in WCHARs */
+#define CSIDL_ID_MASK          0x00FFu              /* strip CSIDL_FLAG_* bits */
+
+typedef struct { uint32_t id; const char *path; } csidl_entry_t;
+static const csidl_entry_t g_csidl[] = {
+    { CSIDL_DESKTOP,       "C:\\Documents and Settings\\User\\Desktop" },
+    { CSIDL_PERSONAL,      "C:\\Documents and Settings\\User\\My Documents" },
+    { CSIDL_LOCAL_APPDATA, "C:\\Documents and Settings\\User\\Local Settings\\Application Data" },
+    { CSIDL_WINDOWS,       "C:\\WINDOWS" },
+    { CSIDL_SYSTEM,        "C:\\WINDOWS\\SYSTEM32" },
+    { CSIDL_PROGRAM_FILES, "C:\\Program Files" },
+};
+
+static void s_SHGetFolderPathW(void) {
+    uint32_t folder = A32(1), flags = A32(3), out_va = A32(4);
+    if (!out_va || flags > SHGFP_TYPE_DEFAULT) { RET(E_INVALIDARG, 5); }
+    uint32_t id = folder & CSIDL_ID_MASK;            /* flags live in the high byte */
+    const csidl_entry_t *hit = NULL;
+    for (size_t i = 0; i < sizeof g_csidl / sizeof g_csidl[0]; i++) {
+        if (g_csidl[i].id == id) { hit = &g_csidl[i]; break; }
+    }
+    if (!hit) { RET(E_INVALIDARG, 5); }
+    /* hle_ansi_to_wide bounds the write to SHGFP_PATH_MAX code units including
+     * the terminator; all table paths are ASCII and comfortably shorter. */
+    if (!hle_ansi_to_wide(hit->path, (uint16_t *)APTR(4), SHGFP_PATH_MAX)) { RET(E_INVALIDARG, 5); }
+    RET(0u /* S_OK */, 5);                            /* SHGFP_TYPE_DEFAULT is ignored */
+}
+
 /* ---- SHFileOperationA: real file operations, no UI ----
  *
  * SHFILEOPSTRUCTA on x86 (all pointers are guest VAs):
@@ -1116,6 +1166,160 @@ static void adv_GetTokenInformation(void) {
     RET(1, 5);
 }
 
+/* ---- privilege names / token privilege adjustment ----
+ *
+ * LookupPrivilegeValueW maps a well-known privilege NAME to its LUID. The
+ * low parts below are the stable SE_*_PRIVILEGE values from winnt.h; every
+ * Windows release assigns the same numbers, so this is a real conversion, not
+ * an arbitrary synthetic token. Unknown names fail with the documented
+ * ERROR_NO_SUCH_PRIVILEGE. Reads of the guest UTF-16 name are bounded by
+ * PRIV_NAME_MAX so a string without a terminator cannot walk off the buffer. */
+#define PRIV_NAME_MAX   128u
+#define PRIV_LUID_HIGH  0u
+#define SE_PRIVILEGE_ENABLED 0x0002u
+#define SE_PRIVILEGE_REMOVED 0x0004u
+#define ADJUST_PRIV_MAX  256u                        /* guard against a bogus count */
+#define TOKEN_PRIV_HDR   4u                          /* sizeof(DWORD) */
+#define LUID_ATTR_SIZE  12u                          /* sizeof(LUID_AND_ATTRIBUTES) */
+
+typedef struct { const char *name; uint32_t luid; } priv_entry_t;
+static const priv_entry_t g_privileges[] = {
+    { "SeCreateTokenPrivilege", 2u },
+    { "SeAssignPrimaryTokenPrivilege", 3u },
+    { "SeLockMemoryPrivilege", 4u },
+    { "SeIncreaseQuotaPrivilege", 5u },
+    { "SeMachineAccountPrivilege", 6u },
+    { "SeTcbPrivilege", 7u },
+    { "SeSecurityPrivilege", 8u },
+    { "SeTakeOwnershipPrivilege", 9u },
+    { "SeLoadDriverPrivilege", 10u },
+    { "SeSystemProfilePrivilege", 11u },
+    { "SeSystemtimePrivilege", 12u },
+    { "SeProfileSingleProcessPrivilege", 13u },
+    { "SeIncreaseBasePriorityPrivilege", 14u },
+    { "SeCreatePagefilePrivilege", 15u },
+    { "SeCreatePermanentPrivilege", 16u },
+    { "SeBackupPrivilege", 17u },
+    { "SeRestorePrivilege", 18u },
+    { "SeShutdownPrivilege", 19u },
+    { "SeDebugPrivilege", 20u },
+    { "SeAuditPrivilege", 21u },
+    { "SeSystemEnvironmentPrivilege", 22u },
+    { "SeChangeNotifyPrivilege", 23u },
+    { "SeRemoteShutdownPrivilege", 24u },
+    { "SeUndockPrivilege", 25u },
+    { "SeSyncAgentPrivilege", 26u },
+    { "SeEnableDelegationPrivilege", 27u },
+    { "SeManageVolumePrivilege", 28u },
+    { "SeImpersonatePrivilege", 29u },
+    { "SeCreateGlobalPrivilege", 30u },
+    { "SeTrustedCredManAccessPrivilege", 31u },
+    { "SeRelabelPrivilege", 32u },
+    { "SeIncreaseWorkingSetPrivilege", 33u },
+    { "SeTimeZonePrivilege", 34u },
+    { "SeCreateSymbolicLinkPrivilege", 35u },
+};
+
+/* Bounded UTF-16 -> CP1252 for a privilege name. Copies at most PRIV_NAME_MAX
+ * code units, then forces a terminator before handing the temporary to
+ * hle_wide_to_ansi (which otherwise walks until it finds one). */
+static int priv_wide_name(const uint16_t *w, char *out, size_t outsz) {
+    if (!w || !out || !outsz) return 0;
+    uint16_t tmp[PRIV_NAME_MAX + 1u];
+    for (size_t i = 0; i < PRIV_NAME_MAX; i++) {
+        tmp[i] = w[i];
+        if (!w[i]) break;
+    }
+    tmp[PRIV_NAME_MAX] = 0;
+    return hle_wide_to_ansi(tmp, out, outsz);
+}
+
+static void adv_LookupPrivilegeValueW(void) {
+    /* lpSystemName (arg 0) is ignored: the empty/NULL string means "this
+     * machine", and remote systems are not available to this host. */
+    const uint16_t *name = (const uint16_t *)APTR(1);
+    uint32_t luid_va = A32(2);
+    char ansi[PRIV_NAME_MAX + 1u];
+    if (!name || !luid_va || !priv_wide_name(name, ansi, sizeof ansi)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 3);
+    }
+    for (size_t i = 0; i < sizeof g_privileges / sizeof g_privileges[0]; i++) {
+        if (!strcasecmp(ansi, g_privileges[i].name)) {
+            MEM32(luid_va)      = g_privileges[i].luid;      /* LUID.LowPart */
+            MEM32(luid_va + 4u) = PRIV_LUID_HIGH;            /* LUID.HighPart */
+            RET(1, 3);
+        }
+    }
+    hle_set_last_error(ERROR_NO_SUCH_PRIVILEGE);
+    RET(0, 3);
+}
+
+/* The token handles this module already hands out (OpenProcessToken,
+ * DuplicateToken, SaferComputeTokenFromLevel). Anything else is invalid. */
+static int adv_valid_token(uint32_t h) {
+    return h == 0xCAFE0001u || h == 0xCAFE0002u || h == 0xCAFE0011u;
+}
+
+/* AdjustTokenPrivileges(TokenHandle, DisableAllPrivileges, NewState,
+ *                      BufferLength, PreviousState, ReturnLength) -> BOOL.
+ *
+ * Input validation and the PreviousState/ReturnLength contract follow the
+ * documented Win32 behaviour: NewState is a TOKEN_PRIVILEGES (DWORD count, then
+ * 12-byte LUID_AND_ATTRIBUTES entries); when PreviousState is requested its
+ * required size is written to *ReturnLength and an undersized BufferLength is
+ * ERROR_INSUFFICIENT_BUFFER. The prior state we report is "all disabled"
+ * because this host keeps no token privilege state.
+ *
+ * This layer cannot actually elevate (or drop) privileges. When a caller asks
+ * for a real change we say so explicitly on stderr and set the documented
+ * ERROR_NOT_ALL_ASSIGNED last error with a TRUE return: Win32 uses exactly
+ * that combination to report "the call succeeded, but no privilege was
+ * assigned". No privilege change is claimed. */
+static void adv_AdjustTokenPrivileges(void) {
+    uint32_t tok = A32(0), disable = A32(1), new_va = A32(2);
+    uint32_t buflen = A32(3), prev_va = A32(4), retlen_va = A32(5);
+    if (!adv_valid_token(tok)) { hle_set_last_error(ERROR_INVALID_HANDLE); RET(0, 6); }
+
+    uint32_t count = 0;
+    if (!disable) {
+        if (!new_va) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 6); }
+        count = MEM32(new_va);
+        if (count > ADJUST_PRIV_MAX) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 6); }
+    }
+    uint32_t required = TOKEN_PRIV_HDR + LUID_ATTR_SIZE * count;
+    if (retlen_va) MEM32(retlen_va) = required;
+
+    if (prev_va) {
+        if (!retlen_va || buflen < required) {
+            hle_set_last_error(ERROR_INSUFFICIENT_BUFFER);
+            RET(0, 6);
+        }
+        MEM32(prev_va) = count;
+        for (uint32_t i = 0; i < count; i++) {
+            uint32_t src = new_va + TOKEN_PRIV_HDR + LUID_ATTR_SIZE * i;
+            uint32_t dst = prev_va + TOKEN_PRIV_HDR + LUID_ATTR_SIZE * i;
+            MEM32(dst)      = MEM32(src);      /* prior LUID.LowPart  */
+            MEM32(dst + 4u) = MEM32(src + 4u); /* prior LUID.HighPart */
+            MEM32(dst + 8u) = 0u;              /* prior attributes: disabled */
+        }
+    }
+
+    int wants_change = disable ? 1 : 0;
+    for (uint32_t i = 0; !wants_change && i < count; i++) {
+        uint32_t attrs = MEM32(new_va + TOKEN_PRIV_HDR + LUID_ATTR_SIZE * i + 8u);
+        if (attrs & (SE_PRIVILEGE_ENABLED | SE_PRIVILEGE_REMOVED)) wants_change = 1;
+    }
+    if (wants_change) {
+        fprintf(stderr, "[advapi32] AdjustTokenPrivileges: real privilege changes are not supported "
+                        "on this host; no token privileges were modified\n");
+        hle_set_last_error(ERROR_NOT_ALL_ASSIGNED);
+    } else {
+        hle_set_last_error(ERROR_SUCCESS);
+    }
+    RET(1, 6);
+}
+
 static void adv_SetTokenInformation(void) { RET(1, 4); }
 
 static void adv_DuplicateToken(void) {
@@ -1291,6 +1495,7 @@ const win32hle_shim win32hle_advapi32[] = {
     { "SetSecurityDescriptorDacl", adv_SetSecurityDescriptorDacl },
     { "SetSecurityDescriptorOwner", adv_SetSecurityDescriptorOwner },
     { "OpenProcessToken", adv_OpenProcessToken }, { "GetTokenInformation", adv_GetTokenInformation },
+    { "LookupPrivilegeValueW", adv_LookupPrivilegeValueW }, { "AdjustTokenPrivileges", adv_AdjustTokenPrivileges },
     { "SetTokenInformation", adv_SetTokenInformation }, { "DuplicateToken", adv_DuplicateToken },
     { "CheckTokenMembership", adv_CheckTokenMembership }, { "AccessCheck", adv_AccessCheck },
     { "GetSecurityInfo", adv_GetSecurityInfo }, { "SaferCreateLevel", adv_SaferCreateLevel },
@@ -1314,6 +1519,7 @@ const win32hle_shim win32hle_advapi32[] = {
     { "VerQueryValueA", v_VerQueryValueA },
     { "FindExecutableA", s_FindExecutableA }, { "ShellExecuteA", s_ShellExecuteA },
     { "SHFileOperationA", s_SHFileOperationA },
+    { "SHGetFolderPathW", s_SHGetFolderPathW },
     { "SHBrowseForFolderW", s_SHBrowseForFolderW }, { "SHGetPathFromIDListW", s_SHGetPathFromIDListW },
     { "SHBrowseForFolderA", s_SHBrowseForFolderA }, { "SHGetPathFromIDListA", s_SHGetPathFromIDListA },
     { "SHGetMalloc", s_SHGetMalloc }, { "SHGetDesktopFolder", s_SHGetDesktopFolder },

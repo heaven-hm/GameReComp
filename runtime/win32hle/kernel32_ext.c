@@ -56,6 +56,21 @@ int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
 #define FILE_ATTRIBUTE_OFFLINE   0x1000u
 #define FILE_ATTRIBUTE_NOT_CONTENT_INDEXED 0x2000u
 
+/* Bound a scan over a NUL-terminated guest WCHAR string. The W string APIs
+ * (lstrcpyW/lstrcatW/FormatMessageW/MoveFileExW) have no length argument, so an
+ * unterminated or bogus pointer must not walk off the end of the guest's 4 GB.
+ * Returns the length in code units (excluding the NUL), or 0 on failure. */
+#define U16_MAX 0x100000u                       /* same ceiling as the Ex string helpers */
+static int u16_len(uint32_t va, uint32_t *out) {
+    uint32_t limit = U16_MAX, i;
+    if (!va) return 0;
+    if ((uint64_t)va + 2ull * limit > 0x100000000ull)
+        limit = (uint32_t)((0x100000000ull - va) / 2u);
+    for (i = 0; i < limit; i++)
+        if (!MEM16(va + i * 2u)) { *out = i; return 1; }
+    return 0;
+}
+
 static uint32_t errno_to_win(int e) {
     switch (e) {
     case ENOENT:  return ERROR_FILE_NOT_FOUND;
@@ -491,13 +506,12 @@ static void k_MoveFileA(void) {
  * across filesystems becomes a copy-then-delete, since rename(2) refuses to
  * cross a mount. MOVEFILE_DELAY_UNTIL_REBOOT (4) has no meaning here and is
  * refused rather than silently treated as an immediate move. */
-static void k_MoveFileExA(void) {
+static uint32_t move_file_ex(const char *src, const char *dst, uint32_t flags) {
     char a[1024], b[1024];
-    uint32_t flags = A32(2);
-    if (flags & 4u) { hle_set_last_error(120u); RET(0, 3); }   /* ERROR_CALL_NOT_IMPLEMENTED */
-    hle_host_path(ASTR(0), a, sizeof a);
-    hle_host_path(ASTR(1), b, sizeof b);
-    if (rename(a, b) == 0) RET(1, 3);
+    if (flags & 4u) { hle_set_last_error(120u); return 0; }   /* ERROR_CALL_NOT_IMPLEMENTED */
+    hle_host_path(src, a, sizeof a);
+    hle_host_path(dst, b, sizeof b);
+    if (rename(a, b) == 0) return 1;
     if (flags & 2u) {                                     /* COPY_ALLOWED: copy, then remove the source */
         FILE *in = fopen(a, "rb"), *out = in ? fopen(b, "wb") : NULL;
         if (in && out) {
@@ -506,11 +520,26 @@ static void k_MoveFileExA(void) {
             fclose(out);
             if (ok) unlink(a);
             fclose(in);
-            if (ok) RET(1, 3);
+            if (ok) return 1;
         } else { if (in) fclose(in); if (out) fclose(out); }
     }
     hle_set_last_error(errno_to_win(errno));
-    RET(0, 3);
+    return 0;
+}
+static void k_MoveFileExA(void) { RET(move_file_ex(ASTR(0), ASTR(1), A32(2)), 3); }
+/* MoveFileExW shares MoveFileExA's body after codepage-1252 conversion of both
+ * UTF-16 paths, so the two forms move the same guest file with the same flags.
+ * The strings are bounded-scanned first so a bad W pointer cannot run off the
+ * guest address space inside hle_wide_to_ansi. */
+static void k_MoveFileExW(void) {
+    uint32_t existing = A32(0), replacement = A32(1), n;
+    char a[1024], b[1024];
+    if (!u16_len(existing, &n) || !u16_len(replacement, &n) ||
+        !hle_wide_to_ansi((const uint16_t *)APTR(0), a, sizeof a) ||
+        !hle_wide_to_ansi((const uint16_t *)APTR(1), b, sizeof b)) {
+        hle_set_last_error(ERROR_INVALID_NAME); RET(0, 3);
+    }
+    RET(move_file_ex(a, b, A32(2)), 3);
 }
 static void k_CopyFileA(void) {                          /* (src, dst, failIfExists) */
     char a[1024], b[1024];
@@ -1551,6 +1580,217 @@ static void k_LocaleNameToLCID(void) {
     hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 2);
 }
 
+/* ---- W-string primitives and the remaining Unicode KERNEL32 imports ----
+ * These are the wide counterparts of kernel32.c's lstrcpyA/lstrcatA and
+ * GetSystemDirectoryA, plus a real FROM_STRING implementation of
+ * FormatMessageW. Inputs are UTF-16 in guest memory; output is UTF-16 written
+ * with bounded stores, always NUL-terminated. Every walk is capped by
+ * u16_len() so a bad pointer fails closed instead of reading off the block.
+ *
+ * Where Win32 gives the caller no size (lstrcpy/lstrcat), the ceiling is the
+ * scan cap U16_MAX; an unterminated source fails with ERROR_INVALID_PARAMETER
+ * rather than overrunning the guest's address space. Real Windows has no
+ * bounds check there at all, so this is strictly safer, not less correct.
+ */
+static void k_lstrcpyW(void) {                        /* (dst, src) -> dst */
+    uint32_t dst = A32(0), src = A32(1), n;
+    if (!dst || !src || !u16_len(src, &n) ||
+        (uint64_t)dst + (uint64_t)(n + 1u) * 2u > 0x100000000ull) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2);
+    }
+    memmove(hle_ptr(dst), hle_ptr(src), ((size_t)n + 1u) * 2u); /* NUL included; overlap-safe */
+    hle_set_last_error(0);
+    RET(dst, 2);
+}
+static void k_lstrcatW(void) {                        /* (dst, src) -> dst */
+    uint32_t dst = A32(0), src = A32(1), nd, ns;
+    uint64_t end;
+    if (!dst || !src || !u16_len(dst, &nd) || !u16_len(src, &ns)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2);
+    }
+    end = (uint64_t)nd + ns + 1u;                     /* appended text + NUL */
+    if (end > U16_MAX || (uint64_t)dst + end * 2u > 0x100000000ull) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2);
+    }
+    /* Start at the destination's NUL so its terminator is overwritten by the
+     * source's; memmove also copes with a source overlapping the destination. */
+    memmove((uint8_t *)hle_ptr(dst) + (size_t)nd * 2u, hle_ptr(src), (size_t)(ns + 1u) * 2u);
+    hle_set_last_error(0);
+    RET(dst, 2);
+}
+
+/* GetSystemDirectoryW(buffer, cch): the same notional system directory that
+ * kernel32_crt.c's GetSystemDirectoryA, SearchPathA and module.c already use
+ * for the guest's C: drive, encoded as UTF-16 with the shared ANSI helper.
+ * cch is in WCHARs. Like Windows: cch == 0 is a pure size probe; a NULL or
+ * too-small buffer returns the required size INCLUDING the NUL and sets
+ * ERROR_INSUFFICIENT_BUFFER; success returns the length WITHOUT the NUL. */
+static void k_GetSystemDirectoryW(void) {
+    static const char sysdir[] = "C:\\Windows\\System32";
+    const uint32_t n = (uint32_t)(sizeof sysdir - 1u);
+    uint32_t dst = A32(0), cch = A32(1), i;
+    uint16_t wide[sizeof sysdir];
+    if (!hle_ansi_to_wide(sysdir, wide, sizeof wide / sizeof wide[0])) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2);
+    }
+    if (!cch) RET(n + 1u, 2);                         /* size probe, buffer untouched */
+    if (!dst || cch < n + 1u) {
+        hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(n + 1u, 2);
+    }
+    for (i = 0; i <= n; i++) MEM16(dst + i * 2u) = wide[i];
+    hle_set_last_error(0);
+    RET(n, 2);
+}
+
+/* ---- FormatMessageW: FORMAT_MESSAGE_FROM_STRING with insertions ----
+ * Supported flags: FROM_STRING (required), IGNORE_INSERTS, ARGUMENT_ARRAY,
+ * ALLOCATE_BUFFER and the MAX_WIDTH_MASK low byte (accepted; line rewrapping
+ * is not implemented, but hard %n/%r breaks are preserved). Any other bit --
+ * notably FROM_SYSTEM and FROM_HMODULE, which need message-table resources
+ * this layer does not carry -- is refused with an explicit diagnostic and
+ * ERROR_INVALID_FLAGS (1004), never a silent fabricated success.
+ * Inserts are %1..%99, defaulting to !s! (a pointer to a guest WCHAR string);
+ * !d!/!i!/!u!/!x!/!X! format the value as an integer. Width/precision ('*')
+ * inserts and other specifiers are refused with a diagnostic and
+ * ERROR_INVALID_PARAMETER. The output ceiling is 64 KB (ERROR_MORE_DATA),
+ * matching the Win32 limit that a message buffer cannot exceed 64K bytes.
+ * Under IGNORE_INSERTS the %n sequences are copied through verbatim, as MSDN
+ * specifies. Standard escapes %%, %0, %n, %r, %t, %!, %<space>, %. and any
+ * other nondigit after '%' (emitted without the '%') are handled.
+ */
+#define FM_ALLOCATE_BUFFER 0x00000100u
+#define FM_IGNORE_INSERTS  0x00000200u
+#define FM_FROM_STRING     0x00000400u
+#define FM_FROM_HMODULE    0x00000800u
+#define FM_FROM_SYSTEM     0x00001000u
+#define FM_ARGUMENT_ARRAY  0x00002000u
+#define FM_WIDTH_MASK      0x000000FFu
+#define FM_OUT_MAX         0x8000u                   /* WCHARs == 64 KB bytes */
+#define FM_ERROR_MORE_DATA 234u
+
+static void fm_diag(const char *what, uint32_t flags) {
+    static uint32_t last_flags; static const char *last_what; static int seen;
+    if (seen && last_flags == flags && last_what == what) return;  /* dedup repeats */
+    fprintf(stderr, "[win32hle] FormatMessageW: %s (flags 0x%08X) from guest 0x%08X\n",
+            what, flags, g_cur_func);
+    last_flags = flags, last_what = what, seen = 1;
+}
+
+/* Insert n's raw value. ARGUMENT_ARRAY passes an array of DWORDs directly;
+ * the default passes a va_list*, whose first word is the address of the first
+ * vararg (x86 stdcall). Both are guest addresses. */
+static uint32_t fm_insert_value(uint32_t args, uint32_t flags, uint32_t n) {
+    uint32_t base = (flags & FM_ARGUMENT_ARRAY) ? args : (args ? MEM32(args) : 0u);
+    return base ? MEM32(base + (n - 1u) * 4u) : 0u;
+}
+
+static void k_FormatMessageW(void) {                  /* (flags,src,id,lang,buf,size,args) */
+    uint32_t flags = A32(0), src = A32(1), buf = A32(4), nsize = A32(5), args = A32(6);
+    uint32_t supported = FM_ALLOCATE_BUFFER | FM_IGNORE_INSERTS | FM_FROM_STRING |
+                         FM_ARGUMENT_ARRAY | FM_WIDTH_MASK;
+    uint32_t slen = 0, i = 0, len = 0;
+    uint16_t out[FM_OUT_MAX];
+#define FM_PUT(c) do {                                                     \
+        if (len + 1u >= FM_OUT_MAX) { fm_diag("message exceeds 64 KB", flags); \
+            hle_set_last_error(FM_ERROR_MORE_DATA); RET(0, 7); }           \
+        out[len++] = (uint16_t)(c);                                        \
+    } while (0)                       /* keep one slot for the final NUL */
+
+    if ((flags & ~supported) || !(flags & FM_FROM_STRING)) {
+        fm_diag("only FROM_STRING flags are implemented", flags);
+        hle_set_last_error(EX_ERROR_INVALID_FLAGS);
+        RET(0, 7);
+    }
+    if (!src || !u16_len(src, &slen)) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 7); }
+
+    while (i < slen) {
+        uint16_t c = MEM16(src + i * 2u);
+        if (c != '%') { FM_PUT(c); i++; continue; }
+        if (i + 1u >= slen) { FM_PUT('%'); i++; continue; }   /* trailing '%' */
+        uint16_t d = MEM16(src + (i + 1u) * 2u);
+        if (d == '%')     { FM_PUT('%'); i += 2u; continue; }
+        if (d == '0')     { i += 2u; continue; }              /* end line, no newline */
+        if (d == 'r')     { FM_PUT('\r'); i += 2u; continue; }
+        if (d == 't')     { FM_PUT('\t'); i += 2u; continue; }
+        if (d == 'n')     { FM_PUT('\r'); FM_PUT('\n'); i += 2u; continue; }
+        if (d == '!' || d == ' ' || d == '.') { FM_PUT(d); i += 2u; continue; }
+        if (d >= '1' && d <= '9') {
+            uint32_t idx = 0u, j = i + 1u;
+            while (j < slen) {
+                uint16_t e = MEM16(src + j * 2u);
+                if (e < '0' || e > '9') break;
+                idx = idx * 10u + (uint32_t)(e - '0');
+                if (idx > 99u) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 7); }
+                j++;
+            }
+            uint16_t spec = 's';                           /* default !s! */
+            if (j < slen && MEM16(src + j * 2u) == '!') {
+                uint32_t k = j + 1u, s0 = k;
+                while (k < slen && MEM16(src + k * 2u) != '!') k++;
+                if (k >= slen || k != s0 + 1u) {
+                    fm_diag("width/precision or malformed insert spec", flags);
+                    hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 7);
+                }
+                spec = MEM16(src + s0 * 2u);
+                j = k + 1u;
+            }
+            if (flags & FM_IGNORE_INSERTS) {                /* pass %n through unchanged */
+                uint32_t q;
+                FM_PUT('%');
+                for (q = i + 1u; q < j; q++) FM_PUT(MEM16(src + q * 2u));
+                i = j; continue;
+            }
+            {
+                uint32_t v = fm_insert_value(args, flags, idx);
+                if (spec == 's' || spec == 'S') {
+                    uint32_t vn, q;
+                    if (!v || !u16_len(v, &vn)) {
+                        fm_diag("insert is not a terminated guest WCHAR string", flags);
+                        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 7);
+                    }
+                    for (q = 0; q < vn; q++) FM_PUT(MEM16(v + q * 2u));
+                } else if (spec == 'd' || spec == 'i' || spec == 'u' || spec == 'x' || spec == 'X') {
+                    char tmp[32], *p;
+                    if (spec == 'd' || spec == 'i') snprintf(tmp, sizeof tmp, "%d", (int32_t)v);
+                    else if (spec == 'u') snprintf(tmp, sizeof tmp, "%u", v);
+                    else snprintf(tmp, sizeof tmp, spec == 'x' ? "%x" : "%X", v);
+                    for (p = tmp; *p; p++) FM_PUT((unsigned char)*p);
+                } else {
+                    fm_diag("unsupported insert format specifier", flags);
+                    hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 7);
+                }
+            }
+            i = j; continue;
+        }
+        FM_PUT(d); i += 2u;                                /* e.g. %<space>, %. -> the char */
+    }
+    out[len] = 0;                                          /* NUL-terminated; len is text length */
+    {
+        uint32_t needed = len + 1u, k;
+        if (flags & FM_ALLOCATE_BUFFER) {
+            uint32_t allocn = nsize > needed ? nsize : needed;
+            void *p;
+            if (allocn > FM_OUT_MAX) {
+                hle_set_last_error(FM_ERROR_MORE_DATA); RET(0, 7);
+            }
+            p = hle_alloc(allocn * 2u);
+            if (!p) { hle_set_last_error(EX_ERROR_NOT_ENOUGH_MEMORY); RET(0, 7); }
+            memcpy(p, out, (size_t)needed * 2u);
+            if (buf) MEM32(buf) = hle_va(p);
+            hle_set_last_error(0);
+            RET(len, 7);
+        }
+        if (!buf || nsize < needed) {
+            hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER);
+            RET(0, 7);
+        }
+        for (k = 0; k < needed; k++) MEM16(buf + k * 2u) = out[k];
+        hle_set_last_error(0);
+        RET(len, 7);
+    }
+#undef FM_PUT
+}
+
 const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetProcessAffinityMask", k_GetProcessAffinityMask }, { "SetProcessAffinityMask", k_SetProcessAffinityMask },
     { "CreateToolhelp32Snapshot", k_CreateToolhelp32Snapshot }, { "Process32First", k_Process32First },
@@ -1636,5 +1876,10 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetSystemDefaultLocaleName", k_GetSystemDefaultLocaleName },
     { "LCIDToLocaleName",           k_LCIDToLocaleName },
     { "LocaleNameToLCID",           k_LocaleNameToLCID },
+    { "FormatMessageW",             k_FormatMessageW },
+    { "GetSystemDirectoryW",        k_GetSystemDirectoryW },
+    { "MoveFileExW",                k_MoveFileExW },
+    { "lstrcatW",                   k_lstrcatW },
+    { "lstrcpyW",                   k_lstrcpyW },
     { 0, 0 }
 };
