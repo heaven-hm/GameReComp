@@ -606,12 +606,19 @@ static int wait_message(msg_t *m, uint32_t hwnd, uint32_t lo, uint32_t hi) {
     }
 }
 
-static void u_GetMessageA(void) {                        /* (msg, hwnd, min, max) */
+/* A MSG holds only numbers (hwnd, message, wParam, lParam, time, x, y), so the
+ * A and W forms of the message-loop calls are byte-for-byte identical: same
+ * 28-byte guest struct, same queue, same return values. Both names share one
+ * implementation; the text-bearing APIs (SendMessageW's WM_SETTEXT and
+ * RegisterClassExW's class name) do the conversion at their boundary. */
+static uint32_t get_message(uint32_t lp, uint32_t hwnd, uint32_t lo, uint32_t hi) {
     msg_t m;
-    wait_message(&m, A32(1), A32(2), A32(3));
-    put_msg(A32(0), &m);
-    RET(m.message == WM_QUIT ? 0u : 1u, 4);
+    wait_message(&m, hwnd, lo, hi);
+    put_msg(lp, &m);
+    return m.message == WM_QUIT ? 0u : 1u;
 }
+static void u_GetMessageA(void) { RET(get_message(A32(0), A32(1), A32(2), A32(3)), 4); }
+static void u_GetMessageW(void) { RET(get_message(A32(0), A32(1), A32(2), A32(3)), 4); }
 static void u_PeekMessageA(void) {                       /* (msg, hwnd, min, max, remove) */
     msg_t m;
     int remove = A32(4) & 1;
@@ -631,12 +638,14 @@ static void u_WaitMessage(void) {
     }
     RET(1, 0);
 }
-static void u_PostMessageA(void) {
-    if (A32(1) == WM_QUIT) { g_quit = 1, g_quit_code = A32(2); RET(1, 4); }
-    if (!A32(0)) { q_push_to(0, A32(1), A32(2), A32(3), hle_thread_id()); RET(1, 4); }   /* NULL: this thread's own queue */
-    q_push(A32(0), A32(1), A32(2), A32(3));
-    RET(1, 4);
+static uint32_t post_message(uint32_t hwnd, uint32_t m, uint32_t w, uint32_t l) {
+    if (m == WM_QUIT) { g_quit = 1, g_quit_code = w; return 1; }
+    if (!hwnd) { q_push_to(0, m, w, l, hle_thread_id()); return 1; }   /* NULL: this thread's own queue */
+    q_push(hwnd, m, w, l);
+    return 1;
 }
+static void u_PostMessageA(void) { RET(post_message(A32(0), A32(1), A32(2), A32(3)), 4); }
+static void u_PostMessageW(void) { RET(post_message(A32(0), A32(1), A32(2), A32(3)), 4); }
 static void u_PostThreadMessageA(void) {                 /* (thread, msg, w, l) */
     q_push_to(0, A32(1), A32(2), A32(3), A32(0));
     RET(1, 4);
@@ -3160,6 +3169,17 @@ static uint32_t send_settext_w(uint32_t hwnd, uint32_t w_va) {
     return r;
 }
 
+/* SendMessageW: message numbers and wParam/lParam travel unchanged on the
+ * existing queue. WM_SETTEXT alone carries text in lParam (UTF-16 here, ANSI
+ * in DefWindowProc); convert that one case through the helper above and free
+ * the temporary after the window procedure has read it. Everything else uses
+ * hle_send, so the window's own thread and cross-thread sent-message path stay
+ * exactly as for the A form. */
+static void u_SendMessageW(void) {
+    uint32_t h = A32(0), m = A32(1), w = A32(2), l = A32(3);
+    RET(m == WM_SETTEXT ? send_settext_w(h, l) : hle_send(h, m, w, l), 4);
+}
+
 static void u_RegisterClassW(void) {
     builtin_classes();
     uint32_t wc = A32(0);
@@ -3169,6 +3189,22 @@ static void u_RegisterClassW(void) {
     if (name_va >= 0x10000u) { wide_to_stack_ansi(name_va, buf, sizeof buf); name = buf; }
     int i = add_class(name, MEM32(wc + 4), MEM32(wc), MEM32(wc + 12), MEM32(wc + 16), K_GUEST);
     set_class_menu(i, MEM32(wc + 32), 1);
+    RET(i < 0 ? 0u : 0xC000u + (uint32_t)i, 1);
+}
+
+/* WNDCLASSEXW has the same field offsets as WNDCLASSEXA; lpszClassName (+40)
+ * and lpszMenuName (+36) are UTF-16. Register through the same class table,
+ * converting those two strings so a Unicode game's class name matches the one
+ * CreateWindowExW resolves. */
+static void u_RegisterClassExW(void) {
+    builtin_classes();
+    uint32_t wc = A32(0);
+    uint32_t name_va = MEM32(wc + 40);
+    char buf[256];
+    const char *name = "?";
+    if (name_va >= 0x10000u) { wide_to_stack_ansi(name_va, buf, sizeof buf); name = buf; }
+    int i = add_class(name, MEM32(wc + 8), MEM32(wc + 4), MEM32(wc + 16), MEM32(wc + 20), K_GUEST);
+    set_class_menu(i, MEM32(wc + 36), 1);
     RET(i < 0 ? 0u : 0xC000u + (uint32_t)i, 1);
 }
 
@@ -3471,7 +3507,8 @@ const win32hle_shim win32hle_user32[] = {
     { "RedrawWindow", u_RedrawWindow }, { "UpdateWindow", u_UpdateWindow },
     { "BeginPaint", u_BeginPaint }, { "EndPaint", u_EndPaint },
     { "MessageBoxA", u_MessageBoxA }, { "MessageBoxIndirectA", u_MessageBoxIndirectA },
-    { "RegisterClassA", u_RegisterClassA }, { "RegisterClassExA", u_RegisterClassExA }, { "UnregisterClassA", u_UnregisterClassA },
+    { "RegisterClassA", u_RegisterClassA }, { "RegisterClassExA", u_RegisterClassExA },
+    { "RegisterClassExW", u_RegisterClassExW }, { "UnregisterClassA", u_UnregisterClassA },
     { "GetClassInfoA", u_GetClassInfoA }, { "GetClassNameA", u_GetClassNameA },
     { "CreateWindowExA", u_CreateWindowExA }, { "DefWindowProcA", u_DefWindowProcA },
     { "DefDlgProcA", u_DefDlgProcA },
@@ -3480,11 +3517,12 @@ const win32hle_shim win32hle_user32[] = {
     { "CloseWindow", u_CloseWindow }, { "DestroyWindow", u_DestroyWindow },
     { "SetWindowTextA", u_SetWindowTextA }, { "GetWindowTextA", u_GetWindowTextA },
     { "GetWindowTextLengthA", u_GetWindowTextLengthA },
-    { "PostMessageA", u_PostMessageA }, { "PostQuitMessage", u_PostQuitMessage },
+    { "PostMessageA", u_PostMessageA }, { "PostMessageW", u_PostMessageW }, { "PostQuitMessage", u_PostQuitMessage },
     { "PostThreadMessageA", u_PostThreadMessageA }, { "MsgWaitForMultipleObjects", u_MsgWaitForMultipleObjects },
-    { "GetMessageA", u_GetMessageA }, { "PeekMessageA", u_PeekMessageA }, { "WaitMessage", u_WaitMessage },
+    { "GetMessageA", u_GetMessageA }, { "GetMessageW", u_GetMessageW },
+    { "PeekMessageA", u_PeekMessageA }, { "WaitMessage", u_WaitMessage },
     { "TranslateMessage", u_TranslateMessage }, { "DispatchMessageA", u_DispatchMessageA },
-    { "SendMessageA", u_SendMessageA },
+    { "SendMessageA", u_SendMessageA }, { "SendMessageW", u_SendMessageW },
     { "CreateDialogParamA", u_CreateDialogParamA }, { "CreateDialogIndirectParamA", u_CreateDialogIndirectParamA },
     { "DialogBoxParamA", u_DialogBoxParamA }, { "DialogBoxIndirectParamA", u_DialogBoxIndirectParamA },
     { "EndDialog", u_EndDialog }, { "IsDialogMessageA", u_IsDialogMessageA }, { "IsDialogMessage", u_IsDialogMessageA },
