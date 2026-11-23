@@ -150,6 +150,13 @@ static uint32_t open_key(uint32_t parent, const char *path, uint32_t out, int cr
     return ERROR_SUCCESS;
 }
 static void r_RegOpenKeyExA(void)   { RET(open_key(A32(0), ASTR(1), A32(4), 0), 5); }   /* (key, sub, opts, sam, &out) */
+/* RegOpenKeyExW: wide subkey name, same isolated store as the ANSI form. */
+static void r_RegOpenKeyExW(void) {
+    char sub[256];
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (w && !hle_wide_to_ansi(w, sub, sizeof sub)) { RET(ERROR_INVALID_PARAMETER, 5); }
+    RET(open_key(A32(0), w ? sub : NULL, A32(4), 0), 5);
+}
 static void r_RegOpenKeyA(void)     { RET(open_key(A32(0), ASTR(1), A32(2), 0), 3); }
 static void r_RegCreateKeyA(void)   { RET(open_key(A32(0), ASTR(1), A32(2), 1), 3); }
 static void r_RegCreateKeyExA(void) {                    /* (key, sub, 0, class, opts, sam, sa, &out, &disp) */
@@ -225,6 +232,41 @@ static void r_RegEnumKeyExA(void) {                      /* (key, index, name, &
     if (MEM32(A32(3)) <= n) RET(ERROR_MORE_DATA, 8);
     memcpy(ASTR(2), c->name, n + 1);
     MEM32(A32(3)) = n;
+    RET(ERROR_SUCCESS, 8);
+}
+/* RegEnumValueA/W: enumerate a key's values in insertion order. Names are
+ * case-insensitive in the store but returned in their original spelling. */
+static void r_RegEnumValueA(void) {
+    rkey_t *k = root_of(A32(0));
+    value_t *v = k ? k->values : NULL;
+    for (uint32_t i = 0; v && i < A32(1); i++) v = v->next;
+    if (!v) RET(ERROR_NO_MORE_ITEMS, 8);
+    uint32_t name_len = (uint32_t)strlen(v->name);
+    if (A32(3) && MEM32(A32(3)) <= name_len) RET(ERROR_MORE_DATA, 8);
+    if (A32(5)) MEM32(A32(5)) = v->type;
+    if (A32(7) && MEM32(A32(7)) < v->size) RET(ERROR_MORE_DATA, 8);
+    if (A32(2) && A32(3)) { memcpy(ASTR(2), v->name, name_len + 1); MEM32(A32(3)) = name_len; }
+    if (A32(7)) MEM32(A32(7)) = v->size;
+    if (A32(6) && v->size) memcpy(APTR(6), v->data, v->size);
+    RET(ERROR_SUCCESS, 8);
+}
+static void r_RegEnumValueW(void) {
+    rkey_t *k = root_of(A32(0));
+    value_t *v = k ? k->values : NULL;
+    for (uint32_t i = 0; v && i < A32(1); i++) v = v->next;
+    if (!v) RET(ERROR_NO_MORE_ITEMS, 8);
+    uint32_t chars = (uint32_t)strlen(v->name), needed = (chars + 1u) * 2u;
+    if (A32(3) && MEM32(A32(3)) < chars) RET(ERROR_MORE_DATA, 8);
+    if (A32(5)) MEM32(A32(5)) = v->type;
+    if (A32(7) && MEM32(A32(7)) < v->size) RET(ERROR_MORE_DATA, 8);
+    if (A32(2) && A32(3)) {
+        uint16_t *dst = (uint16_t *)APTR(2);
+        for (uint32_t i = 0; i < chars; i++) dst[i] = (uint16_t)(unsigned char)v->name[i];
+        dst[chars] = 0;
+        MEM32(A32(3)) = chars;
+    }
+    if (A32(7)) MEM32(A32(7)) = v->size;
+    if (A32(6) && v->size) memcpy(APTR(6), v->data, v->size);
     RET(ERROR_SUCCESS, 8);
 }
 static void r_RegEnumKeyA(void) {                        /* (key, index, name, n) */
@@ -700,11 +742,11 @@ static void il_GetDragImage(void) {
 static void il_SetDragCursorImage(void) { RET(1, 4); }
 
 const win32hle_shim win32hle_advapi32[] = {
-    { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
+    { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyExW", r_RegOpenKeyExW }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
     { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey }, { "RegFlushKey", adv_RegFlushKey },
     { "RegQueryValueExA", r_RegQueryValueExA }, { "RegQueryValueExW", r_RegQueryValueExW }, { "RegSetValueExA", r_RegSetValueExA },
     { "RegDeleteValueA", r_RegDeleteValueA }, { "RegDeleteValueW", r_RegDeleteValueW }, { "RegDeleteKeyA", r_RegDeleteKeyA },
-    { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
+    { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumValueA", r_RegEnumValueA }, { "RegEnumValueW", r_RegEnumValueW }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
     { "GetUserNameA", r_GetUserNameA },
     { "AllocateAndInitializeSid", adv_AllocateAndInitializeSid }, { "CopySid", adv_CopySid },
     { "EqualSid", adv_EqualSid }, { "GetLengthSid", adv_GetLengthSid },
