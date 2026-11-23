@@ -5,6 +5,7 @@ status and evidence; a failure stops dependent stages, but the report stage
 still runs so the failure is inspectable.
 """
 
+import concurrent.futures
 import contextlib
 from collections import Counter
 import hashlib
@@ -33,6 +34,7 @@ from pe_analyze import analyze_pe, build_iat_map  # noqa: E402
 from translator import (MAX_UNIT_BYTES, discover_functions,  # noqa: E402
                         generate_recomp_files, make_read_va)
 
+from . import build_cache as _build_cache  # noqa: E402
 from . import highlevel  # noqa: E402
 from . import projectgen  # noqa: E402
 from .lift_cache import (LiftCache, enabled as lift_cache_enabled,  # noqa: E402
@@ -64,6 +66,114 @@ BUILD_TIMEOUT_CAP = 3600.0
 def default_build_timeout(source_bytes):
     return min(BUILD_TIMEOUT_CAP,
                BUILD_TIMEOUT_BASE + BUILD_TIMEOUT_PER_MB * (source_bytes / (1 << 20)))
+
+
+# The host cmake path gets incremental rebuilds from make/ninja. The wasm32
+# path has no such step: it recompiles every generated unit on every run.
+# Wire the opt-in content-addressed object cache (build_cache.py) into that
+# path so repeated builds can skip unchanged units. The cache is strictly
+# opt-in (RECOMP_BUILD_CACHE=1); with it off, the compile commands are exactly
+# what they were before this hookup.
+def wasm_include_identity(cflags):
+    """Content digest of the headers visible through -I/-isystem in cflags.
+
+    The object cache keys on source bytes, compiler and flags, but a generated
+    unit pulls declarations in through #include. A changed recomp_types.h (or
+    a regenerated recomp_funcs.h) leaves the unit's own bytes and the flags
+    untouched, so binding only those would reuse an object compiled against
+    the old declarations. Fold the bytes of every header under every include
+    directory into an extra identity. The digest depends on content only:
+    paths are walked in sorted order and each file is length-prefixed.
+    """
+    h = hashlib.sha256()
+    dirs = []
+    i = 0
+    flags = [str(f) for f in cflags]
+    while i < len(flags):
+        if flags[i] in ("-I", "-isystem") and i + 1 < len(flags):
+            dirs.append(flags[i + 1])
+            i += 2
+        else:
+            i += 1
+    seen = set()
+    for directory in dirs:
+        root = Path(directory)
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*.h")):
+            if not path.is_file():
+                continue
+            real = str(path.resolve())
+            if real in seen:
+                continue
+            seen.add(real)
+            try:
+                data = path.read_bytes()
+            except OSError:
+                continue
+            h.update(len(data).to_bytes(8, "big"))
+            h.update(data)
+    return h.hexdigest()
+
+
+def compile_units_with_cache(sources, objs, cflags, env=None, *, jobs=4,
+                             run=None, cache_enabled=None):
+    """Compile generated units to objects, optionally via the object cache.
+
+    Returns (errors, stats). ``errors`` is a list of human-readable compile
+    failures; ``stats`` is a JSON-serialisable record of what happened
+    (enabled, units, compiled, hits, include_identity). ``run`` is injectable
+    for tests; it defaults to subprocess.run. With the cache disabled the
+    command and behaviour are identical to a plain cc -c invocation.
+    """
+    enabled = _build_cache.enabled() if cache_enabled is None else bool(cache_enabled)
+    stats = {
+        "enabled": enabled,
+        "units": len(sources),
+        "compiled": 0,
+        "hits": 0,
+        "include_identity": None,
+    }
+    compiler = str(cflags[0])
+    flags = [str(f) for f in cflags[1:]]  # compile_cached adds -c/-o itself
+    if enabled:
+        stats["include_identity"] = wasm_include_identity(cflags)
+    jobs = int(jobs or os.cpu_count() or 4)
+
+    def compile_one(pair):
+        src, obj = pair
+        if enabled:
+            res = _build_cache.compile_cached(
+                src, compiler, flags, obj, extra_identity=stats["include_identity"],
+                env=env, run=run)
+            # compile_cached leaves returncode=None on a cache hit (no process
+            # was run); only a real non-zero return value is a failure.
+            rc = res["returncode"]
+            if rc is not None and rc != 0:
+                cmd = [compiler, *flags, "-c", str(src), "-o", str(obj)]
+                return (f"$ {' '.join(cmd)}\n{res['stderr']}",
+                        bool(res["hit"]), bool(res["compiled"]))
+            return (None, bool(res["hit"]), bool(res["compiled"]))
+        cmd = [str(f) for f in cflags] + ["-c", str(src), "-o", str(obj)]
+        try:
+            proc = (run or subprocess.run)(cmd, env=env,
+                                           capture_output=True, text=True)
+        except OSError as exc:
+            return (f"$ {' '.join(cmd)}\n{exc}", False, False)
+        if proc.returncode != 0:
+            return (f"$ {' '.join(cmd)}\n{proc.stderr or proc.stdout}", False, True)
+        return (None, False, True)
+
+    errors = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        for error, hit, compiled in pool.map(compile_one, zip(sources, objs)):
+            if error:
+                errors.append(error)
+            if hit:
+                stats["hits"] += 1
+            if compiled:
+                stats["compiled"] += 1
+    return errors, stats
 
 
 def resource_footprint(project_dir: Path, stages: list, binary: Path | None) -> dict:
@@ -905,24 +1015,14 @@ class Pipeline:
 
         t0 = time.time()
         objs = [obj_dir / f"{s.stem}.o" for s in sources]
-        errors = []
         jobs = int(self.jobs or os.cpu_count() or 4)
-
-        def compile_one(pair):
-            src, obj = pair
-            cmd = [*cflags, "-c", str(src), "-o", str(obj)]
-            res = subprocess.run(cmd, env=env, capture_output=True, text=True)
-            if res.returncode != 0:
-                return f"$ {' '.join(cmd)}\n{res.stderr or res.stdout}"
-            return None
 
         with open(log_path, "w") as log:
             log.write(f"# wasm32 compile: {len(sources)} units -> {wasm_path}\n")
-            with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-                for err in pool.map(compile_one, zip(sources, objs)):
-                    if err:
-                        errors.append(err)
-                        log.write(err + "\n")
+            errors, cache_stats = compile_units_with_cache(
+                sources, objs, cflags, env, jobs=jobs)
+            for err in errors:
+                log.write(err + "\n")
             if errors:
                 raise StageFailure(
                     f"wasm32 compile failed (see {log_path})\n{_tail(log_path)}",
@@ -959,6 +1059,7 @@ class Pipeline:
             "source_bytes": source_bytes,
             "target": "web/wasm32",
             "web_entry": str(build_dir / "index.html"),
+            "compile_cache": cache_stats,
         }
 
     def _adopt_reused_binary(self, binary, source_digest, log_path):
