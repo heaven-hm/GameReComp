@@ -34,6 +34,7 @@ int main(void) {
     win32hle_register(win32hle_sdl12);
     win32hle_register(win32hle_wsock32);
     win32hle_register(win32hle_module);
+    win32hle_register(win32hle_msvcrt);
     mach_enter();
 
     /* SDL 1.2 bounded string helpers (issue #28, Chocolate Doom). */
@@ -88,6 +89,18 @@ int main(void) {
     ok("DrawTextW computes text extent", call("DrawTextW", 5,
        (uint32_t[]){ 0u, wide("abcdef"), 0xFFFFFFFFu, rect, 0x400u }) == 13u);
     ok("DrawTextW updated DT_CALCRECT width", MEM32(rect + 8u) == 36u);
+
+    /* MSVCRT symbols imported by Chocolate Doom. */
+    static const char *const crt[] = { "_snprintf", "vprintf", "_flsbuf", "fscanf" };
+    for (unsigned i = 0; i < sizeof crt / sizeof crt[0]; i++)
+        ok("CRT symbol registered", hle_resolve(crt[i]) != 0);
+    uint32_t snp = hle_va(hle_alloc(32)), fmt = ansi("hi %d");
+    memset(hle_ptr(snp), 0, 32);
+    ok("_snprintf formats into the guest buffer", call("_snprintf", 4,
+       (uint32_t[]){ snp, 32u, fmt, 42u }) == 5u);
+    ok("_snprintf result", strcmp((char *)hle_ptr(snp), "hi 42") == 0);
+    ok("fscanf fails explicitly", call("fscanf", 2,
+       (uint32_t[]){ 0u, fmt }) == 0xFFFFFFFFu);
 
     mach_leave();
     printf("api_gap_selftest: all checks passed\n");

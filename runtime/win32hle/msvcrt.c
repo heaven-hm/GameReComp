@@ -657,6 +657,45 @@ static void c_sprintf(void) {                        /* (buf, fmt, ...) */
     RETC((uint32_t)n);
 }
 
+/* _snprintf is the MSVC bounded sibling of sprintf: it never writes more than
+ * count-1 bytes and always NUL-terminates when count > 0. */
+static void c__snprintf(void) {
+    ms_init();
+    char *buf = ASTR(0);
+    size_t count = (size_t)A32(1);
+    const char *fmt = ASTR(2);
+    if (!buf || !fmt || !count) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, count, fmt, g_esp + 16u);
+    memcpy(buf, t_fmt, (size_t)n + 1u);
+    RETC((uint32_t)n);
+}
+/* vprintf(fmt, ap): the guest va_list is an array of guest dwords. */
+static void c_vprintf(void) {
+    ms_init();
+    const char *fmt = ASTR(0);
+    uint32_t ap = A32(1);
+    FILE *out = ms_stdout();
+    if (!fmt || !ap || !out) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, ap);
+    size_t w = fwrite(t_fmt, 1, (size_t)n, out);
+    RETC(w == (size_t)n ? (uint32_t)n : 0xFFFFFFFFu);
+}
+/* _flsbuf writes one character to a stream, flushing Guest FILE state. */
+static void c__flsbuf(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(1));
+    if (!s) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    RETC(fputc((int)A32(0), s->fp) == EOF ? 0xFFFFFFFFu : (uint32_t)(unsigned char)A32(0));
+}
+/* fscanf's variadic destination pointers cannot be classified safely from a
+ * lifted va_list; fail explicitly instead of writing to guessed addresses. */
+static void c_fscanf(void) {
+    ms_init();
+    fprintf(stderr, "[msvcrt] fscanf: guest varargs scanning is unsupported\n");
+    ms_seterrno(ENOSYS);
+    RETC(0xFFFFFFFFu);
+}
+
 static void c_puts(void) {                           /* (s) */
     ms_init();
     const char *s = ASTR(0);
@@ -2826,6 +2865,10 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "setbuf",                       c_setbuf },
     { "setvbuf",                      c_setvbuf },
     { "printf",                       c_printf },
+    { "_snprintf",                    c__snprintf },
+    { "vprintf",                      c_vprintf },
+    { "_flsbuf",                      c__flsbuf },
+    { "fscanf",                       c_fscanf },
     { "fprintf",                      c_fprintf },
     { "sprintf",                      c_sprintf },
     { "puts",                         c_puts },
