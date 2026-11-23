@@ -11,11 +11,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from tools.api_coverage import (  # noqa: E402
+    RECENTLY_REGISTERED_SHIMS,
     SYSTEM_DLLS,
     build_report,
     dll_kind,
     import_name,
     pe_imports,
+    recently_registered_names,
     registered_shims,
     render_markdown,
     shim_import_names,
@@ -288,6 +290,31 @@ class ApiCoverageTest(unittest.TestCase):
         # Negative: there is no positive completion claim.
         self.assertNotIn("coverage is complete", doc.lower())
         self.assertNotIn("100% coverage achieved", doc.lower())
+
+    # ---- recently registered shims (additive section) -------------------
+
+    def test_recently_registered_shims_match_last_checkpoint(self):
+        """24 names, grouped by the checkpoint's agent work; no duplicates."""
+        names = recently_registered_names()
+        self.assertEqual(len(names), 24)
+        self.assertEqual(len(set(names)), 24)
+        self.assertEqual(len(RECENTLY_REGISTERED_SHIMS), 5)
+        for group in ("A22", "A26", "A27", "A28", "A29"):
+            self.assertTrue(any(g.startswith(group) for g in RECENTLY_REGISTERED_SHIMS))
+
+    def test_recently_registered_shims_are_actually_registered(self):
+        """The documented delta must be a subset of the real shim registry."""
+        self.assertTrue(set(recently_registered_names()).issubset(registered_shims()))
+
+    def test_render_markdown_lists_recently_registered_shims_with_caveat(self):
+        doc = render_markdown(self._sample_report(),
+                              generated_at="2026-01-01T00:00:00Z")
+        self.assertIn("## Recently registered shims (24, last checkpoint)", doc)
+        self.assertIn("`docs/ISSUE_EXECUTION_PLAN.md`", doc)
+        for name in recently_registered_names():
+            self.assertIn(f"`{name}`", doc)
+        self.assertIn("Registration only proves a name is present", doc)
+        self.assertIn("not extra coverage", doc)
 
 
 if __name__ == "__main__":
