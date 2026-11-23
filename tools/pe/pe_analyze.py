@@ -25,6 +25,29 @@ from dataclasses import dataclass, asdict, field
 from typing import Optional, List, Dict, Tuple
 
 
+def _cstring(data: bytes, off: int) -> Optional[str]:
+    """Decode a NUL-terminated ASCII string, or None if it is unterminated.
+
+    The struct fallback used to call data.index(b'\\x00', off) directly, which
+    raised ValueError on a truncated import/export name and escaped analyze_pe
+    as an unhandled exception. A malformed name is now skipped, not fatal.
+    """
+    if off < 0 or off >= len(data):
+        return None
+    end = data.find(b'\x00', off)
+    if end < 0:
+        return None
+    return data[off:end].decode('ascii', errors='replace')
+
+
+def _u16(data: bytes, off: int) -> Optional[int]:
+    return struct.unpack_from('<H', data, off)[0] if off >= 0 and off + 2 <= len(data) else None
+
+
+def _u32(data: bytes, off: int) -> Optional[int]:
+    return struct.unpack_from('<I', data, off)[0] if off >= 0 and off + 4 <= len(data) else None
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
@@ -442,24 +465,22 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
                     if name_rva == 0:
                         break
                     name_off = rva_to_offset(name_rva)
-                    if name_off:
-                        end = data.index(b'\x00', name_off)
-                        dll_name = data[name_off:end].decode('ascii', errors='replace')
-                    else:
-                        dll_name = '???'
+                    dll_name = (_cstring(data, name_off) if name_off is not None else None) or '???'
                     add_dll(dll_name)
 
                     # Walk the ILT for names/ordinals, but record the IAT slot
                     # RVA: the IAT is what the recompiler dispatches through.
                     # Using the ILT RVA here silently mis-binds every import
                     # when pefile is unavailable (a bound PE has ILT != IAT).
+                    # Bounded by file length: a missing terminator must not run
+                    # off the end of the data.
                     lookup_rva = ilt_rva if ilt_rva else iat_rva_base
                     slot_rva = iat_rva_base or lookup_rva
                     if lookup_rva:
                         loff = rva_to_offset(lookup_rva)
-                        if loff:
+                        if loff is not None:
                             p = loff
-                            while True:
+                            while p + 4 <= len(data):
                                 entry = struct.unpack_from('<I', data, p)[0]
                                 if entry == 0:
                                     break
@@ -472,9 +493,9 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
                                     ))
                                 else:
                                     hint_off = rva_to_offset(entry)
-                                    if hint_off and hint_off + 2 < len(data):
-                                        end2 = data.index(b'\x00', hint_off + 2)
-                                        fname = data[hint_off + 2:end2].decode('ascii', errors='replace')
+                                    fname = (_cstring(data, hint_off + 2)
+                                             if hint_off is not None else None)
+                                    if fname:
                                         info.imports.append(ImportEntry(
                                             dll=dll_name,
                                             name=fname,
@@ -548,28 +569,30 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
         export_size = struct.unpack_from('<I', data, dd_offset + 4)[0]
         if export_rva and export_size:
             exp_off = rva_to_offset(export_rva)
-            if exp_off:
-                num_funcs = struct.unpack_from('<I', data, exp_off + 20)[0]
-                num_names = struct.unpack_from('<I', data, exp_off + 24)[0]
-                funcs_rva = struct.unpack_from('<I', data, exp_off + 28)[0]
-                names_rva = struct.unpack_from('<I', data, exp_off + 32)[0]
-                ords_rva = struct.unpack_from('<I', data, exp_off + 36)[0]
+            if exp_off is not None:
+                num_names = _u32(data, exp_off + 24)
+                funcs_rva = _u32(data, exp_off + 28)
+                names_rva = _u32(data, exp_off + 32)
+                ords_rva = _u32(data, exp_off + 36)
+                if None in (num_names, funcs_rva, names_rva, ords_rva):
+                    num_names = funcs_rva = names_rva = ords_rva = 0
 
                 names_off = rva_to_offset(names_rva)
                 ords_off = rva_to_offset(ords_rva)
                 funcs_off = rva_to_offset(funcs_rva)
 
-                if names_off and ords_off and funcs_off:
+                if names_off is not None and ords_off is not None and funcs_off is not None:
                     for i in range(num_names):
-                        n_rva = struct.unpack_from('<I', data, names_off + i * 4)[0]
-                        ordinal = struct.unpack_from('<H', data, ords_off + i * 2)[0]
-                        func_rva = struct.unpack_from('<I', data, funcs_off + ordinal * 4)[0]
+                        # Every read is bounds-checked: a truncated table skips
+                        # its remaining entries instead of raising struct.error.
+                        n_rva = _u32(data, names_off + i * 4)
+                        ordinal = _u16(data, ords_off + i * 2)
+                        func_rva = (_u32(data, funcs_off + ordinal * 4)
+                                    if ordinal is not None else None)
+                        if None in (n_rva, ordinal, func_rva):
+                            break
                         noff = rva_to_offset(n_rva)
-                        if noff:
-                            end3 = data.index(b'\x00', noff)
-                            ename = data[noff:end3].decode('ascii', errors='replace')
-                        else:
-                            ename = None
+                        ename = _cstring(data, noff) if noff is not None else None
                         info.exports.append(ExportEntry(
                             name=ename,
                             ordinal=ordinal,

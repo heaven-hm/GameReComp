@@ -35,8 +35,10 @@ void recomp_pe_relocate(uint32_t base, uint32_t reloc_rva, uint32_t reloc_size, 
     if (!reloc_rva || !reloc_size || !delta) return;
     uint32_t off = 0;
     while (off < reloc_size) {
+        uint32_t left = reloc_size - off;
+        if (left < sizeof(pe_base_reloc)) break;
         pe_base_reloc *blk = (pe_base_reloc *)hle_ptr(base + reloc_rva + off);
-        if (blk->SizeOfBlock < sizeof *blk) break;
+        if (blk->SizeOfBlock < sizeof *blk || blk->SizeOfBlock > left) break;
         uint32_t nent = (blk->SizeOfBlock - (uint32_t)sizeof *blk) / 2;
         uint16_t *ent = (uint16_t *)(blk + 1);
         for (uint32_t i = 0; i < nent; i++) {
@@ -80,6 +82,32 @@ static int pe_map_buffer(const char *label, const uint8_t *file, size_t flen, pe
     pe_opt_header32 *opt = &nt->OptionalHeader;
     uint32_t image_base = opt->ImageBase;
     uint32_t span = round_up(opt->SizeOfImage, PAGE);
+
+    /* Reject malformed images before any guest-memory reservation or write.
+     * These checks mirror the PR #108 validation selftest and keep a truncated
+     * or hostile PE from making the loader copy past the file or map sections
+     * outside the declared image. */
+    uint16_t nsec = nt->FileHeader.NumberOfSections;
+    const uint8_t *sectab = (const uint8_t *)&nt->OptionalHeader + nt->FileHeader.SizeOfOptionalHeader;
+    if (nt->FileHeader.SizeOfOptionalHeader < sizeof(pe_opt_header32) ||
+        (size_t)(sectab - file) > flen ||
+        opt->SizeOfHeaders == 0 || (size_t)opt->SizeOfHeaders > flen ||
+        opt->SizeOfImage == 0 || span < opt->SizeOfImage ||
+        nsec == 0 || nsec > 96 ||
+        (size_t)(sectab - file) + (size_t)nsec * sizeof(pe_section_header) > flen) {
+        fprintf(stderr, "[pe] malformed PE headers\n"); return 1;
+    }
+    pe_section_header *sections = (pe_section_header *)sectab;
+    for (unsigned i = 0; i < nsec; i++) {
+        uint32_t va = sections[i].VirtualAddress, sz = sections[i].VirtualSize;
+        if (va >= span || sz > span - va ||
+            (size_t)sections[i].PointerToRawData > flen) {
+            fprintf(stderr, "[pe] section %u outside image/file\n", i); return 1;
+        }
+    }
+    if (opt->AddressOfEntryPoint >= span) {
+        fprintf(stderr, "[pe] entry point outside image\n"); return 1;
+    }
 
     /* Reserve the image's VA range, fixed, so every MEM32(va) in lifted code
      * lands. A range already in use (on a flat host, its heap or a library)
