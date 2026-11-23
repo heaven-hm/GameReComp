@@ -31,7 +31,7 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 | 19 | Hitman 2 | BLOCKED | same as #16 | pending agent | no original Windows files locally | OPEN |
 | 20 | Hitman Contracts | BLOCKED | same as #16 | pending agent | no original Windows files locally | OPEN |
 | 21 | Hitman Blood Money | BLOCKED | same as #16 | pending agent | no original Windows files locally | OPEN |
-| 22 | TrackMania Nations ESWC | IN_PROGRESS | `feature/p10-tmnf-eswc` | pending agent | Windows PE32 binary found and hashed; build in progress | OPEN |
+| 22 | TrackMania Nations ESWC | FAIL (native execution) | `feature/p10-tmnf-eswc` | `48b85c41…` | native build PASS after disasm guard; strict boot exit 2 (64 unresolved), permissive SIGBUS; no frames; evidence in `docs/GAME_TM_ESWC_EVIDENCE.md` | OPEN |
 | 23 | TrackMania Nations Forever | IN_PROGRESS | `feature/agent3-game-acceptance` | pending build | Windows PE32 binary found, SHA-256 recorded; build running in background | OPEN |
 | 24 | TrackMania United Forever | BLOCKED | — | — | no original Windows files locally | OPEN |
 | 25 | Multi-lifter fallback | IN_PROGRESS | `feature/upstream-issue-25` | `0ee2f988df5ba9cff5498cc61df7974cbf40db4e` | opt-in selector; 18 targeted + 188 full tests passed | OPEN |
@@ -124,3 +124,16 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - `bash runtime/win32hle/build_selftests.sh` → 25 selftests ok.
 - Linux host results remain UNTESTABLE here; no game-level registry/resource
   scenario was executed, so no issue was closed.
+
+## Integration checkpoint 7 (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `ab007b2c41929454b2e90d5e2bce62ec2b82642b`.
+- `feature/com-abi` (`c12a339`): real per-thread COM initialisation state
+  (S_OK/S_FALSE/RPC_E_CHANGED_MODE, NULL reserved, balanced uninitialise),
+  with `com_init_selftest`; merged with the earlier shared IID/interface work.
+- `feature/p10-tmnf-eswc` (`a909798`, `48b85c4`): disasm unmappable-extent guard
+  and honest FAIL evidence for TrackMania Nations ESWC.
+- `python3 -m pytest tests/ -q` → 177 passed, 2 skipped, 26 subtests passed.
+- `bash runtime/win32hle/build_selftests.sh` → 27 selftests ok.
+- No issue closed; COM functionality is ABI/lifecycle level only, and TM ESWC
+  execution genuinely failed.
