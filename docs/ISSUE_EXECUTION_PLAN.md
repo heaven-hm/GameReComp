@@ -226,3 +226,16 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
   branch; 45 win32hle selftests ok, 0 FAIL. Integration: 213 passed / 11 skipped.
 - New issues: #28 (API gaps, now import-complete but Doom frame evidence needs
   a legal WAD), #26 build scale, #27 DMD exception. **No issue closed.**
+
+## Integration checkpoint 11 — 10-agent swarm and proof evidence
+
+- `feature/integration-checkpoint` pushed/verified at `d19c82a226138f9d36a69346ff5cbb8af5cab6a8`.
+- Ten agents (A21–A30) merged with zero conflicts, each from base `f5c55e5` with exclusive file ownership:
+  - A21: NULL vtable dispatch no longer clobbers EAX and cascades into SIGBUS; precise diagnostics (root cause of Gunroar/Tumiki/Parsec47 crash cascade).
+  - A22: COMCTL32 FlatSB shims for HeroCore; A23: DirectDraw7 DDCAPS offset fix for Warning Forever.
+  - A24 + A29: common frame sink and SDL present wiring; Noiz2sa went from **0 frames to 3 non-blank frames (27/36/30 colours)** in a real rebuilt run.
+  - A25: measured source-size budget and diagnostics; A26: locale Ex APIs; A27: SList/Rtl extras; A28: wide-string CRT exports; A30: regenerated API coverage (2,249 shims, 20 system / 293 game-owned missing).
+- Proof tooling: `tools/frame_proof` decodes BMP frames and flags blank frames. It corrected the earlier Ikachan claim: all Ikachan frames are single-colour, including a 20s/10-frame capture. Only Cave Story (2/3), Noiz2sa (3/3) and Tetris (3/3) have non-blank frames, with 3–36 distinct colours. Gallery: `docs/PROOF_EVIDENCE.md` (`test-results/game-matrix/frame-proof/native-frames.html`).
+- Unicorn: original bytes vs generated C agree for Tetris `0x00406370` over 4 cases (registers + named guest memory); five other candidates were faulted/refused, not counted as passes. No whole-game or Windows side-by-side oracle exists; documented explicitly.
+- Verification: feature suite 229 passed / 8 skipped / 34 subtests; integration 226 passed / 11 skipped; **47 selftests ok, 0 FAIL**.
+- All issues remain OPEN; no 100% or gameplay claim.
