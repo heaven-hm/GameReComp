@@ -3286,6 +3286,94 @@ static void u_GetWindowTextLengthW(void) {
     RET(W(A32(0)) ? hle_send(A32(0), WM_GETTEXTLENGTH, 0, 0) : 0u, 1);
 }
 
+/* ---- more Unicode text/class shims ----
+ * GetClassNameW and GetDlgItemTextW complete the A/W pairs above;
+ * GetClassInfoW fills a WNDCLASSW. All three take caller-owned WCHAR buffers
+ * (counted in WCHARs, not bytes) and report failure honestly: an invalid HWND,
+ * a missing dialog item, or a null pointer returns 0/FALSE and touches no
+ * buffer the caller did not offer. */
+/* Copy an ANSI string into a guest WCHAR buffer of at most max cells, always
+ * writing the terminator. Returns the WCHAR count written before it. */
+static uint32_t wtext_put(const char *s, uint32_t dst_va, uint32_t max) {
+    if (!s || !dst_va || !max) return 0;
+    uint16_t *dst = (uint16_t *)hle_ptr(dst_va);
+    size_t len = strlen(s);
+    if (len + 1u <= max) {
+        if (!hle_ansi_to_wide(s, dst, (size_t)max)) { dst[0] = 0; return 0; }
+        return (uint32_t)len;
+    }
+    for (uint32_t i = 0; i + 1u < max; i++) dst[i] = (uint16_t)(uint8_t)s[i];
+    dst[max - 1u] = 0;
+    return max - 1u;
+}
+
+static void u_GetClassNameW(void) {                     /* (hwnd, LPWSTR, int count) */
+    win_t *x = W(A32(0));
+    uint32_t out = A32(1), max = A32(2);
+    if (!x || !out || !max) {
+        if (out && max) MEM16(out) = 0;
+        RET(0, 3); return;
+    }
+    RET(wtext_put(g_cls[x->cls].name, out, max), 3);
+}
+
+static void u_GetDlgItemTextW(void) {                   /* (dlg, id, LPWSTR, int count) */
+    uint32_t c = dlg_item(A32(0), A32(1));
+    uint32_t out = A32(2), max = A32(3);
+    if (!c || !out || !max || max > 0x100000u) {
+        if (out && max) MEM16(out) = 0;
+        RET(0, 4); return;
+    }
+    /* WM_GETTEXT counts bytes; a control's ANSI text maps 1:1 to WCHARs, so
+     * max*3+4 bytes is the same temporary GetWindowTextW hands its wndproc. */
+    uint32_t cap = max * 3u + 4u;
+    uint32_t tmp = hle_va(hle_alloc(cap));
+    if (!tmp) { MEM16(out) = 0; RET(0, 4); return; }
+    hle_send(c, WM_GETTEXT, cap, tmp);
+    uint32_t n = wtext_put((const char *)hle_ptr(tmp), out, max);
+    hle_free(hle_ptr(tmp));
+    RET(n, 4);
+}
+
+/* The two LPCWSTR fields of WNDCLASSW must remain valid after the call, so a
+ * wide copy of the menu name lives in one growable guest block. */
+static uint32_t g_classw_menu;
+static uint32_t classw_string(const char *s) {
+    if (!s || !*s) return 0;
+    size_t n = strlen(s) + 1u;
+    if (n > 0x7FFFFFFEu / 2u) return 0;
+    uint32_t need = (uint32_t)n * 2u;
+    if (!g_classw_menu || hle_heap_size(hle_ptr(g_classw_menu)) < need) {
+        uint32_t va = hle_va(hle_alloc(need));
+        if (!va) return 0;
+        g_classw_menu = va;
+    }
+    uint16_t *w = (uint16_t *)hle_ptr(g_classw_menu);
+    for (size_t i = 0; i < n; i++) w[i] = (uint16_t)(uint8_t)s[i];
+    return g_classw_menu;
+}
+
+static void u_GetClassInfoW(void) {                     /* (hinst, LPCWSTR, LPWNDCLASSW) */
+    builtin_classes();
+    uint32_t name_va = A32(1), wc = A32(2);
+    char buf[256] = "";
+    const char *name = NULL;
+    if (name_va < 0x10000u) name = (const char *)(uintptr_t)name_va;   /* an atom */
+    else if (wide_to_stack_ansi(name_va, buf, sizeof buf)) name = buf;
+    int i = find_class(name);
+    if (i < 0 || !wc) RET(0, 3);
+    /* WNDCLASSW is 40 bytes on x86, with the same scalar offsets as A; only
+     * lpszMenuName (+32) and lpszClassName (+36) are UTF-16 here. */
+    memset(hle_ptr(wc), 0, 40);
+    MEM32(wc) = g_cls[i].style, MEM32(wc + 4) = g_cls[i].proc, MEM32(wc + 12) = g_cls[i].extra;
+    MEM32(wc + 16) = g_cls[i].hinst;
+    uint32_t menu = g_cls[i].menu_res;
+    if (menu >= 0x10000u) menu = classw_string((const char *)hle_ptr(menu));
+    MEM32(wc + 32) = menu;
+    MEM32(wc + 36) = name_va;
+    RET(1, 3);
+}
+
 static void u_MessageBoxW(void) {
     char cap[256] = "", msg[512] = "";
     wide_to_stack_ansi(A32(1), msg, sizeof msg);
@@ -3591,6 +3679,8 @@ const win32hle_shim win32hle_user32[] = {
     { "DispatchMessageW", u_DispatchMessageA },
     { "GetWindowTextW", u_GetWindowTextW }, { "GetWindowTextLengthW", u_GetWindowTextLengthW },
     { "SetWindowTextW", u_SetWindowTextW }, { "SetDlgItemTextW", u_SetDlgItemTextW },
+    { "GetClassNameW", u_GetClassNameW }, { "GetDlgItemTextW", u_GetDlgItemTextW },
+    { "GetClassInfoW", u_GetClassInfoW },
     { "MessageBoxIndirectW", u_MessageBoxIndirectW },
     { "CreateCaret", u_CreateCaret }, { "DestroyCaret", u_DestroyCaret },
     { "ShowCaret", u_ShowCaret }, { "HideCaret", u_HideCaret },
