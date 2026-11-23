@@ -17,6 +17,7 @@ from tools.api_coverage import (  # noqa: E402
     import_name,
     pe_imports,
     registered_shims,
+    render_markdown,
     shim_import_names,
     strip_comments,
 )
@@ -242,6 +243,51 @@ class ApiCoverageTest(unittest.TestCase):
             shutil.copy(ROOT / "tests/fixtures/pe32-minimal.exe", d / "fixture.exe")
             report = build_report(d, {"ExitProcess"})
         json.dumps(report)
+
+    # ---- generated markdown doc -----------------------------------------
+
+    def _sample_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "fixture.exe").write_bytes(b"MZ")
+            imports = {
+                "kernel32.dll": ["ExitProcess", "MissingSysA", "MissingSysB"],
+                "bulletml.dll": ["bullet_init", "game_only"],
+            }
+            with mock.patch("tools.api_coverage.pe_imports", return_value=imports):
+                return build_report(d, {"ExitProcess", "bullet_init",
+                                        "D3D9::Device::Present"})
+
+    def test_render_markdown_uses_report_numbers(self):
+        report = self._sample_report()
+        doc = render_markdown(report, corpus="/fake/games",
+                              out="/tmp/api-coverage.json",
+                              generated_at="2026-01-01T00:00:00Z")
+        s = report["summary"]
+        self.assertIn(f"| PE32 inputs analysed | {s['inputs']} |", doc)
+        self.assertIn(f"| Registered shim names (`registered_shim_count`) | "
+                      f"{report['registered_shim_count']} |", doc)
+        self.assertIn(f"Missing Win32 **system** APIs (`distinct_missing_api`) | "
+                      f"{s['distinct_missing_api']} |", doc)
+        self.assertIn("| `kernel32.dll` | `MissingSysA` | 1 |", doc)
+        self.assertIn("| `bulletml.dll` | `game_only` | 1 |", doc)
+        self.assertIn("`/fake/games`", doc)
+        self.assertIn("`2026-01-01T00:00:00Z`", doc)
+
+    def test_render_markdown_is_deterministic(self):
+        report = self._sample_report()
+        kw = dict(corpus="/fake/games", generated_at="2026-01-01T00:00:00Z")
+        self.assertEqual(render_markdown(report, **kw),
+                         render_markdown(report, **kw))
+
+    def test_render_markdown_never_claims_completion(self):
+        report = self._sample_report()
+        doc = render_markdown(report, generated_at="2026-01-01T00:00:00Z")
+        self.assertIn("Coverage is incomplete", doc)
+        self.assertIn("registration audit", doc)
+        # Negative: there is no positive completion claim.
+        self.assertNotIn("coverage is complete", doc.lower())
+        self.assertNotIn("100% coverage achieved", doc.lower())
 
 
 if __name__ == "__main__":
