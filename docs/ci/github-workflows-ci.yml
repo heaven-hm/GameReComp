@@ -40,7 +40,8 @@ jobs:
       - name: Verify (the shared gate)
         run: |
           pip install -q pyelftools 2>/dev/null || true
-          sh verify.sh --fast
+          # --differential adds the fail-closed flags/memory comparator gate.
+          sh verify.sh --fast --differential
 
   runtime:
     name: win32hle selftests (${{ matrix.os }})
