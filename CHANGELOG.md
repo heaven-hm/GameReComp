@@ -5,6 +5,13 @@ All notable changes to this repository: the GameReComp PCRecomp-first product
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Adapted upstream PCRecomp #195 (`a67767b`): mouse mapping now reaches the
+  right and bottom edges of a scaled/HiDPI picture instead of stopping a pixel
+  or two short. Added a deterministic `screen_map_selftest` regression.
+
 ## [0.0.1] - 2026-11-19
 
 First beta release of the Rust GameReComp CLI and orchestrator.

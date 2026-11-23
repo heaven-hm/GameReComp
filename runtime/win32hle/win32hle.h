@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "recomp_types.h"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */
+#include "pe_loader.h"      /* pe_image: TLS callback dispatch takes a mapped image */
 
 /* ---- the Win32 ABI, portably ----
  * Win32 is 32-bit stdcall. HANDLE/HWND/HDC are uint32_t; a guest pointer is a
@@ -425,6 +426,9 @@ int  hle_screen_parse_env(int *fullscreen, int *w, int *h);
 /* Match the host window to the guest display mode (or an explicit size). */
 void hle_screen_set_native_size(int w, int h);
 int  hle_screen_request_opengl(void);  /* before open: make the screen window own a GL context */
+void hle_screen_map_point(int px, int py, int pw, int ph, int ww, int wh,
+                          int dx, int dy, int dw, int dh, int gw, int gh,
+                          int *gx, int *gy);
 int  hle_screen_gl_active(void);
 void hle_screen_mouse(int *x, int *y);                                 /* the pointer in the game's pixels, clamped */
 void hle_screen_d3d7_active(int active); /* D3D7 swaps GL frames; suppress software-primary redraws */
@@ -525,7 +529,7 @@ int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
  * them. The host maps each DLL at its preferred base at boot and answers the
  * main image's IAT slots for its exports with the export VA. Nothing here is
  * a shim: the code that runs is the lifted DLL's own. */
-typedef struct { const char *name; uint32_t va; } recomp_export_t;
+typedef struct { const char *name; uint32_t va; uint16_t ordinal; } recomp_export_t;
 typedef struct {
     const char *dll;             /* as imported: "bulletml.dll" */
     uint32_t base;               /* ImageBase the lifted code targets */
@@ -545,3 +549,4 @@ extern const uint32_t recomp_companion_count;
 /* The export VA for `dll`/`name`, or 0. dll is matched by base name, case
  * insensitively. Called by the IAT binder before falling back to a shim. */
 uint32_t recomp_companion_resolve(const char *dll, const char *name);
+void hle_pe_run_tls_callbacks(const pe_image *img);

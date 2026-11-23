@@ -97,11 +97,15 @@ fi
 # ------------------------------------------------------------------- gui
 head1 "gui"
 if [ -x gui/build/gamerecomp ]; then
-    if QT_QPA_PLATFORM=offscreen gui/build/gamerecomp --selftest projects/cavestory-doukutsu --repo "$PWD" \
-         > /tmp/verify-gui.log 2>&1; then
-        ok "gui reads a real project headlessly" "$(grep '^functions:' /tmp/verify-gui.log)"
+    if [ -d projects/cavestory-doukutsu ]; then
+        if QT_QPA_PLATFORM=offscreen gui/build/gamerecomp --selftest projects/cavestory-doukutsu --repo "$PWD" \
+             > /tmp/verify-gui.log 2>&1; then
+            ok "gui reads a real project headlessly" "$(grep '^functions:' /tmp/verify-gui.log)"
+        else
+            bad "gui reads a real project headlessly" "$(head -2 /tmp/verify-gui.log | tr '\n' ' ')"
+        fi
     else
-        bad "gui reads a real project headlessly" "$(head -2 /tmp/verify-gui.log | tr '\n' ' ')"
+        skip "gui reads a real project headlessly" "projects/cavestory-doukutsu not generated"
     fi
     if QT_QPA_PLATFORM=offscreen gui/build/gamerecomp --selftest-pe tests/fixtures/pe32-minimal.exe \
          > /tmp/verify-gui-pe.log 2>&1; then
