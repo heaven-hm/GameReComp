@@ -241,7 +241,9 @@ def tier_fast(record=False, baseline=None):
     if gui.is_file():
         import os
         env = dict(os.environ, QT_QPA_PLATFORM="offscreen")
-        g = _run([str(gui), "--selftest", "projects/cavestory-doukutsu",
+        # Use the freshly generated fixture project, not a path that may only
+        # exist on a developer's machine. This makes the GUI check reproducible.
+        g = _run([str(gui), "--selftest", str(project),
                   "--repo", str(ROOT)], timeout=120, env=env)
         ok_gui = g.returncode == 0 and "functions:" in g.stdout
         results.append({
