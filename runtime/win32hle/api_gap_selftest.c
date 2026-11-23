@@ -3,6 +3,7 @@
 #define _GNU_SOURCE
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "win32hle.h"
 
@@ -144,6 +145,24 @@ int main(void) {
     uint32_t initenv = hle_msvcrt_data("__initenv");
     ok("__initenv resolves as a data export", initenv != 0);
     ok("__initenv points at the guest environment vector", MEM32(initenv) != 0);
+
+    /* Native display sizing: RECOMP_FULLSCREEN / RECOMP_WINDOW_SIZE. */
+    int fs = 0, w = 0, hgt = 0;
+    unsetenv("RECOMP_FULLSCREEN");
+    unsetenv("RECOMP_WINDOW_SIZE");
+    ok("no display policy by default", hle_screen_parse_env(&fs, &w, &hgt) == 0);
+    setenv("RECOMP_FULLSCREEN", "1", 1);
+    setenv("RECOMP_WINDOW_SIZE", "640x480", 1);
+    fs = 0; w = 0; hgt = 0;
+    ok("display policy parsed", hle_screen_parse_env(&fs, &w, &hgt) == 1);
+    ok("fullscreen requested", fs == 1);
+    ok("exact native size requested", w == 640 && hgt == 480);
+    setenv("RECOMP_WINDOW_SIZE", "bogus", 1);
+    fs = 0; w = 0; hgt = 0;
+    ok("malformed size ignored, fullscreen kept",
+       hle_screen_parse_env(&fs, &w, &hgt) == 1 && fs == 1 && w == 0 && hgt == 0);
+    unsetenv("RECOMP_FULLSCREEN");
+    unsetenv("RECOMP_WINDOW_SIZE");
 
     mach_leave();
     printf("api_gap_selftest: all checks passed\n");

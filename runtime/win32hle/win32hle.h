@@ -419,6 +419,10 @@ extern const win32hle_shim win32hle_bink[];           /* binkw32 on ffmpeg (bink
 /* The SDL2 display and input for a DirectDraw game (screen.c): installs
  * itself as the pump hook. headless: no window (a script drives input). */
 int  hle_screen_open(const char *title, int fullscreen, int headless);
+/* RECOMP_FULLSCREEN=1 / RECOMP_WINDOW_SIZE=WxH, parsed fail-closed. */
+int  hle_screen_parse_env(int *fullscreen, int *w, int *h);
+/* Match the host window to the guest display mode (or an explicit size). */
+void hle_screen_set_native_size(int w, int h);
 int  hle_screen_request_opengl(void);  /* before open: make the screen window own a GL context */
 int  hle_screen_gl_active(void);
 void hle_screen_mouse(int *x, int *y);                                 /* the pointer in the game's pixels, clamped */

@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <pthread.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -45,6 +46,7 @@ static int g_tex_w, g_tex_h, g_tex_fmt;
 static unsigned g_shown_seq = ~0u;
 static uint32_t g_last_present;
 static int g_headless, g_fullscreen;
+static int g_native_w = 1280, g_native_h = 960;    /* guest display mode / explicit size */
 static SDL_Rect g_dst;                                   /* where the picture is in the window */
 static pthread_t g_video_thread;                         /* SDL's video calls stay on the thread that opened it */
 static SDL_Texture *g_pre, *g_small;                     /* sharp's integer prescale; the bars' blur */
@@ -888,8 +890,46 @@ static void primary_changed(void) {
     present();
 }
 
+/* Parse the optional display policy without assuming any environment is set.
+ * A malformed size is ignored (fail-closed), never partially applied. */
+int hle_screen_parse_env(int *fullscreen, int *w, int *h) {
+    int any = 0;
+    const char *f = getenv("RECOMP_FULLSCREEN");
+    if (f && (!strcmp(f, "1") || !strcasecmp(f, "yes"))) {
+        if (fullscreen) *fullscreen = 1;
+        any = 1;
+    }
+    const char *spec = getenv("RECOMP_WINDOW_SIZE");
+    if (spec && *spec) {
+        int sw = 0, sh = 0;
+        if (sscanf(spec, "%dx%d", &sw, &sh) == 2 && sw >= 320 && sh >= 240 &&
+            sw <= 8192 && sh <= 8192) {
+            if (w) *w = sw;
+            if (h) *h = sh;
+            any = 1;
+        } else {
+            fprintf(stderr, "[screen] ignoring malformed RECOMP_WINDOW_SIZE=%s\n", spec);
+        }
+    }
+    return any;
+}
+
+void hle_screen_set_native_size(int w, int h) {
+    if (w <= 0 || h <= 0) return;
+    g_native_w = w, g_native_h = h;
+    if (g_win && !g_fullscreen) {
+        SDL_SetWindowSize(g_win, w, h);
+        SDL_SetWindowPosition(g_win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    }
+}
+
 int hle_screen_open(const char *title, int fullscreen, int headless) {
     g_screen_opened = 1;
+    int ew = 0, eh = 0, ef = 0;
+    if (hle_screen_parse_env(&ef, &ew, &eh)) {
+        if (ef) fullscreen = 1;
+        if (ew && eh) { g_native_w = ew, g_native_h = eh; }
+    }
     g_headless = headless, g_fullscreen = fullscreen;
     hle_set_pump_hook(hle_screen_pump);
     hle_gdi_window_hook = present;                       /* a GDI game's blit shows, pumping or not (a loading bar) */
@@ -903,8 +943,12 @@ int hle_screen_open(const char *title, int fullscreen, int headless) {
         SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
         SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);   /* D3D titles clear and test stencil */
     }
-    g_win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960, flags);
+    g_win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                             g_native_w, g_native_h, flags);
     if (!g_win) { fprintf(stderr, "[screen] window: %s\n", SDL_GetError()); return -1; }
+    { int ww = 0, wh = 0; SDL_GetWindowSize(g_win, &ww, &wh);
+      fprintf(stderr, "[screen] window %dx%d fullscreen=%d (RECOMP_WINDOW_SIZE/RECOMP_FULLSCREEN)\n",
+              ww, wh, g_fullscreen); }
     if (g_gl_requested) {
         g_glctx = SDL_GL_CreateContext(g_win);
         if (!g_glctx) { fprintf(stderr, "[screen] OpenGL context: %s\n", SDL_GetError()); return -1; }

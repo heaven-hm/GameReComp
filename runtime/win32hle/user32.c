@@ -172,6 +172,9 @@ static void move(win_t *x, int px, int py, int pw, int ph, int do_move, int do_s
 void hle_set_screen_size(int w, int h) {
     int ow = g_screen_w, oh = g_screen_h;
     g_screen_w = w, g_screen_h = h;
+    /* Keep the host window at the guest's display mode so the picture is
+     * shown at its native size instead of a fixed 1280x960 default. */
+    hle_screen_set_native_size(w, h);
     for (int i = 0; i < MAX_WIN; i++) {
         win_t *x = &g_win[i];
         if (x->used && !x->parent && !x->owner && x->x <= 0 && x->y <= 0 && x->x + x->w >= ow && x->y + x->h >= oh)
