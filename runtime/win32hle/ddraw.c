@@ -31,6 +31,7 @@
 #define DDERR_NOTLOCKED         0x887602ACu
 #define DDERR_GENERIC           0x80004005u
 #define DDERR_SURFACEBUSY       0x887601B6u
+#define DDERR_OUTOFMEMORY       0x8876001Bu   /* MAKE_DDHRESULT(27) */
 
 #define DDSD_CAPS        0x00000001u
 #define DDSD_HEIGHT      0x00000002u
@@ -946,6 +947,28 @@ static void x_DirectDrawCreateEx(void) {                 /* (guid, &out, iid, ou
     MEM32(obj+4)=1;                                      /* the caller now holds the object's one reference */
     RET(DD_OK,4);
 }
+/* DirectDrawCreateClipper - the standalone clipper export, missing until now.
+ * ddraw.h: dwFlags must be 0 and pUnkOuter must be NULL (COM aggregation is not
+ * supported); anything else is DDERR_INVALIDPARAMS with the out pointer
+ * cleared. The object is not owned by a DirectDraw object, so it is built on
+ * the very same IDirectDrawClipper vtable IDirectDraw::CreateClipper uses:
+ * identical guest slots and refcount layout, with no display, no primary and
+ * no second renderer. MSDN notes it is normally reached through
+ * GetProcAddress, which resolves names from this shim table. */
+static void x_DirectDrawCreateClipper(void) {            /* (flags, &out, outer) */
+    uint32_t flags = A32(0), out = A32(1), outer = A32(2);
+    if (trace()) fprintf(stderr, "[ddraw] DirectDrawCreateClipper(flags=0x%X, out=%08X, outer=%08X)\n", flags, out, outer);
+    if (flags || !out || outer) {
+        if (out) MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 3);
+    }
+    vtables();
+    uint32_t o = hle_com_new(g_vt_clip, 12);             /* vt, refs, hWnd */
+    if (!o) { MEM32(out) = 0; RET(DDERR_OUTOFMEMORY, 3); }
+    MEM32(o + 8) = 0;                                    /* no HWND until SetHWnd/Initialize */
+    MEM32(out) = o;
+    RET(DD_OK, 3);
+}
 static void x_DirectDrawEnumerateA(void) {               /* (callback, ctx): the primary display */
     static uint32_t desc, name;                          /* the guest may keep them */
     if (!desc) desc = hle_guest_strdup("Primary Display Driver"), name = hle_guest_strdup("display");
@@ -965,6 +988,7 @@ static void x_DirectDrawEnumerateExA(void) {
 
 const win32hle_shim win32hle_ddraw[] = {
     { "DirectDrawCreate", x_DirectDrawCreate }, { "DirectDrawCreateEx", x_DirectDrawCreateEx },
+    { "DirectDrawCreateClipper", x_DirectDrawCreateClipper },
     { "DirectDrawEnumerateA", x_DirectDrawEnumerateA }, { "DirectDrawEnumerateExA", x_DirectDrawEnumerateExA },
     { 0, 0 }
 };
