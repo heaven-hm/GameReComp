@@ -375,6 +375,7 @@ uint32_t hle_d3d7_create(void);                       /* IDirect3D7 COM object; 
 uint32_t hle_d3d7_get(void);                          /* the same object, without taking a reference */
 void hle_d3d7_present_begin(void);                    /* bind the window framebuffer while presenting a frame */
 void hle_d3d7_present_end(void);                      /* hand the device's render target back */
+extern const win32hle_shim win32hle_d3d9[];          /* D3D9 guest COM frontend (d3d9.c) */
 extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
 extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 audio (sdlmix.c) */
 extern const win32hle_shim win32hle_gl32[];           /* OPENGL32/GLU32 on the host's GL (gl32.c) */
