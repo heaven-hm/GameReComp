@@ -3,9 +3,18 @@
 
 Reads imports from real PE32 files, compares them with the shim names actually
 registered in runtime/win32hle/*.c, and reports implemented / missing imports
-and ordinal imports. No API is called "supported" merely because a DLL name
-appears in a registry: only a registered shim name counts as implemented, and
-the report says so.
+and ordinal imports.
+
+Only a registered shim name counts as implemented.  A namespaced shim such as
+``D3D9::Object::QueryInterface`` or ``IDirect3D8::CreateDevice`` is reduced to
+its leaf (``QueryInterface`` / ``CreateDevice``), because that leaf is the name
+a PE import table actually carries.  An ordinal alias such as
+``wsock32.dll#12`` is likewise reduced to ``#12``.  None of this is proof that
+the function *behaves* correctly: it only proves a name is registered.
+
+PE imports from game-owned DLLs (binkw32.dll, bulletml.dll, d3dx9_30.dll,
+MSVCP140.dll, VCRUNTIME140.dll, ...) are NOT Win32 system APIs.  They are
+reported separately so the "missing API" headline number is not misleading.
 
     python3 -m tools.api_coverage --corpus /path/to/games --out reports/api-coverage.json
 """
@@ -22,24 +31,104 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "runtime" / "win32hle"
 
-# Table forms used by the runtime: { "name", fn }, SHIM2(ord, "name", fn),
-# AUT(ord, "name", fn), SHIM1(...). String literals in comments are excluded
-# by requiring a comma after the quote.
+# Shim names may be plain Win32 symbols, COM/interface names ("IStream::Read",
+# "D3D9::Device::Present"), or ordinal aliases ("wsock32.dll#12").  ':' is
+# included in the character class so namespaced literals are extracted too.
+SHIM_NAME = r'"([A-Za-z0-9_:?#@.$]+)"'
+
+# Table forms used by the runtime:
+#   { "name", fn }, SHIM2(ord, "name", fn), AUT(ord, "name", fn), SHIM1(...)
+# X-macro method lists - X("name", fn, argc) - expand into shim table entries
+# (d3d8.c builds "IDirect3D8::" name; d3d9.c spells out the full name).  The
+# strict three-argument, numeric-argc form keeps other X macros out.
 SHIM_PATTERNS = [
-    re.compile(r'\{\s*"([A-Za-z0-9_?#@.$]+)"\s*,'),
-    re.compile(r'\bSHIM\d*\s*\(\s*\d+\s*,\s*"([A-Za-z0-9_?#@.$]+)"'),
-    re.compile(r'\bAUT\s*\(\s*\d+\s*,\s*"([A-Za-z0-9_?#@.$]+)"'),
+    re.compile(r'\{\s*' + SHIM_NAME + r'\s*,'),
+    re.compile(r'\bSHIM\d*\s*\(\s*\d+\s*,\s*' + SHIM_NAME),
+    re.compile(r'\bAUT\s*\(\s*\d+\s*,\s*' + SHIM_NAME),
+    re.compile(r'\bX\s*\(\s*' + SHIM_NAME + r'\s*,\s*[A-Za-z_]\w*\s*,\s*\d+\s*\)'),
 ]
+# SHIM2/AUT synthesise "wsock32.dll#12" from a macro definition like
+#   #define SHIM2(ord, name, fn) { "wsock32.dll#" #ord, fn }, { name, fn }
+# The alias is not a literal at the call site, so recover it from the define.
+ORDINAL_ALIAS_DEF = re.compile(
+    r'#define\s+(SHIM\d*|AUT)\s*\([^)]*\)\s*\{[^}]*?"([A-Za-z0-9_.]+\.(?:dll|drv)#)"\s*#\s*\w+',
+    re.S,
+)
+ORDINAL_INVOCATION = re.compile(r'\b(SHIM\d*|AUT)\s*\(\s*(\d+)\s*,')
 NON_API = {"win32hle.h", "README"}
+
+# Allow-list of DLLs that are part of the Win32 / DirectX system surface this
+# project targets.  Anything NOT in this set is treated as game-owned (a game's
+# own DLL or a bundled third-party/redistributable runtime), never as a Win32
+# system API.  Keeping this as an allow-list is deliberate: an unknown DLL is
+# conservatively game-owned, so it cannot silently inflate the Win32 number.
+SYSTEM_DLLS = frozenset({
+    "advapi32.dll", "avifil32.dll", "comctl32.dll", "comdlg32.dll",
+    "crypt32.dll", "d3d8.dll", "d3d9.dll", "ddraw.dll", "dinput.dll",
+    "dinput8.dll", "dplayx.dll", "dsound.dll", "gdi32.dll", "gdiplus.dll",
+    "imm32.dll", "iphlpapi.dll", "kernel32.dll", "kernelbase.dll", "lz32.dll",
+    "msimg32.dll", "msvcr100.dll", "msvcr110.dll", "msvcr120.dll",
+    "msvcr80.dll", "msvcr90.dll", "msvcrt.dll", "ntdll.dll", "ole32.dll",
+    "oleaut32.dll", "opengl32.dll", "psapi.dll", "quartz.dll", "rpcrt4.dll",
+    "setupapi.dll", "shell32.dll", "shlwapi.dll", "unicows.dll", "user32.dll",
+    "userenv.dll", "version.dll", "wininet.dll", "winmm.dll", "winspool.drv",
+    "uxtheme.dll", "ws2_32.dll", "wsock32.dll",
+})
+
+
+def strip_comments(text: str) -> str:
+    """Remove C comments so a string literal in a comment is never counted."""
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+    return re.sub(r"//[^\n]*", "", text)
 
 
 def registered_shims(runtime_dir: Path = RUNTIME) -> set[str]:
-    names = set()
+    """Return the raw names actually registered as shim table entries.
+
+    Namespaced names and ordinal aliases are kept verbatim; use
+    :func:`shim_import_names` to map them onto PE import names.
+    """
+    names: set[str] = set()
     for path in sorted(Path(runtime_dir).glob("*.c")):
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = strip_comments(path.read_text(encoding="utf-8", errors="replace"))
         for pattern in SHIM_PATTERNS:
             names.update(pattern.findall(text))
+        prefixes = {macro: prefix for macro, prefix in ORDINAL_ALIAS_DEF.findall(text)}
+        for macro, ordinal in ORDINAL_INVOCATION.findall(text):
+            if macro in prefixes:
+                names.add(prefixes[macro] + ordinal)
     return names - NON_API
+
+
+def import_name(shim: str) -> str:
+    """Map one registered shim name to the PE import name it answers.
+
+    ``D3D9::Object::QueryInterface`` -> ``QueryInterface`` (the leaf is the
+    imported function name); ``wsock32.dll#12`` -> ``#12`` (ordinal import).
+    """
+    if "::" in shim:
+        return shim.rsplit("::", 1)[1]
+    if "#" in shim:
+        return "#" + shim.rsplit("#", 1)[1]
+    return shim
+
+
+def shim_import_names(shims) -> set[str]:
+    """Register-set -> set of PE import names covered by real shims.
+
+    Both the full name and its import alias are returned.  Only names from the
+    supplied registry are used; nothing is inferred from a DLL name.
+    """
+    names: set[str] = set()
+    for shim in shims:
+        names.add(shim)
+        names.add(import_name(shim))
+    return names
+
+
+def dll_kind(dll: str) -> str:
+    """``"system"`` for a known Win32 system DLL, else ``"game-owned"``."""
+    return "system" if dll.lower() in SYSTEM_DLLS else "game-owned"
 
 
 def pe_imports(path: Path) -> dict:
@@ -59,52 +148,96 @@ def pe_imports(path: Path) -> dict:
     return dlls
 
 
+def _implemented(name: str, dll: str, raw: set[str], covered: set[str]) -> bool:
+    """True when a real registered shim answers this import name.
+
+    Ordinals are matched DLL-first (``wsock32.dll#12``); the numeric fallback
+    covers registrations without a DLL-qualified alias.
+    """
+    if name.startswith("#"):
+        return f"{dll}{name}" in raw or name in covered
+    return name in covered
+
+
 def build_report(corpus: Path, shims: set[str]) -> dict:
     corpus = Path(corpus)
+    raw = set(shims)
+    covered = shim_import_names(raw)
     inputs = {}
-    all_missing = Counter()
+    all_missing = Counter()            # system DLLs only (headline)
+    all_game_missing = Counter()       # game-owned DLLs, separate blocker list
     all_ordinal = Counter()
-    all_dlls = Counter()
+    all_game_ordinal = Counter()
+    dlls_by_kind = {"system": set(), "game-owned": set()}
     for path in sorted(corpus.rglob("*.exe")):
         try:
             data = path.read_bytes()
             imports = pe_imports(path)
-        except Exception as exc:
+        except Exception:
             continue
         digest = hashlib.sha256(data).hexdigest()
         missing = {}
+        game_missing = {}
         ordinals = {}
+        game_ordinals = {}
         for dll, names in imports.items():
-            all_dlls[dll] += 1
+            kind = dll_kind(dll)
+            dlls_by_kind[kind].add(dll)
             for name in names:
+                if _implemented(name, dll, raw, covered):
+                    continue
                 if name.startswith("#"):
-                    ordinals.setdefault(dll, []).append(name)
-                    all_ordinal[dll] += 1
-                elif name not in shims:
-                    missing.setdefault(dll, []).append(name)
-                    all_missing[(dll, name)] += 1
+                    (game_ordinals if kind == "game-owned" else ordinals).setdefault(dll, []).append(name)
+                    (all_game_ordinal if kind == "game-owned" else all_ordinal)[dll] += 1
+                else:
+                    (game_missing if kind == "game-owned" else missing).setdefault(dll, []).append(name)
+                    (all_game_missing if kind == "game-owned" else all_missing)[(dll, name)] += 1
         inputs[digest] = {
             "input_sha256": digest,
             "path": str(path),
             "imports": imports,
-            "missing": missing,
-            "ordinals": ordinals,
+            "missing": missing,               # system DLLs
+            "game_owned_missing": game_missing,
+            "ordinals": ordinals,             # system DLLs
+            "game_owned_ordinals": game_ordinals,
         }
     return {
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "tool": "python3 -m tools.api_coverage",
-        "what": "PE32 import coverage against registered win32hle shims",
-        "is_not": "proof that a function behaves correctly; only that it is registered",
-        "registered_shim_count": len(shims),
+        "what": "PE32 import-name coverage against registered win32hle shim names",
+        "is_not": "proof that a function behaves correctly; registration only proves a name is present",
+        "counting_rule": (
+            "Implemented means the import name equals a registered shim name, the "
+            "leaf of a '::' namespaced shim, or a '#N' ordinal alias. Registration "
+            "is not proof of behaviour. Game-owned DLL imports are reported "
+            "separately from Win32 system DLL imports."
+        ),
+        "summary_scope": "headline counts cover Win32 system DLLs only; game-owned counts are separate",
+        "registered_shim_count": len(raw),
+        "registered_import_name_count": len(covered),
+        "dll_classification": {
+            "system": sorted(dlls_by_kind["system"]),
+            "game_owned": sorted(dlls_by_kind["game-owned"]),
+        },
         "summary": {
             "inputs": len(inputs),
-            "distinct_dlls": len(all_dlls),
-            "distinct_missing_api": len(all_missing),
-            "ordinal_imports": sum(all_ordinal.values()),
+            "distinct_dlls": len(dlls_by_kind["system"]) + len(dlls_by_kind["game-owned"]),
+            "system_dlls": len(dlls_by_kind["system"]),
+            "game_owned_dlls": len(dlls_by_kind["game-owned"]),
+            "distinct_missing_api": len(all_missing),          # system only
+            "game_owned_missing_api": len(all_game_missing),
+            "all_missing_api": len(all_missing) + len(all_game_missing),
+            "ordinal_imports": sum(all_ordinal.values()),      # system only
+            "game_owned_ordinal_imports": sum(all_game_ordinal.values()),
+            "all_ordinal_imports": sum(all_ordinal.values()) + sum(all_game_ordinal.values()),
         },
-        "missing_by_api": [
+        "missing_by_api": [               # system DLLs only - the honest number
             {"dll": dll, "name": name, "files": count}
             for (dll, name), count in all_missing.most_common()
+        ],
+        "game_owned_missing_by_api": [
+            {"dll": dll, "name": name, "files": count}
+            for (dll, name), count in all_game_missing.most_common()
         ],
         "inputs": inputs,
     }
@@ -123,9 +256,11 @@ def main(argv=None) -> int:
     report = build_report(Path(corpus), registered_shims())
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-    print(f"api coverage: {report['summary']['inputs']} inputs, "
-          f"{report['summary']['distinct_missing_api']} missing APIs, "
-          f"{report['summary']['ordinal_imports']} ordinal imports -> {args.out}")
+    s = report["summary"]
+    print(f"api coverage: {s['inputs']} inputs, "
+          f"{s['distinct_missing_api']} system missing APIs, "
+          f"{s['game_owned_missing_api']} game-owned missing APIs, "
+          f"{s['ordinal_imports']} system ordinal imports -> {args.out}")
     return 0
 
 
