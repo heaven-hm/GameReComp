@@ -238,15 +238,52 @@ static int dmd_local_unwind(uint32_t record, uint32_t tbl, int stop_index) {
     return idx == stop_index;
 }
 
-int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va) {
-    if (code != 0xE0440001u || n_args < 1u || !args_va || !g_fs_base) return 0;
+/* The catch record at [fs:0] belongs to the function whose EBP is record+12.
+ * Normally that function has a RECOMP_EH_ENTER checkpoint at entry_esp == EBP+4,
+ * and recomp_eh_resume longjmps straight into its landing pad.
+ *
+ * DMD also emits tail-call stubs such as gr.exe's
+ *     0040DB9C: add eax, -0Ch ; jmp 0040DBC0
+ * where the callee opens an SEH frame (mov fs:[0], esp) but its body is lifted
+ * *into the stub's function*.  The stub has no EH prologue, so the lifter emits
+ * no RECOMP_EH_ENTER for that EBP: the guest registration record is live, but
+ * there is no host checkpoint whose entry_esp == EBP+4.  Exact matching then
+ * fails with "no matching lifted guest frame" even though the catch table is
+ * valid (measured on gr.exe: record 0x104FEE94 -> table 0x0044BAF8 ->
+ * catch 0x0040DC96).
+ *
+ * Recover without touching the guest metadata: use the innermost *live*
+ * checkpoint whose entry_esp is inside the catch-owning guest frame.  It is a
+ * valid setjmp target between the throw site and that frame, so longjmp there
+ * unwinds the host C frames; its landing pad's default arm tail-calls the
+ * lifted catch VA with the guest EBP/ESP set for the catch owner.  The exact
+ * owner is still preferred whenever it exists. */
+static recomp_ehframe_t *dmd_resume_frame(uint32_t ebp, int *exact) {
+    recomp_ehframe_t *inner = NULL;
+    *exact = 0;
+    for (recomp_ehframe_t *f = g_eh_frames; f; f = f->prev) {
+        if (f->entry_esp == ebp + 4u) { *exact = 1; return f; }
+        /* entry_esp is the function's entry stack pointer; a frame whose entry
+         * is above this record's EBP was called inside the catch-owning frame. */
+        if (f->entry_esp > ebp + 4u && (!inner || f->entry_esp < inner->entry_esp))
+            inner = f;
+    }
+    return inner;
+}
+
+int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
+                   const char **reason) {
+    if (reason) *reason = "unsupported throw";
+    if (code != 0xE0440001u) { if (reason) *reason = "not a DMD throw"; return 0; }
+    if (n_args < 1u || !args_va) { if (reason) *reason = "missing exception arguments"; return 0; }
+    if (!g_fs_base) { if (reason) *reason = "no guest TIB/FS base"; return 0; }
     uint32_t exc_obj = MEM32(args_va);
-    if (!exc_obj) return 0;
+    if (!exc_obj) { if (reason) *reason = "null exception object"; return 0; }
     uint32_t vtbl = MEM32(exc_obj);
     uint32_t obj_ci = vtbl ? MEM32(vtbl) : 0u;
     uint32_t top = MEM32(g_fs_base), record = top;
     for (unsigned walked = 0; record != EH_END_CHAIN && walked < EH_MAX_CHAIN; walked++) {
-        if (!plausible_stack_record(record)) return 0;
+        if (!plausible_stack_record(record)) { if (reason) *reason = "malformed registration record"; return 0; }
         uint32_t tbl = dmd_table(MEM32(record + 4u));
         if (!tbl) { record = MEM32(record); continue; }
         int idx = (int)MEM32(record + 8u);
@@ -265,22 +302,31 @@ int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va) {
                         int32_t bpoff = (int32_t)MEM32(cb + 4u);
                         if (!catch_va || !dmd_isbaseof(obj_ci, wanted)) continue;
                         uint32_t ebp = record + 12u;
-                        recomp_ehframe_t *target_frame = NULL;
-                        for (recomp_ehframe_t *frame = g_eh_frames; frame; frame = frame->prev) {
-                            if (frame->entry_esp == ebp + 4u) { target_frame = frame; break; }
+                        int exact = 0;
+                        recomp_ehframe_t *target_frame = dmd_resume_frame(ebp, &exact);
+                        if (!target_frame) {
+                            if (reason) *reason = "no EH checkpoint for tail-call-inlined catch frame and no inner live checkpoint";
+                            return 0;
                         }
-                        if (!target_frame) return 0;
+                        /* The fallback enters the catch through the landing pad's
+                         * RECOMP_ITAIL(catch_va), so the continuation must be lifted. */
+                        if (!exact && !recomp_lookup(catch_va)) {
+                            if (reason) *reason = "catch continuation is not a lifted guest function";
+                            return 0;
+                        }
                         for (uint32_t above = top; above != record; above = MEM32(above)) {
-                            if (!plausible_stack_record(above)) return 0;
+                            if (!plausible_stack_record(above)) { if (reason) *reason = "malformed outer registration record"; return 0; }
                             uint32_t atbl = dmd_table(MEM32(above + 4u));
-                            if (atbl && !dmd_local_unwind(above, atbl, -1)) return 0;
+                            if (atbl && !dmd_local_unwind(above, atbl, -1)) { if (reason) *reason = "outer local unwind failed"; return 0; }
                         }
-                        if (!dmd_local_unwind(record, tbl, idx)) return 0;
+                        if (!dmd_local_unwind(record, tbl, idx)) { if (reason) *reason = "local unwind failed"; return 0; }
                         MEM32(g_fs_base) = record;
                         MEM32(record + 8u) = (uint32_t)prev;
                         MEM32(ebp + (uint32_t)bpoff) = exc_obj;
                         g_ebp = ebp;
                         g_esp = ebp - MEM32(tbl + 4u);
+                        if (reason) *reason = exact ? "dispatched to guest catch"
+                            : "dispatched to guest catch via inner checkpoint (catch frame tail-call-inlined: no EH landing pad)";
                         recomp_eh_resume(target_frame, catch_va);
                         return 0;
                     }
@@ -290,6 +336,7 @@ int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va) {
         }
         record = MEM32(record);
     }
+    if (reason) *reason = "no matching catch handler";
     return 0;
 }
 

@@ -93,18 +93,69 @@ uint32_t hle_com_new(uint32_t vtable, uint32_t size) {
     return hle_va(o);
 }
 void hle_com_free(uint32_t obj) { hle_free(hle_ptr(obj)); }
-/* IUnknown for such objects: any interface is this one (a host serves one
- * interface per object), counted at +4, freed at zero. */
+/* Interface identity: a side table keeps IID -> interface VA out of the guest
+ * object layout, so existing DirectX objects are unchanged.  Objects that
+ * never bind an IID keep the legacy single-interface answer. */
+#define MAX_COM_IIDS 256
+static struct { uint32_t obj, iface; uint8_t iid[16]; } g_iids[MAX_COM_IIDS];
+static int g_niids;
+
+int hle_com_iid_equal(const uint8_t *a, const uint8_t *b) {
+    return a && b && memcmp(a, b, 16) == 0;
+}
+void hle_com_bind_iid(uint32_t obj, const uint8_t *iid, uint32_t iface) {
+    if (!obj || !iid || !iface) return;
+    for (int i = 0; i < g_niids; i++)
+        if (g_iids[i].obj == obj && !memcmp(g_iids[i].iid, iid, 16)) {
+            g_iids[i].iface = iface;
+            return;
+        }
+    if (g_niids < MAX_COM_IIDS) {
+        g_iids[g_niids].obj = obj, g_iids[g_niids].iface = iface;
+        memcpy(g_iids[g_niids].iid, iid, 16);
+        g_niids++;
+    }
+}
+void hle_com_unbind_iids(uint32_t obj) {
+    int w = 0;
+    for (int i = 0; i < g_niids; i++) {
+        if (g_iids[i].obj == obj) continue;
+        if (w != i) g_iids[w] = g_iids[i];
+        w++;
+    }
+    g_niids = w;
+}
+static int bound_iids(uint32_t obj) {
+    for (int i = 0; i < g_niids; i++) if (g_iids[i].obj == obj) return 1;
+    return 0;
+}
+
+/* IUnknown for host-served objects: interface identity is compared against the
+ * bound IID(s); unsupported interfaces return E_NOINTERFACE with a NULL out.
+ * A NULL out or iid is E_POINTER, as required by the COM contract. */
 void hle_com_QueryInterface(void) {                      /* (this, iid, &out) */
-    uint32_t self = A32(0);
-    if (A32(2)) MEM32(A32(2)) = self;
+    uint32_t self = A32(0), iid = A32(1), out = A32(2);
+    if (!out || !iid) { if (out) MEM32(out) = 0; RET(0x80004003u, 3); } /* E_POINTER */
+    if (bound_iids(self)) {
+        const uint8_t *g = hle_ptr(iid);
+        for (int i = 0; i < g_niids; i++)
+            if (g_iids[i].obj == self && hle_com_iid_equal(g, g_iids[i].iid)) {
+                uint32_t iface = g_iids[i].iface;
+                MEM32(out) = iface;
+                MEM32(iface + 4)++;
+                RET(S_OK, 3);
+            }
+        MEM32(out) = 0;
+        RET(0x80004002u, 3);                              /* E_NOINTERFACE */
+    }
+    MEM32(out) = self;
     MEM32(self + 4)++;
     RET(S_OK, 3);
 }
 void hle_com_AddRef(void) { RET(++MEM32(A32(0) + 4), 1); }
 void hle_com_Release(void) {
     uint32_t self = A32(0), n = --MEM32(self + 4);
-    if (!n) hle_com_free(self);
+    if (!n) { hle_com_unbind_iids(self); hle_com_free(self); }
     RET(n, 1);
 }
 
@@ -193,8 +244,37 @@ static void o_CoCreateInstance(void) {                   /* (clsid, outer, ctx, 
 }
 static void o_OleInitialize(void)   { RET(S_OK, 1); }
 static void o_OleUninitialize(void) { RETV(0); }
-static void o_CoInitialize(void)    { RET(S_OK, 1); }
-static void o_CoUninitialize(void)  { RETV(0); }
+/* COM initialisation state is per guest thread. The apartment model is the
+ * only part of COM initialisation this layer models: repeated initialisation
+ * with the same model returns S_FALSE and a different model is refused with
+ * RPC_E_CHANGED_MODE, as Win32 does. No host COM apartment is created. */
+static __thread unsigned g_com_init_count;
+static __thread uint32_t g_com_model;         /* COINIT_APARTMENTTHREADED bit */
+static uint32_t com_init(uint32_t flags) {
+    uint32_t model = flags & 0x2u;              /* COINIT_APARTMENTTHREADED */
+    if (g_com_init_count) {
+        if (g_com_model != model) return 0x80010106u;    /* RPC_E_CHANGED_MODE */
+        g_com_init_count++;
+        return 1u;                              /* S_FALSE */
+    }
+    g_com_model = model;
+    g_com_init_count = 1;
+    return S_OK;
+}
+static void o_CoInitializeEx(void) {            /* (reserved, dwCoInit) */
+    if (A32(0)) { RET(0x80070057u, 2); }        /* E_INVALIDARG: must be NULL */
+    RET(com_init(A32(1)), 2);
+}
+static void o_CoInitialize(void) {              /* (reserved) */
+    if (A32(0)) { RET(0x80070057u, 1); }
+    RET(com_init(0x2u), 1);                     /* COINIT_APARTMENTTHREADED */
+}
+static void o_CoUninitialize(void) {
+    if (g_com_init_count) {
+        if (!--g_com_init_count) g_com_model = 0;
+    }
+    RETV(0);
+}
 static void o_CoRegisterClassObject(void) {              /* (clsid, unk, ctx, flags, &cookie) */
     for (int i = 0; i < MAX_GUEST_CLASSES; i++)
         if (!g_guest_class[i].unk) {
@@ -299,10 +379,25 @@ static void o_CoGetClassObject(void) {
     if (A32(4)) MEM32(A32(4)) = 0;
     RET(0x80040111u /* CLASS_E_CLASSNOTAVAILABLE */, 5);
 }
-static void o_CoTaskMemAlloc(void) {
-    uint32_t sz = A32(0);
-    void *p = hle_alloc(sz ? sz : 1u);
-    RET(p ? hle_va(p) : 0u, 1);
+/* ---- the COM task allocator ----
+ * Its blocks come from the same guest heap as Heap/Local/Global (guest_mem.c),
+ * so every pointer handed back is a guest VA (hle_va/RETP), never a host
+ * address. Windows' task allocator follows the process heap: Alloc(0) still
+ * returns a non-NULL block the caller must free; Realloc(NULL, cb) is
+ * Alloc(cb); Realloc(pv, 0) frees pv and returns NULL. hle_heap_realloc keeps
+ * min(old, cb) bytes and zeroes the growth, so a larger block reads back with
+ * its old contents intact and a clean tail. */
+static void o_CoTaskMemAlloc(void) {                     /* (cb) -> pv */
+    uint32_t cb = A32(0);
+    RETP(hle_alloc(cb ? cb : 1u), 1);
+}
+static void o_CoTaskMemRealloc(void) {                   /* (pv, cb) -> pv */
+    uint32_t pv = A32(0), cb = A32(1);
+    void *p;
+    if (!pv) p = hle_alloc(cb ? cb : 1u);                /* NULL source: like Alloc(cb) */
+    else if (!cb) { hle_free(APTR(0)); p = NULL; }       /* zero size: free it, return NULL */
+    else p = hle_heap_realloc(APTR(0), cb, 1);          /* grow/shrink within the guest heap */
+    RETP(p, 2);
 }
 static void o_CoTaskMemFree(void) { if (A32(0)) hle_free(APTR(0)); RETV(1); }
 static void o_CreateStreamOnHGlobal(void) {
@@ -493,11 +588,12 @@ const win32hle_shim win32hle_ole32[] = {
     { "CoCreateInstance",      o_CoCreateInstance },
     { "CoGetClassObject",      o_CoGetClassObject },
     { "CoTaskMemAlloc",        o_CoTaskMemAlloc },
+    { "CoTaskMemRealloc",      o_CoTaskMemRealloc },
     { "CoTaskMemFree",         o_CoTaskMemFree },
     { "CreateStreamOnHGlobal", o_CreateStreamOnHGlobal },
     { "OleInitialize",         o_OleInitialize },
     { "OleUninitialize",       o_OleUninitialize },
-    { "CoInitialize",          o_CoInitialize },
+    { "CoInitialize",          o_CoInitialize }, { "CoInitializeEx", o_CoInitializeEx },
     { "CoUninitialize",        o_CoUninitialize },
     { "CoRegisterClassObject", o_CoRegisterClassObject },
     { "CoRevokeClassObject",   o_CoRevokeClassObject },

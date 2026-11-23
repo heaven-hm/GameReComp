@@ -9,12 +9,15 @@
  * (hle_reg_load/hle_reg_save: one "key\name=type:value" per line).
  */
 #define _GNU_SOURCE
+#include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "win32hle.h"
 
@@ -24,9 +27,10 @@
 #define ERROR_FILE_NOT_FOUND 2u
 #define ERROR_MORE_DATA    234u
 #define ERROR_NO_MORE_ITEMS 259u
-#define REG_SZ     1u
-#define REG_BINARY 3u
-#define REG_DWORD  4u
+#define REG_SZ         1u
+#define REG_EXPAND_SZ  2u
+#define REG_BINARY     3u
+#define REG_DWORD      4u
 
 typedef struct value { char name[128]; uint32_t type, size; uint8_t *data; struct value *next; } value_t;
 typedef struct key { char name[128]; struct key *parent, *child, *next; value_t *values; } rkey_t;
@@ -77,6 +81,54 @@ static void set_value(rkey_t *k, const char *name, uint32_t type, const void *da
     memcpy(v->data, data, size);
     v->data[size] = v->data[size + 1] = 0;
     v->type = type, v->size = size;
+}
+
+/* A REG_SZ/REG_EXPAND_SZ written through the W API arrives as UTF-16 with an
+ * explicit byte count.  The store keeps CP1252 bytes with a trailing NUL, so
+ * convert through the shared codepage helper.  Bound a temporary copy by
+ * cbData first: hle_wide_to_ansi walks to a NUL and must not read past the
+ * data the guest says it supplied.  Returns 0 on malformed/unrepresentable
+ * input (odd byte count, no NUL, codepage miss, or too long for out). */
+static int reg_wide_sz_to_ansi(const uint16_t *w, uint32_t cb, char *out, size_t outsz) {
+    if (!w || !out || !outsz || (cb & 1u) || cb < 2u) return 0;
+    uint32_t n = cb / 2u;
+    uint16_t *tmp = (uint16_t *)malloc((size_t)n * 2u);
+    if (!tmp) return 0;
+    memcpy(tmp, w, cb);
+    tmp[n - 1] = 0;                              /* force termination in-bounds */
+    int ok = hle_wide_to_ansi(tmp, out, outsz);
+    free(tmp);
+    return ok;
+}
+
+/* Detach every value and every descendant key of k, leaving k itself in
+ * place.  Values are freed (the store hands out no handles to them); key
+ * structs are only unlinked, never freed, exactly as RegDeleteKeyA does.  An
+ * open HKEY is a handle to the rkey_t itself, so freeing a key here would
+ * leave any such handle dangling and crash the next call that used it. */
+static void delete_tree_contents(rkey_t *k) {
+    if (!k) return;
+    for (value_t *v = k->values; v; ) {
+        value_t *next = v->next;
+        free(v->data);
+        free(v);
+        v = next;
+    }
+    k->values = NULL;
+    for (rkey_t *c = k->child; c; ) {
+        rkey_t *next = c->next;
+        delete_tree_contents(c);
+        c->parent = NULL, c->next = NULL;
+        c = next;
+    }
+    k->child = NULL;
+}
+/* Remove one (already emptied) key from its parent's child list.  Roots have
+ * no parent and can never be removed this way. */
+static void unlink_key(rkey_t *k) {
+    if (!k || !k->parent) return;
+    for (rkey_t **c = &k->parent->child; *c; c = &(*c)->next)
+        if (*c == k) { *c = k->next; k->next = NULL, k->parent = NULL; break; }
 }
 
 static int root_index(const char *name) {
@@ -150,6 +202,13 @@ static uint32_t open_key(uint32_t parent, const char *path, uint32_t out, int cr
     return ERROR_SUCCESS;
 }
 static void r_RegOpenKeyExA(void)   { RET(open_key(A32(0), ASTR(1), A32(4), 0), 5); }   /* (key, sub, opts, sam, &out) */
+/* RegOpenKeyExW: wide subkey name, same isolated store as the ANSI form. */
+static void r_RegOpenKeyExW(void) {
+    char sub[256];
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (w && !hle_wide_to_ansi(w, sub, sizeof sub)) { RET(ERROR_INVALID_PARAMETER, 5); }
+    RET(open_key(A32(0), w ? sub : NULL, A32(4), 0), 5);
+}
 static void r_RegOpenKeyA(void)     { RET(open_key(A32(0), ASTR(1), A32(2), 0), 3); }
 static void r_RegCreateKeyA(void)   { RET(open_key(A32(0), ASTR(1), A32(2), 1), 3); }
 static void r_RegCreateKeyExA(void) {                    /* (key, sub, 0, class, opts, sam, sa, &out, &disp) */
@@ -195,6 +254,136 @@ static void r_RegSetValueExA(void) {                     /* (key, name, 0, type,
     reg_save();
     RET(ERROR_SUCCESS, 6);
 }
+
+/* ---- Registry persistence APIs used by late-90s/2000s games -------------
+ * Games of this era save settings either through the Unicode *Ex entry
+ * points (localised installers) or through the legacy default-value API
+ * (RegSetValue/RegQueryValue with an unnamed value).  All five functions
+ * below convert at the ANSI/UTF-16 boundary into the store's CP1252 bytes
+ * and persist through the same line-based file as RegSetValueExA, so the
+ * existing hle_reg_load/hle_reg_save format stays the single source of
+ * truth.  No host.c or header change is required. */
+
+/* RegSetValueExW(hKey, lpValueName, 0, dwType, lpData, cbData). */
+static void r_RegSetValueExW(void) {
+    rkey_t *k = root_of(A32(0));
+    if (!k) { hle_set_last_error(6u); RET(6u, 6); }       /* ERROR_INVALID_HANDLE */
+    char name[256];
+    const uint16_t *wn = (const uint16_t *)APTR(1);
+    if (wn && !hle_wide_to_ansi(wn, name, sizeof name)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 6);
+    }
+    uint32_t type = A32(3), cb = A32(5);
+    const void *data = APTR(4);
+    if (cb && !data) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 6); }
+    if ((type == REG_SZ || type == REG_EXPAND_SZ) && cb) {
+        char ansi[2048];
+        if (!reg_wide_sz_to_ansi((const uint16_t *)data, cb, ansi, sizeof ansi)) {
+            hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 6);
+        }
+        set_value(k, wn ? name : NULL, type, ansi, (uint32_t)strlen(ansi) + 1u);
+    } else {
+        set_value(k, wn ? name : NULL, type, data ? data : "", cb);
+    }
+    reg_save();
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 6);
+}
+
+/* RegCreateKeyExW(hKey, lpSubKey, 0, lpClass, opts, sam, sa, &out, &disp). */
+static void r_RegCreateKeyExW(void) {
+    char sub[256];
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (w && !hle_wide_to_ansi(w, sub, sizeof sub)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 9);
+    }
+    rkey_t *p = root_of(A32(0));
+    int existed = p && subkey(p, w ? sub : NULL, 0) != NULL;
+    uint32_t r = open_key(A32(0), w ? sub : NULL, A32(7), 1);
+    if (A32(8)) MEM32(A32(8)) = existed ? 2u : 1u;       /* OPENED_EXISTING / CREATED_NEW */
+    RET(r, 9);
+}
+
+/* RegQueryValueA(hKey, lpValueName, lpData, lpcbData).  The legacy API reads
+ * the default (unnamed) value.  If lpValueName names a subkey, Windows
+ * redirects to that subkey's default value -- an edge case the *Ex form has
+ * no equivalent for.  lpcbData is required and is in bytes. */
+static void r_RegQueryValueA(void) {
+    uint32_t cb_va = A32(3);
+    if (!cb_va) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 4); }
+    rkey_t *k = root_of(A32(0));
+    if (!k) { MEM32(cb_va) = 0; hle_set_last_error(6u); RET(6u, 4); }
+    rkey_t *target = k;
+    const char *which = ASTR(1);
+    if (which && *which) { rkey_t *sk = subkey(k, which, 0); if (sk) target = sk; }
+    value_t *v = find_value(target, NULL, 0);
+    if (!v) { MEM32(cb_va) = 0; hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(ERROR_FILE_NOT_FOUND, 4); }
+    uint32_t need = v->size, have = MEM32(cb_va);
+    MEM32(cb_va) = need;
+    if (!A32(2)) { hle_set_last_error(ERROR_SUCCESS); RET(ERROR_SUCCESS, 4); }
+    if (have < need) { hle_set_last_error(ERROR_MORE_DATA); RET(ERROR_MORE_DATA, 4); }
+    memcpy(APTR(2), v->data, need);
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 4);
+}
+
+/* RegQueryValueW(hKey, lpValueName, lpData, lpcbData).  Same default-value
+ * and subkey-redirect semantics as the ANSI form; REG_SZ/REG_EXPAND_SZ data
+ * is widened back to UTF-16 (lpcbData stays a byte count), other types are
+ * copied verbatim. */
+static void r_RegQueryValueW(void) {
+    char name[256];
+    const uint16_t *wn = (const uint16_t *)APTR(1);
+    uint32_t cb_va = A32(3);
+    if (!cb_va || (wn && !hle_wide_to_ansi(wn, name, sizeof name))) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 4);
+    }
+    rkey_t *k = root_of(A32(0));
+    if (!k) { MEM32(cb_va) = 0; hle_set_last_error(6u); RET(6u, 4); }
+    rkey_t *target = k;
+    if (wn && *wn) { rkey_t *sk = subkey(k, name, 0); if (sk) target = sk; }
+    value_t *v = find_value(target, NULL, 0);
+    if (!v) { MEM32(cb_va) = 0; hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(ERROR_FILE_NOT_FOUND, 4); }
+
+    uint16_t *wide = NULL;
+    uint32_t need = v->size;
+    const void *out = v->data;
+    if ((v->type == REG_SZ || v->type == REG_EXPAND_SZ) && v->size >= 2u) {
+        uint32_t chars = (uint32_t)strlen((const char *)v->data) + 1u;
+        need = chars * 2u;
+        wide = (uint16_t *)malloc(need);
+        if (!wide) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); RET(ERROR_NOT_ENOUGH_MEMORY, 4); }
+        hle_ansi_to_wide((const char *)v->data, wide, chars);
+        out = wide;
+    }
+    uint32_t have = MEM32(cb_va);
+    MEM32(cb_va) = need;
+    if (!A32(2)) { free(wide); hle_set_last_error(ERROR_SUCCESS); RET(ERROR_SUCCESS, 4); }
+    if (have < need) { free(wide); hle_set_last_error(ERROR_MORE_DATA); RET(ERROR_MORE_DATA, 4); }
+    memcpy(APTR(2), out, need);
+    free(wide);
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 4);
+}
+
+/* RegSetValueA(hKey, lpSubKey, dwType, lpData, cbData): legacy writer for
+ * the default (unnamed) value, always stored as REG_SZ.  A non-NULL lpSubKey
+ * selects a subkey (legacy semantics); cbData == 0xFFFFFFFF means "strlen+1". */
+static void r_RegSetValueA(void) {
+    rkey_t *k = root_of(A32(0));
+    if (!k) { hle_set_last_error(6u); RET(6u, 5); }
+    rkey_t *target = k;
+    const char *which = ASTR(1);
+    if (which && *which) { rkey_t *sk = subkey(k, which, 0); if (sk) target = sk; }
+    const char *s = ASTR(3) ? ASTR(3) : "";
+    uint32_t avail = (uint32_t)strlen(s) + 1u;
+    uint32_t n = A32(4) == 0xFFFFFFFFu ? avail : A32(4);
+    if (n > avail) n = avail;                            /* never read past the guest buffer */
+    set_value(target, NULL, REG_SZ, s, n);
+    reg_save();
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 5);
+}
 static void r_RegDeleteValueA(void) {
     rkey_t *k = root_of(A32(0));
     for (value_t **v = k ? &k->values : NULL; v && *v; v = &(*v)->next)
@@ -227,6 +416,88 @@ static void r_RegEnumKeyExA(void) {                      /* (key, index, name, &
     MEM32(A32(3)) = n;
     RET(ERROR_SUCCESS, 8);
 }
+/* RegEnumKeyExW: the same subkeys, returned as UTF-16 in the guest's buffer.
+ * (key, index, name, &nameN, reserved, class, &classN, &ftLastWrite)
+ *
+ * nameN/classN are capacities in WCHARs (the terminating NUL counts) on entry;
+ * on success they receive the character count without the NUL.  A buffer that
+ * cannot hold the name plus its NUL fails with ERROR_MORE_DATA without touching
+ * the buffer or the capacity -- callers size from RegQueryInfoKey, and both
+ * Wine and ReactOS leave the word alone on this error.  lpName and lpcchName
+ * are required; lpClass, lpcchClass and lpftLastWriteTime are optional, but a
+ * class buffer needs its own capacity word. */
+static void r_RegEnumKeyExW(void) {
+    uint32_t name_va = A32(2), name_len_va = A32(3), class_va = A32(5);
+    uint32_t class_len_va = A32(6), ft_va = A32(7);
+
+    if (A32(4) || !name_va || !name_len_va || (class_va && !class_len_va)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(ERROR_INVALID_PARAMETER, 8);
+    }
+    rkey_t *k = root_of(A32(0));
+    if (!k) { hle_set_last_error(6u); RET(6u, 8); }       /* ERROR_INVALID_HANDLE */
+    rkey_t *c = k->child;
+    for (uint32_t i = 0; c && i < A32(1); i++) c = c->next;
+    if (!c) { hle_set_last_error(ERROR_NO_MORE_ITEMS); RET(ERROR_NO_MORE_ITEMS, 8); }
+
+    uint32_t chars = (uint32_t)strlen(c->name);          /* ANSI bytes in the store */
+    if (MEM32(name_len_va) <= chars) {                   /* capacity must hold the NUL */
+        hle_set_last_error(ERROR_MORE_DATA);
+        RET(ERROR_MORE_DATA, 8);
+    }
+    /* No key stores a class: the empty string needs one WCHAR for its NUL. */
+    if (class_len_va && MEM32(class_len_va) < 1u) {
+        hle_set_last_error(ERROR_MORE_DATA);
+        RET(ERROR_MORE_DATA, 8);
+    }
+    /* CP1252 bytes -> UTF-16 code units, the inverse of hle_wide_to_ansi on
+     * the RegOpenKeyExW/RegQueryValueExW input path. */
+    if (!hle_ansi_to_wide(c->name, (uint16_t *)APTR(2), MEM32(name_len_va))) {
+        hle_set_last_error(ERROR_MORE_DATA);
+        RET(ERROR_MORE_DATA, 8);
+    }
+    MEM32(name_len_va) = chars;
+    if (class_va) MEM16(class_va) = 0;
+    if (class_len_va) MEM32(class_len_va) = 0;
+    if (ft_va) { MEM32(ft_va) = 0; MEM32(ft_va + 4) = 0; } /* no timestamps are stored (as in RegQueryInfoKeyA) */
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 8);
+}
+/* RegEnumValueA/W: enumerate a key's values in insertion order. Names are
+ * case-insensitive in the store but returned in their original spelling. */
+static void r_RegEnumValueA(void) {
+    rkey_t *k = root_of(A32(0));
+    value_t *v = k ? k->values : NULL;
+    for (uint32_t i = 0; v && i < A32(1); i++) v = v->next;
+    if (!v) RET(ERROR_NO_MORE_ITEMS, 8);
+    uint32_t name_len = (uint32_t)strlen(v->name);
+    if (A32(3) && MEM32(A32(3)) <= name_len) RET(ERROR_MORE_DATA, 8);
+    if (A32(5)) MEM32(A32(5)) = v->type;
+    if (A32(7) && MEM32(A32(7)) < v->size) RET(ERROR_MORE_DATA, 8);
+    if (A32(2) && A32(3)) { memcpy(ASTR(2), v->name, name_len + 1); MEM32(A32(3)) = name_len; }
+    if (A32(7)) MEM32(A32(7)) = v->size;
+    if (A32(6) && v->size) memcpy(APTR(6), v->data, v->size);
+    RET(ERROR_SUCCESS, 8);
+}
+static void r_RegEnumValueW(void) {
+    rkey_t *k = root_of(A32(0));
+    value_t *v = k ? k->values : NULL;
+    for (uint32_t i = 0; v && i < A32(1); i++) v = v->next;
+    if (!v) RET(ERROR_NO_MORE_ITEMS, 8);
+    uint32_t chars = (uint32_t)strlen(v->name), needed = (chars + 1u) * 2u;
+    if (A32(3) && MEM32(A32(3)) < chars) RET(ERROR_MORE_DATA, 8);
+    if (A32(5)) MEM32(A32(5)) = v->type;
+    if (A32(7) && MEM32(A32(7)) < v->size) RET(ERROR_MORE_DATA, 8);
+    if (A32(2) && A32(3)) {
+        uint16_t *dst = (uint16_t *)APTR(2);
+        for (uint32_t i = 0; i < chars; i++) dst[i] = (uint16_t)(unsigned char)v->name[i];
+        dst[chars] = 0;
+        MEM32(A32(3)) = chars;
+    }
+    if (A32(7)) MEM32(A32(7)) = v->size;
+    if (A32(6) && v->size) memcpy(APTR(6), v->data, v->size);
+    RET(ERROR_SUCCESS, 8);
+}
 static void r_RegEnumKeyA(void) {                        /* (key, index, name, n) */
     rkey_t *k = root_of(A32(0)), *c = k ? k->child : NULL;
     for (uint32_t i = 0; c && i < A32(1); i++) c = c->next;
@@ -250,6 +521,77 @@ static void r_RegQueryInfoKeyA(void) {                   /* (key, class, &classN
     if (A32(10)) MEM32(A32(10)) = 0;
     if (A32(11)) MEM32(A32(11)) = 0, MEM32(A32(11) + 4) = 0;
     RET(ERROR_SUCCESS, 12);
+}
+/* RegQueryInfoKeyW: (key, class, &classN, reserved, &subkeys, &maxSub,
+ * &maxClass, &values, &maxName, &maxData, &security, &time).
+ *
+ * Name counts are UTF-16 code units, not bytes: the store keeps CP1252 bytes
+ * and hle_ansi_to_wide maps each of those to one WCHAR, so strlen() is also the
+ * WCHAR length for every name we can hold.  Value data is still counted in
+ * bytes.  classN is a WCHAR capacity including the NUL on entry and the class
+ * length without it on exit; no key stores a class, so an empty string is
+ * written when there is room for its NUL and the length is always 0.  An lpClass
+ * without its capacity word is invalid (as in Wine and ReactOS); lpReserved is
+ * accepted and ignored, as in both. */
+static void r_RegQueryInfoKeyW(void) {
+    uint32_t class_va = A32(1), class_len_va = A32(2);
+    if (class_va && !class_len_va) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 12); }
+    rkey_t *k = root_of(A32(0));
+    if (!k) { hle_set_last_error(6u); RET(6u, 12); }              /* ERROR_INVALID_HANDLE */
+    uint32_t nsub = 0, maxsub = 0, nval = 0, maxname = 0, maxdata = 0;
+    for (rkey_t *c = k->child; c; c = c->next) {
+        nsub++;
+        uint32_t n = (uint32_t)strlen(c->name);
+        if (n > maxsub) maxsub = n;
+    }
+    for (value_t *v = k->values; v; v = v->next) {
+        nval++;
+        uint32_t n = (uint32_t)strlen(v->name);
+        if (n > maxname) maxname = n;
+        if (v->size > maxdata) maxdata = v->size;
+    }
+    if (class_va && MEM32(class_len_va) >= 1u) MEM16(class_va) = 0; /* empty class */
+    if (class_len_va) MEM32(class_len_va) = 0;
+    if (A32(4)) MEM32(A32(4)) = nsub;
+    if (A32(5)) MEM32(A32(5)) = maxsub;
+    if (A32(6)) MEM32(A32(6)) = 0;                               /* no classes are stored */
+    if (A32(7)) MEM32(A32(7)) = nval;
+    if (A32(8)) MEM32(A32(8)) = maxname;
+    if (A32(9)) MEM32(A32(9)) = maxdata;
+    if (A32(10)) MEM32(A32(10)) = 0;                             /* no security descriptor */
+    if (A32(11)) { MEM32(A32(11)) = 0; MEM32(A32(11) + 4) = 0; } /* no timestamps stored */
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 12);
+}
+/* RegDeleteTreeA/W: (key, subkey).  A NULL (or empty) subkey clears hKey's own
+ * values and subkeys but keeps hKey open; a named subkey is itself removed
+ * once its subtree is empty, matching RegDeleteTreeW in Wine/ReactOS.  A
+ * missing subkey is ERROR_FILE_NOT_FOUND, a bad handle ERROR_INVALID_HANDLE. */
+static void r_RegDeleteTreeA(void) {
+    rkey_t *base = root_of(A32(0));
+    const char *sub = ASTR(1);
+    if (!base) { hle_set_last_error(6u); RET(6u, 2); }
+    rkey_t *target = (sub && *sub) ? subkey(base, sub, 0) : base;
+    if (!target) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(ERROR_FILE_NOT_FOUND, 2); }
+    delete_tree_contents(target);
+    if (target != base) unlink_key(target);
+    reg_save();
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 2);
+}
+static void r_RegDeleteTreeW(void) {
+    char sub[256];
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (w && !hle_wide_to_ansi(w, sub, sizeof sub)) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 2); }
+    rkey_t *base = root_of(A32(0));
+    if (!base) { hle_set_last_error(6u); RET(6u, 2); }
+    rkey_t *target = (w && *w) ? subkey(base, sub, 0) : base;
+    if (!target) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(ERROR_FILE_NOT_FOUND, 2); }
+    delete_tree_contents(target);
+    if (target != base) unlink_key(target);
+    reg_save();
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 2);
 }
 static void r_GetUserNameA(void) { if (A32(1) && MEM32(A32(1)) > 6) { strcpy(ASTR(0), "player"); MEM32(A32(1)) = 7; RET(1, 2); } RET(0, 2); }
 
@@ -275,6 +617,240 @@ static void v_VerQueryValueA(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(0, 4); }
 /* ---- SHELL32 ---- */
 static void s_FindExecutableA(void) { if (A32(2)) MEM8(A32(2)) = 0; RET(31u, 3); }   /* SE_ERR_NOASSOC */
 static void s_ShellExecuteA(void) { fprintf(stderr, "[shell32] ShellExecuteA(%s): not on this host\n", ASTR(2) ? ASTR(2) : ""); RET(31u, 6); }
+
+/* ---- SHFileOperationA: real file operations, no UI ----
+ *
+ * SHFILEOPSTRUCTA on x86 (all pointers are guest VAs):
+ *   +0  hwnd        +4  wFunc        +8  pFrom        +12 pTo
+ *   +16 fFlags (WORD) +18 padding    +20 fAnyOperationsAborted (BOOL)
+ *   +24 hNameMappings +28 lpszProgressTitle            (32 bytes total)
+ * pFrom/pTo are lists of NUL-terminated strings ended by a second NUL. The
+ * paths use backslashes and are resolved with hle_host_path, so a runtime that
+ * maps a drive letter to a scratch directory confines every operation to it.
+ * There is no progress/confirmation UI and no Recycle Bin: FOF_SILENT and
+ * FOF_NOCONFIRMATION are implicit, FOF_ALLOWUNDO still means a real unlink.
+ */
+#define FO_MOVE        0x0001u
+#define FO_COPY        0x0002u
+#define FO_DELETE      0x0003u
+#define FO_RENAME      0x0004u
+#define FOF_MULTIDESTFILES    0x0001u
+#define FOF_RENAMEONCOLLISION 0x0008u
+#define FOF_ALLOWUNDO         0x0040u
+#define FOF_NORECURSION       0x1000u
+/* SHFileOperation's own DE_* result codes (not GetLastError values). */
+#define DE_ACCESSDENIEDSRC 0x74u
+#define DE_PATHTOODEEP     0x75u
+#define DE_MANYDEST        0x76u
+#define DE_INVALIDFILES    0x79u
+#define DE_DESTSAMETREE    0x7Cu
+#define DE_ERROR_MAX       0x100u
+
+#define SHFO_PATH_MAX 1024
+#define SHFO_MAX_LIST 64
+#define SHFO_SCAN_MAX 65536
+
+/* Read a double-NUL guest list into host strings. -1: malformed/oversized. */
+static int shfo_list(uint32_t va, char out[SHFO_MAX_LIST][SHFO_PATH_MAX], int cap) {
+    const char *p = (const char *)hle_ptr(va);
+    int n = 0;
+    size_t scanned = 0;
+    if (!p) return -1;
+    for (;;) {
+        size_t len = 0;
+        while (scanned < SHFO_SCAN_MAX && len < SHFO_PATH_MAX - 1 && p[len]) { len++; scanned++; }
+        if (scanned >= SHFO_SCAN_MAX) return -1;
+        if (!p[len]) {
+            if (len == SHFO_PATH_MAX - 1) return -1;  /* a component that long is refused */
+            if (!len) return n;                        /* the list's second NUL */
+            if (n >= cap) return -1;
+            memcpy(out[n], p, len), out[n][len] = 0;
+            n++;
+            p += len + 1, scanned++;
+        } else return -1;                              /* no NUL in bounds */
+    }
+}
+static int shfo_exists(const char *p) { struct stat st; return lstat(p, &st) == 0; }
+static int shfo_is_dir(const char *p) { struct stat st; return stat(p, &st) == 0 && S_ISDIR(st.st_mode); }
+
+/* Pick an unused "name (2).ext" when FOF_RENAMEONCOLLISION is set. */
+static void shfo_unique(char *path, size_t cap) {
+    if (!shfo_exists(path)) return;
+    char base[SHFO_PATH_MAX], ext[64];
+    snprintf(base, sizeof base, "%s", path);
+    char *slash = strrchr(base, '/'), *dot = strrchr(base, '.');
+    ext[0] = 0;
+    if (dot && (!slash || dot > slash)) { snprintf(ext, sizeof ext, "%s", dot); *dot = 0; }
+    for (int i = 2; i < 1000; i++) {
+        char cand[SHFO_PATH_MAX];
+        snprintf(cand, sizeof cand, "%s (%d)%s", base, i, ext);
+        if (!shfo_exists(cand)) { snprintf(path, cap, "%s", cand); return; }
+    }
+}
+/* mkdir -p on the host path; the runtime's drive mapping is the only sandbox. */
+static int shfo_mkdir_p(const char *path) {
+    char tmp[SHFO_PATH_MAX];
+    if (!path || strlen(path) >= sizeof tmp) return -1;
+    snprintf(tmp, sizeof tmp, "%s", path);
+    for (char *s = tmp + 1; *s; s++) if (*s == '/') {
+        char saved = *s; *s = 0;
+        if (mkdir(tmp, 0755) != 0 && errno != EEXIST) return -1;
+        *s = saved;
+    }
+    if (mkdir(tmp, 0755) != 0 && errno != EEXIST) return -1;
+    return 0;
+}
+static void shfo_parent(const char *path) {
+    char dir[SHFO_PATH_MAX];
+    snprintf(dir, sizeof dir, "%s", path);
+    char *slash = strrchr(dir, '/');
+    if (slash && slash != dir) { *slash = 0; shfo_mkdir_p(dir); }
+}
+
+static uint32_t shfo_copy(const char *from, const char *to, uint16_t flags, int depth) {
+    struct stat st;
+    if (depth > 32) return DE_PATHTOODEEP;
+    if (lstat(from, &st) != 0) return DE_INVALIDFILES;
+    char target[SHFO_PATH_MAX];
+    snprintf(target, sizeof target, "%s", to);
+    if (flags & FOF_RENAMEONCOLLISION) shfo_unique(target, sizeof target);
+    if (S_ISDIR(st.st_mode)) {
+        if (mkdir(target, 0755) != 0 && errno != EEXIST) return DE_ACCESSDENIEDSRC;
+        DIR *d = opendir(from);
+        if (!d) return DE_ACCESSDENIEDSRC;
+        struct dirent *e;
+        uint32_t rc = 0;
+        while ((e = readdir(d))) {
+            if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
+            char a[SHFO_PATH_MAX], b[SHFO_PATH_MAX];
+            snprintf(a, sizeof a, "%s/%s", from, e->d_name);
+            snprintf(b, sizeof b, "%s/%s", target, e->d_name);
+            if ((rc = shfo_copy(a, b, flags, depth + 1)) != 0) break;
+        }
+        closedir(d);
+        return rc;
+    }
+    shfo_parent(target);
+    int in = open(from, O_RDONLY | O_CLOEXEC);
+    if (in < 0) return (errno == EACCES || errno == EPERM) ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+    int out = open(target, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (out < 0) { close(in); return DE_ACCESSDENIEDSRC; }
+    char buf[65536];
+    ssize_t r = 0, rc = 0;
+    while ((r = read(in, buf, sizeof buf)) > 0) {
+        ssize_t w = 0;
+        while (w < r) {
+            ssize_t k = write(out, buf + w, (size_t)(r - w));
+            if (k <= 0) { rc = DE_ACCESSDENIEDSRC; break; }
+            w += k;
+        }
+        if (rc) break;
+    }
+    if (r < 0) rc = DE_ACCESSDENIEDSRC;
+    close(in), close(out);
+    return (uint32_t)rc;
+}
+
+static uint32_t shfo_delete(const char *host, uint16_t flags, int depth) {
+    struct stat st;
+    if (depth > 32) return DE_PATHTOODEEP;
+    if (lstat(host, &st) != 0) return DE_INVALIDFILES;
+    if (!S_ISDIR(st.st_mode)) {
+        if (unlink(host) == 0) return 0;
+        return errno == EACCES || errno == EPERM ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+    }
+    if (flags & FOF_NORECURSION) {
+        if (rmdir(host) == 0) return 0;
+        if (errno == ENOTEMPTY) return DE_INVALIDFILES;
+        return errno == EACCES || errno == EPERM ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+    }
+    DIR *d = opendir(host);
+    if (!d) return DE_ACCESSDENIEDSRC;
+    struct dirent *e;
+    uint32_t rc = 0;
+    while ((e = readdir(d))) {
+        if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
+        char child[SHFO_PATH_MAX];
+        snprintf(child, sizeof child, "%s/%s", host, e->d_name);
+        if ((rc = shfo_delete(child, flags, depth + 1)) != 0) break;
+    }
+    closedir(d);
+    if (rc) return rc;
+    if (rmdir(host) == 0) return 0;
+    return errno == EACCES || errno == EPERM ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+}
+
+static uint32_t shfo_move(const char *from, const char *to, uint16_t flags) {
+    struct stat st;
+    if (lstat(from, &st) != 0) return DE_INVALIDFILES;
+    char target[SHFO_PATH_MAX];
+    snprintf(target, sizeof target, "%s", to);
+    if (flags & FOF_RENAMEONCOLLISION) shfo_unique(target, sizeof target);
+    shfo_parent(target);
+    if (rename(from, target) == 0) return 0;
+    if (errno == EXDEV) {                              /* across filesystems: copy then remove */
+        uint32_t rc = shfo_copy(from, target, flags & (uint16_t)~FOF_RENAMEONCOLLISION, 0);
+        return rc ? rc : shfo_delete(from, flags, 0);
+    }
+    return errno == EACCES || errno == EPERM ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+}
+
+/* Resolve one destination: a single destination folder holds many sources,
+ * otherwise pTo holds one path per source. */
+static void shfo_dest(char *out, size_t cap, const char *src_guest, const char *dst_guest, int into_dir) {
+    char host[SHFO_PATH_MAX];
+    hle_host_path(dst_guest, host, sizeof host);
+    if (into_dir && shfo_is_dir(host)) {
+        const char *tail = strrchr(src_guest, '\\');
+        if (!tail) tail = strrchr(src_guest, '/');
+        snprintf(out, cap, "%s/%s", host, tail ? tail + 1 : src_guest);
+    } else snprintf(out, cap, "%s", host);
+}
+
+static void s_SHFileOperationA(void) {                 /* (const SHFILEOPSTRUCTA *) -> int */
+    uint32_t op = A32(0);
+    if (!op) RET(DE_INVALIDFILES, 1);
+    uint32_t wFunc = MEM32(op + 4), pFrom = MEM32(op + 8), pTo = MEM32(op + 12);
+    uint16_t fFlags = (uint16_t)MEM16(op + 16);
+    MEM32(op + 20) = 0;                                 /* fAnyOperationsAborted: none (synchronous) */
+    MEM32(op + 24) = 0;                                 /* hNameMappings: no mapping handle produced */
+    if (wFunc != FO_MOVE && wFunc != FO_COPY && wFunc != FO_DELETE && wFunc != FO_RENAME)
+        RET(DE_ERROR_MAX, 1);
+
+    static char from[SHFO_MAX_LIST][SHFO_PATH_MAX], to[SHFO_MAX_LIST][SHFO_PATH_MAX];
+    int nf = shfo_list(pFrom, from, SHFO_MAX_LIST);
+    int nt = shfo_list(pTo, to, SHFO_MAX_LIST);
+    if (nf <= 0 || (wFunc != FO_DELETE && nt <= 0)) RET(DE_INVALIDFILES, 1);
+
+    uint32_t rc = 0;
+    if (wFunc == FO_DELETE) {
+        for (int i = 0; i < nf; i++) {
+            char host[SHFO_PATH_MAX];
+            if (!hle_host_path(from[i], host, sizeof host) || !shfo_exists(host)) { rc = DE_INVALIDFILES; break; }
+            if ((rc = shfo_delete(host, fFlags, 0)) != 0) break;
+        }
+        RET(rc, 1);
+    }
+
+    int multidest = (fFlags & FOF_MULTIDESTFILES) != 0;
+    if (multidest ? nt != nf : (nt != 1 && nt != nf)) RET(DE_MANYDEST, 1);
+    for (int i = 0; i < nf; i++) {
+        char src[SHFO_PATH_MAX], dst[SHFO_PATH_MAX];
+        if (!hle_host_path(from[i], src, sizeof src) || !shfo_exists(src)) { rc = DE_INVALIDFILES; break; }
+        const char *dst_guest = (nt == 1 && !multidest) ? to[0] : to[i];
+        shfo_dest(dst, sizeof dst, from[i], dst_guest, nt == 1 && !multidest);
+        size_t sl = strlen(src);
+        if (!strncmp(dst, src, sl) && (dst[sl] == '/' || !dst[sl])) { rc = DE_DESTSAMETREE; break; }
+        if (wFunc == FO_COPY) rc = shfo_copy(src, dst, fFlags, 0);
+        else {
+            if (wFunc == FO_RENAME && shfo_exists(dst) && !(fFlags & FOF_RENAMEONCOLLISION)) { rc = DE_INVALIDFILES; break; }
+            rc = shfo_move(src, dst, fFlags);
+        }
+        if (rc) break;
+    }
+    RET(rc, 1);
+}
+
 /* There is no native folder picker in the portable HLE.  Returning NULL is
  * the documented SHBrowseForFolderW result when the user cancels; callers must
  * handle it before asking SHGetPathFromIDListW for a path. */
@@ -700,11 +1276,14 @@ static void il_GetDragImage(void) {
 static void il_SetDragCursorImage(void) { RET(1, 4); }
 
 const win32hle_shim win32hle_advapi32[] = {
-    { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
+    { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyExW", r_RegOpenKeyExW }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
     { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey }, { "RegFlushKey", adv_RegFlushKey },
     { "RegQueryValueExA", r_RegQueryValueExA }, { "RegQueryValueExW", r_RegQueryValueExW }, { "RegSetValueExA", r_RegSetValueExA },
+    { "RegSetValueExW", r_RegSetValueExW }, { "RegCreateKeyExW", r_RegCreateKeyExW },
+    { "RegQueryValueA", r_RegQueryValueA }, { "RegQueryValueW", r_RegQueryValueW }, { "RegSetValueA", r_RegSetValueA },
     { "RegDeleteValueA", r_RegDeleteValueA }, { "RegDeleteValueW", r_RegDeleteValueW }, { "RegDeleteKeyA", r_RegDeleteKeyA },
-    { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
+    { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumKeyExW", r_RegEnumKeyExW }, { "RegEnumValueA", r_RegEnumValueA }, { "RegEnumValueW", r_RegEnumValueW }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
+    { "RegQueryInfoKeyW", r_RegQueryInfoKeyW }, { "RegDeleteTreeA", r_RegDeleteTreeA }, { "RegDeleteTreeW", r_RegDeleteTreeW },
     { "GetUserNameA", r_GetUserNameA },
     { "AllocateAndInitializeSid", adv_AllocateAndInitializeSid }, { "CopySid", adv_CopySid },
     { "EqualSid", adv_EqualSid }, { "GetLengthSid", adv_GetLengthSid },
@@ -734,6 +1313,7 @@ const win32hle_shim win32hle_advapi32[] = {
     { "GetFileVersionInfoSizeA", v_GetFileVersionInfoSizeA }, { "GetFileVersionInfoA", v_GetFileVersionInfoA },
     { "VerQueryValueA", v_VerQueryValueA },
     { "FindExecutableA", s_FindExecutableA }, { "ShellExecuteA", s_ShellExecuteA },
+    { "SHFileOperationA", s_SHFileOperationA },
     { "SHBrowseForFolderW", s_SHBrowseForFolderW }, { "SHGetPathFromIDListW", s_SHGetPathFromIDListW },
     { "SHBrowseForFolderA", s_SHBrowseForFolderA }, { "SHGetPathFromIDListA", s_SHGetPathFromIDListA },
     { "SHGetMalloc", s_SHGetMalloc }, { "SHGetDesktopFolder", s_SHGetDesktopFolder },

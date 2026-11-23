@@ -16,6 +16,7 @@
  * window-message notification does.
  */
 #define _GNU_SOURCE
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,9 +31,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
-#include <ifaddrs.h>
-#include <net/if.h>
-#include <strings.h>
+#include <time.h>
 #include "win32hle.h"
 
 #ifndef MSG_NOSIGNAL             /* macOS: the socket says so instead (SO_NOSIGPIPE, at creation) */
@@ -48,9 +47,29 @@
 #define WSAEINVAL        10022u
 #define WSAEADDRINUSE    10048u
 #define WSAECONNRESET    10054u
+#define WSAEFAULT        10014u
+#define WSA_NOT_ENOUGH_MEMORY 10008u
 #define WSAHOST_NOT_FOUND 11001u
+#define WSATRY_AGAIN     11002u
+#define WSANO_RECOVERY   11003u
+#define WSANO_DATA       11004u
 #define FD_READ  0x01u
 #define FD_WRITE 0x02u
+#define FD_OOB   0x04u
+#define FD_ACCEPT 0x08u
+#define FD_CONNECT 0x10u
+#define FD_CLOSE 0x20u
+
+/* WSAEVENT objects. wsock32.dll never exported these (games import them from
+ * ws2_32.dll), so they are registered by name only. A WSAEVENT is an opaque
+ * HANDLE; the token range is kept apart from SOCKETs so the two cannot be
+ * confused by a guest that passes one where the other is expected. */
+#define MAX_WSA_EVENTS 64
+#define WSA_MAXIMUM_WAIT_EVENTS 64
+#define WSA_EVENT_BASE 0x40000000u
+#define WSA_WAIT_EVENT_0 0u
+#define WSA_WAIT_TIMEOUT 258u
+#define WSA_WAIT_FAILED  0xFFFFFFFFu
 
 static __thread uint32_t g_wsa_error;
 
@@ -59,6 +78,7 @@ static uint32_t wsa_errno(int e) {
     case EWOULDBLOCK: return WSAEWOULDBLOCK;
     case EADDRINUSE:  return WSAEADDRINUSE;
     case EINVAL:      return WSAEINVAL;
+    case EFAULT:      return WSAEFAULT;
     case EBADF: case ENOTSOCK: return WSAENOTSOCK;
     case ECONNRESET: case ECONNREFUSED: return WSAECONNRESET;
     case EAFNOSUPPORT: return WSAEAFNOSUPPORT;
@@ -68,6 +88,28 @@ static uint32_t wsa_errno(int e) {
 static int fd_of(uint32_t s) { return s >= SOCK_BASE && s < SOCK_BASE + 0x10000u ? (int)(s - SOCK_BASE) : -1; }
 static uint8_t g_ipx[0x10000 / 8];                       /* which descriptors are IPX sockets */
 static int is_ipx(int fd) { return fd >= 0 && fd < 0x10000 && (g_ipx[fd >> 3] >> (fd & 7) & 1); }
+
+/* Event objects are manual-reset (as WSACreateEvent creates), so a wait on
+ * several of them with fWaitAll is well defined. An event may be latched by
+ * WSASetEvent or by a selected network event on its socket. */
+typedef struct {
+    uint32_t s;                        /* socket WSAEventSelect bound here, 0 = none */
+    uint32_t mask;                     /* FD_* mask that was selected */
+    int signaled;
+    int used;
+} wsa_event_obj;
+static wsa_event_obj g_events[MAX_WSA_EVENTS];
+static uint32_t g_ev_sock[64];         /* socket -> event association, keyed as WSAEventSelect left it */
+static uint32_t g_ev_mask[64];
+static uint32_t g_ev_ev[64];           /* the hEventObject passed to WSAEventSelect */
+static int g_ev_count;
+
+static int ev_idx(uint32_t h) {
+    if (h < WSA_EVENT_BASE || h >= WSA_EVENT_BASE + MAX_WSA_EVENTS) return -1;
+    int i = (int)(h - WSA_EVENT_BASE);
+    return g_events[i].used ? i : -1;
+}
+
 #define AF_IPX_WIN    6
 #define NSPROTO_IPX   1000u
 #define FAIL(n) do { g_wsa_error = wsa_errno(errno); RET(SOCKET_ERROR, n); } while (0)
@@ -113,6 +155,13 @@ static void w_WSAStartup(void) {                         /* (version, &WSADATA) 
     RET(0, 2);
 }
 static void w_WSACleanup(void)     { RET(0, 0); }
+/* Legacy WSOCK32 blocking-call cancellation: this layer has no blocking
+ * call to cancel, so report SOCKET_ERROR + WSAEINVAL rather than claiming
+ * a cancellation that never happened. */
+static void w_WSACancelBlockingCall(void) {
+    g_wsa_error = WSAEINVAL;
+    RET(0xFFFFFFFFu, 0);
+}
 static void w_WSAGetLastError(void){ RET(g_wsa_error, 0); }
 static void w_WSASetLastError(void){ g_wsa_error = A32(0); RETV(1); }
 
@@ -137,6 +186,12 @@ static void w_closesocket(void) {
     int fd = fd_of(A32(0));
     if (fd < 0 || close(fd) != 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 1); }
     g_ipx[fd >> 3] &= (uint8_t)~(1 << (fd & 7));
+    uint32_t s = A32(0);
+    for (int i = 0; i < g_ev_count; i++) if (g_ev_sock[i] == s) {
+        int ei = g_ev_ev[i] ? ev_idx(g_ev_ev[i]) : -1;
+        if (ei >= 0) { g_events[ei].s = 0; g_events[ei].mask = 0; g_events[ei].signaled = 0; }
+        g_ev_sock[i] = g_ev_mask[i] = g_ev_ev[i] = 0;
+    }
     RET(0, 1);
 }
 static void w_bind(void) {                               /* (s, addr, len) */
@@ -169,18 +224,45 @@ static void w_sendto(void) {                             /* (s, buf, len, flags,
     RET((uint32_t)n, 6);
 }
 static void w_send(void) { ssize_t n = send(fd_of(A32(0)), APTR(1), A32(2), MSG_NOSIGNAL); if (n < 0) FAIL(4); RET((uint32_t)n, 4); }
+/* Winsock recv() blocks by default; the old MSG_DONTWAIT made a normal read
+ * fail with WSAEWOULDBLOCK. A blocking wait must give the machine to other
+ * guest threads (hle_block_begin/end), as the other blocking waits here do. */
+static int socket_nonblocking(int fd) { return (fcntl(fd, F_GETFL) & O_NONBLOCK) != 0; }
+static void recv_yield(void) {
+    hle_block_begin();
+    usleep(200);
+    hle_block_end();
+}
 static void w_recvfrom(void) {                           /* (s, buf, len, flags, from, &fromlen) */
     struct sockaddr_in a;
     socklen_t al = sizeof a;
-    ssize_t n = recvfrom(fd_of(A32(0)), APTR(1), A32(2), MSG_DONTWAIT, (struct sockaddr *)&a, &al);
-    if (n < 0) FAIL(6);
+    int fd = fd_of(A32(0));
+    ssize_t n;
+    for (;;) {
+        n = recvfrom(fd, APTR(1), A32(2), 0, (struct sockaddr *)&a, &al);
+        if (n >= 0) break;
+        if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) FAIL(6);
+        if (socket_nonblocking(fd)) FAIL(6);
+        recv_yield();
+    }
     if (nettrace()) fprintf(stderr, "[net] recvfrom %s:%u %d bytes\n", inet_ntoa(a.sin_addr), ntohs(a.sin_port), (int)n);
-    int ipx = is_ipx(fd_of(A32(0)));
+    int ipx = is_ipx(fd);
     if (A32(4)) { if (ipx) ipx_to_guest(&a, (uint8_t *)APTR(4), 0); else to_guest(&a, (uint8_t *)APTR(4)); }
     if (A32(5)) MEM32(A32(5)) = ipx ? 14 : 16;
     RET((uint32_t)n, 6);
 }
-static void w_recv(void) { ssize_t n = recv(fd_of(A32(0)), APTR(1), A32(2), MSG_DONTWAIT); if (n < 0) FAIL(4); RET((uint32_t)n, 4); }
+static void w_recv(void) {
+    int fd = fd_of(A32(0));
+    ssize_t n;
+    for (;;) {
+        n = recv(fd, APTR(1), A32(2), 0);
+        if (n >= 0) break;
+        if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) FAIL(4);
+        if (socket_nonblocking(fd)) FAIL(4);
+        recv_yield();
+    }
+    RET((uint32_t)n, 4);
+}
 
 /* Socket options: SOL_SOCKET is 0xFFFF on Winsock, and its option numbers are
  * BSD's own (SO_BROADCAST 0x20, SO_REUSEADDR 4, SO_RCVBUF 0x1002, ...). */
@@ -269,48 +351,98 @@ static void w_inet_ntoa(void) {                          /* (in_addr by value) *
     snprintf(buf, 16, "%u.%u.%u.%u", a & 255, (a >> 8) & 255, (a >> 16) & 255, a >> 24);
     RETP(buf, 1);
 }
-static void w_gethostname(void) {
-    if (gethostname(ASTR(0), A32(1)) != 0) FAIL(2);
-    RET(0, 2);
-}
-/* hostent, in guest-readable memory: name, aliases, addrtype(2), length(2),
- * addr_list. One per thread, as Winsock's is. */
-static void w_gethostbyname(void) {
-    typedef struct { uint32_t name, aliases; uint16_t type, len; uint32_t list; uint32_t lp[9]; uint32_t addr[8]; uint32_t none; char nm[256]; } guest_hostent;
+/* ---- Winsock 1.1 name resolution: host resolver -> guest-visible hostent ----
+ * A hostent is the 16-byte public header (h_name, h_aliases, h_addrtype,
+ * h_length, h_addr_list) followed by private storage. Every pointer handed to
+ * the guest is a guest VA, including the entries of h_addr_list and the empty
+ * NULL-terminated alias list. One result per thread, as Winsock's is. */
+typedef struct {
+    uint32_t name, aliases;
+    uint16_t type, len;
+    uint32_t list;
+    uint32_t lp[9];                     /* h_addr_list, NULL-terminated */
+    uint32_t addr[8];                   /* IPv4 addresses, network order */
+    uint8_t  addr6[16];                 /* one IPv6 address (gethostbyaddr) */
+    uint32_t none;                      /* empty, NULL-terminated h_aliases */
+    char nm[256];
+} guest_hostent;
+#define GHE_OFF(field) ((uint32_t)offsetof(guest_hostent, field))
+
+static guest_hostent *ghe_alloc(void) {
     static __thread guest_hostent *he;
     if (!he) he = (guest_hostent *)hle_alloc(sizeof *he);
+    if (he) memset(he, 0, sizeof *he);
+    return he;
+}
+
+/* getaddrinfo/getnameinfo's EAI_* codes are the resolver's honest diagnosis;
+ * translate them to the Winsock codes WSAGetLastError must report. */
+static uint32_t gai_errno(int e) {
+    switch (e) {
+    case EAI_AGAIN:   return WSATRY_AGAIN;
+    case EAI_FAIL:    return WSANO_RECOVERY;
+    case EAI_MEMORY:  return WSA_NOT_ENOUGH_MEMORY;
+    case EAI_NONAME:  return WSAHOST_NOT_FOUND;
+    case EAI_BADFLAGS:
+    case EAI_SOCKTYPE:
+    case EAI_SERVICE: return WSAEINVAL;
+#ifdef EAI_FAMILY
+    case EAI_FAMILY:  return WSAEAFNOSUPPORT;
+#endif
+#ifdef EAI_ADDRFAMILY
+    case EAI_ADDRFAMILY: return WSANO_DATA;
+#endif
+#if defined(EAI_NODATA)
+#if !defined(EAI_NONAME) || EAI_NODATA != EAI_NONAME
+    case EAI_NODATA:  return WSANO_DATA;
+#endif
+#endif
+    case EAI_SYSTEM:  return wsa_errno(errno);
+    default:          return WSANO_RECOVERY;
+    }
+}
+
+static void w_gethostname(void) {                         /* (name, namelen) */
+    char *name = ASTR(0);
+    uint32_t len = A32(1);
+    if (!name || !len) { g_wsa_error = WSAEFAULT; RET(SOCKET_ERROR, 2); }
+    if (gethostname(name, (size_t)len) != 0) {
+        g_wsa_error = (errno == ENAMETOOLONG || errno == ERANGE) ? WSAEFAULT : wsa_errno(errno);
+        RET(SOCKET_ERROR, 2);
+    }
+    g_wsa_error = 0;
+    RET(0, 2);
+}
+
+static void w_gethostbyname(void) {                       /* (name) -> hostent* or NULL */
     const char *name = ASTR(0);
-    struct hostent *h = name ? gethostbyname(name) : NULL;
-    memset(he, 0, sizeof *he);
-    he->name = hle_va(he->nm);
-    he->aliases = hle_va(&he->none);
-    he->type = 2, he->len = 4;
-    he->list = hle_va(he->lp);
-    if (h && h->h_addrtype == AF_INET) {
-        snprintf(he->nm, sizeof he->nm, "%s", h->h_name);
-        for (int i = 0; i < 8 && h->h_addr_list[i]; i++) {
-            memcpy(&he->addr[i], h->h_addr_list[i], 4);
-            he->lp[i] = hle_va(&he->addr[i]);
-        }
-        RETP(he, 1);
-    }
-    /* Windows always resolves its own name; a Mac's (a .local name) may not
-     * be in the resolver gethostbyname uses, and a game that looks itself up
-     * goes on as if it had an address (Yuri's Revenge's WOnline screen does).
-     * Its own name is its interfaces' IPv4 addresses, or loopback. */
-    char self[256];
-    if (!name || gethostname(self, sizeof self) != 0 || strcasecmp(name, self)) { g_wsa_error = WSAHOST_NOT_FOUND; RET(0, 1); }
-    snprintf(he->nm, sizeof he->nm, "%s", self);
+    if (!name || !*name) { g_wsa_error = WSAHOST_NOT_FOUND; RET(0, 1); }
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;                            /* Winsock's hostent is IPv4 */
+    hints.ai_flags = AI_CANONNAME;
+    int rc = getaddrinfo(name, NULL, &hints, &res);
+    if (rc != 0) { g_wsa_error = gai_errno(rc); RET(0, 1); }
+    guest_hostent *he = ghe_alloc();
+    if (!he) { freeaddrinfo(res); g_wsa_error = WSA_NOT_ENOUGH_MEMORY; RET(0, 1); }
+    const char *canon = NULL;
     int n = 0;
-    struct ifaddrs *ifs = NULL;
-    if (getifaddrs(&ifs) == 0) {
-        for (struct ifaddrs *i = ifs; i && n < 8; i = i->ifa_next)
-            if (i->ifa_addr && i->ifa_addr->sa_family == AF_INET && !(i->ifa_flags & IFF_LOOPBACK) && (i->ifa_flags & IFF_UP))
-                memcpy(&he->addr[n++], &((struct sockaddr_in *)i->ifa_addr)->sin_addr, 4);
-        freeifaddrs(ifs);
+    for (struct addrinfo *p = res; p && n < 8; p = p->ai_next) {
+        if (p->ai_family != AF_INET || !p->ai_addr) continue;
+        if (!canon && p->ai_canonname) canon = p->ai_canonname;
+        memcpy(&he->addr[n], &((const struct sockaddr_in *)p->ai_addr)->sin_addr, 4);
+        n++;
     }
-    if (!n) he->addr[n++] = htonl(INADDR_LOOPBACK);
-    for (int i = 0; i < n; i++) he->lp[i] = hle_va(&he->addr[i]);
+    if (!n) { freeaddrinfo(res); g_wsa_error = WSANO_DATA; RET(0, 1); } /* a name with no IPv4 address */
+    uint32_t base = hle_va(he);
+    he->name = base + GHE_OFF(nm);
+    he->aliases = base + GHE_OFF(none);
+    he->type = 2, he->len = 4;                            /* AF_INET, 4 bytes on Windows */
+    he->list = base + GHE_OFF(lp);
+    for (int i = 0; i < n; i++) he->lp[i] = base + GHE_OFF(addr[i]);
+    snprintf(he->nm, sizeof he->nm, "%s", canon ? canon : name);
+    freeaddrinfo(res);                                    /* canon points into res */
+    g_wsa_error = 0;
     RETP(he, 1);
 }
 
@@ -359,16 +491,19 @@ static void w_EnumProtocolsA(void) {
 static int win_af_to_host(int af) { return af == 23 ? AF_INET6 : af; }
 static int host_af_to_win(int af) { return af == AF_INET6 ? 23 : af; }
 
-static uint32_t g_ev_sock[64];
-static uint32_t g_ev_mask[64];
-static int g_ev_count;
-
 static void w_accept(void) {
     int fd = fd_of(A32(0));
     if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(INVALID_SOCKET, 3); return; }
     struct sockaddr_in sa;
     socklen_t sal = sizeof sa;
-    int nfd = accept(fd, (struct sockaddr *)&sa, &sal);
+    int nfd;
+    for (;;) {
+        nfd = accept(fd, (struct sockaddr *)&sa, &sal);
+        if (nfd >= 0 || errno == EINTR) { if (nfd >= 0) break; continue; }
+        if (errno != EAGAIN && errno != EWOULDBLOCK) break;
+        if (socket_nonblocking(fd)) break;
+        recv_yield();
+    }
     if (nfd < 0) { g_wsa_error = wsa_errno(errno); RET(INVALID_SOCKET, 3); return; }
     if (nfd >= 0x10000) { close(nfd); g_wsa_error = 10024u; RET(INVALID_SOCKET, 3); return; }
     if (APTR(1) && A32(2) && MEM32(A32(2)) >= 16) {
@@ -459,31 +594,53 @@ static void w___WSAFDIsSet(void) {
     RET(0, 2);
 }
 
-static void w_gethostbyaddr(void) {
-    typedef struct { uint32_t name, aliases; uint16_t type, len; uint32_t list; uint32_t lp[9]; uint32_t addr[8]; uint32_t none; char nm[256]; } guest_hostent;
-    static __thread guest_hostent *gh;
+/* Reverse lookup: a real host getnameinfo (NI_NAMEREQD, so an address with no
+ * PTR record fails instead of being passed off as its own name). */
+static void w_gethostbyaddr(void) {                       /* (addr, len, type) -> hostent* or NULL */
     const void *addr = APTR(0);
-    int len = (int)A32(1), type = (int)A32(2);
-    if (!addr) { g_wsa_error = WSAEINVAL; RET(0, 3); return; }
-    struct hostent *h = gethostbyaddr(addr, (socklen_t)len, win_af_to_host(type));
-    if (!h) { g_wsa_error = WSAHOST_NOT_FOUND; RET(0, 3); return; }
-    if (!gh) gh = (guest_hostent *)hle_alloc(sizeof *gh);
-    if (!gh) { RET(0, 3); return; }
-    memset(gh, 0, sizeof *gh);
-    uint32_t b = hle_va(gh);
-    snprintf(gh->nm, sizeof gh->nm, "%s", h->h_name ? h->h_name : "");
-    gh->name = b + (uint32_t)offsetof(guest_hostent, nm);
-    gh->aliases = b + (uint32_t)offsetof(guest_hostent, none);
-    gh->type = (uint16_t)host_af_to_win(h->h_addrtype);
-    gh->len = (uint16_t)h->h_length;
-    gh->list = b + (uint32_t)offsetof(guest_hostent, lp);
-    int n = 0;
-    while (h->h_addr_list[n] && n < 8) {
-        memcpy(&gh->addr[n], h->h_addr_list[n], h->h_length <= 4 ? (size_t)h->h_length : 4);
-        gh->lp[n] = b + (uint32_t)offsetof(guest_hostent, addr[n]);
-        n++;
+    uint32_t len = A32(1), type = A32(2);
+    if (!addr || !len) { g_wsa_error = WSAEINVAL; RET(0, 3); }
+    struct sockaddr_storage ss;
+    socklen_t slen;
+    memset(&ss, 0, sizeof ss);
+    if (type == 2 && len == 4) {                          /* AF_INET on Windows */
+        struct sockaddr_in *sin = (struct sockaddr_in *)&ss;
+#ifdef __APPLE__
+        sin->sin_len = sizeof *sin;
+#endif
+        sin->sin_family = AF_INET;
+        memcpy(&sin->sin_addr, addr, 4);
+        slen = sizeof *sin;
+    } else if (type == 23 && len == 16) {                 /* AF_INET6 on Windows */
+        struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)&ss;
+#ifdef __APPLE__
+        s6->sin6_len = sizeof *s6;
+#endif
+        s6->sin6_family = AF_INET6;
+        memcpy(&s6->sin6_addr, addr, 16);
+        slen = sizeof *s6;
+    } else { g_wsa_error = WSAEINVAL; RET(0, 3); }
+
+    char nm[NI_MAXHOST];
+    int rc = getnameinfo((const struct sockaddr *)&ss, slen, nm, sizeof nm, NULL, 0, NI_NAMEREQD);
+    if (rc != 0) { g_wsa_error = gai_errno(rc); RET(0, 3); }
+    guest_hostent *gh = ghe_alloc();
+    if (!gh) { g_wsa_error = WSA_NOT_ENOUGH_MEMORY; RET(0, 3); }
+    uint32_t base = hle_va(gh);
+    gh->name = base + GHE_OFF(nm);
+    gh->aliases = base + GHE_OFF(none);
+    gh->type = (uint16_t)type, gh->len = (uint16_t)len;
+    gh->list = base + GHE_OFF(lp);
+    snprintf(gh->nm, sizeof gh->nm, "%s", nm);
+    if (type == 2) {
+        memcpy(&gh->addr[0], addr, 4);
+        gh->lp[0] = base + GHE_OFF(addr[0]);
+    } else {
+        memcpy(gh->addr6, addr, 16);
+        gh->lp[0] = base + GHE_OFF(addr6);
     }
-    RET(b, 3);
+    g_wsa_error = 0;
+    RETP(gh, 3);
 }
 
 static uint32_t sockaddr_to_guest_any(const struct sockaddr *sa, socklen_t len) {
@@ -607,18 +764,128 @@ static void w_WSASocketA(void) {
     RET(SOCK_BASE + (uint32_t)fd, 6);
 }
 
+/* ---- WSA event objects -------------------------------------------------
+ * WSAEventSelect's hEventObject used to be ignored; a game that chained it
+ * into WSAWaitForMultipleEvents could never make progress. These shims give
+ * that handle real (manual-reset) semantics. A selected network event latches
+ * the event until WSAEnumNetworkEvents or WSAResetEvent clears it, as on
+ * Windows. fAlertable is accepted but APCs are not delivered by this layer. */
+static void w_WSACreateEvent(void) {
+    for (int i = 0; i < MAX_WSA_EVENTS; i++) if (!g_events[i].used) {
+        memset(&g_events[i], 0, sizeof g_events[i]);
+        g_events[i].used = 1;
+        RET(WSA_EVENT_BASE + (uint32_t)i, 0);             /* NULL on failure, like the real API */
+    }
+    g_wsa_error = WSA_NOT_ENOUGH_MEMORY;
+    RET(0, 0);
+}
+
+static void w_WSACloseEvent(void) {
+    uint32_t h = A32(0);
+    int i = ev_idx(h);
+    if (i < 0) { g_wsa_error = WSAEINVAL; RET(0, 1); }     /* FALSE, not an exception */
+    for (int k = 0; k < g_ev_count; k++) if (g_ev_ev[k] == h) {
+        g_ev_sock[k] = g_ev_mask[k] = g_ev_ev[k] = 0;
+    }
+    memset(&g_events[i], 0, sizeof g_events[i]);
+    RET(1, 1);
+}
+
+static void w_WSASetEvent(void) {
+    int i = ev_idx(A32(0));
+    if (i < 0) { g_wsa_error = WSAEINVAL; RET(0, 1); }
+    g_events[i].signaled = 1;
+    RET(1, 1);
+}
+
+static void w_WSAResetEvent(void) {
+    int i = ev_idx(A32(0));
+    if (i < 0) { g_wsa_error = WSAEINVAL; RET(0, 1); }
+    g_events[i].signaled = 0;
+    RET(1, 1);
+}
+
+static int event_ready(uint32_t h) {
+    int i = ev_idx(h);
+    if (i < 0) return 0;
+    if (g_events[i].signaled) return 1;
+    int fd = fd_of(g_events[i].s);
+    uint32_t mask = g_events[i].mask;
+    if (fd < 0 || !mask) return 0;
+    short want = 0;
+    if (mask & (FD_READ | FD_ACCEPT)) want |= POLLIN;
+    if (mask & (FD_WRITE | FD_CONNECT)) want |= POLLOUT;
+    if (mask & FD_OOB) want |= POLLPRI;
+    if (mask & FD_CLOSE) want |= POLLHUP;
+    if (!want) return 0;
+    struct pollfd p = { fd, want, 0 };
+    if (poll(&p, 1, 0) > 0 && (p.revents & (want | POLLHUP | POLLERR))) {
+        g_events[i].signaled = 1;                         /* a network event latches */
+        return 1;
+    }
+    return 0;
+}
+
+static uint64_t monotonic_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
+}
+
+static void w_WSAWaitForMultipleEvents(void) {
+    uint32_t n = A32(0), hp = A32(1), waitall = A32(2), timeout = A32(3);
+    if (!n || n > WSA_MAXIMUM_WAIT_EVENTS || !hp) { g_wsa_error = WSAEINVAL; RET(WSA_WAIT_FAILED, 5); return; }
+    for (uint32_t i = 0; i < n; i++) if (ev_idx(MEM32(hp + 4u * i)) < 0) {
+        g_wsa_error = WSAEINVAL; RET(WSA_WAIT_FAILED, 5); return;
+    }
+    int infinite = timeout == 0xFFFFFFFFu;                /* WSA_INFINITE */
+    uint64_t deadline = infinite ? 0 : monotonic_ms() + timeout;
+    for (;;) {
+        int first = -1, all = 1;
+        for (uint32_t i = 0; i < n; i++) {
+            int r = event_ready(MEM32(hp + 4u * i));
+            if (r && first < 0) first = (int)i;
+            if (!r) all = 0;
+        }
+        if (!waitall && first >= 0) RET((uint32_t)first, 5);
+        if (waitall && all) RET(WSA_WAIT_EVENT_0, 5);
+        if (!infinite) {
+            uint64_t now = monotonic_ms();
+            if (now >= deadline) RET(WSA_WAIT_TIMEOUT, 5);
+            uint64_t left = deadline - now;
+            if (left > 20) left = 20;                     /* bounded poll granularity */
+            hle_block_begin();
+            usleep((useconds_t)(left * 1000u));
+            hle_block_end();
+        } else {
+            hle_block_begin();
+            usleep(20000);
+            hle_block_end();
+        }
+    }
+}
+
 static void w_WSAEventSelect(void) {
-    uint32_t s = A32(0), mask = A32(2);
+    uint32_t s = A32(0), evh = A32(1), mask = A32(2);
     int fd = fd_of(s);
     if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); return; }
+    if (evh && ev_idx(evh) < 0) { g_wsa_error = WSAEINVAL; RET(SOCKET_ERROR, 3); return; }
     if (mask) {
         int fl = fcntl(fd, F_GETFL, 0);
         if (fl >= 0) fcntl(fd, F_SETFL, fl | O_NONBLOCK);
     }
     int idx = -1;
     for (int i = 0; i < g_ev_count; i++) if (g_ev_sock[i] == s) { idx = i; break; }
-    if (idx < 0 && g_ev_count < 64) idx = g_ev_count++;
-    if (idx >= 0) { g_ev_sock[idx] = s; g_ev_mask[idx] = mask; }
+    if (idx < 0 && g_ev_count < WSA_MAXIMUM_WAIT_EVENTS) idx = g_ev_count++;
+    if (idx >= 0) {
+        g_ev_sock[idx] = s; g_ev_mask[idx] = mask; g_ev_ev[idx] = evh;
+        int ei = evh ? ev_idx(evh) : -1;
+        if (ei >= 0) {
+            g_events[ei].s = mask ? s : 0;
+            g_events[ei].mask = mask;
+            if (!mask) g_events[ei].signaled = 0;
+        }
+    }
     RET(0, 3);
 }
 
@@ -638,6 +905,12 @@ static void w_WSAEnumNetworkEvents(void) {
         if (pfd.revents & POLLHUP) ev |= 0x20u; /* FD_CLOSE */
     }
     MEM32(out_va) = ev & (mask ? mask : 0x3Fu);
+    /* WSAEnumNetworkEvents clears the associated event, as Windows does. */
+    for (int i = 0; i < g_ev_count; i++) if (g_ev_sock[i] == s && g_ev_ev[i]) {
+        int ei = ev_idx(g_ev_ev[i]);
+        if (ei >= 0) g_events[ei].signaled = 0;
+        break;
+    }
     RET(0, 3);
 }
 
@@ -673,6 +946,7 @@ const win32hle_shim win32hle_wsock32[] = {
     SHIM2(101, "WSAAsyncSelect", w_WSAAsyncSelect),
     SHIM2(108, "WSACancelAsyncRequest", w_WSACancelAsyncRequest),
     SHIM2(111, "WSAGetLastError", w_WSAGetLastError),
+    SHIM2(119, "WSACancelBlockingCall", w_WSACancelBlockingCall),
     SHIM2(112, "WSASetLastError", w_WSASetLastError),
     SHIM2(115, "WSAStartup", w_WSAStartup),
     SHIM2(116, "WSACleanup", w_WSACleanup),
@@ -683,5 +957,11 @@ const win32hle_shim win32hle_wsock32[] = {
     { "WSASocketA", w_WSASocketA },
     { "WSAEventSelect", w_WSAEventSelect },
     { "WSAEnumNetworkEvents", w_WSAEnumNetworkEvents },
+    /* Winsock 2 event objects: no wsock32.dll ordinals, imported by name. */
+    { "WSACreateEvent", w_WSACreateEvent },
+    { "WSACloseEvent", w_WSACloseEvent },
+    { "WSASetEvent", w_WSASetEvent },
+    { "WSAResetEvent", w_WSAResetEvent },
+    { "WSAWaitForMultipleEvents", w_WSAWaitForMultipleEvents },
     { 0, 0 }
 };

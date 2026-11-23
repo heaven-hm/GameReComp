@@ -172,6 +172,9 @@ static void move(win_t *x, int px, int py, int pw, int ph, int do_move, int do_s
 void hle_set_screen_size(int w, int h) {
     int ow = g_screen_w, oh = g_screen_h;
     g_screen_w = w, g_screen_h = h;
+    /* Keep the host window at the guest's display mode so the picture is
+     * shown at its native size instead of a fixed 1280x960 default. */
+    hle_screen_set_native_size(w, h);
     for (int i = 0; i < MAX_WIN; i++) {
         win_t *x = &g_win[i];
         if (x->used && !x->parent && !x->owner && x->x <= 0 && x->y <= 0 && x->x + x->w >= ow && x->y + x->h >= oh)
@@ -606,12 +609,19 @@ static int wait_message(msg_t *m, uint32_t hwnd, uint32_t lo, uint32_t hi) {
     }
 }
 
-static void u_GetMessageA(void) {                        /* (msg, hwnd, min, max) */
+/* A MSG holds only numbers (hwnd, message, wParam, lParam, time, x, y), so the
+ * A and W forms of the message-loop calls are byte-for-byte identical: same
+ * 28-byte guest struct, same queue, same return values. Both names share one
+ * implementation; the text-bearing APIs (SendMessageW's WM_SETTEXT and
+ * RegisterClassExW's class name) do the conversion at their boundary. */
+static uint32_t get_message(uint32_t lp, uint32_t hwnd, uint32_t lo, uint32_t hi) {
     msg_t m;
-    wait_message(&m, A32(1), A32(2), A32(3));
-    put_msg(A32(0), &m);
-    RET(m.message == WM_QUIT ? 0u : 1u, 4);
+    wait_message(&m, hwnd, lo, hi);
+    put_msg(lp, &m);
+    return m.message == WM_QUIT ? 0u : 1u;
 }
+static void u_GetMessageA(void) { RET(get_message(A32(0), A32(1), A32(2), A32(3)), 4); }
+static void u_GetMessageW(void) { RET(get_message(A32(0), A32(1), A32(2), A32(3)), 4); }
 static void u_PeekMessageA(void) {                       /* (msg, hwnd, min, max, remove) */
     msg_t m;
     int remove = A32(4) & 1;
@@ -631,12 +641,14 @@ static void u_WaitMessage(void) {
     }
     RET(1, 0);
 }
-static void u_PostMessageA(void) {
-    if (A32(1) == WM_QUIT) { g_quit = 1, g_quit_code = A32(2); RET(1, 4); }
-    if (!A32(0)) { q_push_to(0, A32(1), A32(2), A32(3), hle_thread_id()); RET(1, 4); }   /* NULL: this thread's own queue */
-    q_push(A32(0), A32(1), A32(2), A32(3));
-    RET(1, 4);
+static uint32_t post_message(uint32_t hwnd, uint32_t m, uint32_t w, uint32_t l) {
+    if (m == WM_QUIT) { g_quit = 1, g_quit_code = w; return 1; }
+    if (!hwnd) { q_push_to(0, m, w, l, hle_thread_id()); return 1; }   /* NULL: this thread's own queue */
+    q_push(hwnd, m, w, l);
+    return 1;
 }
+static void u_PostMessageA(void) { RET(post_message(A32(0), A32(1), A32(2), A32(3)), 4); }
+static void u_PostMessageW(void) { RET(post_message(A32(0), A32(1), A32(2), A32(3)), 4); }
 static void u_PostThreadMessageA(void) {                 /* (thread, msg, w, l) */
     q_push_to(0, A32(1), A32(2), A32(3), A32(0));
     RET(1, 4);
@@ -2299,6 +2311,16 @@ static void u_GetSystemMetrics(void) {
 
 /* resources the presenter does not draw: handles that are not NULL */
 static void u_LoadIconA(void)        { RET(0x1C000001u, 2); }
+/* CreateIconIndirect(ICONINFO*): validate the 20-byte guest struct and hand
+ * back the same stand-in icon identity LoadIconA uses. No rasterisation is
+ * claimed; the handle is a real guest value that DestroyIcon accepts. */
+static void u_CreateIconIndirect(void) {
+    uint32_t p = A32(0);
+    if (!p) { RET(0, 1); }
+    uint32_t hmask = MEM32(p + 12u), hcolor = MEM32(p + 16u);
+    if (!hmask && !hcolor) { RET(0, 1); }
+    RET(0x1C000001u, 1);
+}
 /* Cursors from the guest's own resources: a 32x32 monochrome cursor, as the
  * Westwood games ship, is kept as its masks so screen.c can show it. Any
  * other cursor (a system one, colour, another size) is the stand-in handle,
@@ -2342,6 +2364,13 @@ const hle_cursor_image_t *hle_cursor_image(uint32_t handle) {
 }
 
 static void u_LoadCursorA(void) {                        /* (hinst, name): an id, or a system cursor with hinst NULL */
+    uint32_t hinst = A32(0), name = A32(1), h = 0;
+    if (hinst && name < 0x10000u) h = load_mono_cursor(hinst, name);
+    RET(h ? h : CURSOR_STANDIN, 2);
+}
+/* LoadCursorW: a numeric resource id is passed by value; a wide string names
+ * a system cursor. Both resolve to the same real cursor stand-in path. */
+static void u_LoadCursorW(void) {
     uint32_t hinst = A32(0), name = A32(1), h = 0;
     if (hinst && name < 0x10000u) h = load_mono_cursor(hinst, name);
     RET(h ? h : CURSOR_STANDIN, 2);
@@ -3070,6 +3099,19 @@ static void u_DrawTextA(void) {                          /* (hdc, text, n, rect,
     if (r && (A32(4) & 0x400u)) MEM32(r + 8) = MEM32(r) + (uint32_t)(n * 6), MEM32(r + 12) = MEM32(r + 4) + 13;   /* DT_CALCRECT */
     RET(13, 5);
 }
+/* DrawTextW: UTF-16 text is converted to the same bounded ANSI text path the
+ * A form uses; the measured width and DT_CALCRECT contract stay identical. */
+static int wide_to_stack_ansi(uint32_t va, char *buf, size_t sz);
+static void u_DrawTextW(void) {
+    char text[1024] = "";
+    uint32_t t = A32(1);
+    int n = (int)A32(2);
+    uint32_t r = A32(3);
+    if (t >= 0x10000u) wide_to_stack_ansi(t, text, sizeof text);
+    if (n < 0) n = (int)strlen(text);
+    if (r && (A32(4) & 0x400u)) MEM32(r + 8) = MEM32(r) + (uint32_t)(n * 6), MEM32(r + 12) = MEM32(r + 4) + 13;
+    RET(13, 5);
+}
 
 /* wsprintfA is cdecl: the caller pops, so only the return address goes. */
 static void u_wsprintfA(void) {
@@ -3160,6 +3202,17 @@ static uint32_t send_settext_w(uint32_t hwnd, uint32_t w_va) {
     return r;
 }
 
+/* SendMessageW: message numbers and wParam/lParam travel unchanged on the
+ * existing queue. WM_SETTEXT alone carries text in lParam (UTF-16 here, ANSI
+ * in DefWindowProc); convert that one case through the helper above and free
+ * the temporary after the window procedure has read it. Everything else uses
+ * hle_send, so the window's own thread and cross-thread sent-message path stay
+ * exactly as for the A form. */
+static void u_SendMessageW(void) {
+    uint32_t h = A32(0), m = A32(1), w = A32(2), l = A32(3);
+    RET(m == WM_SETTEXT ? send_settext_w(h, l) : hle_send(h, m, w, l), 4);
+}
+
 static void u_RegisterClassW(void) {
     builtin_classes();
     uint32_t wc = A32(0);
@@ -3169,6 +3222,22 @@ static void u_RegisterClassW(void) {
     if (name_va >= 0x10000u) { wide_to_stack_ansi(name_va, buf, sizeof buf); name = buf; }
     int i = add_class(name, MEM32(wc + 4), MEM32(wc), MEM32(wc + 12), MEM32(wc + 16), K_GUEST);
     set_class_menu(i, MEM32(wc + 32), 1);
+    RET(i < 0 ? 0u : 0xC000u + (uint32_t)i, 1);
+}
+
+/* WNDCLASSEXW has the same field offsets as WNDCLASSEXA; lpszClassName (+40)
+ * and lpszMenuName (+36) are UTF-16. Register through the same class table,
+ * converting those two strings so a Unicode game's class name matches the one
+ * CreateWindowExW resolves. */
+static void u_RegisterClassExW(void) {
+    builtin_classes();
+    uint32_t wc = A32(0);
+    uint32_t name_va = MEM32(wc + 40);
+    char buf[256];
+    const char *name = "?";
+    if (name_va >= 0x10000u) { wide_to_stack_ansi(name_va, buf, sizeof buf); name = buf; }
+    int i = add_class(name, MEM32(wc + 8), MEM32(wc + 4), MEM32(wc + 16), MEM32(wc + 20), K_GUEST);
+    set_class_menu(i, MEM32(wc + 36), 1);
     RET(i < 0 ? 0u : 0xC000u + (uint32_t)i, 1);
 }
 
@@ -3217,6 +3286,102 @@ static void u_GetWindowTextLengthW(void) {
     RET(W(A32(0)) ? hle_send(A32(0), WM_GETTEXTLENGTH, 0, 0) : 0u, 1);
 }
 
+/* ---- more Unicode text/class shims ----
+ * GetClassNameW and GetDlgItemTextW complete the A/W pairs above;
+ * GetClassInfoW fills a WNDCLASSW. All three take caller-owned WCHAR buffers
+ * (counted in WCHARs, not bytes) and report failure honestly: an invalid HWND,
+ * a missing dialog item, or a null pointer returns 0/FALSE and touches no
+ * buffer the caller did not offer. */
+/* Copy an ANSI string into a guest WCHAR buffer of at most max cells, always
+ * writing the terminator. Returns the WCHAR count written before it. */
+static uint32_t wtext_put(const char *s, uint32_t dst_va, uint32_t max) {
+    if (!s || !dst_va || !max) return 0;
+    uint16_t *dst = (uint16_t *)hle_ptr(dst_va);
+    size_t len = strlen(s);
+    if (len + 1u <= max) {
+        if (!hle_ansi_to_wide(s, dst, (size_t)max)) { dst[0] = 0; return 0; }
+        return (uint32_t)len;
+    }
+    for (uint32_t i = 0; i + 1u < max; i++) dst[i] = (uint16_t)(uint8_t)s[i];
+    dst[max - 1u] = 0;
+    return max - 1u;
+}
+
+static void u_GetClassNameW(void) {                     /* (hwnd, LPWSTR, int count) */
+    win_t *x = W(A32(0));
+    uint32_t out = A32(1), max = A32(2);
+    if (!x || !out || !max) {
+        if (out && max) MEM16(out) = 0;
+        RET(0, 3); return;
+    }
+    RET(wtext_put(g_cls[x->cls].name, out, max), 3);
+}
+
+static void u_GetDlgItemTextW(void) {                   /* (dlg, id, LPWSTR, int count) */
+    uint32_t c = dlg_item(A32(0), A32(1));
+    uint32_t out = A32(2), max = A32(3);
+    if (!c || !out || !max || max > 0x100000u) {
+        if (out && max) MEM16(out) = 0;
+        RET(0, 4); return;
+    }
+    /* WM_GETTEXT counts bytes; a control's ANSI text maps 1:1 to WCHARs, so
+     * max*3+4 bytes is the same temporary GetWindowTextW hands its wndproc. */
+    uint32_t cap = max * 3u + 4u;
+    uint32_t tmp = hle_va(hle_alloc(cap));
+    if (!tmp) { MEM16(out) = 0; RET(0, 4); return; }
+    hle_send(c, WM_GETTEXT, cap, tmp);
+    uint32_t n = wtext_put((const char *)hle_ptr(tmp), out, max);
+    hle_free(hle_ptr(tmp));
+    RET(n, 4);
+}
+
+/* The two LPCWSTR fields of WNDCLASSW must remain valid after the call, so a
+ * wide copy of the menu name lives in one growable guest block. */
+static uint32_t g_classw_menu;
+static uint32_t classw_string(const char *s) {
+    if (!s || !*s) return 0;
+    size_t n = strlen(s) + 1u;
+    if (n > 0x7FFFFFFEu / 2u) return 0;
+    uint32_t need = (uint32_t)n * 2u;
+    if (!g_classw_menu || hle_heap_size(hle_ptr(g_classw_menu)) < need) {
+        uint32_t va = hle_va(hle_alloc(need));
+        if (!va) return 0;
+        g_classw_menu = va;
+    }
+    uint16_t *w = (uint16_t *)hle_ptr(g_classw_menu);
+    for (size_t i = 0; i < n; i++) w[i] = (uint16_t)(uint8_t)s[i];
+    return g_classw_menu;
+}
+
+static void u_GetClassInfoW(void) {                     /* (hinst, LPCWSTR, LPWNDCLASSW) */
+    builtin_classes();
+    uint32_t name_va = A32(1), wc = A32(2);
+    char buf[256] = "";
+    const char *name = NULL;
+    if (name_va < 0x10000u) name = (const char *)(uintptr_t)name_va;   /* an atom */
+    else if (wide_to_stack_ansi(name_va, buf, sizeof buf)) name = buf;
+    int i = find_class(name);
+    if (i < 0 || !wc) RET(0, 3);
+    /* WNDCLASSW is 40 bytes on x86, with the same scalar offsets as A; only
+     * lpszMenuName (+32) and lpszClassName (+36) are UTF-16 here. */
+    memset(hle_ptr(wc), 0, 40);
+    MEM32(wc) = g_cls[i].style, MEM32(wc + 4) = g_cls[i].proc, MEM32(wc + 12) = g_cls[i].extra;
+    MEM32(wc + 16) = g_cls[i].hinst;
+    uint32_t menu = g_cls[i].menu_res;
+    if (menu >= 0x10000u) menu = classw_string((const char *)hle_ptr(menu));
+    MEM32(wc + 32) = menu;
+    MEM32(wc + 36) = name_va;
+    RET(1, 3);
+}
+
+static void u_MessageBoxW(void) {
+    char cap[256] = "", msg[512] = "";
+    wide_to_stack_ansi(A32(1), msg, sizeof msg);
+    wide_to_stack_ansi(A32(2), cap, sizeof cap);
+    fprintf(stderr, "[MessageBoxW] %s: %s\n", cap, msg);
+    uint32_t b = A32(3) & 0xF;
+    RET(b == 4 || b == 3 ? 6u : b == 5 ? 4u : 1u, 4);   /* IDYES, IDRETRY, IDOK */
+}
 static void u_MessageBoxIndirectW(void) {
     uint32_t p = A32(0);
     char cap[256] = "", msg[512] = "";
@@ -3422,7 +3587,7 @@ const win32hle_shim win32hle_user32[] = {
     { "EqualRect", u_EqualRect },
     { "IsRectEmpty", u_IsRectEmpty }, { "IntersectRect", u_IntersectRect }, { "UnionRect", u_UnionRect },
     { "AdjustWindowRect", u_AdjustWindowRect }, { "AdjustWindowRectEx", u_AdjustWindowRectEx },
-    { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "LoadCursorA", u_LoadCursorA },
+    { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "CreateIconIndirect", u_CreateIconIndirect }, { "LoadCursorA", u_LoadCursorA }, { "LoadCursorW", u_LoadCursorW },
     { "LoadImageA", u_LoadImageA }, { "LoadBitmapA", u_LoadBitmapA }, { "LoadAcceleratorsA", u_LoadAcceleratorsA },
     { "GetOpenFileNameA", u_GetOpenFileNameA }, { "GetOpenFileNameW", u_GetOpenFileNameW },
     { "GetSaveFileNameA", u_GetSaveFileNameA }, { "GetSaveFileNameW", u_GetSaveFileNameW },
@@ -3470,8 +3635,9 @@ const win32hle_shim win32hle_user32[] = {
     { "InvalidateRect", u_InvalidateRect }, { "ValidateRect", u_ValidateRect }, { "GetUpdateRect", u_GetUpdateRect },
     { "RedrawWindow", u_RedrawWindow }, { "UpdateWindow", u_UpdateWindow },
     { "BeginPaint", u_BeginPaint }, { "EndPaint", u_EndPaint },
-    { "MessageBoxA", u_MessageBoxA }, { "MessageBoxIndirectA", u_MessageBoxIndirectA },
-    { "RegisterClassA", u_RegisterClassA }, { "RegisterClassExA", u_RegisterClassExA }, { "UnregisterClassA", u_UnregisterClassA },
+    { "MessageBoxA", u_MessageBoxA }, { "MessageBoxW", u_MessageBoxW }, { "MessageBoxIndirectA", u_MessageBoxIndirectA },
+    { "RegisterClassA", u_RegisterClassA }, { "RegisterClassExA", u_RegisterClassExA },
+    { "RegisterClassExW", u_RegisterClassExW }, { "UnregisterClassA", u_UnregisterClassA },
     { "GetClassInfoA", u_GetClassInfoA }, { "GetClassNameA", u_GetClassNameA },
     { "CreateWindowExA", u_CreateWindowExA }, { "DefWindowProcA", u_DefWindowProcA },
     { "DefDlgProcA", u_DefDlgProcA },
@@ -3480,11 +3646,12 @@ const win32hle_shim win32hle_user32[] = {
     { "CloseWindow", u_CloseWindow }, { "DestroyWindow", u_DestroyWindow },
     { "SetWindowTextA", u_SetWindowTextA }, { "GetWindowTextA", u_GetWindowTextA },
     { "GetWindowTextLengthA", u_GetWindowTextLengthA },
-    { "PostMessageA", u_PostMessageA }, { "PostQuitMessage", u_PostQuitMessage },
+    { "PostMessageA", u_PostMessageA }, { "PostMessageW", u_PostMessageW }, { "PostQuitMessage", u_PostQuitMessage },
     { "PostThreadMessageA", u_PostThreadMessageA }, { "MsgWaitForMultipleObjects", u_MsgWaitForMultipleObjects },
-    { "GetMessageA", u_GetMessageA }, { "PeekMessageA", u_PeekMessageA }, { "WaitMessage", u_WaitMessage },
+    { "GetMessageA", u_GetMessageA }, { "GetMessageW", u_GetMessageW },
+    { "PeekMessageA", u_PeekMessageA }, { "WaitMessage", u_WaitMessage },
     { "TranslateMessage", u_TranslateMessage }, { "DispatchMessageA", u_DispatchMessageA },
-    { "SendMessageA", u_SendMessageA },
+    { "SendMessageA", u_SendMessageA }, { "SendMessageW", u_SendMessageW },
     { "CreateDialogParamA", u_CreateDialogParamA }, { "CreateDialogIndirectParamA", u_CreateDialogIndirectParamA },
     { "DialogBoxParamA", u_DialogBoxParamA }, { "DialogBoxIndirectParamA", u_DialogBoxIndirectParamA },
     { "EndDialog", u_EndDialog }, { "IsDialogMessageA", u_IsDialogMessageA }, { "IsDialogMessage", u_IsDialogMessageA },
@@ -3512,6 +3679,8 @@ const win32hle_shim win32hle_user32[] = {
     { "DispatchMessageW", u_DispatchMessageA },
     { "GetWindowTextW", u_GetWindowTextW }, { "GetWindowTextLengthW", u_GetWindowTextLengthW },
     { "SetWindowTextW", u_SetWindowTextW }, { "SetDlgItemTextW", u_SetDlgItemTextW },
+    { "GetClassNameW", u_GetClassNameW }, { "GetDlgItemTextW", u_GetDlgItemTextW },
+    { "GetClassInfoW", u_GetClassInfoW },
     { "MessageBoxIndirectW", u_MessageBoxIndirectW },
     { "CreateCaret", u_CreateCaret }, { "DestroyCaret", u_DestroyCaret },
     { "ShowCaret", u_ShowCaret }, { "HideCaret", u_HideCaret },
@@ -3525,6 +3694,6 @@ const win32hle_shim win32hle_user32[] = {
     { "GetMonitorInfoA", u_GetMonitorInfoA }, { "EnumDisplayMonitors", u_EnumDisplayMonitors },
     { "MonitorFromWindow", u_MonitorFromWindow }, { "MonitorFromRect", u_MonitorFromRect },
     { "MonitorFromPoint", u_MonitorFromPoint },
-    { "DrawTextA", u_DrawTextA }, { "wsprintfA", u_wsprintfA }, { "wsprintfW", u_wsprintfW }, { "wvsprintfA", u_wvsprintfA },
+    { "DrawTextA", u_DrawTextA }, { "DrawTextW", u_DrawTextW }, { "wsprintfA", u_wsprintfA }, { "wsprintfW", u_wsprintfW }, { "wvsprintfA", u_wvsprintfA },
     { 0, 0 }
 };

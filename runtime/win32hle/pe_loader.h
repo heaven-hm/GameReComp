@@ -13,6 +13,7 @@ typedef struct {
     uint32_t span;        /* SizeOfImage, page-rounded */
     uint32_t entry;       /* entry point VA (base + AddressOfEntryPoint) */
     uint32_t import_rva;  /* import directory RVA (0 if none) */
+    uint32_t delay_import_rva; /* delay-import directory RVA (0 if none) */
     uint32_t resource_rva, resource_size;  /* resource directory (0 if none) */
     uint32_t stamp;       /* FileHeader.TimeDateStamp: which build this is */
 } pe_image;

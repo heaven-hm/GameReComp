@@ -182,6 +182,18 @@ static uint32_t load_library(const char *name) {
 }
 
 static void k_LoadLibraryA(void) { RET(load_library(ASTR(0)), 1); }
+/* LoadLibraryW: same module table, UTF-16 path converted with the existing
+ * bounded converter; an unreadable name fails with MOD_NOT_FOUND, never a
+ * guessed module. */
+static void k_LoadLibraryW(void) {
+    const uint16_t *w = (const uint16_t *)hle_ptr(A32(0));
+    char name[512];
+    if (!w || !hle_wide_to_ansi(w, name, sizeof name)) {
+        hle_set_last_error(ERROR_MOD_NOT_FOUND);
+        RET(0, 1);
+    }
+    RET(load_library(name), 1);
+}
 /* (name, hFile, flags): hFile is for LOAD_LIBRARY_AS_DATAFILE-style loads from
  * an open file, which this host does not support; passing one is refused
  * rather than ignored, because ignoring it would load the wrong image. */
@@ -196,24 +208,122 @@ static void k_LoadLibraryExA(void) {
 }
 static void k_FreeLibrary(void) { int i = find_mod(A32(0)); if (i >= 0 && g_mod[i].refs > 1) g_mod[i].refs--; RET(1, 1); }
 
-static void k_GetProcAddress(void) {                     /* (hModule, name or ordinal) */
-    int i = find_mod(A32(0));
-    uint32_t n = A32(1), va = 0;
-    if (i >= 0 && g_mod[i].system) {
-        if (n < 0x10000u) {
-            char nm[96];
-            snprintf(nm, sizeof nm, "%s#%u", g_mod[i].base_name, n);
-            va = hle_resolve(nm);
-        } else {
-            va = hle_resolve((const char *)hle_ptr(n));
+/* ---- exports of a mapped image, including forwarders ----
+ * An export table may hold, instead of a code RVA, the RVA of a NUL-terminated
+ * string in the export section: "KERNEL32.Sleep" or "NTDLL.#8". Windows loads
+ * the named DLL and resolves the name or ordinal there. The MSVC CRT DLLs and
+ * the api-ms-win-* layer do this for almost every entry point, so a game that
+ * uses LoadLibrary + GetProcAddress on one of them got 0 from us even though
+ * the real target is an ordinary registered shim.
+ *
+ * The same lookup also answers GetProcAddress on an image mapped at load time
+ * (a companion DLL), which previously only worked for system pseudo-modules. */
+#define MAX_FORWARDER_DEPTH 8
+
+/* Export data directory (index 0) of a mapped PE32, from the optional header. */
+static int export_directory(uint32_t base, uint32_t *rva, uint32_t *size) {
+    if (!base || MEM16(base) != 0x5A4D) return 0;         /* MZ */
+    uint32_t nt = base + MEM32(base + 0x3Cu);
+    if (MEM32(nt) != 0x00004550u || MEM16(nt + 24) != 0x10Bu) return 0;
+    uint32_t opt = nt + 24;
+    if (MEM32(opt + 92) < 1) return 0;                    /* NumberOfRvaAndSizes */
+    *rva = MEM32(opt + 96);                               /* DataDirectory[0] */
+    *size = MEM32(opt + 100);
+    return *rva != 0;
+}
+
+/* Resolve `name` (NULL means the ordinal `ord`) in the module behind `hmod`.
+ * Forwarder strings are followed recursively; the depth bound also breaks a
+ * cycle between two images. Returns a guest VA, or 0 with nothing guessed. */
+static uint32_t resolve_module_export(uint32_t hmod, const char *name, uint32_t ord, int depth) {
+    if (depth > MAX_FORWARDER_DEPTH) return 0;
+    int m = find_mod(hmod);
+    if (m < 0) return 0;
+
+    if (g_mod[m].system) {                                /* no image: the shim registry is the export table */
+        char shim[96];
+        if (name) snprintf(shim, sizeof shim, "%s", name);
+        else snprintf(shim, sizeof shim, "%s#%u", g_mod[m].base_name, ord);
+        return hle_resolve(shim);
+    }
+
+    uint32_t base = g_mod[m].base, exp_rva, exp_size;
+    if (!export_directory(base, &exp_rva, &exp_size)) return 0;
+    uint32_t dir = base + exp_rva, nfunc = MEM32(dir + 20);
+    uint32_t funcs = MEM32(dir + 28);
+    if (!nfunc || nfunc > 0x100000u || !funcs) return 0;
+    uint32_t idx;
+    if (!name) {
+        uint32_t first = MEM32(dir + 16);
+        if (ord < first) return 0;
+        idx = ord - first;
+    } else {
+        uint32_t nnames = MEM32(dir + 24);
+        if (!nnames || nnames > 0x100000u) return 0;
+        uint32_t names = MEM32(dir + 32), ords = MEM32(dir + 36);
+        if (!names || !ords) return 0;
+        idx = 0xFFFFFFFFu;
+        for (uint32_t i = 0; i < nnames; i++) {
+            const char *cand = (const char *)hle_ptr(base + MEM32(base + names + 4u * i));
+            if (cand && !strcmp(cand, name)) { idx = MEM16(base + ords + 2u * i); break; }
         }
     }
+    if (idx >= nfunc) return 0;
+
+    uint32_t frva = MEM32(base + funcs + 4u * idx);
+    if (!frva) return 0;
+    if (frva < exp_rva || frva - exp_rva >= exp_size) return base + frva;
+
+    /* A forwarder is inside the export directory. Copy it out of guest memory
+     * with a bound: an unterminated string must not be followed as a name. */
+    const char *fwd = (const char *)hle_ptr(base + frva);
+    if (!fwd) return 0;
+    char text[256];
+    size_t k = 0;
+    while (k + 1 < sizeof text && fwd[k]) { text[k] = fwd[k]; k++; }
+    if (!k || fwd[k]) return 0;                           /* empty or unterminated */
+    text[k] = 0;
+    /* Windows splits on the last dot: the DLL part of an api-ms-win forwarder
+     * contains dashes but no dot, and an explicit ".dll" may precede it. */
+    char *dot = strrchr(text, '.');
+    if (!dot || dot == text) return 0;
+    *dot = 0;
+    const char *target_name = dot + 1;
+    uint32_t target = load_library(text);
+    if (!target) {
+        /* api-ms-win-* has no pseudo-module here, but shims are global by
+         * symbol: a registered name still resolves to the right shim. */
+        return target_name[0] == '#' ? 0 : hle_resolve(target_name);
+    }
+    if (target_name[0] == '#') {
+        char *end = NULL;
+        unsigned long ord10 = strtoul(target_name + 1, &end, 10);
+        if (end == target_name + 1 || *end) return 0;
+        return resolve_module_export(target, NULL, (uint32_t)ord10, depth + 1);
+    }
+    return resolve_module_export(target, target_name, 0, depth + 1);
+}
+
+/* GetProcAddress's core, kept separate from the shim's stack argument ABI so
+ * the runtime and the selftest can call it without synthesising a guest frame. */
+uint32_t hle_get_proc_address(uint32_t hmod, uint32_t name_or_ord) {
+    if (!name_or_ord) { hle_set_last_error(ERROR_PROC_NOT_FOUND); return 0; }
+    uint32_t va = name_or_ord < 0x10000u
+        ? resolve_module_export(hmod, NULL, name_or_ord, 0)
+        : resolve_module_export(hmod, (const char *)hle_ptr(name_or_ord), 0, 0);
     if (!va) {
-        fprintf(stderr, "[module] GetProcAddress(%s, %s%s): not answered\n", i >= 0 ? g_mod[i].base_name : "?",
-                n < 0x10000u ? "#" : "", n < 0x10000u ? "" : (const char *)hle_ptr(n));
+        if (name_or_ord < 0x10000u)
+            fprintf(stderr, "[module] GetProcAddress(%08X, #%u): not answered\n", hmod, name_or_ord);
+        else
+            fprintf(stderr, "[module] GetProcAddress(%08X, %s): not answered\n", hmod,
+                    (const char *)hle_ptr(name_or_ord));
         hle_set_last_error(ERROR_PROC_NOT_FOUND);
     }
-    RET(va, 2);
+    return va;
+}
+
+static void k_GetProcAddress(void) {                     /* (hModule, name or ordinal) */
+    RET(hle_get_proc_address(A32(0), A32(1)), 2);
 }
 
 /* ---- resources ----
@@ -222,13 +332,16 @@ static void k_GetProcAddress(void) {                     /* (hModule, name or or
  * entries; an offset with the top bit set is a subdirectory, else an
  * IMAGE_RESOURCE_DATA_ENTRY {rva, size, codepage, 0}. An HRSRC is the data
  * entry's address. */
-static int name_matches(uint32_t root, uint32_t entry_name, uint32_t want) {
+static int name_matches(uint32_t root, uint32_t entry_name, uint32_t want, uint32_t limit) {
     if (want < 0x10000u) return !(entry_name & 0x80000000u) && entry_name == want;
     const char *w = (const char *)hle_ptr(want);
+    if (!w) return 0;
     if (w[0] == '#') return !(entry_name & 0x80000000u) && entry_name == (uint32_t)atoi(w + 1);
     if (!(entry_name & 0x80000000u)) return 0;
     uint32_t s = root + (entry_name & 0x7FFFFFFFu);
+    if (s < root || s + 2u > limit) return 0;
     uint16_t len = MEM16(s);
+    if ((uint32_t)2u + 2u * len > limit - s) return 0;
     if (strlen(w) != len) return 0;
     for (uint16_t k = 0; k < len; k++) {
         uint16_t c = MEM16(s + 2 + 2u * k);
@@ -238,11 +351,13 @@ static int name_matches(uint32_t root, uint32_t entry_name, uint32_t want) {
 }
 /* Find `want` in the directory at dir; 0 for any (the first). Returns the
  * entry's offset word. */
-static uint32_t dir_lookup(uint32_t root, uint32_t dir, uint32_t want, int any) {
+static uint32_t dir_lookup(uint32_t root, uint32_t dir, uint32_t want, int any, uint32_t limit) {
+    if (dir < root || dir > limit || limit - dir < 16u) return 0xFFFFFFFFu;
     uint32_t n = (uint32_t)MEM16(dir + 12) + MEM16(dir + 14);
+    if (n > (limit - dir - 16u) / 8u) return 0xFFFFFFFFu;
     for (uint32_t k = 0; k < n; k++) {
         uint32_t e = dir + 16 + 8 * k;
-        if (any || name_matches(root, MEM32(e), want)) return MEM32(e + 4);
+        if (any || name_matches(root, MEM32(e), want, limit)) return MEM32(e + 4);
     }
     return 0xFFFFFFFFu;
 }
@@ -278,15 +393,26 @@ int hle_module_region(uint32_t addr, uint32_t *base, uint32_t *size) {
 }
 static uint32_t find_resource(int m, uint32_t name, uint32_t type) {
     ensure_rsrc(m);
-    if (m < 0 || !g_mod[m].rsrc) return 0;
-    uint32_t root = g_mod[m].base + g_mod[m].rsrc;
-    uint32_t t = dir_lookup(root, root, type, 0);
+    if (m < 0 || !g_mod[m].rsrc || !g_mod[m].rsrc_size) return 0;
+    uint32_t base = g_mod[m].base;
+    uint32_t root = base + g_mod[m].rsrc;
+    uint32_t limit = root + g_mod[m].rsrc_size;
+    if (limit < root) return 0;
+    if (g_mod[m].image_size && limit > base + g_mod[m].image_size)
+        limit = base + g_mod[m].image_size;
+    uint32_t t = dir_lookup(root, root, type, 0, limit);
     if (t == 0xFFFFFFFFu || !(t & 0x80000000u)) return 0;
-    uint32_t nm = dir_lookup(root, root + (t & 0x7FFFFFFFu), name, 0);
+    uint32_t sub = root + (t & 0x7FFFFFFFu);
+    if (sub < root || sub > limit) return 0;
+    uint32_t nm = dir_lookup(root, sub, name, 0, limit);
     if (nm == 0xFFFFFFFFu || !(nm & 0x80000000u)) return 0;
-    uint32_t lang = dir_lookup(root, root + (nm & 0x7FFFFFFFu), 0, 1);
+    sub = root + (nm & 0x7FFFFFFFu);
+    if (sub < root || sub > limit) return 0;
+    uint32_t lang = dir_lookup(root, sub, 0, 1, limit);
     if (lang == 0xFFFFFFFFu || (lang & 0x80000000u)) return 0;
-    return root + lang;
+    uint32_t entry = root + lang;
+    if (entry < root || entry + 16u > limit) return 0;
+    return entry;
 }
 
 uint32_t hle_find_resource(uint32_t hmod, uint32_t name, uint32_t type) {
@@ -300,8 +426,15 @@ uint32_t hle_resource_data(uint32_t hmod, uint32_t hrsrc, uint32_t *size) {
             if (g_mod[i].rsrc && hrsrc >= g_mod[i].base + g_mod[i].rsrc && hrsrc < g_mod[i].base + g_mod[i].rsrc + g_mod[i].rsrc_size) m = i;
         if (m < 0) return 0;
     }
-    if (size) *size = MEM32(hrsrc + 4);
-    return g_mod[m].base + MEM32(hrsrc);
+    ensure_rsrc(m);
+    uint32_t rstart = g_mod[m].base + g_mod[m].rsrc;
+    uint32_t rend = rstart + g_mod[m].rsrc_size;
+    if (rend < rstart || hrsrc < rstart || hrsrc + 16u > rend) return 0;
+    uint32_t rva = MEM32(hrsrc), bytes = MEM32(hrsrc + 4);
+    uint32_t image = g_mod[m].image_size;
+    if (!rva || !bytes || (image && (rva > image || bytes > image - rva))) return 0;
+    if (size) *size = bytes;
+    return g_mod[m].base + rva;
 }
 
 /* The last dialog template looked up, so a dialog made from its bytes
@@ -429,6 +562,7 @@ const win32hle_shim win32hle_module[] = {
     { "GetModuleHandleExW",   k_GetModuleHandleExW },
     { "GetModuleFileNameA",   k_GetModuleFileNameA }, { "GetModuleFileNameW", k_GetModuleFileNameW },
     { "LoadLibraryA",         k_LoadLibraryA },
+    { "LoadLibraryW",         k_LoadLibraryW },
     { "LoadLibraryExA",       k_LoadLibraryExA }, { "LoadLibraryExW", k_LoadLibraryExW },
     { "FreeLibrary",          k_FreeLibrary },
     { "GetProcAddress",       k_GetProcAddress },

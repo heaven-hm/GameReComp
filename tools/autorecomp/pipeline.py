@@ -5,6 +5,7 @@ status and evidence; a failure stops dependent stages, but the report stage
 still runs so the failure is inspectable.
 """
 
+import concurrent.futures
 import contextlib
 from collections import Counter
 import hashlib
@@ -33,8 +34,11 @@ from pe_analyze import analyze_pe, build_iat_map  # noqa: E402
 from translator import (MAX_UNIT_BYTES, discover_functions,  # noqa: E402
                         generate_recomp_files, make_read_va)
 
+from . import build_cache as _build_cache  # noqa: E402
 from . import highlevel  # noqa: E402
 from . import projectgen  # noqa: E402
+from .lift_cache import (LiftCache, enabled as lift_cache_enabled,  # noqa: E402
+                         fingerprint as lift_cache_fingerprint)
 
 STAGES = ["inspect", "recover", "translate", "project", "compile",
           "run", "verify", "report"]
@@ -62,6 +66,150 @@ BUILD_TIMEOUT_CAP = 3600.0
 def default_build_timeout(source_bytes):
     return min(BUILD_TIMEOUT_CAP,
                BUILD_TIMEOUT_BASE + BUILD_TIMEOUT_PER_MB * (source_bytes / (1 << 20)))
+
+
+# The host cmake path gets incremental rebuilds from make/ninja. The wasm32
+# path has no such step: it recompiles every generated unit on every run.
+# Wire the opt-in content-addressed object cache (build_cache.py) into that
+# path so repeated builds can skip unchanged units. The cache is strictly
+# opt-in (RECOMP_BUILD_CACHE=1); with it off, the compile commands are exactly
+# what they were before this hookup.
+def wasm_include_identity(cflags):
+    """Content digest of the headers visible through -I/-isystem in cflags.
+
+    The object cache keys on source bytes, compiler and flags, but a generated
+    unit pulls declarations in through #include. A changed recomp_types.h (or
+    a regenerated recomp_funcs.h) leaves the unit's own bytes and the flags
+    untouched, so binding only those would reuse an object compiled against
+    the old declarations. Fold the bytes of every header under every include
+    directory into an extra identity. The digest depends on content only:
+    paths are walked in sorted order and each file is length-prefixed.
+    """
+    h = hashlib.sha256()
+    dirs = []
+    i = 0
+    flags = [str(f) for f in cflags]
+    while i < len(flags):
+        if flags[i] in ("-I", "-isystem") and i + 1 < len(flags):
+            dirs.append(flags[i + 1])
+            i += 2
+        else:
+            i += 1
+    seen = set()
+    for directory in dirs:
+        root = Path(directory)
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*.h")):
+            if not path.is_file():
+                continue
+            real = str(path.resolve())
+            if real in seen:
+                continue
+            seen.add(real)
+            try:
+                data = path.read_bytes()
+            except OSError:
+                continue
+            h.update(len(data).to_bytes(8, "big"))
+            h.update(data)
+    return h.hexdigest()
+
+
+def compile_units_with_cache(sources, objs, cflags, env=None, *, jobs=4,
+                             run=None, cache_enabled=None):
+    """Compile generated units to objects, optionally via the object cache.
+
+    Returns (errors, stats). ``errors`` is a list of human-readable compile
+    failures; ``stats`` is a JSON-serialisable record of what happened
+    (enabled, units, compiled, hits, include_identity). ``run`` is injectable
+    for tests; it defaults to subprocess.run. With the cache disabled the
+    command and behaviour are identical to a plain cc -c invocation.
+    """
+    enabled = _build_cache.enabled() if cache_enabled is None else bool(cache_enabled)
+    stats = {
+        "enabled": enabled,
+        "units": len(sources),
+        "compiled": 0,
+        "hits": 0,
+        "include_identity": None,
+    }
+    compiler = str(cflags[0])
+    flags = [str(f) for f in cflags[1:]]  # compile_cached adds -c/-o itself
+    if enabled:
+        stats["include_identity"] = wasm_include_identity(cflags)
+    jobs = int(jobs or os.cpu_count() or 4)
+
+    def compile_one(pair):
+        src, obj = pair
+        if enabled:
+            res = _build_cache.compile_cached(
+                src, compiler, flags, obj, extra_identity=stats["include_identity"],
+                env=env, run=run)
+            # compile_cached leaves returncode=None on a cache hit (no process
+            # was run); only a real non-zero return value is a failure.
+            rc = res["returncode"]
+            if rc is not None and rc != 0:
+                cmd = [compiler, *flags, "-c", str(src), "-o", str(obj)]
+                return (f"$ {' '.join(cmd)}\n{res['stderr']}",
+                        bool(res["hit"]), bool(res["compiled"]))
+            return (None, bool(res["hit"]), bool(res["compiled"]))
+        cmd = [str(f) for f in cflags] + ["-c", str(src), "-o", str(obj)]
+        try:
+            proc = (run or subprocess.run)(cmd, env=env,
+                                           capture_output=True, text=True)
+        except OSError as exc:
+            return (f"$ {' '.join(cmd)}\n{exc}", False, False)
+        if proc.returncode != 0:
+            return (f"$ {' '.join(cmd)}\n{proc.stderr or proc.stdout}", False, True)
+        return (None, False, True)
+
+    errors = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        for error, hit, compiled in pool.map(compile_one, zip(sources, objs)):
+            if error:
+                errors.append(error)
+            if hit:
+                stats["hits"] += 1
+            if compiled:
+                stats["compiled"] += 1
+    return errors, stats
+
+
+def resource_footprint(project_dir: Path, stages: list, binary: Path | None) -> dict:
+    """Measured build resources for one autorecomp run (issue #26).
+
+    Every value is observed, never estimated: generated C bytes come from the
+    translate stage, binary bytes from the compiled file, project disk bytes
+    from a walk of the project tree, and peak RSS from the host's resource
+    accounting. macOS reports ru_maxrss in bytes, Linux in KiB; both are
+    normalised to bytes here.
+    """
+    generated = 0
+    for stage in stages:
+        if stage.get("name") == "translate":
+            generated = int((stage.get("data") or {}).get("source_bytes", 0))
+    disk = 0
+    try:
+        for path in project_dir.rglob("*"):
+            if path.is_file() and not path.is_symlink():
+                disk += path.stat().st_size
+    except (OSError, ValueError):
+        pass
+    peak_rss = None
+    try:
+        import resource  # POSIX; the pipeline already targets macOS/Linux
+        raw = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+        peak_rss = raw if sys.platform == "darwin" else raw * 1024
+    except (ImportError, ValueError, OSError):
+        pass
+    return {
+        "generated_source_bytes": generated,
+        "binary_bytes": int(binary.stat().st_size) if binary and binary.exists() else 0,
+        "project_disk_bytes": disk,
+        "peak_rss_bytes": peak_rss,
+        "stage_seconds_total": round(sum(float(s.get("seconds") or 0) for s in stages), 2),
+    }
 
 CATEGORIES = ("HIGH_LEVEL_VERIFIED", "HIGH_LEVEL_UNVERIFIED",
               "LOW_LEVEL_FALLBACK", "UNRESOLVED")
@@ -343,10 +491,24 @@ class Pipeline:
             "code_range": [f"0x{info.code_start:08X}", f"0x{info.code_end:08X}"],
             "import_dlls": list(info.import_dlls),
             "import_count": len(info.imports),
+            # Delay imports are folded into the ordinary import list/IAT map,
+            # so a game that binds them only on first use is visible here too.
+            "delay_import_count": sum(1 for i in info.imports
+                                      if getattr(i, 'is_delayed', False)),
             "iat_entries": len(self.iat_map),
         }
         self._write_json("reports/inspect.json", data)
         return f"{info.machine} {info.pe_type}, {len(info.imports)} imports, entry {data['entry_point']}", data
+
+    def _lift_cache(self):
+        """Return a fingerprinted cache when explicitly enabled."""
+        if not lift_cache_enabled():
+            return None
+        root = Path(self.highlevel_dir) if self.highlevel_dir else (_ROOT / "highlevel")
+        key = lift_cache_fingerprint(
+            self.pe_path, self.companions, self.split, self.split_bytes,
+            root, _ROOT)
+        return LiftCache(key)
 
     def stage_recover(self):
         # The disassembler narrates its recovery on stdout. Capture that
@@ -356,23 +518,43 @@ class Pipeline:
         log_path = self.project_dir / "logs" / "recover.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            functions = discover_functions(self.pe_data, self.info,
-                                           self.iat_map)
-            # Bundled DLLs are reconstructed into the same table. Their VAs are
-            # distinct from the exe's (the collision check in stage_inspect saw
-            # to that), so a plain merge is safe; merging their IAT maps lets
-            # their own imports resolve through the same lifter.
-            for comp in self.companions:
-                dll_data = comp["path"].read_bytes()
-                dll_iat = build_iat_map(comp["info"])
-                dll_fns = discover_functions(dll_data, comp["info"], dll_iat)
-                for addr, fn in dll_fns.items():
-                    functions.setdefault(addr, fn)
-                self.iat_map.update(dll_iat)
-                comp["function_count"] = len(dll_fns)
+        cache = self._lift_cache()
+        cached = cache.get('recover') if cache else None
+        if isinstance(cached, dict) and 'functions' in cached:
+            self.functions = cached['functions']
+            self.iat_map = cached['iat_map']
+            for comp, count in zip(self.companions,
+                                   cached.get('companion_counts', [])):
+                comp['function_count'] = count
+            buf.write('recover: cache hit (fingerprint matched)\n')
+            functions = self.functions
+            used_cache = True
+        else:
+            used_cache = False
+            with contextlib.redirect_stdout(buf):
+                functions = discover_functions(self.pe_data, self.info,
+                                               self.iat_map)
+                # Bundled DLLs are reconstructed into the same table. Their VAs are
+                # distinct from the exe's (the collision check in stage_inspect saw
+                # to that), so a plain merge is safe; merging their IAT maps lets
+                # their own imports resolve through the same lifter.
+                for comp in self.companions:
+                    dll_data = comp["path"].read_bytes()
+                    dll_iat = build_iat_map(comp["info"])
+                    dll_fns = discover_functions(dll_data, comp["info"], dll_iat)
+                    for addr, fn in dll_fns.items():
+                        functions.setdefault(addr, fn)
+                    self.iat_map.update(dll_iat)
+                    comp["function_count"] = len(dll_fns)
+            self.functions = functions
+            if cache:
+                cache.put('recover', {
+                    'functions': self.functions,
+                    'iat_map': self.iat_map,
+                    'companion_counts': [c.get('function_count', 0)
+                                         for c in self.companions],
+                })
         log_path.write_text(buf.getvalue())
-        self.functions = functions
         ordered = sorted(functions.values(), key=lambda f: f.address)
         entries = []
         for i, func in enumerate(ordered):
@@ -394,7 +576,8 @@ class Pipeline:
             "functions": entries,
         }
         self._write_json("reports/functions.json", data)
-        return f"{len(entries)} functions, {data['instructions']} instructions", {"count": len(entries), "instructions": data["instructions"]}
+        data['cache'] = 'hit' if used_cache else 'miss'
+        return f"{len(entries)} functions, {data['instructions']} instructions", {"count": len(entries), "instructions": data["instructions"], "cache": data['cache']}
 
     def stage_translate(self):
         gen_dir = self.project_dir / "src" / "recomp" / "gen"
@@ -439,14 +622,31 @@ class Pipeline:
                     return data
             return b""
 
-        with contextlib.redirect_stdout(buf):
-            lifted = generate_recomp_files(
-                self.functions, self.iat_map, str(gen_dir),
-                split_size=self.split, max_unit_bytes=self.split_bytes,
-                highlevel={a: self.highlevel_by_address[a] for a in replaced},
-                read_va=combined_read_va)
+        cache = self._lift_cache()
+        cached = cache.get('translate') if cache else None
+        if isinstance(cached, dict) and 'files' in cached and isinstance(
+                cached.get('lifted'), list):
+            cache.copy_gen_dir(gen_dir)
+            self.lifted = cached['lifted']
+            lifted = self.lifted
+            used_cache = True
+            buf.write('translate: cache hit (fingerprint matched)\n')
+        else:
+            used_cache = False
+            with contextlib.redirect_stdout(buf):
+                lifted = generate_recomp_files(
+                    self.functions, self.iat_map, str(gen_dir),
+                    split_size=self.split, max_unit_bytes=self.split_bytes,
+                    highlevel={a: self.highlevel_by_address[a] for a in replaced},
+                    read_va=combined_read_va)
+            self.lifted = lifted
+            if cache:
+                cache.put('translate', {
+                    'files': {p.name: p.read_bytes() for p in sorted(gen_dir.iterdir())
+                              if p.is_file()},
+                    'lifted': lifted,
+                })
         log_path.write_text(buf.getvalue())
-        self.lifted = lifted
 
         # stage_recover guesses the unit from the function count; by-size
         # chunking makes that guess wrong, so use the generator's own manifest.
@@ -494,6 +694,7 @@ class Pipeline:
             "source_bytes": total_bytes,
             "lift_errors": errors,
             "seconds": round(time.time() - t0, 1),
+            "cache": 'hit' if used_cache else 'miss',
         }
         if errors:
             data["warning"] = (f"{errors} function(s) failed to lift; they are "
@@ -814,24 +1015,14 @@ class Pipeline:
 
         t0 = time.time()
         objs = [obj_dir / f"{s.stem}.o" for s in sources]
-        errors = []
         jobs = int(self.jobs or os.cpu_count() or 4)
-
-        def compile_one(pair):
-            src, obj = pair
-            cmd = [*cflags, "-c", str(src), "-o", str(obj)]
-            res = subprocess.run(cmd, env=env, capture_output=True, text=True)
-            if res.returncode != 0:
-                return f"$ {' '.join(cmd)}\n{res.stderr or res.stdout}"
-            return None
 
         with open(log_path, "w") as log:
             log.write(f"# wasm32 compile: {len(sources)} units -> {wasm_path}\n")
-            with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-                for err in pool.map(compile_one, zip(sources, objs)):
-                    if err:
-                        errors.append(err)
-                        log.write(err + "\n")
+            errors, cache_stats = compile_units_with_cache(
+                sources, objs, cflags, env, jobs=jobs)
+            for err in errors:
+                log.write(err + "\n")
             if errors:
                 raise StageFailure(
                     f"wasm32 compile failed (see {log_path})\n{_tail(log_path)}",
@@ -868,6 +1059,7 @@ class Pipeline:
             "source_bytes": source_bytes,
             "target": "web/wasm32",
             "web_entry": str(build_dir / "index.html"),
+            "compile_cache": cache_stats,
         }
 
     def _adopt_reused_binary(self, binary, source_digest, log_path):
@@ -1145,6 +1337,7 @@ class Pipeline:
             "input": str(self.pe_path),
             "project": str(self.project_dir),
             "stages": self.stages,
+            "resources": resource_footprint(self.project_dir, self.stages, self.binary),
             "outcome": self.verification or {"status": "not-run", "reason": "verification did not run"},
             "score": self.score(include_report=True),
             "manifest": "manifest.json",

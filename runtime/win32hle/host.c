@@ -111,6 +111,8 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_gdidc);
     win32hle_register(win32hle_gdi32);
     win32hle_register(win32hle_user32);
+    extern const win32hle_shim win32hle_comctl32[];    /* local: the shared header is not edited here */
+    win32hle_register(win32hle_comctl32);
     win32hle_register(win32hle_winmm);
     win32hle_register(win32hle_avifil32);
     win32hle_register(win32hle_msvfw32);                 /* the AVI decompressor API */
@@ -121,6 +123,8 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_advapi32);
     win32hle_register(win32hle_dsound);
     win32hle_register(win32hle_ddraw);
+    win32hle_register(win32hle_d3d8);
+    win32hle_register(win32hle_d3d9);
     win32hle_register(win32hle_sdl12);
     win32hle_register(win32hle_sdlmix);
     win32hle_register(win32hle_gl32);

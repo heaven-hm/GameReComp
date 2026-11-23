@@ -43,11 +43,18 @@ int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
 #define ERROR_INVALID_NAME    123u      /* a path the ANSI codepage cannot carry */
 #define ERROR_ALREADY_EXISTS  183u
 #define ERROR_INVALID_FUNCTION  1u
+#define ERROR_INVALID_PARAMETER  87u
+#define ERROR_WRITE_PROTECT      19u
 
 #define FILE_ATTRIBUTE_READONLY  0x01u
+#define FILE_ATTRIBUTE_HIDDEN    0x02u
+#define FILE_ATTRIBUTE_SYSTEM    0x04u
 #define FILE_ATTRIBUTE_DIRECTORY 0x10u
 #define FILE_ATTRIBUTE_ARCHIVE   0x20u
 #define FILE_ATTRIBUTE_NORMAL    0x80u
+#define FILE_ATTRIBUTE_TEMPORARY 0x100u
+#define FILE_ATTRIBUTE_OFFLINE   0x1000u
+#define FILE_ATTRIBUTE_NOT_CONTENT_INDEXED 0x2000u
 
 static uint32_t errno_to_win(int e) {
     switch (e) {
@@ -391,7 +398,57 @@ static void k_GetFileAttributesW(void) {
     if (stat(path, &st) != 0) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0xFFFFFFFFu, 1); }
     RET(attrs_of(&st), 1);
 }
-static void k_SetFileAttributesA(void) { char path[1024]; RET(hle_host_path(ASTR(0), path, sizeof path) ? 1u : 0u, 2); }
+/* ---- SetFileAttributesA/W ----
+ * SetFileAttributes replaces the file's attribute set: a requested READONLY
+ * makes it unwritable, and its absence makes it writable (NORMAL means "no
+ * other attributes", and is valid only on its own). The other settable Windows
+ * bits are accepted but have no POSIX counterpart, so they are not stored;
+ * DIRECTORY, REPARSE_POINT, SPARSE_FILE, DEVICE and the like cannot be set
+ * through this API on Windows either, and are rejected like Windows does.
+ * The W form takes a UTF-16 path and shares the ANSI path mapping, so a guest
+ * `C:\Dir\File.TXT` lands on the same host file as CreateFileW would open. */
+static uint32_t set_file_attrs(const char *name, uint32_t attrs) {
+    if (!name || !*name) { hle_set_last_error(ERROR_PATH_NOT_FOUND); return 0; }
+    const uint32_t settable = FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN |
+        FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_NORMAL |
+        FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+    if ((attrs & ~settable) ||
+        ((attrs & FILE_ATTRIBUTE_NORMAL) && (attrs & ~FILE_ATTRIBUTE_NORMAL))) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        return 0;
+    }
+    char path[1024];
+    if (!hle_host_path(name, path, sizeof path)) {
+        hle_set_last_error(ERROR_FILE_NOT_FOUND);
+        return 0;
+    }
+    /* A file under a mod's base is changed in the overlay, as a write to it
+     * would be; keep copies the game's file there first when it has no copy. */
+    hle_host_path_for_write(name, path, sizeof path, 1);
+
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        hle_set_last_error(errno == EACCES || errno == EPERM ? ERROR_ACCESS_DENIED : errno_to_win(errno));
+        return 0;
+    }
+    mode_t mode = st.st_mode;
+    if (attrs & FILE_ATTRIBUTE_READONLY) mode &= ~(mode_t)(S_IWUSR | S_IWGRP | S_IWOTH);
+    else mode |= (mode_t)S_IWUSR;                    /* attrs_of reads the owner's write bit */
+    if (mode != st.st_mode && chmod(path, mode) != 0) {
+        hle_set_last_error(errno == EROFS ? ERROR_WRITE_PROTECT : errno_to_win(errno));
+        return 0;
+    }
+    hle_set_last_error(0);
+    return 1;
+}
+static void k_SetFileAttributesA(void) { RET(set_file_attrs(ASTR(0), A32(1)), 2); }
+static void k_SetFileAttributesW(void) {
+    const uint16_t *w = (const uint16_t *)APTR(0);
+    char name[1024];
+    if (!w || !*w) { hle_set_last_error(ERROR_PATH_NOT_FOUND); RET(0, 2); }
+    if (!hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_INVALID_NAME); RET(0, 2); }
+    RET(set_file_attrs(name, A32(1)), 2);
+}
 static void k_CreateDirectoryA(void) {
     char path[1024];
     hle_host_path_for_write(ASTR(0), path, sizeof path, 0);
@@ -802,19 +859,45 @@ static void k_OpenFile(void) {
 /* GetFullPathNameA(name, buflen, buf, &filePart): a lexical absolute path (no
  * disk access). Relative names are taken against the current directory; the
  * result keeps whatever separators it had, which hle_path matches on either. */
-static void k_GetFullPathNameA(void) {
-    const char *name = ASTR(0);
-    char abs[1024];
+static uint32_t full_path_lexical(const char *name, char *abs, size_t cap, char **part) {
     if (name && (name[0] == '/' || name[0] == '\\' || (name[0] && name[1] == ':')))
-        snprintf(abs, sizeof abs, "%s", name);
-    else { char cwd[768]; if (!getcwd(cwd, sizeof cwd)) cwd[0] = 0; snprintf(abs, sizeof abs, "%s/%s", cwd, name ? name : ""); }
-    char *buf = ASTR(2); uint32_t n = A32(1);
-    if (buf && n) { strncpy(buf, abs, n - 1); buf[n - 1] = 0; }
+        snprintf(abs, cap, "%s", name);
+    else { char cwd[768]; if (!getcwd(cwd, sizeof cwd)) cwd[0] = 0; snprintf(abs, cap, "%s/%s", cwd, name ? name : ""); }
+    char *bs = strrchr(abs, '\\'), *fs = strrchr(abs, '/');
+    *part = bs > fs ? bs : fs;
+    return (uint32_t)strlen(abs);
+}
+static void k_GetFullPathNameA(void) {
+    char abs[1024]; char *part;
+    uint32_t n = full_path_lexical(ASTR(0), abs, sizeof abs, &part);
+    char *buf = ASTR(2); uint32_t cap = A32(1);
+    if (buf && cap) { strncpy(buf, abs, cap - 1); buf[cap - 1] = 0; }
     if (A32(3) && buf) {
         char *bs = strrchr(buf, '\\'), *fs = strrchr(buf, '/'), *p = bs > fs ? bs : fs;
         MEM32(A32(3)) = hle_va(p ? p + 1 : buf);
     }
-    RET(buf ? (uint32_t)strlen(buf) : (uint32_t)strlen(abs), 4);
+    RET(buf ? (uint32_t)strlen(buf) : n, 4);
+}
+/* GetFullPathNameW: the wide form used by PE32 games. The length returned is
+ * in UTF-16 code units, and the file-part pointer addresses the guest's wide
+ * buffer, not the temporary ANSI string. */
+static void k_GetFullPathNameW(void) {
+    const uint16_t *wide = (const uint16_t *)APTR(0);
+    char name[1024], abs[1024]; char *part;
+    if (!wide || !hle_wide_to_ansi(wide, name, sizeof name)) { RET(0, 4); }
+    uint32_t n = full_path_lexical(name, abs, sizeof abs, &part);
+    uint32_t out = A32(2), cap = A32(1);
+    uint32_t needed = n + 1;
+    if (out && cap) {
+        uint16_t *dst = (uint16_t *)hle_ptr(out);
+        uint32_t i;
+        for (i = 0; i < n && i < cap - 1; i++) dst[i] = (uint16_t)(unsigned char)abs[i];
+        dst[i] = 0;
+        if (A32(3)) MEM32(A32(3)) = out + 2u * (uint32_t)(part ? part + 1 - abs : 0);
+        RET(n, 4);
+    }
+    if (A32(3)) MEM32(A32(3)) = 0;
+    RET(needed, 4);
 }
 /* SearchPathA(path, file, ext, buflen, buf, &filePart): find a file on a search
  * path (NULL means the default: the current directory, then the Windows
@@ -1072,6 +1155,402 @@ static void k_ConnectNamedPipe(void) { hle_set_last_error(ERROR_INVALID_HANDLE);
 static void k_WaitNamedPipeA(void)   { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0, 2); }
 static void k_PeekNamedPipe(void)    { hle_set_last_error(ERROR_INVALID_HANDLE); RET(0, 6); }
 
+/* ---- Vista+ name-based NLS: LCMapStringEx, GetLocaleInfoEx, CompareStringEx ----
+ * The UTF-16, locale-name counterparts of kernel32_crt.c's LCMapStringA,
+ * GetLocaleInfoA and CompareStringA. There are no NLS data files in this layer
+ * and exactly one locale (en-US / LCID 0x0409, what the existing
+ * GetUserDefaultLCID / GetLocaleInfoA answer), so:
+ *   - NULL (LOCALE_NAME_USER_DEFAULT), "en", "en-US" and
+ *     "!x-sys-default-locale" (LOCALE_NAME_SYSTEM_DEFAULT) select that locale;
+ *   - L"" (LOCALE_NAME_INVARIANT) gives culture-free casing and ordinal
+ *     comparison, but no locale *data* -- GetLocaleInfoEx fails for it;
+ *   - any other name fails with ERROR_INVALID_PARAMETER. No locale data is
+ *     invented for locales this layer cannot back.
+ * Casing is Unicode *simple* mapping for ASCII, Latin-1, Greek and Cyrillic:
+ * code points whose case mapping expands (e.g. U+0130) pass through unchanged.
+ * A sort key here is an opaque stream of folded, big-endian UTF-16 code units
+ * plus a 0 terminator; it sorts consistently with CompareStringEx below but is
+ * NOT a Windows NLS weight table. Flags that need real collation data (kana /
+ * width, Chinese, digits-as-numbers, SORT_STRINGSORT, LCMAP_HASH /
+ * LCMAP_SORTHANDLE, version structures and sort handles) fail closed with
+ * ERROR_INVALID_FLAGS / ERROR_INVALID_PARAMETER. NORM_IGNORENONSPACE ignores
+ * U+0300..U+036F combining marks and NORM_IGNORESYMBOLS ignores ASCII
+ * punctuation; precomposed accents are not decomposed.
+ * Strings are UTF-16 *in guest memory*; counts are WCHARs (bytes for a sort
+ * key). Failure is 0 with a Win32 last error: these APIs do not return
+ * HRESULTs, so a caller that wants one must apply HRESULT_FROM_WIN32 itself.
+ */
+#define EX_ERROR_INVALID_PARAMETER   87u
+#define EX_ERROR_NOT_ENOUGH_MEMORY   8u
+#define EX_ERROR_INSUFFICIENT_BUFFER 122u
+#define EX_ERROR_INVALID_FLAGS      1004u
+
+#define EX_LCMAP_LOWERCASE         0x00000100u
+#define EX_LCMAP_UPPERCASE         0x00000200u
+#define EX_LCMAP_SORTKEY           0x00000400u
+#define EX_LCMAP_BYTEREV           0x00000800u
+#define EX_LCMAP_LINGUISTIC_CASING 0x01000000u
+#define EX_NORM_IGNORECASE         0x00000001u
+#define EX_NORM_IGNORENONSPACE     0x00000002u
+#define EX_NORM_IGNORESYMBOLS      0x00000004u
+#define EX_LINGUISTIC_IGNORECASE   0x00000010u
+#define EX_LINGUISTIC_IGNOREDIACRITIC 0x00000020u
+#define EX_NORM_LINGUISTIC_CASING  0x08000000u
+#define EX_MAX_STRING 0x100000u                 /* guard for an unterminated guest string */
+
+enum ex_locale_kind { EX_LOCALE_BAD = 0, EX_LOCALE_DEFAULT, EX_LOCALE_INVARIANT };
+
+/* A locale name is an ASCII UTF-16 string; a non-ASCII unit cannot name one of
+ * the two locales this layer knows. */
+static int ex_wide_ascii(uint32_t va, char *out, size_t cap) {
+    size_t i;
+    if (!va) return 0;
+    for (i = 0; i + 1 < cap; i++) {
+        uint16_t c = MEM16(va + (uint32_t)i * 2u);
+        if (!c) { out[i] = 0; return 1; }
+        if (c > 0x7F) return 0;
+        out[i] = (char)c;
+    }
+    return 0;
+}
+static enum ex_locale_kind ex_locale_of(uint32_t va, char *name, size_t cap) {
+    if (!va) return EX_LOCALE_DEFAULT;          /* LOCALE_NAME_USER_DEFAULT */
+    if (!ex_wide_ascii(va, name, cap)) return EX_LOCALE_BAD;
+    if (!*name) return EX_LOCALE_INVARIANT;     /* LOCALE_NAME_INVARIANT */
+    if (!strcasecmp(name, "en") || !strcasecmp(name, "en-us") ||
+        !strcasecmp(name, "!x-sys-default-locale")) return EX_LOCALE_DEFAULT;
+    return EX_LOCALE_BAD;
+}
+static int ex_wide_len(uint32_t va, uint32_t *out) {
+    uint32_t i;
+    for (i = 0; i < EX_MAX_STRING; i++)
+        if (!MEM16(va + i * 2u)) { *out = i; return 1; }
+    return 0;
+}
+
+static uint16_t ex_lower(uint16_t c) {
+    if (c >= 'A' && c <= 'Z') return (uint16_t)(c + 32);
+    if (c >= 0x00C0 && c <= 0x00DE && c != 0x00D7) return (uint16_t)(c + 32);
+    if (c == 0x0178) return 0x00FF;
+    if (c >= 0x0391 && c <= 0x03A1) return (uint16_t)(c + 32);
+    if (c >= 0x03A3 && c <= 0x03AB) return (uint16_t)(c + 32);
+    if (c >= 0x0410 && c <= 0x042F) return (uint16_t)(c + 32);
+    if (c >= 0x0400 && c <= 0x040F) return (uint16_t)(c + 0x50);
+    return c;
+}
+static uint16_t ex_upper(uint16_t c) {
+    if (c >= 'a' && c <= 'z') return (uint16_t)(c - 32);
+    if (c >= 0x00E0 && c <= 0x00FE && c != 0x00F7) return (uint16_t)(c - 32);
+    if (c == 0x00FF) return 0x0178;
+    if (c >= 0x03B1 && c <= 0x03C1) return (uint16_t)(c - 32);
+    if (c >= 0x03C3 && c <= 0x03CB) return (uint16_t)(c - 32);
+    if (c == 0x03C2) return 0x03A3;             /* final sigma */
+    if (c >= 0x0430 && c <= 0x044F) return (uint16_t)(c - 32);
+    if (c >= 0x0450 && c <= 0x045F) return (uint16_t)(c - 0x50);
+    return c;
+}
+static int ex_is_letter(uint16_t c) {
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+           (c >= 0x00C0 && c <= 0x00FF && c != 0x00D7 && c != 0x00F7) ||
+           (c >= 0x0391 && c <= 0x03CB) || (c >= 0x0400 && c <= 0x044F);
+}
+static int ex_is_alnum(uint16_t c) {
+    return ex_is_letter(c) || (c >= '0' && c <= '9');
+}
+static int ex_is_sym(uint16_t c) {
+    return c < 0x80 && ((c >= 0x21 && c <= 0x2F) || (c >= 0x3A && c <= 0x40) ||
+                        (c >= 0x5B && c <= 0x60) || (c >= 0x7B && c <= 0x7E));
+}
+static int ex_ignore_unit(uint16_t c, uint32_t flags) {
+    if ((flags & (EX_NORM_IGNORENONSPACE | EX_LINGUISTIC_IGNOREDIACRITIC)) &&
+        c >= 0x0300 && c <= 0x036F) return 1;   /* combining diacritical marks */
+    if ((flags & EX_NORM_IGNORESYMBOLS) && ex_is_sym(c)) return 1;
+    return 0;
+}
+static uint16_t ex_cmp_unit(uint16_t c, uint32_t flags) {
+    return (flags & (EX_NORM_IGNORECASE | EX_LINGUISTIC_IGNORECASE)) ? ex_lower(c) : c;
+}
+
+/* LCMapStringEx(locale, flags, src, cchSrc, dst, cchDest, version, reserved, sortHandle) */
+static void k_LCMapStringEx(void) {
+    uint32_t va = A32(0), flags = A32(1), src = A32(2), dst = A32(4);
+    int n = (int)A32(3), dn = (int)A32(5);
+    char name[64];
+    uint32_t n_src, i, m = 0;
+    enum ex_locale_kind loc;
+    uint32_t known = EX_LCMAP_LOWERCASE | EX_LCMAP_UPPERCASE | EX_LCMAP_SORTKEY |
+                     EX_LCMAP_BYTEREV | EX_LCMAP_LINGUISTIC_CASING | EX_NORM_IGNORECASE |
+                     EX_NORM_IGNORENONSPACE | EX_NORM_IGNORESYMBOLS | EX_LINGUISTIC_IGNORECASE |
+                     EX_LINGUISTIC_IGNOREDIACRITIC | EX_NORM_LINGUISTIC_CASING;
+    if (!src || !n || dn < 0 || A32(6) || A32(7) || A32(8)) {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9);
+    }
+    if (flags & ~known) { hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 9); }
+    if ((flags & EX_LCMAP_SORTKEY) && (flags & (EX_LCMAP_LOWERCASE | EX_LCMAP_UPPERCASE))) {
+        hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 9);
+    }
+    if (!(flags & EX_LCMAP_SORTKEY) &&
+        (flags & (EX_NORM_IGNORECASE | EX_LINGUISTIC_IGNORECASE | EX_NORM_LINGUISTIC_CASING))) {
+        hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 9);
+    }
+    loc = ex_locale_of(va, name, sizeof name);
+    if (loc == EX_LOCALE_BAD) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+    if (n < 0) {
+        if (!ex_wide_len(src, &n_src)) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+        n_src++;                                /* include the terminating NUL */
+    } else {
+        if ((uint32_t)n > EX_MAX_STRING) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+        n_src = (uint32_t)n;
+    }
+    (void)loc;                                  /* casing here is locale-independent */
+
+    if (flags & EX_LCMAP_SORTKEY) {
+        uint8_t *key = (uint8_t *)malloc((size_t)n_src * 2u + 1u);
+        if (!key) { hle_set_last_error(EX_ERROR_NOT_ENOUGH_MEMORY); RET(0, 9); }
+        for (i = 0; i < n_src; i++) {
+            uint16_t c = MEM16(src + i * 2u);
+            if (ex_ignore_unit(c, flags)) continue;
+            c = ex_cmp_unit(c, flags);
+            key[m++] = (uint8_t)(c >> 8);       /* big-endian code unit */
+            key[m++] = (uint8_t)c;
+        }
+        key[m++] = 0;                           /* the opaque stream's terminator */
+        if (flags & EX_LCMAP_BYTEREV)
+            for (i = 0; i + 1 < m; i += 2) { uint8_t t = key[i]; key[i] = key[i + 1]; key[i + 1] = t; }
+        if (!dn) { free(key); RET(m, 9); }
+        if (dn < 0 || (uint32_t)dn < m || !dst) {
+            free(key); hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(0, 9);
+        }
+        for (i = 0; i < m; i++) MEM8(dst + i) = key[i];
+        free(key);
+        RET(m, 9);
+    }
+
+    {
+        uint16_t *out = (uint16_t *)malloc((size_t)n_src * 2u);
+        int title = (flags & (EX_LCMAP_LOWERCASE | EX_LCMAP_UPPERCASE)) ==
+                    (EX_LCMAP_LOWERCASE | EX_LCMAP_UPPERCASE);
+        int word_start = 1;
+        if (!out) { hle_set_last_error(EX_ERROR_NOT_ENOUGH_MEMORY); RET(0, 9); }
+        for (i = 0; i < n_src; i++) {
+            uint16_t c = MEM16(src + i * 2u);
+            if (ex_ignore_unit(c, flags)) continue;
+            if (title) {
+                c = ex_is_letter(c) ? (word_start ? ex_upper(c) : ex_lower(c)) : c;
+                word_start = !ex_is_alnum(c);
+            } else if (flags & EX_LCMAP_LOWERCASE) c = ex_lower(c);
+            else if (flags & EX_LCMAP_UPPERCASE) c = ex_upper(c);
+            if (flags & EX_LCMAP_BYTEREV) c = (uint16_t)((c >> 8) | (c << 8));
+            out[m++] = c;
+        }
+        if (!dn) { free(out); RET(m, 9); }
+        if ((uint32_t)dn < m || !dst) {
+            free(out); hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(0, 9);
+        }
+        for (i = 0; i < m; i++) MEM16(dst + i * 2u) = out[i];
+        free(out);
+        RET(m, 9);
+    }
+}
+
+/* GetLocaleInfoEx(locale, LCType, data, cchData) */
+static void k_GetLocaleInfoEx(void) {
+    uint32_t va = A32(0), lctype = A32(1), data = A32(2);
+    int dn = (int)A32(3), is_num = 0, hex = 0;
+    char name[64], tmp[64];
+    uint32_t num = 0;
+    uint32_t t = lctype & 0x0FFFFFFFu;           /* NOUSEROVERRIDE/RETURN_NUMBER/etc. */
+    const char *s = NULL;
+    static const char *const day[] = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+    static const char *const mon[] = { "January", "February", "March", "April", "May", "June", "July", "August",
+                                       "September", "October", "November", "December" };
+    if (dn < 0 || ex_locale_of(va, name, sizeof name) != EX_LOCALE_DEFAULT) {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 4);
+    }
+    if ((lctype & 0x20000000u) && !t) {          /* RETURN_NUMBER needs an LCType */
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 4);
+    }
+    /* The one locale's values, mirroring kernel32_crt.c's GetLocaleInfoA table
+     * (same LCID 0x0409), plus the name constants that Ex callers use. */
+    switch (t) {
+    case 0x01: case 0x09: num = 0x0409; is_num = 1; hex = 1; break; /* ILANGUAGE, IDEFAULTLANGUAGE */
+    case 0x05: case 0x0A: num = 1; is_num = 1; break;              /* ICOUNTRY, IDEFAULTCOUNTRY */
+    case 0x0B: num = 437; is_num = 1; break;                       /* IDEFAULTCODEPAGE */
+    case 0x0D: num = 1; is_num = 1; break;                         /* IMEASURE */
+    case 0x11: case 0x19: case 0x1A: num = 2; is_num = 1; break;   /* IDIGITS, ICURRDIGITS */
+    case 0x12: num = 1; is_num = 1; break;                         /* ILZERO */
+    case 0x1B: case 0x1C: case 0x21: case 0x22: case 0x23: case 0x24:
+    case 0x25: case 0x26: case 0x27: num = 0; is_num = 1; break;
+    case 0x1004: num = 1252; is_num = 1; break;                    /* IDEFAULTANSICODEPAGE */
+    case 0x1009: num = 1; is_num = 1; break;                       /* ICALENDARTYPE */
+    case 0x100C: num = 0; is_num = 1; break;                       /* IFIRSTDAYOFWEEK */
+    default:
+        if (t >= 0x2A && t <= 0x30) s = day[t - 0x2A];
+        else if (t >= 0x31 && t <= 0x37) { snprintf(tmp, sizeof tmp, "%.3s", day[t - 0x31]); s = tmp; }
+        else if (t >= 0x38 && t <= 0x43) s = mon[t - 0x38];
+        else if (t >= 0x44 && t <= 0x4F) { snprintf(tmp, sizeof tmp, "%.3s", mon[t - 0x44]); s = tmp; }
+        else switch (t) {
+        case 0x02: case 0x04: case 0x1001: s = "English"; break;
+        case 0x03: s = "ENU"; break;
+        case 0x06: case 0x08: case 0x1002: s = "United States"; break;
+        case 0x07: s = "USA"; break;
+        case 0x0C: case 0x0F: case 0x17: s = ","; break;
+        case 0x0E: case 0x16: s = "."; break;
+        case 0x10: case 0x18: s = "3;0"; break;
+        case 0x14: s = "$"; break;
+        case 0x15: s = "USD"; break;
+        case 0x1D: s = "/"; break;
+        case 0x1E: s = ":"; break;
+        case 0x1F: s = "M/d/yyyy"; break;
+        case 0x20: s = "dddd, MMMM dd, yyyy"; break;
+        case 0x28: s = "AM"; break;
+        case 0x29: s = "PM"; break;
+        case 0x50: s = ""; break;
+        case 0x51: s = "-"; break;
+        case 0x59: case 0x67: s = "en"; break; /* SISO639LANGNAME, ...NAME2 */
+        case 0x5A: case 0x68: s = "US"; break; /* SISO3166CTRYNAME, ...NAME2 */
+        case 0x5C: s = "en-US"; break;         /* SNAME */
+        case 0x6D: s = "en"; break;            /* SPARENT */
+        case 0x1003: s = "h:mm:ss tt"; break;  /* STIMEFORMAT */
+        default: break;
+        }
+        break;
+    }
+    if (!is_num && !s) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 4); }
+    if (lctype & 0x20000000u) {                 /* LOCALE_RETURN_NUMBER: a DWORD in 2 WCHARs */
+        if (!is_num) { hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 4); }
+        if (!dn) RET(2, 4);
+        if (dn < 2 || !data) { hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(0, 4); }
+        MEM32(data) = num;
+        RET(2, 4);
+    }
+    if (is_num) { snprintf(tmp, sizeof tmp, hex ? "%04X" : "%u", num); s = tmp; }
+    {
+        uint32_t len = (uint32_t)strlen(s) + 1u, i;
+        if (!dn) RET(len, 4);
+        if ((uint32_t)dn < len || !data) { hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); RET(0, 4); }
+        for (i = 0; i < len; i++) MEM16(data + i * 2u) = (uint8_t)s[i];
+        RET(len, 4);
+    }
+}
+
+/* CompareStringEx(locale, flags, s1, cch1, s2, cch2, version, reserved, lParam) */
+static void k_CompareStringEx(void) {
+    uint32_t va = A32(0), flags = A32(1), s1 = A32(2), s2 = A32(4);
+    int n1 = (int)A32(3), n2 = (int)A32(5);
+    uint32_t len1, len2, i = 0, j = 0;
+    char name[64];
+    uint32_t supported = EX_NORM_IGNORECASE | EX_NORM_IGNORENONSPACE | EX_NORM_IGNORESYMBOLS |
+                         EX_LINGUISTIC_IGNORECASE | EX_LINGUISTIC_IGNOREDIACRITIC |
+                         EX_NORM_LINGUISTIC_CASING;
+    if (!s1 || !s2 || A32(6) || A32(7) || A32(8)) {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9);
+    }
+    if (flags & ~supported) { hle_set_last_error(EX_ERROR_INVALID_FLAGS); RET(0, 9); }
+    if (ex_locale_of(va, name, sizeof name) == EX_LOCALE_BAD) {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9);
+    }
+    if (n1 < 0 && !ex_wide_len(s1, &len1)) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+    if (n2 < 0 && !ex_wide_len(s2, &len2)) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+    if (n1 >= 0) len1 = (uint32_t)n1;
+    if (n2 >= 0) len2 = (uint32_t)n2;
+    if (len1 > EX_MAX_STRING || len2 > EX_MAX_STRING) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 9); }
+    for (;;) {
+        uint16_t a, b;
+        while (i < len1 && ex_ignore_unit(MEM16(s1 + i * 2u), flags)) i++;
+        while (j < len2 && ex_ignore_unit(MEM16(s2 + j * 2u), flags)) j++;
+        if (i >= len1 || j >= len2) break;
+        a = ex_cmp_unit(MEM16(s1 + i * 2u), flags);
+        b = ex_cmp_unit(MEM16(s2 + j * 2u), flags);
+        if (a != b) RET(a < b ? 1u : 3u, 9);    /* CSTR_LESS_THAN / CSTR_GREATER_THAN */
+        i++; j++;
+    }
+    RET(i >= len1 && j >= len2 ? 2u : (i >= len1 ? 1u : 3u), 9);
+}
+
+/* ---- locale-name bridge: Get{User,System}DefaultLocaleName, LCID <-> name ----
+ * The Vista+ counterparts of the LCID-based NLS calls in kernel32_crt.c. As in
+ * the Ex block above, this layer backs exactly one locale (en-US / 0x0409),
+ * which is both the user and the system default, so name <-> LCID conversion
+ * can be honest without an NLS data file:
+ *   - "en-US" (and the case-insensitive "en") <-> 0x0409;
+ *   - "" (LOCALE_NAME_INVARIANT) <-> 0x007F (LOCALE_INVARIANT);
+ *   - NULL (LOCALE_NAME_USER_DEFAULT) -> the user LCID 0x0409;
+ *   - "!x-sys-default-locale" (LOCALE_NAME_SYSTEM_DEFAULT) -> the system LCID 0x0409.
+ * A neutral name ("en") maps to 0x0409 unless LOCALE_ALLOW_NEUTRAL_NAMES is
+ * set, in which case it maps to the neutral LCID 0x0009; the reverse direction
+ * does the same with "en" / "en-US". Casing of the name itself is ignored,
+ * matching Windows. Every other name or LCID fails with ERROR_INVALID_PARAMETER
+ * rather than inventing NLS data; unknown flag bits are ignored, as on Windows.
+ * All strings are UTF-16 *in guest memory*: output is one WCHAR per code unit,
+ * NUL-terminated, with a length measured in WCHARs (including that NUL), just
+ * like GetLocaleInfoEx(LOCALE_SNAME). cch == 0 is a size probe and returns the
+ * required length without touching the buffer; a present but small buffer
+ * fails with ERROR_INSUFFICIENT_BUFFER and leaves it untouched.
+ */
+#define EX_LOCALE_MAX_NAME          85u      /* LOCALE_NAME_MAX_LENGTH */
+#define EX_LOCALE_ALLOW_NEUTRAL_NAMES 0x08000000u
+#define EX_LOCALE_NEUTRAL_EN        0x0009u   /* MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_NEUTRAL)) */
+#define EX_LOCALE_INVARIANT         0x007Fu
+#define EX_LOCALE_NEUTRAL           0x0000u   /* LOCALE_NEUTRAL -> user locale */
+#define EX_LOCALE_USER_DEFAULT      0x0400u
+#define EX_LOCALE_SYSTEM_DEFAULT    0x0800u
+#define EX_LOCALE_EN_US             0x0409u
+
+/* Write a NUL-terminated ASCII locale name as UTF-16 into guest memory. */
+static uint32_t ex_write_utf16_name(const char *s, uint32_t dst, int cch) {
+    uint32_t len = (uint32_t)strlen(s) + 1u, i;  /* includes the NUL */
+    if (cch < 0) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); return 0; }
+    if (len > EX_LOCALE_MAX_NAME) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); return 0; }
+    if (!cch) return len;                        /* size probe, no write */
+    if ((uint32_t)cch < len || !dst) { hle_set_last_error(EX_ERROR_INSUFFICIENT_BUFFER); return 0; }
+    for (i = 0; i < len; i++) MEM16(dst + i * 2u) = (uint8_t)s[i];
+    return len;
+}
+
+/* GetUserDefaultLocaleName(localeName, cchLocaleName) */
+static void k_GetUserDefaultLocaleName(void) {
+    RET(ex_write_utf16_name("en-US", A32(0), (int)A32(1)), 2);
+}
+
+/* GetSystemDefaultLocaleName(localeName, cchLocaleName) */
+static void k_GetSystemDefaultLocaleName(void) {
+    RET(ex_write_utf16_name("en-US", A32(0), (int)A32(1)), 2);
+}
+
+/* LCIDToLocaleName(lcid, name, cchName, dwFlags) */
+static void k_LCIDToLocaleName(void) {
+    uint32_t lcid = A32(0), dst = A32(1), flags = A32(3);
+    int cch = (int)A32(2);
+    const char *name;
+    if (lcid == EX_LOCALE_INVARIANT) name = "";                       /* LOCALE_NAME_INVARIANT */
+    else if (lcid == EX_LOCALE_NEUTRAL_EN) {
+        /* A neutral LCID answers with its neutral name only when the caller
+         * opted in; otherwise Windows substitutes the default language. */
+        name = (flags & EX_LOCALE_ALLOW_NEUTRAL_NAMES) ? "en" : "en-US";
+    } else if (lcid == EX_LOCALE_EN_US || lcid == EX_LOCALE_USER_DEFAULT ||
+               lcid == EX_LOCALE_SYSTEM_DEFAULT || lcid == EX_LOCALE_NEUTRAL) {
+        name = "en-US";
+    } else {
+        hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 4);
+    }
+    RET(ex_write_utf16_name(name, dst, cch), 4);
+}
+
+/* LocaleNameToLCID(lpName, dwFlags) */
+static void k_LocaleNameToLCID(void) {
+    uint32_t va = A32(0), flags = A32(1);
+    char name[64];
+    if (!va) RET(EX_LOCALE_EN_US, 2);          /* LOCALE_NAME_USER_DEFAULT */
+    if (!ex_wide_ascii(va, name, sizeof name)) { hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 2); }
+    if (!*name) RET(EX_LOCALE_INVARIANT, 2);   /* LOCALE_NAME_INVARIANT */
+    if (!strcasecmp(name, "!x-sys-default-locale")) RET(EX_LOCALE_EN_US, 2); /* LOCALE_NAME_SYSTEM_DEFAULT */
+    if (!strcasecmp(name, "en-us")) RET(EX_LOCALE_EN_US, 2);
+    if (!strcasecmp(name, "en"))
+        RET((flags & EX_LOCALE_ALLOW_NEUTRAL_NAMES) ? EX_LOCALE_NEUTRAL_EN : EX_LOCALE_EN_US, 2);
+    hle_set_last_error(EX_ERROR_INVALID_PARAMETER); RET(0, 2);
+}
+
 const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetProcessAffinityMask", k_GetProcessAffinityMask }, { "SetProcessAffinityMask", k_SetProcessAffinityMask },
     { "CreateToolhelp32Snapshot", k_CreateToolhelp32Snapshot }, { "Process32First", k_Process32First },
@@ -1086,7 +1565,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "CreatePipe", k_CreatePipe }, { "CreateNamedPipeA", k_CreateNamedPipeA },
     { "ConnectNamedPipe", k_ConnectNamedPipe }, { "WaitNamedPipeA", k_WaitNamedPipeA },
     { "PeekNamedPipe", k_PeekNamedPipe },
-    { "GetFullPathNameA", k_GetFullPathNameA },
+    { "GetFullPathNameA", k_GetFullPathNameA }, { "GetFullPathNameW", k_GetFullPathNameW },
     { "SearchPathA", k_SearchPathA },
     { "OpenFile", k_OpenFile }, { "_hread", k__lread }, { "_hwrite", k__lwrite },
     { "_lopen", k__lopen }, { "_lcreat", k__lcreat }, { "_lread", k__lread },
@@ -1112,6 +1591,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetFileAttributesExA",       k_GetFileAttributesExA },
     { "GetFileAttributesExW",       k_GetFileAttributesExW },
     { "SetFileAttributesA",         k_SetFileAttributesA },
+    { "SetFileAttributesW",         k_SetFileAttributesW },
     { "CreateDirectoryA",           k_CreateDirectoryA },
     { "CreateDirectoryW",           k_CreateDirectoryW },
     { "RemoveDirectoryA",           k_RemoveDirectoryA },
@@ -1149,5 +1629,12 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "GetPrivateProfileStringA",   k_GetPrivateProfileStringA },
     { "GetPrivateProfileIntA",      k_GetPrivateProfileIntA },
     { "WritePrivateProfileStringA", k_WritePrivateProfileStringA },
+    { "LCMapStringEx",              k_LCMapStringEx },
+    { "GetLocaleInfoEx",            k_GetLocaleInfoEx },
+    { "CompareStringEx",            k_CompareStringEx },
+    { "GetUserDefaultLocaleName",   k_GetUserDefaultLocaleName },
+    { "GetSystemDefaultLocaleName", k_GetSystemDefaultLocaleName },
+    { "LCIDToLocaleName",           k_LCIDToLocaleName },
+    { "LocaleNameToLCID",           k_LocaleNameToLCID },
     { 0, 0 }
 };

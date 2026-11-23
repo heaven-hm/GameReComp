@@ -657,6 +657,45 @@ static void c_sprintf(void) {                        /* (buf, fmt, ...) */
     RETC((uint32_t)n);
 }
 
+/* _snprintf is the MSVC bounded sibling of sprintf: it never writes more than
+ * count-1 bytes and always NUL-terminates when count > 0. */
+static void c__snprintf(void) {
+    ms_init();
+    char *buf = ASTR(0);
+    size_t count = (size_t)A32(1);
+    const char *fmt = ASTR(2);
+    if (!buf || !fmt || !count) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, count, fmt, g_esp + 16u);
+    memcpy(buf, t_fmt, (size_t)n + 1u);
+    RETC((uint32_t)n);
+}
+/* vprintf(fmt, ap): the guest va_list is an array of guest dwords. */
+static void c_vprintf(void) {
+    ms_init();
+    const char *fmt = ASTR(0);
+    uint32_t ap = A32(1);
+    FILE *out = ms_stdout();
+    if (!fmt || !ap || !out) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, ap);
+    size_t w = fwrite(t_fmt, 1, (size_t)n, out);
+    RETC(w == (size_t)n ? (uint32_t)n : 0xFFFFFFFFu);
+}
+/* _flsbuf writes one character to a stream, flushing Guest FILE state. */
+static void c__flsbuf(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(1));
+    if (!s) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    RETC(fputc((int)A32(0), s->fp) == EOF ? 0xFFFFFFFFu : (uint32_t)(unsigned char)A32(0));
+}
+/* fscanf's variadic destination pointers cannot be classified safely from a
+ * lifted va_list; fail explicitly instead of writing to guessed addresses. */
+static void c_fscanf(void) {
+    ms_init();
+    fprintf(stderr, "[msvcrt] fscanf: guest varargs scanning is unsupported\n");
+    ms_seterrno(ENOSYS);
+    RETC(0xFFFFFFFFu);
+}
+
 static void c_puts(void) {                           /* (s) */
     ms_init();
     const char *s = ASTR(0);
@@ -1789,22 +1828,72 @@ static void u_terminate(void) {
     fprintf(stderr, "[msvcrt] std::terminate called\n");
     hle_exit(3);
 }
+/* Read a TypeDescriptor's mangled name out of guest memory, bounded so a bad
+ * RTTI pointer can only truncate the name, never run the read away. MSVC x86
+ * TypeDescriptor is { int nRTTIBase; void *pVFTable; void *spare; char name[]; }
+ * so the name begins at +12. A pointer below 64 KB is treated as null: guest
+ * code and data live above that, and the same test eh32.c uses for a plausible
+ * metadata pointer. */
+static size_t cxx_type_name(uint32_t td, char *buf, size_t cap) {
+    size_t k;
+    if (!cap) return 0;
+    buf[0] = '\0';
+    if (td < 0x10000u) return 0;
+    for (k = 0; k + 1 < cap; k++) {
+        uint8_t c = MEM8(td + 12u + (uint32_t)k);
+        if (!c) break;
+        buf[k] = (char)c;
+    }
+    buf[k] = '\0';
+    return k;
+}
 /* _CxxThrowException(exceptionObject, throwInfo): MSVC's `throw` entry point.
  *
- * Reached only when a guest actually throws. This layer has no guest SEH (the
- * README says so: RaiseException ends the run), so it cannot walk the guest's
- * frame chain and find a catch. Answering "success" would resume the guest at
- * whatever PC followed the throw, with the exception uncaught and its frames
- * never unwound -- silent corruption. Report and stop instead, naming the
- * throw, so a title that never throws (TrackEditor, GeneRally) is unaffected
- * and one that does fails where it threw rather than somewhere later. */
+ * Dispatch is owned by hle_eh_cxx_throw in eh32.c. When a lifted frame has a
+ * registered checkpoint and a compatible catch, that helper longjmps to the
+ * catch continuation and never returns here. Reaching the code below therefore
+ * means it declined the throw: no checkpoint/TIB, no compatible handler, or an
+ * unsupported frame. We must not fake a catch by returning "success" -- the
+ * guest would resume after its throw with the exception uncaught and none of
+ * its unwind funclets run, i.e. silent stack corruption. Stop at the throw and
+ * say what was thrown, decoded from the guest's own ThrowInfo, so a title that
+ * never throws is unaffected and one that does fails at the throw rather than
+ * later with a corrupted stack. */
 static void u_cxx_throw_exception(void) {
-    /* A caught exception resumes through its owning function's setjmp
-     * checkpoint and therefore never returns here. */
-    hle_eh_cxx_throw(A32(0), A32(1));
-    fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
-                    "0x%08X type 0x%08X, no compatible guest handler\n",
-            A32(0), A32(1));
+    uint32_t object = A32(0), info = A32(1);
+    uint32_t arr, ct, td;
+    unsigned ncat = 0;
+    char type[64];
+
+    /* On a match this dispatches via longjmp and does not return. */
+    hle_eh_cxx_throw(object, info);
+
+    /* Diagnostic only; it makes no dispatch decision. Decode ThrowInfo ->
+     * CatchableTypeArray -> first CatchableType -> TypeDescriptor purely to
+     * name the thrown type. An absent or unreadable field is reported as such
+     * instead of being guessed at. */
+    type[0] = '\0';
+    if (info >= 0x10000u) {
+        arr = MEM32(info + 12u);                      /* pCatchableTypeArray */
+        if (arr >= 0x10000u) {
+            ncat = MEM32(arr);                        /* nCatchableTypes */
+            if (ncat >= 1u && ncat <= 32u) {
+                ct = MEM32(arr + 4u);                 /* first CatchableType */
+                td = ct >= 0x10000u ? MEM32(ct + 4u) : 0u;  /* pType */
+                (void)cxx_type_name(td, type, sizeof type);
+            }
+        }
+    }
+    if (type[0])
+        fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
+                        "0x%08X ThrowInfo 0x%08X, no compatible guest handler: "
+                        "type %s (%u catchable type%s)\n",
+                object, info, type, ncat, ncat == 1u ? "" : "s");
+    else
+        fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
+                        "0x%08X ThrowInfo 0x%08X, no compatible guest handler: "
+                        "throw type unreadable\n",
+                object, info);
     hle_exit(3);
 }
 /* _except_handler4_common: every /GS-checked MSVC function's handler stub
@@ -2180,6 +2269,57 @@ static void u_wcsnlen(void) {
     uint32_t max = A32(1), n = 0;
     if (w) while (n < max && w[n]) n++;
     RETC(n);
+}
+
+/* ---- more wide-string exports this table did not answer ----
+ * Guest wchar_t is 2 bytes (UTF-16 code units on x86 MSVC), so every routine
+ * here walks uint16_t cells in guest memory exactly like wcscpy/wcsncmp above;
+ * the host's 4-byte wchar_t is deliberately never used. Each returns a real
+ * guest address or a real comparison/termination result - a NULL input is
+ * never turned into a fake "success". All are cdecl: one RETC pops only the
+ * synthetic return address, the lifted caller drops its own arguments. */
+static void u_wcsdup(void) {                         /* (const wchar_t *s) -> wchar_t * */
+    ms_init();
+    const uint16_t *s = (const uint16_t *)APTR(0);
+    if (!s) { ms_seterrno(EINVAL); RETC(0); }
+    uint32_t n = 0;
+    while (s[n]) n++;
+    uint64_t bytes = ((uint64_t)n + 1u) * 2u;         /* the terminating NUL cell counts */
+    if (bytes > 0xFFFFFFFFull) { ms_seterrno(ENOMEM); RETC(0); }
+    uint16_t *p = (uint16_t *)hle_heap_alloc((uint32_t)bytes, 0);
+    if (!p) { ms_seterrno(ENOMEM); RETC(0); }
+    memcpy(p, s, (size_t)bytes);
+    RETC(hle_va(p));                                 /* guest-heap copy, free() can reclaim it */
+}
+static void u_wcscat(void) {                         /* (wchar_t *dst, const wchar_t *src) -> dst */
+    uint32_t dst_va = A32(0);
+    uint16_t *dst = (uint16_t *)hle_ptr(dst_va);
+    const uint16_t *src = (const uint16_t *)APTR(1);
+    if (!dst || !src) RETC(0);
+    uint32_t i = 0;
+    while (dst[i]) i++;
+    while ((dst[i++] = *src++) != 0) { }
+    RETC(dst_va);
+}
+static void u_wcsncat(void) {                        /* (wchar_t *dst, const wchar_t *src, size_t n) -> dst */
+    uint32_t dst_va = A32(0);
+    uint16_t *dst = (uint16_t *)hle_ptr(dst_va);
+    const uint16_t *src = (const uint16_t *)APTR(1);
+    uint32_t n = A32(2);
+    if (!dst || !src) RETC(0);
+    uint32_t i = 0;
+    while (dst[i]) i++;
+    for (uint32_t k = 0; k < n && src[k]; k++) dst[i++] = src[k];
+    dst[i] = 0;                                      /* wcsncat always terminates */
+    RETC(dst_va);
+}
+static void u_wcscmp(void) {                         /* (const wchar_t *a, const wchar_t *b) -> int */
+    const uint16_t *a = (const uint16_t *)APTR(0), *b = (const uint16_t *)APTR(1);
+    if (!a || !b) RETC((uint32_t)(int32_t)(a == b ? 0 : (a ? 1 : -1)));
+    for (size_t i = 0;; i++) {
+        if (a[i] != b[i]) RETC(a[i] < b[i] ? 0xFFFFFFFFu : 1u);
+        if (!a[i]) RETC(0);
+    }
 }
 static int utf8_next(const uint8_t *s, size_t n, uint32_t *cp) {
     if (!n) return -2;
@@ -2674,6 +2814,9 @@ uint32_t hle_msvcrt_data(const char *name) {
     if (!strcmp(name, "_ctype"))       return g_ctype_va;    /* the table itself */
     if (!strcmp(name, "_fmode"))       return g_fmode_va;
     if (!strcmp(name, "__mb_cur_max")) return g_mbmax_va;
+    /* __initenv is a char **; the existing _environ cell already points at
+     * the guest environment vector, so share that real object. */
+    if (!strcmp(name, "__initenv"))   return g_environ_va;
     return 0;
 }
 
@@ -2776,6 +2919,10 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "setbuf",                       c_setbuf },
     { "setvbuf",                      c_setvbuf },
     { "printf",                       c_printf },
+    { "_snprintf",                    c__snprintf },
+    { "vprintf",                      c_vprintf },
+    { "_flsbuf",                      c__flsbuf },
+    { "fscanf",                       c_fscanf },
     { "fprintf",                      c_fprintf },
     { "sprintf",                      c_sprintf },
     { "puts",                         c_puts },
@@ -2867,8 +3014,12 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "strtok",                       c_strtok },
     { "strerror",                     c_strerror },
     { "wcscpy",                       c_wcscpy },
+    { "wcscat",                       u_wcscat },
+    { "wcsncat",                      u_wcsncat },
     { "wcsncmp",                      c_wcsncmp },
+    { "wcscmp",                       u_wcscmp },
     { "wcsnlen",                      u_wcsnlen },
+    { "_wcsdup",                      u_wcsdup },
     { "_wcsicmp",                     c_wcsicmp },
     { "_wcsnicmp",                    c_wcsnicmp },
     { "mbrtowc",                      u_mbrtowc },
