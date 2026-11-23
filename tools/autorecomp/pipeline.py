@@ -35,6 +35,8 @@ from translator import (MAX_UNIT_BYTES, discover_functions,  # noqa: E402
 
 from . import highlevel  # noqa: E402
 from . import projectgen  # noqa: E402
+from .lift_cache import (LiftCache, enabled as lift_cache_enabled,  # noqa: E402
+                         fingerprint as lift_cache_fingerprint)
 
 STAGES = ["inspect", "recover", "translate", "project", "compile",
           "run", "verify", "report"]
@@ -384,6 +386,16 @@ class Pipeline:
         self._write_json("reports/inspect.json", data)
         return f"{info.machine} {info.pe_type}, {len(info.imports)} imports, entry {data['entry_point']}", data
 
+    def _lift_cache(self):
+        """Return a fingerprinted cache when explicitly enabled."""
+        if not lift_cache_enabled():
+            return None
+        root = Path(self.highlevel_dir) if self.highlevel_dir else (_ROOT / "highlevel")
+        key = lift_cache_fingerprint(
+            self.pe_path, self.companions, self.split, self.split_bytes,
+            root, _ROOT)
+        return LiftCache(key)
+
     def stage_recover(self):
         # The disassembler narrates its recovery on stdout. Capture that
         # narration into logs/recover.log like the translate stage does, so
@@ -392,23 +404,43 @@ class Pipeline:
         log_path = self.project_dir / "logs" / "recover.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            functions = discover_functions(self.pe_data, self.info,
-                                           self.iat_map)
-            # Bundled DLLs are reconstructed into the same table. Their VAs are
-            # distinct from the exe's (the collision check in stage_inspect saw
-            # to that), so a plain merge is safe; merging their IAT maps lets
-            # their own imports resolve through the same lifter.
-            for comp in self.companions:
-                dll_data = comp["path"].read_bytes()
-                dll_iat = build_iat_map(comp["info"])
-                dll_fns = discover_functions(dll_data, comp["info"], dll_iat)
-                for addr, fn in dll_fns.items():
-                    functions.setdefault(addr, fn)
-                self.iat_map.update(dll_iat)
-                comp["function_count"] = len(dll_fns)
+        cache = self._lift_cache()
+        cached = cache.get('recover') if cache else None
+        if isinstance(cached, dict) and 'functions' in cached:
+            self.functions = cached['functions']
+            self.iat_map = cached['iat_map']
+            for comp, count in zip(self.companions,
+                                   cached.get('companion_counts', [])):
+                comp['function_count'] = count
+            buf.write('recover: cache hit (fingerprint matched)\n')
+            functions = self.functions
+            used_cache = True
+        else:
+            used_cache = False
+            with contextlib.redirect_stdout(buf):
+                functions = discover_functions(self.pe_data, self.info,
+                                               self.iat_map)
+                # Bundled DLLs are reconstructed into the same table. Their VAs are
+                # distinct from the exe's (the collision check in stage_inspect saw
+                # to that), so a plain merge is safe; merging their IAT maps lets
+                # their own imports resolve through the same lifter.
+                for comp in self.companions:
+                    dll_data = comp["path"].read_bytes()
+                    dll_iat = build_iat_map(comp["info"])
+                    dll_fns = discover_functions(dll_data, comp["info"], dll_iat)
+                    for addr, fn in dll_fns.items():
+                        functions.setdefault(addr, fn)
+                    self.iat_map.update(dll_iat)
+                    comp["function_count"] = len(dll_fns)
+            self.functions = functions
+            if cache:
+                cache.put('recover', {
+                    'functions': self.functions,
+                    'iat_map': self.iat_map,
+                    'companion_counts': [c.get('function_count', 0)
+                                         for c in self.companions],
+                })
         log_path.write_text(buf.getvalue())
-        self.functions = functions
         ordered = sorted(functions.values(), key=lambda f: f.address)
         entries = []
         for i, func in enumerate(ordered):
@@ -430,7 +462,8 @@ class Pipeline:
             "functions": entries,
         }
         self._write_json("reports/functions.json", data)
-        return f"{len(entries)} functions, {data['instructions']} instructions", {"count": len(entries), "instructions": data["instructions"]}
+        data['cache'] = 'hit' if used_cache else 'miss'
+        return f"{len(entries)} functions, {data['instructions']} instructions", {"count": len(entries), "instructions": data["instructions"], "cache": data['cache']}
 
     def stage_translate(self):
         gen_dir = self.project_dir / "src" / "recomp" / "gen"
@@ -475,14 +508,31 @@ class Pipeline:
                     return data
             return b""
 
-        with contextlib.redirect_stdout(buf):
-            lifted = generate_recomp_files(
-                self.functions, self.iat_map, str(gen_dir),
-                split_size=self.split, max_unit_bytes=self.split_bytes,
-                highlevel={a: self.highlevel_by_address[a] for a in replaced},
-                read_va=combined_read_va)
+        cache = self._lift_cache()
+        cached = cache.get('translate') if cache else None
+        if isinstance(cached, dict) and 'files' in cached and isinstance(
+                cached.get('lifted'), list):
+            cache.copy_gen_dir(gen_dir)
+            self.lifted = cached['lifted']
+            lifted = self.lifted
+            used_cache = True
+            buf.write('translate: cache hit (fingerprint matched)\n')
+        else:
+            used_cache = False
+            with contextlib.redirect_stdout(buf):
+                lifted = generate_recomp_files(
+                    self.functions, self.iat_map, str(gen_dir),
+                    split_size=self.split, max_unit_bytes=self.split_bytes,
+                    highlevel={a: self.highlevel_by_address[a] for a in replaced},
+                    read_va=combined_read_va)
+            self.lifted = lifted
+            if cache:
+                cache.put('translate', {
+                    'files': {p.name: p.read_bytes() for p in sorted(gen_dir.iterdir())
+                              if p.is_file()},
+                    'lifted': lifted,
+                })
         log_path.write_text(buf.getvalue())
-        self.lifted = lifted
 
         # stage_recover guesses the unit from the function count; by-size
         # chunking makes that guess wrong, so use the generator's own manifest.
@@ -530,6 +580,7 @@ class Pipeline:
             "source_bytes": total_bytes,
             "lift_errors": errors,
             "seconds": round(time.time() - t0, 1),
+            "cache": 'hit' if used_cache else 'miss',
         }
         if errors:
             data["warning"] = (f"{errors} function(s) failed to lift; they are "
