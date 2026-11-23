@@ -97,3 +97,18 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - Auditor on 19 game PE32s found 322 missing distinct imports overall (mostly
   game-owned DLLs/C++ runtime); 22 are Win32 system APIs, listed in the report.
 - No issue closed: behavioural correctness and game acceptance remain open.
+
+## Integration checkpoint 5 (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `51731c28984afb0198c82e0ca75c3327e7f7767d`.
+- Threading branch `feature/threading-stress` (`51731c2`) merged agent 27
+  (thread/sync semantics) and agent 33 (waitable timers), and adds a 200-thread
+  mutex-contention fixture: 200 threads x 40 increments = 8000 exactly, with
+  correct exit codes, five consecutive deterministic runs.
+- Architecture: guest threads are host pthreads serialised by the win32hle
+  machine lock; waits use `hle_block_begin`/`hle_block_end`; handles are typed
+  guest-facing integers, never host pthread structures.
+- `python3 -m pytest tests/ -q` → 177 passed, 2 skipped, 26 subtests passed.
+- `bash runtime/win32hle/build_selftests.sh` → 23 selftests ok.
+- No game-level thread-safety claim: no original-game deterministic scenario
+  was executed; Linux host testing remains unavailable.
