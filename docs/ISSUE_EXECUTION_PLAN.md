@@ -153,3 +153,19 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - `bash runtime/win32hle/build_selftests.sh` → 28 selftests ok.
 - No renderer and no game-level D3D9 validation: rendering remains NOT IMPLEMENTED;
   no issue closed.
+
+## Game matrix correction — TrackMania (2026-11-23)
+
+- Rows 22 and 23 were previously marked `BLOCKED: no Windows game files`.
+  Real PE32 executables were located and hashed locally, so that blocker is
+  stale for those two rows. Row 24 (TM United Forever) remains BLOCKED.
+- TM Nations ESWC (`822def66…`): native build PASS; execution FAIL (strict exit
+  2 with 64 unresolved imports, permissive SIGBUS, no frames). Evidence kept on
+  `feature/p10-tmnf-eswc` in `docs/GAME_TM_ESWC_EVIDENCE.md`.
+- TM Nations Forever (`5e287e79…`): `tools.autorecomp --no-run` completed all
+  stages: 128,726 functions, 0 lift errors, native 741,976,264-byte build.
+  `verification.json` is `not-run`; only A0–A3 are claimed. Evidence in
+  `docs/GAME_TMNF_EVIDENCE.md`.
+- No acceptance level above A3 was assigned and no issue was closed: no
+  launch, frame, input, audio, save/load or original-versus-native comparison
+  was performed.
