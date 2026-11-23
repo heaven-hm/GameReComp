@@ -18,16 +18,34 @@ binary or oracle path is baked into this file. Missing inputs are reported as
 BLOCKED; a build without a launch is BUILD ONLY; render evidence is PARTIAL;
 PASS additionally requires an explicit, matching pipeline verification
 outcome (a process-level oracle), a non-failing launch and proven frames.
-There is no code path that assigns PASS from a build, a frame or a timeout
-alone -- see ``classify`` and docs/CORPUS_ACCEPTANCE.md.
+There is no code path that assigns PASS from a build, a frame, an exit code or
+a timeout alone -- see ``classify`` and docs/CORPUS_ACCEPTANCE.md.
 
-Usage:
+Headless/CLI apps (7-Zip, PuTTY and friends) never produce a screenshot frame,
+so they could never reach PARTIAL under the frame rules. A game may opt in with
+``--kind NAME=cli`` (or ``headless``) *and* a declared scenario file
+(``--scenario NAME=PATH``) listing the CLI args, expected exit code and the
+expected SHA-256 of combined stdout/stderr. Only then is a frame-free,
+*process-level* evidence path used: the recorded launch, exact exit code,
+recomputed stdout/stderr hash and the on-disk log can lift that game to PARTIAL.
+No scenario means the existing frame rules still apply -- nothing is guessed.
+This evidence is render-free and explicitly NOT gameplay equivalence.
+
+Usage (GUI game):
     python3 -m tools.corpus_acceptance \
         --out <dir> \
         --original Doukutsu=/path/to/Doukutsu.exe \
         --native Doukutsu=/path/to/native/bin \
         --pipeline-report Doukutsu=/path/to/project/reports/report.json \
         --timeout 12 --json <report.json> --markdown <report.md>
+
+Usage (declared headless CLI game):
+    python3 -m tools.corpus_acceptance \
+        --out <dir> \
+        --original 7z=/path/to/7z.exe --native 7z=/path/to/native/7z \
+        --kind 7z=cli --scenario 7z=/path/to/7z-version-scenario.json \
+        --assets 7z=/path/to/app/folder --timeout 10 \
+        --json <report.json> --markdown <report.md>
 """
 from __future__ import annotations
 
@@ -35,8 +53,10 @@ import argparse
 import datetime
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -54,12 +74,42 @@ FAIL = "FAIL"
 BLOCKED = "BLOCKED"
 STATUSES = (PASS, PARTIAL, BUILD_ONLY, FAIL, BLOCKED)
 
+# Per-game kind. Anything other than the two headless spellings stays GUI: an
+# unknown value is never guessed into a render-free evidence path.
+KIND_GUI = "gui"
+KIND_CLI = "cli"
+CLI_KINDS = ("cli", "headless")
+
 # Only a pipeline outcome that consumed an explicit oracle can support PASS.
 # "partial", "not-run", "launch-failed", "trace-diverged" and friends cannot.
 PASS_VERIFICATION_STATUSES = ("scenario-pass", "verified-playable-scope")
 # A game loop legitimately outlives the runner's deadline; neither this nor a
 # clean exit is a *failure*, but neither alone is a pass.
 NONFAILING_EXITS = (0, "TIMEOUT")
+
+_HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
+
+
+def is_sha256(value: Any) -> bool:
+    """True only for a 64-character hexadecimal digest string."""
+    return (isinstance(value, str) and len(value) == 64
+            and all(ch in _HEX_DIGITS for ch in value))
+
+
+def normalize_kind(value: Any) -> str:
+    """Return KIND_CLI only for explicit headless kinds, else KIND_GUI."""
+    return (KIND_CLI if str(value or KIND_GUI).strip().lower() in CLI_KINDS
+            else KIND_GUI)
+
+
+def uses_cli_evidence(kind: str, scenario: dict | None) -> bool:
+    """True only for an opted-in headless game that *declared* a scenario.
+
+    A headless game without a declared scenario deliberately keeps the existing
+    frame rules (and therefore stays FAIL/PARTIAL under those rules).
+    """
+    return (normalize_kind(kind) == KIND_CLI
+            and bool(scenario and scenario.get("declared")))
 
 
 def sha256_file(path: Path) -> str:
@@ -377,11 +427,223 @@ def launch_record(name: str, native: dict, folder: str | None, out_dir: Path,
     return launch, frames
 
 
+def scenario_record(path_text: str | None) -> dict:
+    """Load and validate a per-game CLI scenario from a CLI-supplied JSON file.
+
+    The file must declare all three fields; anything missing, malformed or
+    unreadable leaves the scenario ``declared`` but ``incomplete`` so the
+    classifier can FAIL closed instead of guessing an expectation.
+    """
+    base: dict[str, Any] = {
+        "declared": bool(path_text), "complete": False, "source": path_text,
+        "args": None, "expected_exit": None, "expected_output_sha256": None,
+        "reasons": [],
+    }
+    if not path_text:
+        return base
+    path = Path(path_text).expanduser()
+    if not path.is_file():
+        base["reasons"].append(f"scenario file not found at {path}")
+        return base
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        base["reasons"].append(f"cannot read scenario file {path}: {exc}")
+        return base
+    if not isinstance(data, dict):
+        base["reasons"].append("scenario JSON must be an object")
+        return base
+
+    args = data.get("args")
+    expected_exit = data.get("expected_exit")
+    expected_hash = data.get("expected_output_sha256")
+    problems: list[str] = []
+    if not isinstance(args, list) or any(not isinstance(a, str) for a in args):
+        problems.append("'args' must be a list of strings")
+    if isinstance(expected_exit, bool) or not isinstance(expected_exit, int):
+        problems.append("'expected_exit' must be an integer")
+    if not is_sha256(expected_hash):
+        problems.append("'expected_output_sha256' must be a 64-character hex digest")
+
+    base["args"] = args if isinstance(args, list) else None
+    base["expected_exit"] = expected_exit if (
+        isinstance(expected_exit, int) and not isinstance(expected_exit, bool)) else None
+    base["expected_output_sha256"] = expected_hash if is_sha256(expected_hash) else None
+    base["reasons"] = problems
+    base["complete"] = not problems
+    return base
+
+
+def cli_evidence(scenario: dict, launch: dict) -> dict:
+    """Evaluate recorded process-level evidence against a declared scenario.
+
+    Nothing here invents a value: the hash comes from the bytes actually
+    captured by :func:`cli_launch_record`, and the log path must exist on disk.
+    """
+    digest = launch.get("output_sha256")
+    log = launch.get("log")
+    exit_code = launch.get("exit_code")
+    expected_exit = scenario.get("expected_exit")
+    expected_hash = scenario.get("expected_output_sha256")
+    log_exists = bool(log) and Path(str(log)).is_file()
+    evidence_present = bool(
+        exit_code is not None and is_sha256(digest) and log_exists)
+    exit_matches = bool(scenario.get("complete") and exit_code == expected_exit)
+    output_matches = bool(
+        scenario.get("complete") and expected_hash and is_sha256(digest)
+        and digest == expected_hash)
+    return {
+        "complete": bool(scenario.get("complete")),
+        "evidence_present": evidence_present,
+        "exit_code": exit_code,
+        "expected_exit": expected_exit,
+        "exit_matches": exit_matches,
+        "output_sha256": digest,
+        "expected_output_sha256": expected_hash,
+        "output_matches": output_matches,
+        "log": log, "log_exists": log_exists,
+        "command": launch.get("command"),
+        "reproduced": bool(evidence_present and exit_matches and output_matches),
+    }
+
+
+def cli_launch_record(name: str, native: dict, folder: str | None, out_dir: Path,
+                      timeout: int, execute: bool, scenario: dict) -> dict:
+    """Launch a headless binary with the declared CLI args and capture evidence.
+
+    Combined stdout/stderr bytes are written verbatim to ``run.log`` and hashed
+    from those same bytes; no hash, log or exit code is fabricated. This is a
+    thin subprocess wrapper local to the harness -- game_runner is unchanged.
+    """
+    launch: dict[str, Any] = {
+        "executed": False, "exit_code": None, "seconds": None,
+        "evidence": None, "log": None, "command": None,
+        "output_sha256": None, "stdout_tail": None, "mode": "cli",
+        "reason": "launch not requested (--no-run)",
+    }
+    if not native.get("path"):
+        launch["reason"] = "no native binary to launch"
+        return launch
+    if not execute:
+        return launch
+    binary = Path(str(native["path"]))
+    if not binary.is_file():
+        launch["reason"] = f"native binary missing at {binary}"
+        return launch
+    assets = Path(folder).expanduser() if folder else binary.parent
+    if not assets.is_dir():
+        launch["executed"] = True  # attempted, but cannot run from a missing folder
+        launch["exit_code"] = "NO_FOLDER"
+        launch["reason"] = f"game folder {assets} does not exist"
+        return launch
+
+    evidence = out_dir / name
+    shutil.rmtree(evidence, ignore_errors=True)
+    evidence.mkdir(parents=True, exist_ok=True)
+    cmd = [str(binary), *(scenario.get("args") or [])]
+    started = time.time()
+    try:
+        proc = subprocess.run(
+            cmd, cwd=str(assets), stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, timeout=timeout, check=False)
+        output = proc.stdout or b""
+        exit_code = proc.returncode
+    except subprocess.TimeoutExpired as exc:
+        output = exc.stdout or b""
+        if isinstance(output, str):
+            output = output.encode("utf-8", "replace")
+        exit_code = "TIMEOUT"
+    except OSError as exc:
+        launch["executed"] = True
+        launch["exit_code"] = "LAUNCH_ERROR"
+        launch["command"] = cmd
+        launch["reason"] = f"CLI launch failed: {exc}"
+        return launch
+
+    log_path = evidence / "run.log"
+    log_path.write_bytes(output)
+    digest = hashlib.sha256(output).hexdigest()
+    tail = output.decode("utf-8", "replace")[-3000:]
+    launch.update({
+        "executed": True,
+        "exit_code": exit_code,
+        "seconds": round(time.time() - started, 1),
+        "evidence": str(evidence),
+        "log": str(log_path),
+        "command": cmd,
+        "output_sha256": digest,
+        "stdout_tail": tail,
+        "reason": "",
+    })
+    return launch
+
+
+def _classify_cli(pipeline: dict, native: dict, launch: dict, scenario: dict,
+                  reasons: list[str], exit_code: Any) -> tuple[str, list[str]]:
+    """Fail-closed verdict for a declared headless CLI scenario (no frames)."""
+    if not scenario.get("complete"):
+        return FAIL, reasons + [
+            "declared CLI scenario is incomplete: "
+            + ("; ".join(scenario.get("reasons") or []) or "unknown"),
+            "no process-level evidence to report"]
+    ev = cli_evidence(scenario, launch)
+    if not ev["evidence_present"]:
+        return FAIL, reasons + [
+            "CLI scenario has no process-level evidence: "
+            f"exit={ev['exit_code']!s}, output_sha256={ev['output_sha256']!s}, "
+            f"log={ev['log']!s}",
+            "no process-level evidence to report"]
+    reasons.append(
+        f"CLI scenario args={scenario.get('args')!r}: exit {ev['exit_code']!s} "
+        f"vs declared {ev['expected_exit']!s}, stdout/stderr sha256 "
+        f"{str(ev['output_sha256'])[:16]}... vs declared "
+        f"{str(ev['expected_output_sha256'])[:16]}..., log "
+        f"{Path(str(ev['log'])).name}")
+    if not (ev["exit_matches"] and ev["output_matches"]):
+        divergence = []
+        if not ev["exit_matches"]:
+            divergence.append(
+                f"exit {ev['exit_code']!s} != expected {ev['expected_exit']!s}")
+        if not ev["output_matches"]:
+            divergence.append("stdout/stderr sha256 does not match declared output")
+        return FAIL, reasons + [
+            "declared CLI scenario did not reproduce: " + "; ".join(divergence),
+            "no process-level evidence to report"]
+
+    missing: list[str] = []
+    if exit_code not in NONFAILING_EXITS:
+        missing.append(f"launch exit {exit_code!s} is not {NONFAILING_EXITS}")
+    if pipeline.get("stage_failed"):
+        missing.append(f"pipeline stage {pipeline['stage_failed']!r} failed")
+    if not pipeline.get("claims_verified"):
+        missing.extend(pipeline.get("blocking_reasons")
+                       or ["pipeline result unproven"])
+    if pipeline.get("verification_status") not in PASS_VERIFICATION_STATUSES:
+        missing.append(f"pipeline verification "
+                       f"{pipeline.get('verification_status')!r} is not an accepted "
+                       "Windows oracle")
+    pipeline_sha = pipeline.get("native_sha256")
+    if pipeline_sha and pipeline_sha != native.get("sha256"):
+        missing.append(native.get("reason") or "native hash differs from pipeline build")
+    if not pipeline_sha and native.get("source") == "cli":
+        missing.append("native binary was supplied directly, not tied to a "
+                       "pipeline build by hash")
+    if missing:
+        return PARTIAL, reasons + [
+            "PASS withheld: " + m for m in missing] + [
+            "render-free process-level evidence only; no Windows oracle or "
+            "gameplay equivalence"]
+    return PASS, reasons + [
+        f"pipeline verification {pipeline.get('verification_status')!r} matched",
+        "scope: declared CLI scenario + process-level oracle, not gameplay equivalence"]
+
+
 def classify(original: dict, pipeline: dict, native: dict, launch: dict,
-             frames: dict, analysis: dict | None) -> tuple[str, list[str]]:
+             frames: dict, analysis: dict | None, kind: str = KIND_GUI,
+             scenario: dict | None = None) -> tuple[str, list[str]]:
     """Assign one status with explicit reasons. Fail closed; no invented PASS.
 
-    Ladder (highest-priority gate first):
+    Ladder (highest-priority gate first), GUI (default):
 
     1. BLOCKED -- original PE missing/invalid, or no native binary.
     2. BUILD ONLY -- native binary exists but no launch was executed.
@@ -389,6 +651,16 @@ def classify(original: dict, pipeline: dict, native: dict, launch: dict,
     4. PARTIAL -- at least one proven non-blank frame (render evidence only).
     5. PASS -- PARTIAL evidence plus a matching pipeline oracle verification,
        matching input/native hashes, no failed stage and a non-failing launch.
+
+    Opted-in headless CLI games (kind=cli/headless *with* a declared scenario)
+    swap the frame requirement for process-level evidence: a recorded launch,
+    exact exit code, recomputed stdout/stderr SHA-256 and the on-disk log must
+    reproduce the declared expectation. Divergence or missing evidence is FAIL;
+    a reproduced scenario is PARTIAL without an oracle. PASS additionally
+    demands the same accepted pipeline oracle + provenance gates as GUI, so a
+    bare exit code can never pass. This ladder is render-free and is explicitly
+    NOT gameplay equivalence. A game with no declared scenario keeps the GUI
+    frame rules above -- nothing is guessed.
     """
     reasons: list[str] = []
     if original.get("status") != "ok":
@@ -415,6 +687,9 @@ def classify(original: dict, pipeline: dict, native: dict, launch: dict,
                                    "INVALID_REPORT"):
         reasons.append(f"pipeline result {pipeline['status']}: "
                        + "; ".join(pipeline.get("reasons") or []))
+
+    if uses_cli_evidence(kind, scenario):
+        return _classify_cli(pipeline, native, launch, scenario, reasons, exit_code)
 
     example = frames.get("example")
     if not example:
@@ -461,7 +736,7 @@ def render_markdown(report: dict) -> str:
         f"Generated: {report['generated_at']}  ",
         f"Schema: {report['schema']}  ",
         "Statuses are derived from recorded evidence only; no PASS is "
-        "assigned from a build or a frame alone.",
+        "assigned from a build, a frame or a bare exit code alone.",
         "",
         "## Inputs",
         "",
@@ -489,6 +764,28 @@ def render_markdown(report: dict) -> str:
             f"SHA-256 `{native.get('sha256') or 'none'}`",
             f"- Launch: executed={launch['executed']} exit="
             f"`{launch.get('exit_code')}` log=`{launch.get('log') or 'none'}`",
+            f"- Kind: `{game.get('kind', KIND_GUI)}`"
+            + (f" (declared CLI scenario, complete="
+               f"{game.get('scenario', {}).get('complete')})"
+               if game.get("scenario", {}).get("declared") else ""),
+        ]
+        if game.get("scenario", {}).get("declared"):
+            scenario = game["scenario"]
+            evidence = game.get("cli_evidence") or {}
+            lines += [
+                f"- CLI scenario: args={scenario.get('args')} "
+                f"expected_exit={scenario.get('expected_exit')} "
+                f"expected_output_sha256=`{scenario.get('expected_output_sha256')}` "
+                f"source=`{scenario.get('source')}`",
+                f"- CLI evidence: output_sha256="
+                f"`{launch.get('output_sha256')}` "
+                f"log_exists={evidence.get('log_exists')} "
+                f"exit_matches={evidence.get('exit_matches')} "
+                f"output_matches={evidence.get('output_matches')} "
+                f"reproduced={evidence.get('reproduced')} "
+                f"(render-free process-level evidence)",
+            ]
+        lines += [
             f"- Frames: runner={frames.get('runner_frame_count')} "
             f"joined={frames.get('joined_frame_count')} "
             f"proven={frames.get('proven_frame_count')} "
@@ -508,9 +805,11 @@ def render_markdown(report: dict) -> str:
                                for status in STATUSES),
               "",
               "PASS requires a matching pipeline oracle verification, matching "
-              "input/native hashes, a non-failing launch and a proven non-blank "
-              "frame. No Windows-oracle comparison is available here: PARTIAL "
-              "means render evidence, not gameplay acceptance.",
+              "input/native hashes and a non-failing launch, plus a proven "
+              "non-blank frame (GUI) or a reproduced declared CLI scenario with "
+              "matching stdout/stderr hash (headless). No Windows-oracle "
+              "comparison is available here: PARTIAL means render or "
+              "render-free process-level evidence, not gameplay acceptance.",
               ""]
     return "\n".join(lines)
 
@@ -556,23 +855,40 @@ def build_acceptance(configs: list[dict], out_dir: Path, *, timeout: int = 12,
         native = native_record(cfg.get("native"), pipeline)
         inputs.append({"kind": f"native:{name}", "path": cfg.get("native"),
                        "status": "ok" if native.get("sha256") else "MISSING_INPUT"})
-        launch, frames = launch_record(
-            name, native, cfg.get("assets"), out_dir, timeout, execute,
-            small_max, medium_max)
+
+        kind = normalize_kind(cfg.get("kind"))
+        scenario = scenario_record(cfg.get("scenario"))
+        if kind == KIND_CLI or scenario["declared"]:
+            inputs.append({"kind": f"scenario:{name}",
+                           "path": scenario["source"],
+                           "status": ("ok" if scenario["complete"]
+                                      else ("NOT_DECLARED" if not scenario["declared"]
+                                            else "INCOMPLETE"))})
         analysis = None
-        runner_summary = Path(str(launch.get("evidence") or "")) / "runner-summary.json"
-        proof_path = Path(str(launch.get("evidence") or "")) / "frame-proof.json"
-        if launch.get("executed") and runner_summary.is_file() and proof_path.is_file():
-            summary = json.loads(runner_summary.read_text(encoding="utf-8"))
-            proof = json.loads(proof_path.read_text(encoding="utf-8"))
-            analyses = size_tier_report.analyse(
-                {"results": [summary]}, proof,
-                small_max=small_max, medium_max=medium_max)
-            analysis = analyses[0] if analyses else None
+        if uses_cli_evidence(kind, scenario):
+            # Headless + declared scenario: frame-free process-level evidence.
+            launch = cli_launch_record(
+                name, native, cfg.get("assets"), out_dir, timeout, execute, scenario)
+            frames = frame_summary(None)
+        else:
+            launch, frames = launch_record(
+                name, native, cfg.get("assets"), out_dir, timeout, execute,
+                small_max, medium_max)
+            runner_summary = Path(str(launch.get("evidence") or "")) / "runner-summary.json"
+            proof_path = Path(str(launch.get("evidence") or "")) / "frame-proof.json"
+            if launch.get("executed") and runner_summary.is_file() and proof_path.is_file():
+                summary = json.loads(runner_summary.read_text(encoding="utf-8"))
+                proof = json.loads(proof_path.read_text(encoding="utf-8"))
+                analyses = size_tier_report.analyse(
+                    {"results": [summary]}, proof,
+                    small_max=small_max, medium_max=medium_max)
+                analysis = analyses[0] if analyses else None
+        evidence = cli_evidence(scenario, launch)
         status, reasons = classify(original, pipeline, native, launch, frames,
-                                   analysis)
+                                   analysis, kind=kind, scenario=scenario)
         games.append({
             "game": name, "status": status, "reasons": reasons,
+            "kind": kind, "scenario": scenario, "cli_evidence": evidence,
             "original": original, "pipeline": pipeline, "native": native,
             "launch": launch, "frames": frames,
         })
@@ -610,6 +926,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pipeline-report", action="append", default=[],
                     metavar="NAME=PATH",
                     help="autorecomp report.json or project dir (repeatable)")
+    ap.add_argument("--kind", action="append", default=[], metavar="NAME=KIND",
+                    help="per-game kind: gui (default), cli or headless (repeatable)")
+    ap.add_argument("--scenario", action="append", default=[], metavar="NAME=PATH",
+                    help="path to a CLI scenario JSON for a headless game "
+                         "(repeatable; args, expected_exit, expected_output_sha256)")
     ap.add_argument("--run-pipeline", action="store_true",
                     help="invoke tools.autorecomp per original before classifying")
     ap.add_argument("--pipeline-timeout", type=float, default=60.0,
@@ -632,16 +953,21 @@ def main(argv: list[str] | None = None) -> int:
         natives = dict(parse_assignment(v) for v in args.native)
         assets = dict(parse_assignment(v) for v in args.assets)
         pipelines = dict(parse_assignment(v) for v in args.pipeline_report)
+        kinds = dict(parse_assignment(v) for v in args.kind)
+        scenarios = dict(parse_assignment(v) for v in args.scenario)
         small_max = size_tier_report.parse_size(args.small_max)
         medium_max = size_tier_report.parse_size(args.medium_max)
     except ValueError as exc:
         print(f"argument error: {exc}", file=sys.stderr)
         return 2
 
-    names = sorted(set(originals) | set(natives) | set(pipelines))
+    names = sorted(set(originals) | set(natives) | set(pipelines)
+                   | set(kinds) | set(scenarios))
     configs = [{"name": name, "original": originals.get(name),
                 "native": natives.get(name), "assets": assets.get(name),
-                "pipeline_report": pipelines.get(name)} for name in names]
+                "pipeline_report": pipelines.get(name),
+                "kind": kinds.get(name), "scenario": scenarios.get(name)}
+               for name in names]
     report = build_acceptance(
         configs, args.out, timeout=args.timeout, execute=not args.no_run,
         small_max=small_max, medium_max=medium_max,
