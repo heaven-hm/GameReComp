@@ -137,3 +137,19 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - `bash runtime/win32hle/build_selftests.sh` → 27 selftests ok.
 - No issue closed; COM functionality is ABI/lifecycle level only, and TM ESWC
   execution genuinely failed.
+
+## Integration checkpoint 8 (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `3b4213f580da9bba1bcc1b5ecb2bdcea2ffbd63b`.
+- `feature/d3d9-frontend` (`3b4213f`): guest-facing D3D9 COM frontend with
+  `Direct3DCreate9`, full IDirect3D9 (17) and IDirect3DDevice9 (119) vtable
+  order from Wine's official `include/d3d9.h` (commit `97027f87`), real
+  reference counting, IID identity checks, and honest `D3DERR_NOTAVAILABLE`
+  for all rasteriser methods. Adapter/display queries use the shared display
+  mode. `d3d9_selftest` checks every vtable slot and object lifecycle.
+- Provenance recorded in `docs/D3D9_FRONTEND_REUSE.md`; no Wine code copied.
+- `python3 -m pytest tests/ -q` with real GBX fixtures → 183 passed, 2 skipped,
+  36 subtests passed.
+- `bash runtime/win32hle/build_selftests.sh` → 28 selftests ok.
+- No renderer and no game-level D3D9 validation: rendering remains NOT IMPLEMENTED;
+  no issue closed.
