@@ -124,6 +124,7 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_dsound);
     win32hle_register(win32hle_ddraw);
     win32hle_register(win32hle_d3d8);
+    win32hle_register(win32hle_d3d9);
     win32hle_register(win32hle_sdl12);
     win32hle_register(win32hle_sdlmix);
     win32hle_register(win32hle_gl32);

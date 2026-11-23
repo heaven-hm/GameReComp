@@ -15,6 +15,14 @@ class RuntimeRegistrationTest(unittest.TestCase):
         self.assertIn('extern const win32hle_shim win32hle_d3d8[]', header)
         self.assertIn('{ "Direct3DCreate8", d3d8_Direct3DCreate8 }', frontend)
 
+    def test_d3d9_frontend_is_registered(self):
+        host = (ROOT / 'runtime/win32hle/host.c').read_text()
+        header = (ROOT / 'runtime/win32hle/win32hle.h').read_text()
+        frontend = (ROOT / 'runtime/win32hle/d3d9.c').read_text()
+        self.assertIn('win32hle_register(win32hle_d3d9)', host)
+        self.assertIn('extern const win32hle_shim win32hle_d3d9[]', header)
+        self.assertIn('{ "Direct3DCreate9", d3d9_Direct3DCreate9 }', frontend)
+
 
 if __name__ == '__main__':
     unittest.main()
