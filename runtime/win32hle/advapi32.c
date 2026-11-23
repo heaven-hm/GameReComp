@@ -9,12 +9,15 @@
  * (hle_reg_load/hle_reg_save: one "key\name=type:value" per line).
  */
 #define _GNU_SOURCE
+#include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "win32hle.h"
 
@@ -317,6 +320,240 @@ static void v_VerQueryValueA(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(0, 4); }
 /* ---- SHELL32 ---- */
 static void s_FindExecutableA(void) { if (A32(2)) MEM8(A32(2)) = 0; RET(31u, 3); }   /* SE_ERR_NOASSOC */
 static void s_ShellExecuteA(void) { fprintf(stderr, "[shell32] ShellExecuteA(%s): not on this host\n", ASTR(2) ? ASTR(2) : ""); RET(31u, 6); }
+
+/* ---- SHFileOperationA: real file operations, no UI ----
+ *
+ * SHFILEOPSTRUCTA on x86 (all pointers are guest VAs):
+ *   +0  hwnd        +4  wFunc        +8  pFrom        +12 pTo
+ *   +16 fFlags (WORD) +18 padding    +20 fAnyOperationsAborted (BOOL)
+ *   +24 hNameMappings +28 lpszProgressTitle            (32 bytes total)
+ * pFrom/pTo are lists of NUL-terminated strings ended by a second NUL. The
+ * paths use backslashes and are resolved with hle_host_path, so a runtime that
+ * maps a drive letter to a scratch directory confines every operation to it.
+ * There is no progress/confirmation UI and no Recycle Bin: FOF_SILENT and
+ * FOF_NOCONFIRMATION are implicit, FOF_ALLOWUNDO still means a real unlink.
+ */
+#define FO_MOVE        0x0001u
+#define FO_COPY        0x0002u
+#define FO_DELETE      0x0003u
+#define FO_RENAME      0x0004u
+#define FOF_MULTIDESTFILES    0x0001u
+#define FOF_RENAMEONCOLLISION 0x0008u
+#define FOF_ALLOWUNDO         0x0040u
+#define FOF_NORECURSION       0x1000u
+/* SHFileOperation's own DE_* result codes (not GetLastError values). */
+#define DE_ACCESSDENIEDSRC 0x74u
+#define DE_PATHTOODEEP     0x75u
+#define DE_MANYDEST        0x76u
+#define DE_INVALIDFILES    0x79u
+#define DE_DESTSAMETREE    0x7Cu
+#define DE_ERROR_MAX       0x100u
+
+#define SHFO_PATH_MAX 1024
+#define SHFO_MAX_LIST 64
+#define SHFO_SCAN_MAX 65536
+
+/* Read a double-NUL guest list into host strings. -1: malformed/oversized. */
+static int shfo_list(uint32_t va, char out[SHFO_MAX_LIST][SHFO_PATH_MAX], int cap) {
+    const char *p = (const char *)hle_ptr(va);
+    int n = 0;
+    size_t scanned = 0;
+    if (!p) return -1;
+    for (;;) {
+        size_t len = 0;
+        while (scanned < SHFO_SCAN_MAX && len < SHFO_PATH_MAX - 1 && p[len]) { len++; scanned++; }
+        if (scanned >= SHFO_SCAN_MAX) return -1;
+        if (!p[len]) {
+            if (len == SHFO_PATH_MAX - 1) return -1;  /* a component that long is refused */
+            if (!len) return n;                        /* the list's second NUL */
+            if (n >= cap) return -1;
+            memcpy(out[n], p, len), out[n][len] = 0;
+            n++;
+            p += len + 1, scanned++;
+        } else return -1;                              /* no NUL in bounds */
+    }
+}
+static int shfo_exists(const char *p) { struct stat st; return lstat(p, &st) == 0; }
+static int shfo_is_dir(const char *p) { struct stat st; return stat(p, &st) == 0 && S_ISDIR(st.st_mode); }
+
+/* Pick an unused "name (2).ext" when FOF_RENAMEONCOLLISION is set. */
+static void shfo_unique(char *path, size_t cap) {
+    if (!shfo_exists(path)) return;
+    char base[SHFO_PATH_MAX], ext[64];
+    snprintf(base, sizeof base, "%s", path);
+    char *slash = strrchr(base, '/'), *dot = strrchr(base, '.');
+    ext[0] = 0;
+    if (dot && (!slash || dot > slash)) { snprintf(ext, sizeof ext, "%s", dot); *dot = 0; }
+    for (int i = 2; i < 1000; i++) {
+        char cand[SHFO_PATH_MAX];
+        snprintf(cand, sizeof cand, "%s (%d)%s", base, i, ext);
+        if (!shfo_exists(cand)) { snprintf(path, cap, "%s", cand); return; }
+    }
+}
+/* mkdir -p on the host path; the runtime's drive mapping is the only sandbox. */
+static int shfo_mkdir_p(const char *path) {
+    char tmp[SHFO_PATH_MAX];
+    if (!path || strlen(path) >= sizeof tmp) return -1;
+    snprintf(tmp, sizeof tmp, "%s", path);
+    for (char *s = tmp + 1; *s; s++) if (*s == '/') {
+        char saved = *s; *s = 0;
+        if (mkdir(tmp, 0755) != 0 && errno != EEXIST) return -1;
+        *s = saved;
+    }
+    if (mkdir(tmp, 0755) != 0 && errno != EEXIST) return -1;
+    return 0;
+}
+static void shfo_parent(const char *path) {
+    char dir[SHFO_PATH_MAX];
+    snprintf(dir, sizeof dir, "%s", path);
+    char *slash = strrchr(dir, '/');
+    if (slash && slash != dir) { *slash = 0; shfo_mkdir_p(dir); }
+}
+
+static uint32_t shfo_copy(const char *from, const char *to, uint16_t flags, int depth) {
+    struct stat st;
+    if (depth > 32) return DE_PATHTOODEEP;
+    if (lstat(from, &st) != 0) return DE_INVALIDFILES;
+    char target[SHFO_PATH_MAX];
+    snprintf(target, sizeof target, "%s", to);
+    if (flags & FOF_RENAMEONCOLLISION) shfo_unique(target, sizeof target);
+    if (S_ISDIR(st.st_mode)) {
+        if (mkdir(target, 0755) != 0 && errno != EEXIST) return DE_ACCESSDENIEDSRC;
+        DIR *d = opendir(from);
+        if (!d) return DE_ACCESSDENIEDSRC;
+        struct dirent *e;
+        uint32_t rc = 0;
+        while ((e = readdir(d))) {
+            if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
+            char a[SHFO_PATH_MAX], b[SHFO_PATH_MAX];
+            snprintf(a, sizeof a, "%s/%s", from, e->d_name);
+            snprintf(b, sizeof b, "%s/%s", target, e->d_name);
+            if ((rc = shfo_copy(a, b, flags, depth + 1)) != 0) break;
+        }
+        closedir(d);
+        return rc;
+    }
+    shfo_parent(target);
+    int in = open(from, O_RDONLY | O_CLOEXEC);
+    if (in < 0) return (errno == EACCES || errno == EPERM) ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+    int out = open(target, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (out < 0) { close(in); return DE_ACCESSDENIEDSRC; }
+    char buf[65536];
+    ssize_t r = 0, rc = 0;
+    while ((r = read(in, buf, sizeof buf)) > 0) {
+        ssize_t w = 0;
+        while (w < r) {
+            ssize_t k = write(out, buf + w, (size_t)(r - w));
+            if (k <= 0) { rc = DE_ACCESSDENIEDSRC; break; }
+            w += k;
+        }
+        if (rc) break;
+    }
+    if (r < 0) rc = DE_ACCESSDENIEDSRC;
+    close(in), close(out);
+    return (uint32_t)rc;
+}
+
+static uint32_t shfo_delete(const char *host, uint16_t flags, int depth) {
+    struct stat st;
+    if (depth > 32) return DE_PATHTOODEEP;
+    if (lstat(host, &st) != 0) return DE_INVALIDFILES;
+    if (!S_ISDIR(st.st_mode)) {
+        if (unlink(host) == 0) return 0;
+        return errno == EACCES || errno == EPERM ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+    }
+    if (flags & FOF_NORECURSION) {
+        if (rmdir(host) == 0) return 0;
+        if (errno == ENOTEMPTY) return DE_INVALIDFILES;
+        return errno == EACCES || errno == EPERM ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+    }
+    DIR *d = opendir(host);
+    if (!d) return DE_ACCESSDENIEDSRC;
+    struct dirent *e;
+    uint32_t rc = 0;
+    while ((e = readdir(d))) {
+        if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
+        char child[SHFO_PATH_MAX];
+        snprintf(child, sizeof child, "%s/%s", host, e->d_name);
+        if ((rc = shfo_delete(child, flags, depth + 1)) != 0) break;
+    }
+    closedir(d);
+    if (rc) return rc;
+    if (rmdir(host) == 0) return 0;
+    return errno == EACCES || errno == EPERM ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+}
+
+static uint32_t shfo_move(const char *from, const char *to, uint16_t flags) {
+    struct stat st;
+    if (lstat(from, &st) != 0) return DE_INVALIDFILES;
+    char target[SHFO_PATH_MAX];
+    snprintf(target, sizeof target, "%s", to);
+    if (flags & FOF_RENAMEONCOLLISION) shfo_unique(target, sizeof target);
+    shfo_parent(target);
+    if (rename(from, target) == 0) return 0;
+    if (errno == EXDEV) {                              /* across filesystems: copy then remove */
+        uint32_t rc = shfo_copy(from, target, flags & (uint16_t)~FOF_RENAMEONCOLLISION, 0);
+        return rc ? rc : shfo_delete(from, flags, 0);
+    }
+    return errno == EACCES || errno == EPERM ? DE_ACCESSDENIEDSRC : DE_INVALIDFILES;
+}
+
+/* Resolve one destination: a single destination folder holds many sources,
+ * otherwise pTo holds one path per source. */
+static void shfo_dest(char *out, size_t cap, const char *src_guest, const char *dst_guest, int into_dir) {
+    char host[SHFO_PATH_MAX];
+    hle_host_path(dst_guest, host, sizeof host);
+    if (into_dir && shfo_is_dir(host)) {
+        const char *tail = strrchr(src_guest, '\\');
+        if (!tail) tail = strrchr(src_guest, '/');
+        snprintf(out, cap, "%s/%s", host, tail ? tail + 1 : src_guest);
+    } else snprintf(out, cap, "%s", host);
+}
+
+static void s_SHFileOperationA(void) {                 /* (const SHFILEOPSTRUCTA *) -> int */
+    uint32_t op = A32(0);
+    if (!op) RET(DE_INVALIDFILES, 1);
+    uint32_t wFunc = MEM32(op + 4), pFrom = MEM32(op + 8), pTo = MEM32(op + 12);
+    uint16_t fFlags = (uint16_t)MEM16(op + 16);
+    MEM32(op + 20) = 0;                                 /* fAnyOperationsAborted: none (synchronous) */
+    MEM32(op + 24) = 0;                                 /* hNameMappings: no mapping handle produced */
+    if (wFunc != FO_MOVE && wFunc != FO_COPY && wFunc != FO_DELETE && wFunc != FO_RENAME)
+        RET(DE_ERROR_MAX, 1);
+
+    static char from[SHFO_MAX_LIST][SHFO_PATH_MAX], to[SHFO_MAX_LIST][SHFO_PATH_MAX];
+    int nf = shfo_list(pFrom, from, SHFO_MAX_LIST);
+    int nt = shfo_list(pTo, to, SHFO_MAX_LIST);
+    if (nf <= 0 || (wFunc != FO_DELETE && nt <= 0)) RET(DE_INVALIDFILES, 1);
+
+    uint32_t rc = 0;
+    if (wFunc == FO_DELETE) {
+        for (int i = 0; i < nf; i++) {
+            char host[SHFO_PATH_MAX];
+            if (!hle_host_path(from[i], host, sizeof host) || !shfo_exists(host)) { rc = DE_INVALIDFILES; break; }
+            if ((rc = shfo_delete(host, fFlags, 0)) != 0) break;
+        }
+        RET(rc, 1);
+    }
+
+    int multidest = (fFlags & FOF_MULTIDESTFILES) != 0;
+    if (multidest ? nt != nf : (nt != 1 && nt != nf)) RET(DE_MANYDEST, 1);
+    for (int i = 0; i < nf; i++) {
+        char src[SHFO_PATH_MAX], dst[SHFO_PATH_MAX];
+        if (!hle_host_path(from[i], src, sizeof src) || !shfo_exists(src)) { rc = DE_INVALIDFILES; break; }
+        const char *dst_guest = (nt == 1 && !multidest) ? to[0] : to[i];
+        shfo_dest(dst, sizeof dst, from[i], dst_guest, nt == 1 && !multidest);
+        size_t sl = strlen(src);
+        if (!strncmp(dst, src, sl) && (dst[sl] == '/' || !dst[sl])) { rc = DE_DESTSAMETREE; break; }
+        if (wFunc == FO_COPY) rc = shfo_copy(src, dst, fFlags, 0);
+        else {
+            if (wFunc == FO_RENAME && shfo_exists(dst) && !(fFlags & FOF_RENAMEONCOLLISION)) { rc = DE_INVALIDFILES; break; }
+            rc = shfo_move(src, dst, fFlags);
+        }
+        if (rc) break;
+    }
+    RET(rc, 1);
+}
+
 /* There is no native folder picker in the portable HLE.  Returning NULL is
  * the documented SHBrowseForFolderW result when the user cancels; callers must
  * handle it before asking SHGetPathFromIDListW for a path. */
@@ -776,6 +1013,7 @@ const win32hle_shim win32hle_advapi32[] = {
     { "GetFileVersionInfoSizeA", v_GetFileVersionInfoSizeA }, { "GetFileVersionInfoA", v_GetFileVersionInfoA },
     { "VerQueryValueA", v_VerQueryValueA },
     { "FindExecutableA", s_FindExecutableA }, { "ShellExecuteA", s_ShellExecuteA },
+    { "SHFileOperationA", s_SHFileOperationA },
     { "SHBrowseForFolderW", s_SHBrowseForFolderW }, { "SHGetPathFromIDListW", s_SHGetPathFromIDListW },
     { "SHBrowseForFolderA", s_SHBrowseForFolderA }, { "SHGetPathFromIDListA", s_SHGetPathFromIDListA },
     { "SHGetMalloc", s_SHGetMalloc }, { "SHGetDesktopFolder", s_SHGetDesktopFolder },
