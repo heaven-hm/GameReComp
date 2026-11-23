@@ -964,6 +964,80 @@ static void k_CreateProcessW(void) {
 static void k_CreateRemoteThread(void) { hle_set_last_error(5u); RET(0, 7); }
 static void k_ReadProcessMemory(void) { hle_set_last_error(5u); RET(0, 5); }
 
+/* --- GetDriveTypeW / SystemTimeToTzSpecificLocalTime ---
+ * Both take guest pointers to fixed- or short-bounded data. Read through MEM16
+ * with an explicit cap instead of handing the guest pointer to a scanning
+ * helper: an unterminated or out-of-range pointer must not make the shim walk
+ * the whole guest block (the A variant can scan a C string, the W one cannot
+ * be allowed an unbounded WCHAR scan). */
+#define DRIVE_UNKNOWN     0u
+#define DRIVE_NO_ROOT_DIR 1u
+#define DRIVE_FIXED       3u
+#define SYSTEMTIME_WORDS  8                 /* 8 WORDs: year..milliseconds */
+
+/* Copy at most cap WCHARs into a host array, stopping at NUL. Returns 0 for a
+ * NULL pointer or no terminator inside the cap (the caller fails the call). */
+static int bounded_wide(uint32_t va, uint16_t *out, size_t cap) {
+    if (!va || !cap) return 0;
+    for (size_t i = 0; i + 1 < cap; i++) {
+        uint16_t c = MEM16(va + (uint32_t)i * 2u);
+        out[i] = c;
+        if (!c) return 1;
+    }
+    out[cap - 1] = 0;                       /* always NUL-terminated for the converter */
+    return 0;
+}
+
+/* Drive letters are the layer's host directories (hle_host_path; Z: is /), so
+ * any mapped letter is a fixed drive and an unmapped one has no root. This is
+ * the W twin of kernel32_ext.c's GetDriveTypeA and makes the same CD-ROM scan
+ * find nothing. A NULL/empty/unterminated name is DRIVE_UNKNOWN. */
+static void k_GetDriveTypeW(void) {         /* (LPCWSTR rootPathName) */
+    uint16_t w[16];
+    char path[16], host[1024];
+    if (!bounded_wide(A32(0), w, sizeof w / sizeof *w)) RET(DRIVE_UNKNOWN, 1);
+    if (!hle_wide_to_ansi(w, path, sizeof path) || !path[0]) RET(DRIVE_UNKNOWN, 1);
+    char root[4] = { path[0], ':', '\\', 0 };
+    RET(hle_host_path(root, host, sizeof host) && host[0] ? DRIVE_FIXED : DRIVE_NO_ROOT_DIR, 1);
+}
+
+/* SYSTEMTIME (UTC) -> SYSTEMTIME (local), using the host zone as GetLocalTime
+ * does. lpTimeZoneInformation is accepted but deliberately not consulted: this
+ * layer has one zone, the host's, and GetTimeZoneInformation reports that same
+ * one. Honouring a caller-supplied TZI here would make the two calls disagree.
+ * A bad pointer, an out-of-range field or a failed conversion returns FALSE
+ * with ERROR_INVALID_PARAMETER and leaves the output untouched. */
+static void k_SystemTimeToTzSpecificLocalTime(void) { /* (opt TZI, &utc, &local) */
+    uint32_t in = A32(1), out = A32(2);
+    (void)A32(0);
+    uint16_t w[SYSTEMTIME_WORDS];
+    if (!in || !out) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 3); }
+    for (int i = 0; i < SYSTEMTIME_WORDS; i++) w[i] = MEM16(in + (uint32_t)i * 2u);
+    if (w[0] < 1601u || w[0] > 30827u || w[1] < 1u || w[1] > 12u ||
+        w[3] < 1u || w[3] > 31u || w[4] > 23u || w[5] > 59u ||
+        w[6] > 59u || w[7] > 999u) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 3);
+    }
+    struct tm utc = { 0 };
+    utc.tm_year = w[0] - 1900, utc.tm_mon = w[1] - 1, utc.tm_mday = w[3];
+    utc.tm_hour = w[4], utc.tm_min = w[5], utc.tm_sec = w[6];
+    time_t s = timegm(&utc);
+    struct tm local;
+    if (s == (time_t)-1 || !localtime_r(&s, &local)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 3);
+    }
+    uint16_t result[SYSTEMTIME_WORDS] = {
+        (uint16_t)(local.tm_year + 1900), (uint16_t)(local.tm_mon + 1),
+        (uint16_t)local.tm_wday, (uint16_t)local.tm_mday,
+        (uint16_t)local.tm_hour, (uint16_t)local.tm_min,
+        (uint16_t)local.tm_sec, w[7]                    /* zone offsets are whole minutes */
+    };
+    for (int i = 0; i < SYSTEMTIME_WORDS; i++) MEM16(out + (uint32_t)i * 2u) = result[i];
+    RET(1, 3);
+}
+
 const win32hle_shim win32hle_kernel32[] = {
     { "GetProcessVersion",  k_GetProcessVersion },
     { "GlobalFlags",        k_GlobalFlags },
@@ -1039,6 +1113,8 @@ const win32hle_shim win32hle_kernel32[] = {
     { "CreateProcessW",     k_CreateProcessW },
     { "CreateRemoteThread", k_CreateRemoteThread },
     { "ReadProcessMemory",  k_ReadProcessMemory },
+    { "GetDriveTypeW",      k_GetDriveTypeW },
+    { "SystemTimeToTzSpecificLocalTime", k_SystemTimeToTzSpecificLocalTime },
     { "SetSystemTime",      k_ret1_1 },
     { "lstrlenA",           k_lstrlenA },
     { "lstrlenW",           k_lstrlenW },
