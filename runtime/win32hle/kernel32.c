@@ -515,6 +515,66 @@ static void k_ReleaseSemaphore(void) {
     RET(1, 3);
 }
 
+/* ---- waitable timers ----
+ * One object type in the existing handle table; no second wait manager. The
+ * timer's due time is a monotonic ticks_ms() deadline. A guest LARGE_INTEGER
+ * LONGLONG is 100ns units: negative means relative, positive an absolute
+ * FILETIME (microseconds since 1601-01-01). */
+typedef struct {
+    uint32_t due;                 /* ticks_ms deadline; 0 means inactive */
+    uint32_t period;              /* ms, 0 = one-shot */
+    int manual, signaled, cancelled;
+} htimer;
+
+static uint64_t filetime_now(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return (uint64_t)ts.tv_sec * 10000000ull + (uint64_t)ts.tv_nsec / 100ull +
+           116444736000000000ull;
+}
+
+static void free_timer(void *p) { free(p); }
+
+static uint32_t create_timer(int manual) {
+    static int closer;
+    if (!closer) hle_handle_set_closer(HLE_H_TIMER, free_timer), closer = 1;
+    htimer *t = (htimer *)calloc(1, sizeof *t);
+    if (!t) { hle_set_last_error(8 /* ERROR_NOT_ENOUGH_MEMORY */); return 0; }
+    t->manual = manual;
+    return hle_handle_alloc(HLE_H_TIMER, t);
+}
+static void k_CreateWaitableTimerA(void) { RET(create_timer(A32(1) != 0), 3); }
+static void k_CreateWaitableTimerW(void) { RET(create_timer(A32(1) != 0), 3); }
+static void k_SetWaitableTimer(void) {
+    htimer *t = (htimer *)hle_handle_obj(A32(0), HLE_H_TIMER);
+    uint32_t due_va = A32(1);
+    if (!t || !due_va) { hle_set_last_error(6 /* ERROR_INVALID_HANDLE */); RET(0, 6); }
+    /* Completion routines are APCs; this layer has no APC queue and must not
+     * pretend to deliver one. */
+    if (A32(3)) { hle_set_last_error(120u /* ERROR_CALL_NOT_IMPLEMENTED */); RET(0, 6); }
+    uint32_t lo = MEM32(due_va), hi = MEM32(due_va + 4u);
+    uint64_t due = ((uint64_t)hi << 32) | lo;
+    uint32_t ms;
+    if ((int64_t)due < 0) {
+        uint64_t magnitude = (uint64_t)(-(int64_t)due);
+        ms = (uint32_t)(magnitude / 10000u);
+    } else {
+        uint64_t now = filetime_now();
+        ms = due <= now ? 0u : (uint32_t)((due - now) / 10000u);
+    }
+    t->period = A32(2);
+    t->cancelled = 0;
+    t->signaled = 0;
+    t->due = ms ? ticks_ms() + ms : ticks_ms();
+    RET(1, 6);
+}
+static void k_CancelWaitableTimer(void) {
+    htimer *t = (htimer *)hle_handle_obj(A32(0), HLE_H_TIMER);
+    if (!t) { hle_set_last_error(6); RET(0, 1); }
+    t->cancelled = 1; t->signaled = 0; t->due = 0;
+    RET(1, 1);
+}
+
 /* Try to take one object: 1 if it is signalled (and consumed, as its type
  * says), 0 if not, -1 if it is not a waitable handle. */
 int (*hle_wait_hook)(uint32_t h);        /* a host's own objects (threads, sockets) */
@@ -537,6 +597,22 @@ static int try_take(uint32_t h, int consume) {
         hsem *s = (hsem *)hle_handle_obj(h, HLE_H_SEMAPHORE);
         if (s->count <= 0) return 0;
         if (consume) s->count--;
+        return 1;
+    }
+    case HLE_H_TIMER: {
+        htimer *t = (htimer *)hle_handle_obj(h, HLE_H_TIMER);
+        if (!t->signaled && !t->cancelled && t->due &&
+            (int32_t)(ticks_ms() - t->due) >= 0) t->signaled = 1;
+        if (!t->signaled) return 0;
+        if (consume) {
+            if (!t->manual) t->signaled = 0;
+            if (!t->cancelled && t->period) {
+                t->due = (uint32_t)(t->due + t->period);
+                if (t->due == 0) t->due = ticks_ms() + t->period;
+            } else {
+                t->due = 0;
+            }
+        }
         return 1;
     }
     case HLE_H_THREAD:
@@ -575,6 +651,9 @@ uint32_t hle_wait(int n, const uint32_t *h, int all, uint32_t timeout) {
     }
 }
 static void k_WaitForSingleObject(void) { uint32_t h = A32(0); RET(hle_wait(1, &h, 0, A32(1)), 2); }
+/* bAlertable is ignored: this layer has no APC queue. SleepEx/Wait*Ex return
+ * the normal wait result, never WAIT_IO_COMPLETION, and that limit is
+ * documented rather than faked. */
 static void k_WaitForSingleObjectEx(void) { uint32_t h = A32(0); RET(hle_wait(1, &h, 0, A32(1)), 3); }
 static void k_WaitForMultipleObjects(void) {             /* (n, handles, all, timeout) */
     uint32_t n = A32(0), hs[64];
@@ -584,6 +663,12 @@ static void k_WaitForMultipleObjects(void) {             /* (n, handles, all, ti
     }
     for (uint32_t i = 0; i < n; i++) hs[i] = MEM32(A32(1) + 4 * i);
     RET(hle_wait((int)n, hs, A32(2) != 0, A32(3)), 4);
+}
+static void k_WaitForMultipleObjectsEx(void) {           /* (n, handles, all, timeout, alertable) */
+    uint32_t n = A32(0), hs[64];
+    if (n == 0 || n > 64) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(WAIT_FAILED, 5); }
+    for (uint32_t i = 0; i < n; i++) hs[i] = MEM32(A32(1) + 4 * i);
+    RET(hle_wait((int)n, hs, A32(2) != 0, A32(3)), 5);
 }
 
 /* --- critical sections: the spin-count form the CRT calls --- */
@@ -988,6 +1073,11 @@ const win32hle_shim win32hle_kernel32[] = {
     { "WaitForSingleObject",   k_WaitForSingleObject },
     { "WaitForSingleObjectEx", k_WaitForSingleObjectEx },
     { "WaitForMultipleObjects", k_WaitForMultipleObjects },
+    { "WaitForMultipleObjectsEx", k_WaitForMultipleObjectsEx },
+    { "CreateWaitableTimerA", k_CreateWaitableTimerA },
+    { "CreateWaitableTimerW", k_CreateWaitableTimerW },
+    { "SetWaitableTimer", k_SetWaitableTimer },
+    { "CancelWaitableTimer", k_CancelWaitableTimer },
     { "InitializeCriticalSectionAndSpinCount", k_InitializeCriticalSectionAndSpinCount },
     { "FlsAlloc",           k_FlsAlloc }, { "FlsFree", k_FlsFree },
     { "FlsGetValue",        k_FlsGetValue }, { "FlsSetValue", k_FlsSetValue },

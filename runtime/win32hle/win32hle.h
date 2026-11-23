@@ -227,7 +227,7 @@ void  hle_present_close(void);
  * Typed: hle_handle_obj(h, type) is NULL for a handle of another type (type 0
  * takes any). CloseHandle calls the type's closer. */
 enum { HLE_H_FILE = 1, HLE_H_FIND, HLE_H_EVENT, HLE_H_MUTEX, HLE_H_THREAD, HLE_H_SEMAPHORE,
-       HLE_H_REGKEY, HLE_H_SOCKET, HLE_H_OTHER, HLE_H_MAPPING, HLE_H_MMIO };
+       HLE_H_REGKEY, HLE_H_SOCKET, HLE_H_OTHER, HLE_H_MAPPING, HLE_H_MMIO, HLE_H_TIMER };
 uint32_t hle_handle_alloc(int type, void *obj);       /* 0 when the table is full */
 void    *hle_handle_obj(uint32_t h, int type);
 int      hle_handle_type(uint32_t h);
