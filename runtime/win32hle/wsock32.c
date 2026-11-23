@@ -31,6 +31,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include "win32hle.h"
 
 #ifndef MSG_NOSIGNAL             /* macOS: the socket says so instead (SO_NOSIGPIPE, at creation) */
@@ -54,6 +55,21 @@
 #define WSANO_DATA       11004u
 #define FD_READ  0x01u
 #define FD_WRITE 0x02u
+#define FD_OOB   0x04u
+#define FD_ACCEPT 0x08u
+#define FD_CONNECT 0x10u
+#define FD_CLOSE 0x20u
+
+/* WSAEVENT objects. wsock32.dll never exported these (games import them from
+ * ws2_32.dll), so they are registered by name only. A WSAEVENT is an opaque
+ * HANDLE; the token range is kept apart from SOCKETs so the two cannot be
+ * confused by a guest that passes one where the other is expected. */
+#define MAX_WSA_EVENTS 64
+#define WSA_MAXIMUM_WAIT_EVENTS 64
+#define WSA_EVENT_BASE 0x40000000u
+#define WSA_WAIT_EVENT_0 0u
+#define WSA_WAIT_TIMEOUT 258u
+#define WSA_WAIT_FAILED  0xFFFFFFFFu
 
 static __thread uint32_t g_wsa_error;
 
@@ -72,6 +88,28 @@ static uint32_t wsa_errno(int e) {
 static int fd_of(uint32_t s) { return s >= SOCK_BASE && s < SOCK_BASE + 0x10000u ? (int)(s - SOCK_BASE) : -1; }
 static uint8_t g_ipx[0x10000 / 8];                       /* which descriptors are IPX sockets */
 static int is_ipx(int fd) { return fd >= 0 && fd < 0x10000 && (g_ipx[fd >> 3] >> (fd & 7) & 1); }
+
+/* Event objects are manual-reset (as WSACreateEvent creates), so a wait on
+ * several of them with fWaitAll is well defined. An event may be latched by
+ * WSASetEvent or by a selected network event on its socket. */
+typedef struct {
+    uint32_t s;                        /* socket WSAEventSelect bound here, 0 = none */
+    uint32_t mask;                     /* FD_* mask that was selected */
+    int signaled;
+    int used;
+} wsa_event_obj;
+static wsa_event_obj g_events[MAX_WSA_EVENTS];
+static uint32_t g_ev_sock[64];         /* socket -> event association, keyed as WSAEventSelect left it */
+static uint32_t g_ev_mask[64];
+static uint32_t g_ev_ev[64];           /* the hEventObject passed to WSAEventSelect */
+static int g_ev_count;
+
+static int ev_idx(uint32_t h) {
+    if (h < WSA_EVENT_BASE || h >= WSA_EVENT_BASE + MAX_WSA_EVENTS) return -1;
+    int i = (int)(h - WSA_EVENT_BASE);
+    return g_events[i].used ? i : -1;
+}
+
 #define AF_IPX_WIN    6
 #define NSPROTO_IPX   1000u
 #define FAIL(n) do { g_wsa_error = wsa_errno(errno); RET(SOCKET_ERROR, n); } while (0)
@@ -148,6 +186,12 @@ static void w_closesocket(void) {
     int fd = fd_of(A32(0));
     if (fd < 0 || close(fd) != 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 1); }
     g_ipx[fd >> 3] &= (uint8_t)~(1 << (fd & 7));
+    uint32_t s = A32(0);
+    for (int i = 0; i < g_ev_count; i++) if (g_ev_sock[i] == s) {
+        int ei = g_ev_ev[i] ? ev_idx(g_ev_ev[i]) : -1;
+        if (ei >= 0) { g_events[ei].s = 0; g_events[ei].mask = 0; g_events[ei].signaled = 0; }
+        g_ev_sock[i] = g_ev_mask[i] = g_ev_ev[i] = 0;
+    }
     RET(0, 1);
 }
 static void w_bind(void) {                               /* (s, addr, len) */
@@ -447,10 +491,6 @@ static void w_EnumProtocolsA(void) {
 static int win_af_to_host(int af) { return af == 23 ? AF_INET6 : af; }
 static int host_af_to_win(int af) { return af == AF_INET6 ? 23 : af; }
 
-static uint32_t g_ev_sock[64];
-static uint32_t g_ev_mask[64];
-static int g_ev_count;
-
 static void w_accept(void) {
     int fd = fd_of(A32(0));
     if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(INVALID_SOCKET, 3); return; }
@@ -724,18 +764,128 @@ static void w_WSASocketA(void) {
     RET(SOCK_BASE + (uint32_t)fd, 6);
 }
 
+/* ---- WSA event objects -------------------------------------------------
+ * WSAEventSelect's hEventObject used to be ignored; a game that chained it
+ * into WSAWaitForMultipleEvents could never make progress. These shims give
+ * that handle real (manual-reset) semantics. A selected network event latches
+ * the event until WSAEnumNetworkEvents or WSAResetEvent clears it, as on
+ * Windows. fAlertable is accepted but APCs are not delivered by this layer. */
+static void w_WSACreateEvent(void) {
+    for (int i = 0; i < MAX_WSA_EVENTS; i++) if (!g_events[i].used) {
+        memset(&g_events[i], 0, sizeof g_events[i]);
+        g_events[i].used = 1;
+        RET(WSA_EVENT_BASE + (uint32_t)i, 0);             /* NULL on failure, like the real API */
+    }
+    g_wsa_error = WSA_NOT_ENOUGH_MEMORY;
+    RET(0, 0);
+}
+
+static void w_WSACloseEvent(void) {
+    uint32_t h = A32(0);
+    int i = ev_idx(h);
+    if (i < 0) { g_wsa_error = WSAEINVAL; RET(0, 1); }     /* FALSE, not an exception */
+    for (int k = 0; k < g_ev_count; k++) if (g_ev_ev[k] == h) {
+        g_ev_sock[k] = g_ev_mask[k] = g_ev_ev[k] = 0;
+    }
+    memset(&g_events[i], 0, sizeof g_events[i]);
+    RET(1, 1);
+}
+
+static void w_WSASetEvent(void) {
+    int i = ev_idx(A32(0));
+    if (i < 0) { g_wsa_error = WSAEINVAL; RET(0, 1); }
+    g_events[i].signaled = 1;
+    RET(1, 1);
+}
+
+static void w_WSAResetEvent(void) {
+    int i = ev_idx(A32(0));
+    if (i < 0) { g_wsa_error = WSAEINVAL; RET(0, 1); }
+    g_events[i].signaled = 0;
+    RET(1, 1);
+}
+
+static int event_ready(uint32_t h) {
+    int i = ev_idx(h);
+    if (i < 0) return 0;
+    if (g_events[i].signaled) return 1;
+    int fd = fd_of(g_events[i].s);
+    uint32_t mask = g_events[i].mask;
+    if (fd < 0 || !mask) return 0;
+    short want = 0;
+    if (mask & (FD_READ | FD_ACCEPT)) want |= POLLIN;
+    if (mask & (FD_WRITE | FD_CONNECT)) want |= POLLOUT;
+    if (mask & FD_OOB) want |= POLLPRI;
+    if (mask & FD_CLOSE) want |= POLLHUP;
+    if (!want) return 0;
+    struct pollfd p = { fd, want, 0 };
+    if (poll(&p, 1, 0) > 0 && (p.revents & (want | POLLHUP | POLLERR))) {
+        g_events[i].signaled = 1;                         /* a network event latches */
+        return 1;
+    }
+    return 0;
+}
+
+static uint64_t monotonic_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
+}
+
+static void w_WSAWaitForMultipleEvents(void) {
+    uint32_t n = A32(0), hp = A32(1), waitall = A32(2), timeout = A32(3);
+    if (!n || n > WSA_MAXIMUM_WAIT_EVENTS || !hp) { g_wsa_error = WSAEINVAL; RET(WSA_WAIT_FAILED, 5); return; }
+    for (uint32_t i = 0; i < n; i++) if (ev_idx(MEM32(hp + 4u * i)) < 0) {
+        g_wsa_error = WSAEINVAL; RET(WSA_WAIT_FAILED, 5); return;
+    }
+    int infinite = timeout == 0xFFFFFFFFu;                /* WSA_INFINITE */
+    uint64_t deadline = infinite ? 0 : monotonic_ms() + timeout;
+    for (;;) {
+        int first = -1, all = 1;
+        for (uint32_t i = 0; i < n; i++) {
+            int r = event_ready(MEM32(hp + 4u * i));
+            if (r && first < 0) first = (int)i;
+            if (!r) all = 0;
+        }
+        if (!waitall && first >= 0) RET((uint32_t)first, 5);
+        if (waitall && all) RET(WSA_WAIT_EVENT_0, 5);
+        if (!infinite) {
+            uint64_t now = monotonic_ms();
+            if (now >= deadline) RET(WSA_WAIT_TIMEOUT, 5);
+            uint64_t left = deadline - now;
+            if (left > 20) left = 20;                     /* bounded poll granularity */
+            hle_block_begin();
+            usleep((useconds_t)(left * 1000u));
+            hle_block_end();
+        } else {
+            hle_block_begin();
+            usleep(20000);
+            hle_block_end();
+        }
+    }
+}
+
 static void w_WSAEventSelect(void) {
-    uint32_t s = A32(0), mask = A32(2);
+    uint32_t s = A32(0), evh = A32(1), mask = A32(2);
     int fd = fd_of(s);
     if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); return; }
+    if (evh && ev_idx(evh) < 0) { g_wsa_error = WSAEINVAL; RET(SOCKET_ERROR, 3); return; }
     if (mask) {
         int fl = fcntl(fd, F_GETFL, 0);
         if (fl >= 0) fcntl(fd, F_SETFL, fl | O_NONBLOCK);
     }
     int idx = -1;
     for (int i = 0; i < g_ev_count; i++) if (g_ev_sock[i] == s) { idx = i; break; }
-    if (idx < 0 && g_ev_count < 64) idx = g_ev_count++;
-    if (idx >= 0) { g_ev_sock[idx] = s; g_ev_mask[idx] = mask; }
+    if (idx < 0 && g_ev_count < WSA_MAXIMUM_WAIT_EVENTS) idx = g_ev_count++;
+    if (idx >= 0) {
+        g_ev_sock[idx] = s; g_ev_mask[idx] = mask; g_ev_ev[idx] = evh;
+        int ei = evh ? ev_idx(evh) : -1;
+        if (ei >= 0) {
+            g_events[ei].s = mask ? s : 0;
+            g_events[ei].mask = mask;
+            if (!mask) g_events[ei].signaled = 0;
+        }
+    }
     RET(0, 3);
 }
 
@@ -755,6 +905,12 @@ static void w_WSAEnumNetworkEvents(void) {
         if (pfd.revents & POLLHUP) ev |= 0x20u; /* FD_CLOSE */
     }
     MEM32(out_va) = ev & (mask ? mask : 0x3Fu);
+    /* WSAEnumNetworkEvents clears the associated event, as Windows does. */
+    for (int i = 0; i < g_ev_count; i++) if (g_ev_sock[i] == s && g_ev_ev[i]) {
+        int ei = ev_idx(g_ev_ev[i]);
+        if (ei >= 0) g_events[ei].signaled = 0;
+        break;
+    }
     RET(0, 3);
 }
 
@@ -801,5 +957,11 @@ const win32hle_shim win32hle_wsock32[] = {
     { "WSASocketA", w_WSASocketA },
     { "WSAEventSelect", w_WSAEventSelect },
     { "WSAEnumNetworkEvents", w_WSAEnumNetworkEvents },
+    /* Winsock 2 event objects: no wsock32.dll ordinals, imported by name. */
+    { "WSACreateEvent", w_WSACreateEvent },
+    { "WSACloseEvent", w_WSACloseEvent },
+    { "WSASetEvent", w_WSASetEvent },
+    { "WSAResetEvent", w_WSAResetEvent },
+    { "WSAWaitForMultipleEvents", w_WSAWaitForMultipleEvents },
     { 0, 0 }
 };
