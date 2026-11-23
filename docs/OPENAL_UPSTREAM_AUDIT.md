@@ -81,12 +81,18 @@ probe: the launcher checks whether the OpenAL runtime is present before the
 game starts. A shim must make these three calls succeed with plausible answers
 or the launcher may refuse to select the OpenAL path.
 
-### 2.3 What TMNF does **not** import
+### 2.3 What else TMNF imports for audio/container work
 
-`TmForever.exe` imports **no `dsound.dll`, no `winmm.dll`, no `SDL_mixer.dll`,
-no `mss32.dll`**. Its only other audio-adjacent import is `binkw32.dll` (movie
-decoding). Consequently the repository's three existing audio shims are not on
-TMNF's import path at all — they cannot supply its sound.
+`TmForever.exe` imports **no `dsound.dll`, no `SDL_mixer.dll`, no `mss32.dll`**.
+It does import **`WINMM.dll` with 10 names**: `mmioAscend`, `mmioClose`,
+`mmioDescend`, `mmioOpenW`, `mmioRead`, `mmioSeek`, `timeBeginPeriod`,
+`timeEndPeriod`, `timeGetDevCaps`, `timeGetTime`. These are the RIFF reader and
+multimedia timers that `runtime/win32hle/winmm.c` already covers, **except
+`mmioOpenW`** (the shim implements `mmioOpenA` only). There is no `waveOut*`
+import, so this is not a PCM playback path. Its other audio-adjacent import is
+`binkw32.dll` (movie decoding). Consequently the existing DirectSound and
+SDL_mixer shims cannot supply TMNF's sound, and the winmm shim is relevant only
+for its container/timer support (with the `mmioOpenW` gap noted above).
 
 ### 2.4 The DLL it expects
 
@@ -106,6 +112,12 @@ All three are registered centrally in `runtime/win32hle/host.c`
 | `runtime/win32hle/dsound.c` | `IDirectSound`, `IDirectSoundBuffer`, software mixer with real play cursors/volume/pan, guest-visible lock buffers, DirectSound COM class | stdcall (`RET`, `dll#N` aliases) | SDL2 audio device (`SDL_OpenAudioDevice`), silent `SDL_AUDIODRIVER=dummy` fallback that still advances cursors | `hle_audio_stream_open/push/queued/gain/close`, `hle_dsound_set_master`, `hle_dsound_register_com` |
 | `runtime/win32hle/sdlmix.c` | SDL_mixer 1.2 `Mix_*`: PCM WAV decode, channel mixer, volume/pan/fade; music deliberately returns failure (no MOD/OGG/MP3 decoder) | cdecl (`RETC`, matching SDL 1.2) | the same SDL2 audio device | private to the shim |
 | `runtime/win32hle/winmm.c` | multimedia timers, joystick (none), `waveOut*` as a **silent accept-and-retire** device, MCI/mixer/waveIn stubbed, `mmio*` RIFF reader | stdcall (`RET`) | none (libc timing only) | via `clock.c` for virtual time |
+
+For TMNF specifically, only the winmm **timer and RIFF-reader** slice of §2.3
+is used; the `waveOut*` path is not imported. Nine of the ten WINMM names are
+already covered, with `mmioOpenW` the one gap (`mmioOpenA` exists). That gap is
+separate from the OpenAL shim and is recorded here rather than fixed in this
+document-only task.
 
 Design rules these files establish, and which an OpenAL shim must inherit:
 
@@ -247,8 +259,10 @@ detail:
 - **Do not copy the OpenIGI C# OpenAL backend** (language/runtime/licence
   mismatch). Its design notes are evidence, not source.
 - **Do not extend `dsound.c`, `sdlmix.c` or `winmm.c`** with OpenAL entry
-  points: TMNF imports none of those DLLs, and mixing unrelated DLL ABIs into
-  one shim table would blur the registry's name-based dispatch.
+  points: TMNF imports no `dsound.dll`/`SDL_mixer.dll` at all and its `WINMM.dll`
+  imports are only timers/RIFF, not PCM playback. Mixing unrelated DLL ABIs into
+  one shim table would blur the registry's name-based dispatch. The `mmioOpenW`
+  gap noted in §3 is a separate winmm task, not an OpenAL one.
 
 ### Verification before claiming anything works
 
