@@ -298,11 +298,15 @@ static void m_mmioStringToFOURCCA(void) {
 
 /* --- sndPlaySoundA/W: real RIFF/WAVE playback on the SDL audio mixer ---
  *
- * Like the rest of this module, these shims answer with MMSYSERR_* codes:
- * MMSYSERR_NOERROR (0) means the sound really was started (or stopped, for a
- * NULL name), and a nonzero MMSYSERR_* says why it was not. A missing file, a
- * non-PCM WAV, an unsupported flag or a missing audio device is an error,
- * never a silent success: compare with MMSYSERR_NOERROR, not truthiness.
+ * Guest ABI: Win32 sndPlaySound returns BOOL, so these shims return exactly
+ * TRUE (1) when the sound really was started (or stopped, for a NULL name) and
+ * FALSE (0) when it was not. A guest that tests truthiness gets the Windows
+ * answer; a missing file, a non-PCM WAV, an unsupported flag or a missing audio
+ * device is never reported as success.
+ *
+ * Internally ps_play() keeps the precise MMSYSERR_* reason, which is logged at
+ * the BOOL boundary: no failure detail is lost, it is just not leaked into a
+ * BOOL return. (The other winmm APIs below really do return MMSYSERR_*.)
  *
  * Playback uses dsound.c's hle_audio_stream_* (the SDL2 audio device and its
  * software mixer), the same path bink.c uses for movie sound. Decoding covers
@@ -552,21 +556,44 @@ static uint32_t ps_play(uint32_t name_va, uint32_t flags) {
     return MMSYSERR_NOERROR;
 }
 
-static void m_sndPlaySoundA(void) { RET(ps_play(A32(0), A32(1)), 2); }
+/* Win32's BOOL, not an MMSYSERR code, is what the guest gets. The internal
+ * classification from ps_play() is logged here so every failure keeps its
+ * reason; only the success/failure bit crosses the ABI. */
+static const char *ps_err_name(uint32_t err) {
+    switch (err) {
+    case MMSYSERR_NOERROR:    return "NOERROR";
+    case MMSYSERR_ERROR:      return "ERROR";
+    case MMSYSERR_ALLOCATED:  return "ALLOCATED";
+    case MMSYSERR_NODRIVER:   return "NODRIVER";
+    case MMSYSERR_NOMEM:      return "NOMEM";
+    case MMSYSERR_NOTSUPPORTED: return "NOTSUPPORTED";
+    case MMSYSERR_INVALFLAG:  return "INVALFLAG";
+    case MMSYSERR_INVALPARAM: return "INVALPARAM";
+    default:                  return "UNKNOWN";
+    }
+}
+static uint32_t ps_bool(uint32_t err) {
+    if (err == MMSYSERR_NOERROR) return 1u;          /* TRUE */
+    fprintf(stderr, "[winmm] sndPlaySound: FAILED (MMSYSERR_%s = %u) -> FALSE\n",
+            ps_err_name(err), err);
+    return 0u;                                       /* FALSE */
+}
+
+static void m_sndPlaySoundA(void) { RET(ps_bool(ps_play(A32(0), A32(1))), 2); }
 static void m_sndPlaySoundW(void) {
     uint32_t flags = A32(1);
-    if (flags & SND_MEMORY) { RET(ps_play(A32(0), flags), 2); }   /* the bytes are not a string */
+    if (flags & SND_MEMORY) { RET(ps_bool(ps_play(A32(0), flags)), 2); }  /* the bytes are not a string */
     const uint16_t *w = (const uint16_t *)APTR(0);
     char name[1024];
     if (!w || !hle_wide_to_ansi(w, name, sizeof name)) {
         fprintf(stderr, "[winmm] sndPlaySoundW: bad wide name\n");
-        RET(MMSYSERR_INVALPARAM, 2);
+        RET(ps_bool(MMSYSERR_INVALPARAM), 2);
     }
     uint32_t mark = hle_scratch_mark();
     uint32_t dst = hle_scratch_copy(name, (uint32_t)strlen(name) + 1);
     uint32_t err = dst ? ps_play(dst, flags) : MMSYSERR_NOMEM;
     hle_scratch_release(mark);
-    RET(err, 2);
+    RET(ps_bool(err), 2);
 }
 
 const win32hle_shim win32hle_winmm[] = {

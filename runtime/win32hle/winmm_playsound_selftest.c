@@ -17,11 +17,10 @@
 const recomp_dispatch_entry_t recomp_dispatch_table[1];
 const uint32_t recomp_dispatch_count = 0;
 
-/* Return codes this module promises (winmm uses MMSYSERR_* throughout). */
-enum {
-    PS_NOERROR = 0u, PS_ERROR = 1u, PS_NODRIVER = 6u,
-    PS_NOTSUPPORTED = 8u, PS_INVALFLAG = 10u
-};
+/* Win32 sndPlaySound returns BOOL: exactly 1 on success and 0 on failure.
+ * The detailed MMSYSERR_* reason is kept host-side in the diagnostic log, not
+ * in the guest-visible return value. */
+enum { PS_TRUE = 1u, PS_FALSE = 0u };
 /* Flags used below. */
 enum {
     PS_SYNC = 0x0000u, PS_ASYNC = 0x0001u, PS_MEMORY = 0x0004u,
@@ -112,19 +111,20 @@ int main(int argc, char **argv) {
     uint32_t w_wav = guest_wide(guest);
     ok("guest strings allocated", p_wav && p_bad && w_wav);
 
-    /* A missing file is an error, with the guest path in the diagnostic. */
+    /* A missing file is a FALSE return, with the guest path and the MMSYSERR_*
+     * reason in the host diagnostic. */
     uint32_t r = call("sndPlaySoundA", p_bad, PS_FILENAME | PS_SYNC);
-    ok("missing file -> MMSYSERR_ERROR", r == PS_ERROR);
+    ok("missing file -> FALSE(0)", r == PS_FALSE);
 
     /* Unsupported flags are rejected, not quietly downgraded. */
     r = call("sndPlaySoundA", p_wav, PS_FILENAME | PS_ALIAS);
-    ok("unsupported flags -> MMSYSERR_INVALFLAG", r == PS_INVALFLAG);
+    ok("unsupported flags -> FALSE(0)", r == PS_FALSE);
 
     /* Real playback through SDL audio (the build runs with SDL_AUDIODRIVER=dummy). */
     r = call("sndPlaySoundA", p_wav, PS_FILENAME | PS_SYNC);
-    ok("synchronous WAV path -> MMSYSERR_NOERROR", r == PS_NOERROR);
+    ok("synchronous WAV path -> TRUE(1)", r == PS_TRUE);
     r = call("sndPlaySoundW", w_wav, PS_FILENAME | PS_SYNC);
-    ok("wide WAV path -> MMSYSERR_NOERROR", r == PS_NOERROR);
+    ok("wide WAV path -> TRUE(1)", r == PS_TRUE);
 
     /* SND_MEMORY: a WAVE image in guest memory, not a host path. */
     uint32_t mem = hle_va(hle_alloc(WAV_BYTES));
@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
         make_wav(wav, 0);
         memcpy(hle_ptr(mem), wav, sizeof wav);
         r = call("sndPlaySoundA", mem, PS_MEMORY | PS_SYNC);
-        ok("SND_MEMORY WAV -> MMSYSERR_NOERROR", r == PS_NOERROR);
+        ok("SND_MEMORY WAV -> TRUE(1)", r == PS_TRUE);
     } else {
         printf("FAIL SND_MEMORY guest buffer\n");
         fails++;
@@ -147,15 +147,27 @@ int main(int argc, char **argv) {
         ok("float WAV written", f && fwrite(wav, 1, sizeof wav, f) == sizeof wav);
         if (f) fclose(f);
         r = call("sndPlaySoundA", guest_str(guest_float), PS_FILENAME | PS_SYNC);
-        ok("non-PCM WAV -> MMSYSERR_NOTSUPPORTED", r == PS_NOTSUPPORTED);
+        ok("non-PCM WAV -> FALSE(0)", r == PS_FALSE);
         unlink(float_host);
     }
 
     /* Stop/purge paths, including an asynchronous voice. */
     r = call("sndPlaySoundA", p_wav, PS_FILENAME | PS_ASYNC);
-    ok("async WAV path -> MMSYSERR_NOERROR", r == PS_NOERROR);
+    ok("async WAV path -> TRUE(1)", r == PS_TRUE);
     r = call("sndPlaySoundA", 0, PS_PURGE);
-    ok("NULL name purge -> success", r == PS_NOERROR);
+    ok("NULL name purge -> TRUE(1)", r == PS_TRUE);
+
+    /* Explicit guest-ABI contract: Win32 sndPlaySound returns BOOL, so a
+     * successful play is exactly 1 and a failed play is exactly 0. An
+     * MMSYSERR-style 0-on-success regression is caught here for both forms. */
+    r = call("sndPlaySoundA", p_wav, PS_FILENAME | PS_SYNC);
+    ok("BOOL ABI: sndPlaySoundA success == 1", r == 1u);
+    r = call("sndPlaySoundA", p_bad, PS_FILENAME | PS_SYNC);
+    ok("BOOL ABI: sndPlaySoundA failure == 0", r == 0u);
+    r = call("sndPlaySoundW", w_wav, PS_FILENAME | PS_SYNC);
+    ok("BOOL ABI: sndPlaySoundW success == 1", r == 1u);
+    r = call("sndPlaySoundW", guest_wide(guest_bad), PS_FILENAME | PS_SYNC);
+    ok("BOOL ABI: sndPlaySoundW failure == 0", r == 0u);
 
     if (generated) unlink(host);
     mach_leave();
