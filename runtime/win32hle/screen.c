@@ -120,6 +120,23 @@ static struct {
     int loaded;
 } g_gl_present;
 void (*hle_screen_frame_hook)(const uint8_t *px, int w, int h, int pitch, int bpp);   /* a recorder, a checksum */
+
+/* The single frame sink for every presentation path.
+ *
+ * present() below reaches the hook only when there is a DirectDraw primary or
+ * a GDI window to show, and only while its 60 Hz throttle lets a frame through.
+ * Titles that present through a different surface (the SDL 1.2 video surface
+ * used by SDL-based games, for one) never satisfy that condition, so their
+ * blits produced no recorded frame at all -- a 12-second run could stay alive
+ * and still write zero screenshots. Publishing here is unconditional and has
+ * no window or throttle prerequisite: a surface blit *is* a frame. Every
+ * presenter (present.c included) feeds this one function, and the recorder
+ * screenshot.c installs on hle_screen_frame_hook sees all of them. */
+void hle_screen_frame_publish(const uint8_t *px, int w, int h, int pitch, int bpp) {
+    if (!px || w <= 0 || h <= 0 || pitch <= 0 || bpp <= 0) return;
+    if (hle_screen_frame_hook) hle_screen_frame_hook(px, w, h, pitch, bpp);
+}
+
 /* A host's own picture at twice the size (an HD layer): fills out with 2w x
  * 2h XRGB from the 16-bit frame and returns 1, or returns 0 for the 1x. */
 int (*hle_screen_compose_hook)(const uint8_t *px16, int pitch, int w, int h, uint32_t *out);
@@ -313,7 +330,7 @@ static void present(void) {
     if (seq == g_shown_seq && now - g_last_present < 250) return;
     if (now - g_last_present < 15) return;
     g_shown_seq = seq, g_last_present = now;
-    if (hle_screen_frame_hook) hle_screen_frame_hook(px, w, h, pitch, bpp);
+    hle_screen_frame_publish(px, w, h, pitch, bpp);
     if (!g_ren) {
         if (g_glctx) present_gl(px,w,h,pitch,bpp,pal);
         return;
