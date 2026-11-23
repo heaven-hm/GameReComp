@@ -217,8 +217,8 @@ from this environment; no version or hash is invented.
 | 19 | Hitman 2: Silent Assassin | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
 | 20 | Hitman: Contracts | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
 | 21 | Hitman: Blood Money | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
-| 22 | TrackMania Nations ESWC | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
-| 23 | TrackMania Nations Forever | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
+| 22 | TrackMania Nations ESWC | `TmNationsESWC.exe` | `822def6627f020035ef0819cf9f85493e952a2efb450d23770b330311ad8109d` | PASS | FAIL | FAIL (no frames) | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | `docs/GAME_TM_ESWC_EVIDENCE.md` on `feature/p10-tmnf-eswc`: native build PASS; strict boot exit 2 (64 unresolved imports), permissive SIGBUS |
+| 23 | TrackMania Nations Forever | `TmForever.exe` | `5e287e79a07cccc9f58989120fda2668d5da1086321033f162492af7c2671672` | PASS | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | `docs/GAME_TMNF_EVIDENCE.md`: A0–A3 PASS, 128,726 functions, 0 lift errors, 741,976,264-byte native build; run skipped, verify `not-run`, score 70/100 |
 | 24 | TrackMania United Forever | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
 
 Correction: an earlier IGI verdict of `FAIL (black frames)` was caused by
