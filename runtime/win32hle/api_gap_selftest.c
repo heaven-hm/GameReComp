@@ -35,6 +35,7 @@ int main(void) {
     win32hle_register(win32hle_wsock32);
     win32hle_register(win32hle_module);
     win32hle_register(win32hle_msvcrt);
+    win32hle_register(win32hle_sdlmix);
     mach_enter();
 
     /* SDL 1.2 bounded string helpers (issue #28, Chocolate Doom). */
@@ -118,6 +119,13 @@ int main(void) {
     ok("_snprintf result", strcmp((char *)hle_ptr(snp), "hi 42") == 0);
     ok("fscanf fails explicitly", call("fscanf", 2,
        (uint32_t[]){ 0u, fmt }) == 0xFFFFFFFFu);
+
+    /* SDL_mixer post-mix registration (documented: callback is recorded,
+     * never invoked from the host audio thread). */
+    ok("Mix_SetPostMix registered", hle_resolve("Mix_SetPostMix") != 0);
+    call("Mix_SetPostMix", 2, (uint32_t[]){ 0x1234u, 0x5678u });
+    ok("Mix_SetPostMix accepts NULL (unregister)", call("Mix_SetPostMix", 2,
+       (uint32_t[]){ 0u, 0u }) == 0u);
 
     mach_leave();
     printf("api_gap_selftest: all checks passed\n");

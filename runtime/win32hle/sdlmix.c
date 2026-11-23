@@ -484,6 +484,20 @@ static void s_SetError(void) {
     RETCV();
 }
 
+/* Mix_SetPostMix registers a post-mix callback. The project's architecture
+ * rule forbids running guest code from a background thread, so the host audio
+ * callback never invokes it; we record the registration and say so explicitly
+ * instead of pretending the callback runs. */
+static uint32_t g_postmix_fn, g_postmix_arg;
+static void s_SetPostMix(void) {
+    g_postmix_fn = A32(0);
+    g_postmix_arg = A32(1);
+    if (g_postmix_fn)
+        fprintf(stderr, "[sdlmix] Mix_SetPostMix: callback registered but not "
+                        "invoked (guest code must run on the game thread)\n");
+    RETCV();
+}
+
 const win32hle_shim win32hle_sdlmix[] = {
     { "Mix_OpenAudio",          s_OpenAudio },
     { "Mix_CloseAudio",         s_CloseAudio },
@@ -503,6 +517,7 @@ const win32hle_shim win32hle_sdlmix[] = {
     { "Mix_Volume",             s_Volume },
     { "Mix_VolumeChunk",        s_VolumeChunk },
     { "Mix_SetPanning",         s_SetPanning },
+    { "Mix_SetPostMix",         s_SetPostMix },
     { "Mix_AllocateChannels",   s_AllocateChannels },
     { "Mix_ReserveChannels",    s_ReserveChannels },
     { "Mix_LoadMUS",            s_LoadMUS },
