@@ -219,7 +219,7 @@ from this environment; no version or hash is invented.
 | 21 | Hitman: Blood Money | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
 | 22 | TrackMania Nations ESWC | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
 | 23 | TrackMania Nations Forever | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
-| 24 | TrackMania United Forever | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
+| 24 | TrackMania United Forever | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
 
 Correction: an earlier IGI verdict of `FAIL (black frames)` was caused by
 capturing frames 0–1 before the first rendered menu. Later frames show the
