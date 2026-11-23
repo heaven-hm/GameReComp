@@ -572,6 +572,18 @@ static void k_WaitForMultipleObjects(void) {             /* (n, handles, all, ti
  * CRITICAL_SECTION InitializeCriticalSection makes, with the count recorded
  * where Windows keeps it (+20).  This layer's own lock fields are the ones
  * hle_enter_cs/hle_leave_cs use; the spin count is the guest's to read. */
+/* InitializeCriticalSectionEx(cs, spinCount, flags): the Vista+ form. The
+ * only defined flag is CRITICAL_SECTION_NO_DEBUG_INFO (0x01000000); an
+ * unsupported flag is a real invalid-parameter failure, not a silent success. */
+static void k_InitializeCriticalSectionEx(void) {
+    uint32_t cs = A32(0), flags = A32(2);
+    if (!cs || (flags & ~0x01000000u)) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 3); }
+    memset(hle_ptr(cs), 0, 24);
+    MEM32(cs + 4) = 0xFFFFFFFFu;
+    MEM32(cs + 20) = A32(1);
+    g_last_error = 0;
+    RET(1, 3);
+}
 static void k_InitializeCriticalSectionAndSpinCount(void) {
     uint32_t cs = A32(0);
     if (!cs) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 2); }
@@ -913,6 +925,7 @@ const win32hle_shim win32hle_kernel32[] = {
     { "InitializeSListHead", k_InitializeSListHead }, { "IsDebuggerPresent", k_IsDebuggerPresent },
     { "WinExec",            k_WinExec },
     { "InitializeCriticalSection", k_InitializeCriticalSection },
+    { "InitializeCriticalSectionEx", k_InitializeCriticalSectionEx },
     { "DeleteCriticalSection",     k_DeleteCriticalSection },
     { "EnterCriticalSection",      k_EnterCriticalSection },
     { "LeaveCriticalSection",      k_LeaveCriticalSection },
