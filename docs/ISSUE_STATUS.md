@@ -184,9 +184,19 @@ parallel builds. Status: **PARTIAL**; OPEN.
 ### #27 Gunroar DMD exception
 `eh32.c` supports the D throw path and earlier swarm work added diagnostics,
 but no minimal DMD throw/catch fixture demonstrated that a caught exception
-resumes guest execution and renders frames. The original reproduction still
-reports `RaiseException(0xE0440001) ... guest exceptions are not handled`.
-Status: **FAIL**; OPEN.
+resumes guest execution and renders frames. **Re-measured on `develop`
+`630fa91` (2026-11-24):** the original `RaiseException(0xE0440001)` no longer
+appears. A fresh rebuild of `gr.exe` (SHA-256
+`6ea800ee918547ca1953a24bebdcd07c29cef4ada617d7321a7dc3701e825636`) binds 136
+imports with 0 unresolved, but with `SDL_VIDEODRIVER=cocoa` it now dies on
+three null vtable calls — `ICALL: null target from 0x0040942C`, `0x00409324`
+and `0x00419D38` — followed by
+`[win32hle] fatal signal 10 at 0x7001000003 (guest VA 0x01000003) in lifted
+function 0x00419D38`. In the generated C, `sub_00419D38` dereferences a
+pointer chain (`eax = MEM32(eax+0x2C); ecx = MEM32(eax)`) and calls
+`MEM32(ecx+0x2C)` with a NULL vtable. No frames are produced. This is a
+different, still-unfixed manifestation, so acceptance is not met. Status:
+**FAIL**; OPEN.
 
 ### #28 Nineteen unresolved imports (Tetris, Chocolate Doom)
 All 19 named shims are registered in the current tree. Two natives were
