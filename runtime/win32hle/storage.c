@@ -105,11 +105,15 @@ static int read_cfb(const uint8_t *f, size_t n, node_t **out) {
     if (n < 512 || memcmp(f, sig, 8)) return 0;
     rd_t r;
     memset(&r, 0, sizeof r);
+    int valid = 1;                              /* a corrupt stream rejects the whole file */
     r.f = f, r.n = n, r.ss = 1u << *(const uint16_t *)(f + 30);
     if (r.ss != 512 && r.ss != 4096) return 0;
     uint32_t nfatsec = *(const uint32_t *)(f + 44), dir0 = *(const uint32_t *)(f + 48);
     uint32_t cutoff = *(const uint32_t *)(f + 56), mini0 = *(const uint32_t *)(f + 60);
     uint32_t difat0 = *(const uint32_t *)(f + 68), ndifat = *(const uint32_t *)(f + 72);
+    /* A FAT sector count larger than the file could hold is corrupt; allocating
+     * it would either fail or let later reads walk off the file buffer. */
+    if (nfatsec > n / r.ss + 2) return 0;
     /* the FAT's sectors: 109 in the header, the rest through the DIFAT chain */
     uint32_t *fs = (uint32_t *)calloc(nfatsec + 1, 4), k = 0;
     for (uint32_t i = 0; i < 109 && k < nfatsec; i++) fs[k++] = *(const uint32_t *)(f + 76 + 4 * i);
@@ -128,9 +132,14 @@ static int read_cfb(const uint8_t *f, size_t n, node_t **out) {
     uint32_t mlen;
     r.minifat = (uint32_t *)chain(&r, mini0, &mlen);
     r.nmini = mlen / 4;
+    /* The first 128 bytes hold the root directory entry; a truncated
+     * directory chain cannot supply it, and reading dir+116 would be an
+     * out-of-bounds read. */
+    if (!dir || dlen < 128) {
+        free(dir); free(r.fat); free(r.minifat); return 0;
+    }
     uint32_t ndir = dlen / 128;
-    if (!ndir) { free(dir); free(r.fat); free(r.minifat); return 0; }
-    /* the root's chain is the mini stream */
+    /* the root's chain is the mini stream; it may legitimately be empty */
     r.ministream = chain(&r, *(const uint32_t *)(dir + 116), &r.ministream_n);
     node_t **nodes = (node_t **)calloc(ndir, sizeof *nodes);
     for (uint32_t i = 0; i < ndir; i++) {
@@ -148,16 +157,24 @@ static int read_cfb(const uint8_t *f, size_t n, node_t **out) {
             x->size = x->cap = size;
             x->data = (uint8_t *)calloc(1, size ? size : 1);
             if (size < cutoff) {                     /* in the mini stream, 64-byte sectors */
-                uint32_t got = 0, steps = 0;
-                for (uint32_t s = start; s != ENDOFCHAIN && s < r.nmini && got < size && steps < 1u << 20; s = r.minifat[s], steps++) {
-                    uint32_t take = size - got < 64 ? size - got : 64;
-                    if ((size_t)s * 64 + take <= r.ministream_n) memcpy(x->data + got, r.ministream + (size_t)s * 64, take);
-                    got += take;
+                /* A stream that lives in the mini stream must have a mini FAT
+                 * and a mini stream to back it. Returning an empty buffer here
+                 * would be a fake success on a corrupt file. */
+                if (size && (!r.ministream || start == ENDOFCHAIN || start >= r.nmini)) {
+                    valid = 0;
+                } else {
+                    uint32_t got = 0, steps = 0;
+                    for (uint32_t s = start; s != ENDOFCHAIN && s < r.nmini && got < size && steps < 1u << 20; s = r.minifat[s], steps++) {
+                        uint32_t take = size - got < 64 ? size - got : 64;
+                        if ((size_t)s * 64 + take <= r.ministream_n)
+                            memcpy(x->data + got, r.ministream + (size_t)s * 64, take);
+                        got += take;
+                    }
                 }
             } else {
                 uint32_t cl;
                 uint8_t *c = chain(&r, start, &cl);
-                memcpy(x->data, c, cl < size ? cl : size);
+                if (c) memcpy(x->data, c, cl < size ? cl : size);
                 free(c);
             }
         }
@@ -165,7 +182,7 @@ static int read_cfb(const uint8_t *f, size_t n, node_t **out) {
     }
     /* each storage's children are the tree under its child id: in-order */
     node_t *root = nodes[0];
-    int ok = root && root->type == 5;
+    int ok = valid && root && root->type == 5;
     for (uint32_t i = 0; ok && i < ndir; i++) {
         if (!nodes[i] || nodes[i]->type == 2) continue;
         uint32_t stack[256], sp = 0, c = *(const uint32_t *)(dir + 128 * i + 76);
@@ -545,6 +562,7 @@ static void s_StgCreateDocfile(void) {                   /* (name, mode, reserve
     vtables();
     char path[1024];
     if (!A32(0) || !A32(3)) RET(STG_E_INVALIDPOINTER, 4);
+    MEM32(A32(3)) = 0;                          /* COM: null the out param on failure */
     wide_path(A32(0), path, sizeof path);
     FILE *t = fopen(path, "rb");
     if (t && !(A32(1) & STGM_CREATE)) { fclose(t); RET(STG_E_FILEALREADYEXISTS, 4); }
@@ -561,6 +579,7 @@ static void s_StgOpenStorage(void) {                     /* (name, priority, mod
     vtables();
     char path[1024];
     if (!A32(0) || !A32(5)) RET(STG_E_INVALIDPOINTER, 6);
+    MEM32(A32(5)) = 0;                          /* COM: null the out param on failure */
     wide_path(A32(0), path, sizeof path);
     FILE *fp = fopen(path, "rb");
     if (!fp) RET(STG_E_FILENOTFOUND, 6);
