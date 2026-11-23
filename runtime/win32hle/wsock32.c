@@ -16,6 +16,7 @@
  * window-message notification does.
  */
 #define _GNU_SOURCE
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,9 +31,6 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
-#include <ifaddrs.h>
-#include <net/if.h>
-#include <strings.h>
 #include "win32hle.h"
 
 #ifndef MSG_NOSIGNAL             /* macOS: the socket says so instead (SO_NOSIGPIPE, at creation) */
@@ -48,7 +46,12 @@
 #define WSAEINVAL        10022u
 #define WSAEADDRINUSE    10048u
 #define WSAECONNRESET    10054u
+#define WSAEFAULT        10014u
+#define WSA_NOT_ENOUGH_MEMORY 10008u
 #define WSAHOST_NOT_FOUND 11001u
+#define WSATRY_AGAIN     11002u
+#define WSANO_RECOVERY   11003u
+#define WSANO_DATA       11004u
 #define FD_READ  0x01u
 #define FD_WRITE 0x02u
 
@@ -59,6 +62,7 @@ static uint32_t wsa_errno(int e) {
     case EWOULDBLOCK: return WSAEWOULDBLOCK;
     case EADDRINUSE:  return WSAEADDRINUSE;
     case EINVAL:      return WSAEINVAL;
+    case EFAULT:      return WSAEFAULT;
     case EBADF: case ENOTSOCK: return WSAENOTSOCK;
     case ECONNRESET: case ECONNREFUSED: return WSAECONNRESET;
     case EAFNOSUPPORT: return WSAEAFNOSUPPORT;
@@ -296,48 +300,98 @@ static void w_inet_ntoa(void) {                          /* (in_addr by value) *
     snprintf(buf, 16, "%u.%u.%u.%u", a & 255, (a >> 8) & 255, (a >> 16) & 255, a >> 24);
     RETP(buf, 1);
 }
-static void w_gethostname(void) {
-    if (gethostname(ASTR(0), A32(1)) != 0) FAIL(2);
-    RET(0, 2);
-}
-/* hostent, in guest-readable memory: name, aliases, addrtype(2), length(2),
- * addr_list. One per thread, as Winsock's is. */
-static void w_gethostbyname(void) {
-    typedef struct { uint32_t name, aliases; uint16_t type, len; uint32_t list; uint32_t lp[9]; uint32_t addr[8]; uint32_t none; char nm[256]; } guest_hostent;
+/* ---- Winsock 1.1 name resolution: host resolver -> guest-visible hostent ----
+ * A hostent is the 16-byte public header (h_name, h_aliases, h_addrtype,
+ * h_length, h_addr_list) followed by private storage. Every pointer handed to
+ * the guest is a guest VA, including the entries of h_addr_list and the empty
+ * NULL-terminated alias list. One result per thread, as Winsock's is. */
+typedef struct {
+    uint32_t name, aliases;
+    uint16_t type, len;
+    uint32_t list;
+    uint32_t lp[9];                     /* h_addr_list, NULL-terminated */
+    uint32_t addr[8];                   /* IPv4 addresses, network order */
+    uint8_t  addr6[16];                 /* one IPv6 address (gethostbyaddr) */
+    uint32_t none;                      /* empty, NULL-terminated h_aliases */
+    char nm[256];
+} guest_hostent;
+#define GHE_OFF(field) ((uint32_t)offsetof(guest_hostent, field))
+
+static guest_hostent *ghe_alloc(void) {
     static __thread guest_hostent *he;
     if (!he) he = (guest_hostent *)hle_alloc(sizeof *he);
+    if (he) memset(he, 0, sizeof *he);
+    return he;
+}
+
+/* getaddrinfo/getnameinfo's EAI_* codes are the resolver's honest diagnosis;
+ * translate them to the Winsock codes WSAGetLastError must report. */
+static uint32_t gai_errno(int e) {
+    switch (e) {
+    case EAI_AGAIN:   return WSATRY_AGAIN;
+    case EAI_FAIL:    return WSANO_RECOVERY;
+    case EAI_MEMORY:  return WSA_NOT_ENOUGH_MEMORY;
+    case EAI_NONAME:  return WSAHOST_NOT_FOUND;
+    case EAI_BADFLAGS:
+    case EAI_SOCKTYPE:
+    case EAI_SERVICE: return WSAEINVAL;
+#ifdef EAI_FAMILY
+    case EAI_FAMILY:  return WSAEAFNOSUPPORT;
+#endif
+#ifdef EAI_ADDRFAMILY
+    case EAI_ADDRFAMILY: return WSANO_DATA;
+#endif
+#if defined(EAI_NODATA)
+#if !defined(EAI_NONAME) || EAI_NODATA != EAI_NONAME
+    case EAI_NODATA:  return WSANO_DATA;
+#endif
+#endif
+    case EAI_SYSTEM:  return wsa_errno(errno);
+    default:          return WSANO_RECOVERY;
+    }
+}
+
+static void w_gethostname(void) {                         /* (name, namelen) */
+    char *name = ASTR(0);
+    uint32_t len = A32(1);
+    if (!name || !len) { g_wsa_error = WSAEFAULT; RET(SOCKET_ERROR, 2); }
+    if (gethostname(name, (size_t)len) != 0) {
+        g_wsa_error = (errno == ENAMETOOLONG || errno == ERANGE) ? WSAEFAULT : wsa_errno(errno);
+        RET(SOCKET_ERROR, 2);
+    }
+    g_wsa_error = 0;
+    RET(0, 2);
+}
+
+static void w_gethostbyname(void) {                       /* (name) -> hostent* or NULL */
     const char *name = ASTR(0);
-    struct hostent *h = name ? gethostbyname(name) : NULL;
-    memset(he, 0, sizeof *he);
-    he->name = hle_va(he->nm);
-    he->aliases = hle_va(&he->none);
-    he->type = 2, he->len = 4;
-    he->list = hle_va(he->lp);
-    if (h && h->h_addrtype == AF_INET) {
-        snprintf(he->nm, sizeof he->nm, "%s", h->h_name);
-        for (int i = 0; i < 8 && h->h_addr_list[i]; i++) {
-            memcpy(&he->addr[i], h->h_addr_list[i], 4);
-            he->lp[i] = hle_va(&he->addr[i]);
-        }
-        RETP(he, 1);
-    }
-    /* Windows always resolves its own name; a Mac's (a .local name) may not
-     * be in the resolver gethostbyname uses, and a game that looks itself up
-     * goes on as if it had an address (Yuri's Revenge's WOnline screen does).
-     * Its own name is its interfaces' IPv4 addresses, or loopback. */
-    char self[256];
-    if (!name || gethostname(self, sizeof self) != 0 || strcasecmp(name, self)) { g_wsa_error = WSAHOST_NOT_FOUND; RET(0, 1); }
-    snprintf(he->nm, sizeof he->nm, "%s", self);
+    if (!name || !*name) { g_wsa_error = WSAHOST_NOT_FOUND; RET(0, 1); }
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;                            /* Winsock's hostent is IPv4 */
+    hints.ai_flags = AI_CANONNAME;
+    int rc = getaddrinfo(name, NULL, &hints, &res);
+    if (rc != 0) { g_wsa_error = gai_errno(rc); RET(0, 1); }
+    guest_hostent *he = ghe_alloc();
+    if (!he) { freeaddrinfo(res); g_wsa_error = WSA_NOT_ENOUGH_MEMORY; RET(0, 1); }
+    const char *canon = NULL;
     int n = 0;
-    struct ifaddrs *ifs = NULL;
-    if (getifaddrs(&ifs) == 0) {
-        for (struct ifaddrs *i = ifs; i && n < 8; i = i->ifa_next)
-            if (i->ifa_addr && i->ifa_addr->sa_family == AF_INET && !(i->ifa_flags & IFF_LOOPBACK) && (i->ifa_flags & IFF_UP))
-                memcpy(&he->addr[n++], &((struct sockaddr_in *)i->ifa_addr)->sin_addr, 4);
-        freeifaddrs(ifs);
+    for (struct addrinfo *p = res; p && n < 8; p = p->ai_next) {
+        if (p->ai_family != AF_INET || !p->ai_addr) continue;
+        if (!canon && p->ai_canonname) canon = p->ai_canonname;
+        memcpy(&he->addr[n], &((const struct sockaddr_in *)p->ai_addr)->sin_addr, 4);
+        n++;
     }
-    if (!n) he->addr[n++] = htonl(INADDR_LOOPBACK);
-    for (int i = 0; i < n; i++) he->lp[i] = hle_va(&he->addr[i]);
+    if (!n) { freeaddrinfo(res); g_wsa_error = WSANO_DATA; RET(0, 1); } /* a name with no IPv4 address */
+    uint32_t base = hle_va(he);
+    he->name = base + GHE_OFF(nm);
+    he->aliases = base + GHE_OFF(none);
+    he->type = 2, he->len = 4;                            /* AF_INET, 4 bytes on Windows */
+    he->list = base + GHE_OFF(lp);
+    for (int i = 0; i < n; i++) he->lp[i] = base + GHE_OFF(addr[i]);
+    snprintf(he->nm, sizeof he->nm, "%s", canon ? canon : name);
+    freeaddrinfo(res);                                    /* canon points into res */
+    g_wsa_error = 0;
     RETP(he, 1);
 }
 
@@ -493,31 +547,53 @@ static void w___WSAFDIsSet(void) {
     RET(0, 2);
 }
 
-static void w_gethostbyaddr(void) {
-    typedef struct { uint32_t name, aliases; uint16_t type, len; uint32_t list; uint32_t lp[9]; uint32_t addr[8]; uint32_t none; char nm[256]; } guest_hostent;
-    static __thread guest_hostent *gh;
+/* Reverse lookup: a real host getnameinfo (NI_NAMEREQD, so an address with no
+ * PTR record fails instead of being passed off as its own name). */
+static void w_gethostbyaddr(void) {                       /* (addr, len, type) -> hostent* or NULL */
     const void *addr = APTR(0);
-    int len = (int)A32(1), type = (int)A32(2);
-    if (!addr) { g_wsa_error = WSAEINVAL; RET(0, 3); return; }
-    struct hostent *h = gethostbyaddr(addr, (socklen_t)len, win_af_to_host(type));
-    if (!h) { g_wsa_error = WSAHOST_NOT_FOUND; RET(0, 3); return; }
-    if (!gh) gh = (guest_hostent *)hle_alloc(sizeof *gh);
-    if (!gh) { RET(0, 3); return; }
-    memset(gh, 0, sizeof *gh);
-    uint32_t b = hle_va(gh);
-    snprintf(gh->nm, sizeof gh->nm, "%s", h->h_name ? h->h_name : "");
-    gh->name = b + (uint32_t)offsetof(guest_hostent, nm);
-    gh->aliases = b + (uint32_t)offsetof(guest_hostent, none);
-    gh->type = (uint16_t)host_af_to_win(h->h_addrtype);
-    gh->len = (uint16_t)h->h_length;
-    gh->list = b + (uint32_t)offsetof(guest_hostent, lp);
-    int n = 0;
-    while (h->h_addr_list[n] && n < 8) {
-        memcpy(&gh->addr[n], h->h_addr_list[n], h->h_length <= 4 ? (size_t)h->h_length : 4);
-        gh->lp[n] = b + (uint32_t)offsetof(guest_hostent, addr[n]);
-        n++;
+    uint32_t len = A32(1), type = A32(2);
+    if (!addr || !len) { g_wsa_error = WSAEINVAL; RET(0, 3); }
+    struct sockaddr_storage ss;
+    socklen_t slen;
+    memset(&ss, 0, sizeof ss);
+    if (type == 2 && len == 4) {                          /* AF_INET on Windows */
+        struct sockaddr_in *sin = (struct sockaddr_in *)&ss;
+#ifdef __APPLE__
+        sin->sin_len = sizeof *sin;
+#endif
+        sin->sin_family = AF_INET;
+        memcpy(&sin->sin_addr, addr, 4);
+        slen = sizeof *sin;
+    } else if (type == 23 && len == 16) {                 /* AF_INET6 on Windows */
+        struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)&ss;
+#ifdef __APPLE__
+        s6->sin6_len = sizeof *s6;
+#endif
+        s6->sin6_family = AF_INET6;
+        memcpy(&s6->sin6_addr, addr, 16);
+        slen = sizeof *s6;
+    } else { g_wsa_error = WSAEINVAL; RET(0, 3); }
+
+    char nm[NI_MAXHOST];
+    int rc = getnameinfo((const struct sockaddr *)&ss, slen, nm, sizeof nm, NULL, 0, NI_NAMEREQD);
+    if (rc != 0) { g_wsa_error = gai_errno(rc); RET(0, 3); }
+    guest_hostent *gh = ghe_alloc();
+    if (!gh) { g_wsa_error = WSA_NOT_ENOUGH_MEMORY; RET(0, 3); }
+    uint32_t base = hle_va(gh);
+    gh->name = base + GHE_OFF(nm);
+    gh->aliases = base + GHE_OFF(none);
+    gh->type = (uint16_t)type, gh->len = (uint16_t)len;
+    gh->list = base + GHE_OFF(lp);
+    snprintf(gh->nm, sizeof gh->nm, "%s", nm);
+    if (type == 2) {
+        memcpy(&gh->addr[0], addr, 4);
+        gh->lp[0] = base + GHE_OFF(addr[0]);
+    } else {
+        memcpy(gh->addr6, addr, 16);
+        gh->lp[0] = base + GHE_OFF(addr6);
     }
-    RET(b, 3);
+    g_wsa_error = 0;
+    RETP(gh, 3);
 }
 
 static uint32_t sockaddr_to_guest_any(const struct sockaddr *sa, socklen_t len) {
