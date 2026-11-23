@@ -13,7 +13,7 @@
 typedef struct {
     uint16_t e_magic;      /* 'MZ' = 0x5A4D */
     uint16_t e_cblp[29];   /* rest of the DOS header, unused */
-    int32_t  e_lfanew;     /* file offset of the PE signature */
+    uint32_t e_lfanew;     /* file offset of the PE signature (unsigned) */
 } pe_dos_header;
 
 typedef struct {
