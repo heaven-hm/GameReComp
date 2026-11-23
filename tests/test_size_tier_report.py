@@ -10,7 +10,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.size_tier_report import analyse, build_report, main, parse_size
+from tools.size_tier_report import (TIER_LABELS, analyse, build_html_report,
+                                    build_report, main, parse_size)
 
 SMALL_MAX = 1_000
 MEDIUM_MAX = 2_000
@@ -225,6 +226,152 @@ class SizeTierReportTest(unittest.TestCase):
         alpha = game_section(report, "alpha-small")
         self.assertIn("UNPROVEN", alpha)
         self.assertIn("**FAIL**", alpha)
+
+
+class HtmlGalleryTest(unittest.TestCase):
+    """The HTML gallery reuses the same joined evidence, never new guesses."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+        self.summary = {"schema": 1, "results": [
+            rec("alpha-small", size=500, frames=[FRAME_SMALL],
+                exit_code="TIMEOUT", binary_sha256=SHA_BINARY),
+            rec("beta-medium", size=1_500, frames=[FRAME_BLANK],
+                exit_code="TIMEOUT"),
+            rec("gamma-big", size=3_000, frames=[], exit_code=-10),
+            rec("delta-unknown", binary=None, frames=[], exit_code="BLOCKED",
+                status="BLOCKED", reason="no native binary"),
+            rec("epsilon-ghost", size=600, frames=[FRAME_GHOST]),
+        ]}
+        self.proof = {"schema": 1, "frames": [
+            proof_row("alpha-small", FRAME_SMALL, sha=SHA_SMALL, colours=7),
+            proof_row("beta-medium", FRAME_BLANK, sha=SHA_BLANK, colours=1, blank=True),
+            proof_row("zeta-not-in-summary", FRAME_GHOST_PROOF_ONLY,
+                      sha=SHA_GHOST_PROOF_ONLY, colours=9),
+        ]}
+
+    def html(self, summary=None, proof=Ellipsis, **kwargs):
+        use_proof = self.proof if proof is Ellipsis else proof
+        return build_html_report(
+            self.summary if summary is None else summary, use_proof,
+            small_max=SMALL_MAX, medium_max=MEDIUM_MAX,
+            summary_label="synthetic-summary.json",
+            proof_label="synthetic-frame-proof.json" if use_proof else None,
+            **kwargs)
+
+    def test_gallery_is_labelled_native_macos_only_with_no_windows_column(self):
+        page = self.html()
+        label = "native macOS only — no Windows oracle column"
+        self.assertIn(label, page)
+        self.assertIn(f"<title>Size-tier frame gallery — {label}</title>", page)
+        self.assertIn(f"<h1>Size-tier frame gallery — {label}</h1>", page)
+        expected = ["Frame path (recorded)", "SHA-256 (exact)",
+                    "Distinct colours", "Marker"]
+        headers = re.findall(r"<th>(.*?)</th>", page)
+        self.assertTrue(headers)
+        self.assertEqual(len(headers) % 4, 0)
+        self.assertEqual(headers, expected * (len(headers) // 4))
+        self.assertFalse(any("windows" in h.lower() for h in headers))
+        self.assertNotIn("<td>Windows", page)
+
+    def test_gallery_groups_small_medium_big_and_unknown(self):
+        page = self.html()
+        for tier in ("small", "medium", "big", "unknown"):
+            self.assertIn(f'<section id="tier-{tier}">', page)
+            self.assertIn(f"<h2>Tier: {TIER_LABELS[tier]}</h2>", page)
+        small = page[page.index('id="tier-small"'):page.index('id="tier-medium"')]
+        self.assertIn("alpha-small", small)
+        self.assertNotIn("beta-medium", small)
+        big = page[page.index('id="tier-big"'):page.index('id="tier-unknown"')]
+        self.assertIn("gamma-big", big)
+        self.assertIn("No frames recorded by the runner", big)
+
+    def test_gallery_uses_real_paths_hashes_and_colour_counts(self):
+        page = self.html()
+        self.assertIn(FRAME_SMALL, page)
+        self.assertIn(SHA_SMALL, page)
+        self.assertIn("<td>7</td>", page)
+        self.assertIn(SHA_BLANK, page)
+        self.assertIn("<td>1</td>", page)
+        self.assertIn(SHA_BINARY, page)
+        self.assertNotIn(SHA_GHOST_PROOF_ONLY, page)
+        self.assertNotIn("zeta-not-in-summary", page)
+
+    def test_gallery_has_blank_unproven_fail_and_ok_badges(self):
+        p_ok, p_blank = "/run/mix/ok.bmp", "/run/mix/blank.bmp"
+        p_unproven, p_fail = "/run/mix/unproven.bmp", "/run/mix/fail.bmp"
+        summary = {"schema": 1, "results": [
+            rec("mix", size=500,
+                frames=[p_ok, p_blank, p_unproven, p_fail])]}
+        proof = {"schema": 1, "frames": [
+            proof_row("mix", p_ok, sha=SHA_SMALL, colours=7),
+            proof_row("mix", p_blank, sha=SHA_BLANK, colours=1, blank=True),
+            proof_row("mix", p_fail, sha=SHA_STAT, colours=5,
+                      error="frame file missing"),
+        ]}
+        page = self.html(summary=summary, proof=proof)
+        for kind in ("ok", "blank", "unproven", "fail"):
+            self.assertIn(f'<span class="badge {kind}">{kind.upper()}</span>', page)
+        self.assertIn("BLANK — blank.bmp is single-colour (1)", page)
+        self.assertIn("UNPROVEN — no matching frame-proof entry", page)
+        self.assertIn("FAIL — proof error: frame file missing", page)
+        # The UNPROVEN frame never acquires a hash it did not have.
+        row = next(line for line in page.splitlines() if p_unproven in line)
+        self.assertIn('<td>—</td>', row)
+        self.assertNotIn(SHA_SMALL, row)
+        self.assertNotIn(SHA_STAT, row)
+
+    def test_gallery_embeds_only_real_existing_frame_files(self):
+        real_frame = self.tmp / "recorded.bmp"
+        real_frame.write_bytes(b"recorded frame, not decoded here")
+        summary = {"schema": 1, "results": [
+            rec("real", size=500, frames=[str(real_frame)]),
+            rec("gone", size=600, frames=["/run/gone/does-not-exist.bmp"]),
+        ]}
+        proof = {"schema": 1, "frames": [
+            proof_row("real", str(real_frame), sha=SHA_SMALL, colours=7),
+            proof_row("gone", "/run/gone/does-not-exist.bmp",
+                      sha=SHA_STAT, colours=5),
+        ]}
+        page = self.html(summary=summary, proof=proof)
+        self.assertIn(f'<img src="file://{real_frame}"', page)
+        self.assertIn("frame file not present at generation time", page)
+        self.assertNotIn('<img src="file:///run/gone/does-not-exist.bmp"', page)
+
+    def test_gallery_escapes_untrusted_record_text(self):
+        hostile = '<script>alert("x")</script>'
+        summary = {"schema": 1, "results": [
+            rec(hostile, size=500, frames=['/run/x/a&b"c.bmp'])]}
+        page = self.html(summary=summary, proof={"schema": 1, "frames": []})
+        self.assertNotIn("<script>", page)
+        self.assertIn("&lt;script&gt;", page)
+        self.assertIn("/run/x/a&amp;b&quot;c.bmp", page)
+
+    def test_gallery_without_proof_claims_no_hashes(self):
+        page = self.html(proof=None)
+        self.assertIn("not supplied — no hash or colour count is claimed", page)
+        self.assertNotIn(SHA_SMALL, page)
+        self.assertIn('<span class="badge unproven">UNPROVEN</span>', page)
+
+    def test_cli_writes_html_gallery_alongside_markdown(self):
+        summary_path = self.tmp / "summary.json"
+        proof_path = self.tmp / "frame-proof.json"
+        out_path, html_path = self.tmp / "report.md", self.tmp / "gallery.html"
+        summary_path.write_text(json.dumps(self.summary))
+        proof_path.write_text(json.dumps(self.proof))
+        self.assertEqual(main([
+            "--summary", str(summary_path), "--frame-proof", str(proof_path),
+            "--out", str(out_path), "--html", str(html_path),
+            "--small-max", str(SMALL_MAX), "--medium-max", str(MEDIUM_MAX),
+        ]), 0)
+        page = html_path.read_text()
+        self.assertIn("native macOS only — no Windows oracle column", page)
+        self.assertIn(SHA_SMALL, page)
+        self.assertIn("BLANK", page)
+        self.assertIn("UNPROVEN", page)
+        self.assertNotIn("<!doctype html>", out_path.read_text())
 
 
 if __name__ == "__main__":
