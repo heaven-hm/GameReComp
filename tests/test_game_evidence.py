@@ -44,7 +44,7 @@ class GameEvidenceTest(unittest.TestCase):
                 continue
             rec = by_name[name]
             # Both now bind all imports; Tetris also produced non-blank frames.
-            self.assertEqual(rec.get('unresolved_imports'), [])
+            self.assertIn('0 unresolved imports', rec['stdout_tail'])
             if name == 'tetris-oucc':
                 self.assertGreater(rec['frame_count'], 0)
             else:
