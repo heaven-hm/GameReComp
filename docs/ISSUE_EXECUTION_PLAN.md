@@ -239,3 +239,28 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - Unicorn: original bytes vs generated C agree for Tetris `0x00406370` over 4 cases (registers + named guest memory); five other candidates were faulted/refused, not counted as passes. No whole-game or Windows side-by-side oracle exists; documented explicitly.
 - Verification: feature suite 229 passed / 8 skipped / 34 subtests; integration 226 passed / 11 skipped; **47 selftests ok, 0 FAIL**.
 - All issues remain OPEN; no 100% or gameplay claim.
+
+## Integration checkpoint 12 — CUA GUI/CLI tests and 10-agent doc/tool swarm
+
+- `feature/integration-checkpoint` and `feature/game-matrix-all` pushed/verified
+  at `a7833f99d9050a1893fd21a32f6cbe1a15cec5bd`.
+- Real GUI interaction with the installed CUA driver (Accessibility and Screen
+  Recording true under com.trycua.driver): `tools/gui_cua_test.py` performed
+  **9/9 mouse clicks** (6 pixel tabs, Run Options and Open Agents AX buttons,
+  sidebar Settings) with before/after screenshot SHA-256 proof; three JPEG
+  screenshots committed under `docs/evidence/gui-cua/`. Destructive controls
+  excluded and unit-tested. Evidence: `docs/GUI_CUA_EVIDENCE.md`.
+- `tools/cli_matrix.py`: 16 CLI commands (version/about/setup/tasks/status and
+  `inspect --json` over 11 PE32 files) all exit 0; header checks only.
+- Ten agents (B1–B10) merged with zero conflicts: issue work ledger for all
+  28 issues; 3 new legally redistributable PE32 games (PrBoom+, dhewm3,
+  OpenTTD win32 with hashes); x64 OpenTTD refusal evidence; legacy-software
+  legality report + 7-Zip/Notepad++/PuTTY PE checks; rev.ng/AI-assist probes;
+  size-tier screenshot report; fail-closed multi-lifter selector; x64 gate;
+  acceptance-doc guardrails.
+- Also added `tools/app_compat_probe`: PE32 x86 native is only a
+  SUPPORTED_CANDIDATE; PE32+/x64, .NET, Win16/NE and non-PE are explicit
+  UNSUPPORTED classes. No "100% of Windows apps" claim.
+- Verification: feature suite **328 passed, 8 skipped, 55 subtests**;
+  integration **325 passed, 11 skipped**; **52 win32hle selftests ok**.
+- All issues remain OPEN; no 100% or game-acceptance claim.
