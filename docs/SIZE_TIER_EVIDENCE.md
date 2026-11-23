@@ -11,6 +11,62 @@ Tier thresholds: **small** < 4,194,304 B (4.00 MiB); **medium** < 12,582,912 B (
 
 Provenance: these are the real records from the current one-at-a-time game_runner run and its frame_proof pass. In a fresh checkout the canonical, gitignored locations are test-results/game-matrix/execution/summary.json and test-results/game-matrix/frame-proof/frame-proof.json; regenerate them with tools.game_runner and tools.frame_proof. No screenshot is embedded in this report.
 
+## HTML proof gallery — native macOS only — no Windows oracle column
+
+`tools/size_tier_report.py --html <gallery.html>` emits a standalone HTML gallery from the same runner-summary + frame-proof join used below. The gallery is explicitly labelled **native macOS only — no Windows oracle column** and has exactly four columns: recorded frame path, exact SHA-256, distinct colour count and marker. There is deliberately no original-Windows capture column: no Windows execution oracle exists in this environment, and Wine is not the final runtime.
+
+Every path, hash and colour count in the gallery is copied verbatim from the two input records. A frame with no matching proof entry is badged `UNPROVEN` and gets no hash; a single-colour frame is badged `BLANK`; a proof error is badged `FAIL`; `OK` means only non-blank render evidence, never gameplay acceptance. A real frame image is linked from its recorded `file://` path **only when that file still exists at generation time** — the tool never generates or invents a screenshot.
+
+Regenerate both outputs (paths supplied by the caller, never hard-coded):
+
+```sh
+python3 -m tools.size_tier_report \
+  --summary <summary.json> --frame-proof <frame-proof.json> \
+  --out <report.md> --html <gallery.html> \
+  [--small-max 4MiB --medium-max 12MiB]
+```
+
+<details>
+<summary>Checked-in gallery excerpt — real frames from this recorded run (images live at the recorded gitignored paths)</summary>
+
+<p><strong>native macOS only — no Windows oracle column.</strong> Four columns only: recorded frame path, exact SHA-256, distinct colour count and marker.</p>
+
+<h3>Tier: small</h3>
+<table>
+<thead><tr><th>Frame path (recorded)</th><th>SHA-256 (exact)</th><th>Distinct colours</th><th>Marker</th></tr></thead>
+<tbody>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/ikachan/screenshots/frame-0000.bmp</code></td><td><code>95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349</code></td><td>1</td><td><span class="badge blank">BLANK</span> — single-colour, not graphics evidence</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/ikachan/screenshots/frame-0001.bmp</code></td><td><code>95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349</code></td><td>1</td><td><span class="badge blank">BLANK</span> — single-colour, not graphics evidence</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/ikachan/screenshots/frame-0002.bmp</code></td><td><code>95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349</code></td><td>1</td><td><span class="badge blank">BLANK</span> — single-colour, not graphics evidence</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/tetris-oucc/screenshots/frame-0000.bmp</code></td><td><code>d62f04a00e3c16ac4f98a65834ff27181b769faa2162c109a5c8cfbadeb58640</code></td><td>4</td><td><span class="badge ok">OK</span> — render evidence only, not gameplay</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/tetris-oucc/screenshots/frame-0001.bmp</code></td><td><code>c0701ba5ec7f499d91a7b1782f81c65492537ccc90b934b5ec67b378566aace7</code></td><td>5</td><td><span class="badge ok">OK</span> — render evidence only, not gameplay</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/tetris-oucc/screenshots/frame-0002.bmp</code></td><td><code>c0701ba5ec7f499d91a7b1782f81c65492537ccc90b934b5ec67b378566aace7</code></td><td>5</td><td><span class="badge ok">OK</span> — render evidence only, not gameplay</td></tr>
+</tbody></table>
+
+<h3>Tier: medium</h3>
+<table>
+<thead><tr><th>Frame path (recorded)</th><th>SHA-256 (exact)</th><th>Distinct colours</th><th>Marker</th></tr></thead>
+<tbody>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/cavestory/screenshots/frame-0000.bmp</code></td><td><code>a6ff748a2c1b386844bf8afd790540cf5f4642a1251d2958196f2b25ae413a12</code></td><td>1</td><td><span class="badge blank">BLANK</span> — single-colour, not graphics evidence</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/cavestory/screenshots/frame-0001.bmp</code></td><td><code>0d8783a2534c521e2d74549ea139cd2e6d054b55a940f4144a709df7ac21ca9e</code></td><td>3</td><td><span class="badge ok">OK</span> — render evidence only, not gameplay</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/cavestory/screenshots/frame-0002.bmp</code></td><td><code>0d8783a2534c521e2d74549ea139cd2e6d054b55a940f4144a709df7ac21ca9e</code></td><td>3</td><td><span class="badge ok">OK</span> — render evidence only, not gameplay</td></tr>
+</tbody></table>
+<p>Medium-tier games with no recorded frames are shown by the generated gallery as <span class="badge fail">FAIL</span>: chocolate-doom, gunroar, parsec47, tumiki_fighters, warning_forever.</p>
+
+<h3>Tier: big</h3>
+<table>
+<thead><tr><th>Frame path (recorded)</th><th>SHA-256 (exact)</th><th>Distinct colours</th><th>Marker</th></tr></thead>
+<tbody>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/noiz2sa/screenshots/frame-0000.bmp</code></td><td><code>a08b431943f8b956f32adff53ce70f87c2defd143e5c61d2cf573248b2f2c1fd</code></td><td>27</td><td><span class="badge ok">OK</span> — render evidence only, not gameplay</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/noiz2sa/screenshots/frame-0001.bmp</code></td><td><code>85d48fa81b02fc5ec08882efb3606afce5891c78e87cbb94d0b144fbc5bcd2d7</code></td><td>36</td><td><span class="badge ok">OK</span> — render evidence only, not gameplay</td></tr>
+<tr><td><code>/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/gamematrix/test-results/game-matrix/execution/noiz2sa/screenshots/frame-0002.bmp</code></td><td><code>d92bd74ae34e4c3db8894bdf5307a0d658d9707051a74567757762a544c528b7</code></td><td>30</td><td><span class="badge ok">OK</span> — render evidence only, not gameplay</td></tr>
+</tbody></table>
+<p>Big-tier games with no recorded frames are shown as <span class="badge fail">FAIL</span>: herocore5, rrootage.</p>
+
+<p><span class="badge unproven">UNPROVEN</span> is emitted by the tool whenever a summary frame has no matching frame-proof entry; this recorded run had none, so no such row appears above. No hash is ever invented for one.</p>
+
+</details>
+
 ## Tier: small
 
 ### `ikachan` — 3,029,560 B (2.89 MiB) — **FAIL**
@@ -174,5 +230,11 @@ _No games in this tier._
 ```sh
 python3 -m tools.size_tier_report \
   --summary <summary.json> --frame-proof <frame-proof.json> \
-  --out <report.md> [--small-max 4MiB --medium-max 12MiB]
+  --out <report.md> --html <gallery.html> \
+  [--small-max 4MiB --medium-max 12MiB]
+
+# HTML gallery only (prints no Markdown):
+python3 -m tools.size_tier_report \
+  --summary <summary.json> --frame-proof <frame-proof.json> \
+  --html <gallery.html>
 ```

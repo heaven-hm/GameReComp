@@ -18,17 +18,25 @@ reports evidence, it does not create a screenshot.
 Usage:
     python3 -m tools.size_tier_report --summary <summary.json> \
         --frame-proof <frame-proof.json> --out <report.md> \
-        [--small-max 4MiB --medium-max 12MiB]
+        [--html <gallery.html>] [--small-max 4MiB --medium-max 12MiB]
+
+With ``--html`` the tool additionally emits a standalone HTML proof gallery.
+The gallery is **native macOS only — no Windows oracle column**: it shows only
+frame paths, exact hashes, colour counts and BLANK/UNPROVEN/FAIL markers taken
+from the two input records. It references real frame files (never generated or
+invented ones) when they still exist at the recorded paths.
 """
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
 import re
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 DEFAULT_SMALL_MAX = "4MiB"
 DEFAULT_MEDIUM_MAX = "12MiB"
@@ -144,12 +152,19 @@ def join_frames(rec: dict, by_game_path: dict, by_path: dict) -> list[dict]:
 
 
 def frame_rows(joined: list[dict]) -> list[dict]:
-    """Resolve each joined frame once into report-ready evidence fields."""
+    """Resolve each joined frame once into report-ready evidence fields.
+
+    ``exists`` records whether the *real* frame file named by the runner is
+    still present at generation time. It is used only to decide whether the
+    HTML gallery may render an ``<img>`` of a recorded path; it never causes a
+    path, hash or colour count to be invented.
+    """
     resolved = []
     for row in joined:
         marker, digest, colours = frame_evidence(row)
         resolved.append({"path": row["path"], "marker": marker,
-                         "sha256": digest, "colours": colours})
+                         "sha256": digest, "colours": colours,
+                         "exists": bool(row["path"]) and Path(row["path"]).is_file()})
     return resolved
 
 
@@ -333,10 +348,208 @@ def render(games: list[dict], *, small_max: int, medium_max: int,
             "```sh",
             "python3 -m tools.size_tier_report \\",
             "  --summary <summary.json> --frame-proof <frame-proof.json> \\",
-            "  --out <report.md> [--small-max 4MiB --medium-max 12MiB]",
+            "  --out <report.md> [--html <gallery.html>]",
+            "  [--small-max 4MiB --medium-max 12MiB]",
             "```",
             ""]
     return "\n".join(out)
+
+
+_MARKER_KINDS = ("BLANK", "UNPROVEN", "FAIL", "OK")
+
+_HTML_CSS = """
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+       margin: 2rem auto; max-width: 1100px; color: #222; line-height: 1.45; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.3rem; margin-top: 2rem; border-bottom: 1px solid #ddd; }
+h3 { font-size: 1.05rem; }
+code { background: #f4f4f4; padding: 0 3px; word-break: break-all; }
+.scope { background: #fff8e1; border-left: 4px solid #f0ad4e; padding: .7rem 1rem; }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 10px;
+         font: 600 11px/1.5 sans-serif; color: #fff; }
+.badge.ok { background: #2e7d32; }
+.badge.blank { background: #6c757d; }
+.badge.unproven { background: #b8860b; }
+.badge.fail { background: #b3261e; }
+.badge.unknown { background: #555; }
+.verdict { font-weight: 600; }
+.verdict.partial { color: #b8860b; }
+.verdict.fail { color: #b3261e; }
+figure { margin: 0 0 1rem; }
+figure img { max-width: 240px; height: auto; border: 1px solid #ccc; display: block; }
+table { border-collapse: collapse; width: 100%; margin: .5rem 0 1rem; }
+th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left;
+         vertical-align: top; font-size: .9rem; }
+th { background: #fafafa; }
+td.path { max-width: 420px; }
+.empty { color: #666; font-style: italic; }
+.limits li { margin-bottom: .35rem; }
+footer { margin-top: 2rem; color: #777; font-size: .85rem; }
+"""
+
+
+def _esc(value: Any) -> str:
+    return html.escape(str(value), quote=True)
+
+
+def _marker_kind(marker: str) -> str:
+    """Short badge label for a frame marker: BLANK/UNPROVEN/FAIL/OK."""
+    for kind in _MARKER_KINDS:
+        if marker.startswith(kind):
+            return kind
+    return "UNKNOWN"
+
+
+def _frame_uri(path: str) -> str:
+    """A file:// URI for a recorded native path, escaped for an HTML attribute."""
+    uri = path if path.startswith("file://") else "file://" + quote(path, safe="/:")
+    return html.escape(uri, quote=True)
+
+
+def _badge(text: str) -> str:
+    kind = _marker_kind(text)
+    return (f'<span class="badge {kind.lower()}">{_esc(kind)}</span> '
+            f'<small>{_esc(text)}</small>')
+
+
+def render_html(games: list[dict], *, small_max: int, medium_max: int,
+                summary_label: str, proof_label: str | None,
+                title: str = "Size-tier frame gallery — native macOS only — no Windows oracle column",
+                note: str | None = None) -> str:
+    """Render a standalone HTML gallery of *recorded* frame evidence.
+
+    Four columns only — recorded frame path, exact SHA-256, distinct colour
+    count and marker. There is deliberately no Windows-original column. Blank,
+    unproven and failed frames are given explicit badges, and images are
+    linked from the real recorded path only when that file still exists.
+    """
+    out = ["<!doctype html>", '<html lang="en">', "<head>",
+           '<meta charset="utf-8">', f"<title>{_esc(title)}</title>",
+           "<style>", _HTML_CSS, "</style>", "</head>", "<body>",
+           f"<h1>{_esc(title)}</h1>",
+           '<p class="scope"><strong>native macOS only — no Windows oracle column.</strong> '
+           "Every path, hash and colour count below comes from the runner summary and frame "
+           "proof supplied to this tool. There is no original-Windows capture column because "
+           "no Windows execution oracle exists in this environment; Wine is not used as the "
+           "final runtime.</p>",
+           "<p>Generated by <code>tools/size_tier_report.py</code> from "
+           f"runner summary <code>{_esc(summary_label)}</code> and frame proof "
+           f"<code>{_esc(proof_label or 'not supplied — no hash or colour count is claimed')}</code>. "
+           f"Tiers: <strong>small</strong> &lt; {_esc(human_size(small_max))}; "
+           f"<strong>medium</strong> &lt; {_esc(human_size(medium_max))}; "
+           f"<strong>big</strong> ≥ {_esc(human_size(medium_max))}. Sizes come from the native "
+           "binary recorded by the runner; games without a binary are listed under unknown "
+           "size and never assigned a tier.</p>",
+           '<p class="play">Frame marker legend: '
+           + ", ".join(_badge(k) for k in
+                       ("OK — non-blank render evidence only, not gameplay",
+                        "BLANK — single-colour frame; not graphics evidence",
+                        "UNPROVEN — no matching frame-proof entry, hash or colour count",
+                        "FAIL — proof error or missing frame file"))
+           + "</p>"]
+    if note:
+        out += ["<p>", _esc(note), "</p>"]
+
+    total_partial = sum(g["verdict"] == "PARTIAL" for g in games)
+    total_fail = sum(g["verdict"] == "FAIL" for g in games)
+    nonblank = sum(1 for g in games for f in g["frames"]
+                   if f["marker"].startswith("OK"))
+    blank = sum(1 for g in games for f in g["frames"]
+                if f["marker"].startswith("BLANK"))
+    unproven = sum(1 for g in games for f in g["frames"]
+                   if f["marker"].startswith("UNPROVEN")
+                   or f["marker"].startswith("FAIL"))
+
+    for tier in (*TIERS, "unknown"):
+        rows = sorted((g for g in games if g["tier"] == tier),
+                      key=lambda g: (g["game"].lower(), g["game"]))
+        out.append(f'<section id="tier-{tier}">')
+        out.append(f"<h2>Tier: {_esc(TIER_LABELS[tier])}</h2>")
+        if not rows:
+            out.append('<p class="empty">No games in this tier.</p>')
+        for game in rows:
+            verdict_cls = game["verdict"].lower()
+            out.append('<article>')
+            out.append(f"<h3><code>{_esc(game['game'])}</code> — "
+                       f"{_esc(human_size(game['size']))} — "
+                       f'<span class="verdict {verdict_cls}">{_esc(game["verdict"])}</span></h3>')
+            out.append("<ul>")
+            out.append(f"<li>Verdict: {_esc(game['verdict'])} — {_esc(game['reason'])}</li>")
+            out.append(f"<li>Run: {_esc(game['run_marker'])}; exit <code>{_esc(str(game['exit_code']))}</code></li>")
+            out.append(f"<li>Size source: {_esc(game['size_source'])}</li>")
+            if game["binary_sha256"]:
+                out.append(f"<li>Binary SHA-256: <code>{_esc(game['binary_sha256'])}</code></li>")
+            if game["status"] == "BLOCKED":
+                out.append("<li>Status: <strong>FAIL (BLOCKED)</strong> — no native binary to run</li>")
+            if game["log"]:
+                suffix = "" if game["log_exists"] else " (log file not present at generation time)"
+                out.append(f"<li>Log: <code>{_esc(game['log'])}</code>{_esc(suffix)}</li>")
+            out.append("</ul>")
+
+            if game["frames"]:
+                out.append('<p class="scope">Frames shown below are native macOS captures only '
+                           '— no Windows oracle column.</p>')
+                out.append("<table>")
+                out.append("<thead><tr><th>Frame path (recorded)</th><th>SHA-256 (exact)</th>"
+                           "<th>Distinct colours</th><th>Marker</th></tr></thead>")
+                out.append("<tbody>")
+                for frame in game["frames"]:
+                    digest = f"<code>{_esc(frame['sha256'])}</code>" if frame["sha256"] else "—"
+                    colours = str(frame["colours"]) if isinstance(frame["colours"], int) else "—"
+                    image = ""
+                    if frame.get("exists"):
+                        image = (f'<figure><img src="{_frame_uri(frame["path"])}" '
+                                 f'alt="Recorded native frame {_esc(Path(frame["path"]).name)}" '
+                                 f'width="240"><figcaption>recorded frame file</figcaption></figure>')
+                    missing = "" if frame.get("exists") else (
+                        "<br><small>frame file not present at generation time</small>")
+                    out.append(
+                        '<tr>'
+                        f'<td class="path">{image}<code>{_esc(frame["path"])}</code>{missing}</td>'
+                        f'<td>{digest}</td>'
+                        f'<td>{_esc(colours)}</td>'
+                        f'<td>{_badge(frame["marker"])}</td>'
+                        '</tr>')
+                out.append("</tbody></table>")
+            else:
+                out.append('<p class="empty">No frames recorded by the runner — there is no '
+                           'screenshot to report for this game.</p>')
+            out.append("</article>")
+        out.append("</section>")
+
+    out += ["<section id=\"summary\">", "<h2>Evidence summary</h2>", "<ul>",
+            f"<li>Games: {len(games)} — PARTIAL (non-blank proof): {total_partial}; "
+            f"FAIL: {total_fail}</li>",
+            f"<li>Frames: non-blank (OK): {nonblank}; BLANK: {blank}; "
+            f"UNPROVEN/proof-failed: {unproven}</li>",
+            "</ul>", "</section>",
+            '<section id="limits" class="limits">',
+            "<h2>What this gallery does not claim</h2>", "<ul>",
+            "<li>No original-Windows frame is compared; no Windows execution oracle exists "
+            "in this environment. This is a native macOS only gallery.</li>",
+            "<li>Non-blank frames prove only that the rebuilt binary rendered pixel content, "
+            "not correct gameplay, input or audio.</li>",
+            "<li>No hash, colour count, frame path or screenshot is inferred when the "
+            "underlying proof record is absent.</li>",
+            "</ul>", "</section>",
+            "<footer>Regenerate with "
+            "<code>python3 -m tools.size_tier_report --summary &lt;summary.json&gt; "
+            "--frame-proof &lt;frame-proof.json&gt; --out &lt;report.md&gt; "
+            "--html &lt;gallery.html&gt;</code>.</footer>",
+            "</body>", "</html>", ""]
+    return "\n".join(out)
+
+
+def build_html_report(summary: dict, proof: dict | None, *,
+                      small_max: int, medium_max: int,
+                      summary_label: str, proof_label: str | None,
+                      title: str = "Size-tier frame gallery — native macOS only — no Windows oracle column",
+                      note: str | None = None) -> str:
+    """Convenience wrapper: analyse the JSON dicts and render the HTML gallery."""
+    games = analyse(summary, proof, small_max=small_max, medium_max=medium_max)
+    return render_html(games, small_max=small_max, medium_max=medium_max,
+                       summary_label=summary_label, proof_label=proof_label,
+                       title=title, note=note)
 
 
 def build_report(summary: dict, proof: dict | None, *,
@@ -367,6 +580,11 @@ def main(argv: list[str] | None = None) -> int:
                     help="tools.frame_proof frame-proof.json; omit to claim no hashes")
     ap.add_argument("--out", type=Path,
                     help="write Markdown here; omit to print to stdout")
+    ap.add_argument("--html", type=Path,
+                    help="also write the native-macOS-only HTML frame gallery here")
+    ap.add_argument("--html-title",
+                    default="Size-tier frame gallery — native macOS only — no Windows oracle column",
+                    help="title for the HTML gallery")
     ap.add_argument("--small-max", default=DEFAULT_SMALL_MAX,
                     help=f"upper bound of the small tier (default: {DEFAULT_SMALL_MAX})")
     ap.add_argument("--medium-max", default=DEFAULT_MEDIUM_MAX,
@@ -397,6 +615,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {args.out}")
     else:
         print(report)
+    if args.html:
+        gallery = build_html_report(
+            summary, proof, small_max=small_max, medium_max=medium_max,
+            summary_label=str(args.summary),
+            proof_label=str(args.frame_proof) if args.frame_proof else None,
+            title=args.html_title, note=args.note)
+        args.html.parent.mkdir(parents=True, exist_ok=True)
+        args.html.write_text(gallery, encoding="utf-8")
+        print(f"wrote {args.html} (native macOS only — no Windows oracle column)")
     return 0
 
 
