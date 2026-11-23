@@ -25,8 +25,9 @@
 #include "win32hle.h"
 
 /* kernel32_crt.c's codepage conversion (ANSI <-> UTF-16), shared by the wide
- * text calls. */
+ * text and object-query calls. */
 int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
+int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
 
 #define TRANSPARENT 1
 #define OPAQUE      2
@@ -484,6 +485,7 @@ static void g_EnumFontFamiliesA(void) {                  /* (hdc, face, cb, lPar
 enum { GO_BRUSH = 1, GO_PEN, GO_BITMAP, GO_PALETTE, GO_REGION };
 #define PS_NULL 5
 #define HS_HOLLOW 5
+#define BS_DIBPATTERNPT 6     /* LOGBRUSH.lbStyle of a packed-DIB pattern brush */
 typedef struct {
     int used, type;
     uint32_t color; int style, width;
@@ -505,6 +507,22 @@ static uint32_t new_obj(int type) {
 static uint32_t make_brush(uint32_t color, int hatch) { uint32_t h = new_obj(GO_BRUSH); gobj_t *o = GOBJ(h); if (o) o->color = color, o->style = hatch; return h; }
 static uint32_t make_pen(int style, int width, uint32_t color) { uint32_t h = new_obj(GO_PEN); gobj_t *o = GOBJ(h); if (o) o->color = color, o->style = style, o->width = width; return h; }
 
+/* A pixel of a packed-DIB pattern brush as 0x00RRGGBB. The pattern's pixels
+ * are host-owned (copied out of the guest at creation), so a caller changing
+ * its packed DIB afterwards cannot change an existing brush. */
+static uint32_t pattern_rgb(const gobj_t *o, int x, int y) {
+    if (!o || !o->px || x < 0 || y < 0 || x >= o->w || y >= o->h) return 0;
+    const uint8_t *row = o->px + (ptrdiff_t)y * o->pitch;
+    if (o->bpp == 32) { uint32_t v; memcpy(&v, row + 4 * (size_t)x, 4); return v & 0xFFFFFFu; }
+    if (o->bpp == 24) {
+        const uint8_t *p = row + 3 * (size_t)x;
+        return (uint32_t)p[2] << 16 | (uint32_t)p[1] << 8 | p[0];
+    }
+    uint32_t i = o->bpp == 8 ? row[x] : o->bpp == 4 ? ((x & 1) ? row[x / 2] & 15 : row[x / 2] >> 4)
+                                                    : (row[x / 8] >> (7 - (x & 7))) & 1;
+    return o->pal && i < 256 ? o->pal[i] & 0xFFFFFFu : 0;
+}
+
 static uint32_t g_stock[20];
 static uint32_t stock(int i) {
     if (i == 13 || i == 17 || i == 12 || i == 10) return SYSTEM_FONT;       /* font stocks: one font */
@@ -523,10 +541,17 @@ static uint32_t stock(int i) {
     }
     return g_stock[i];
 }
-/* The COLORREF a DC fills/strokes with (default: white brush, black pen). */
+/* The COLORREF a DC fills/strokes with (default: white brush, black pen). A
+ * pattern brush has no single COLORREF; the paths that cannot tile use the
+ * colour of its first pixel rather than the packed-DIB pointer in o->color. */
 static uint32_t brush_color(const dc_t *d, int *hollow) {
     gobj_t *o = GOBJ(d->brush); if (hollow) *hollow = o ? o->style == HS_HOLLOW : 0;
-    return o ? o->color : 0xFFFFFF;
+    if (!o) return 0xFFFFFF;
+    if (o->style == BS_DIBPATTERNPT && o->px) {
+        uint32_t c = pattern_rgb(o, 0, 0);
+        return ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >> 16) & 0xFF);
+    }
+    return o->color;
 }
 static uint32_t pen_color(const dc_t *d, int *null) {
     gobj_t *o = GOBJ(d->pen); if (null) *null = o ? o->style == PS_NULL : 0;
@@ -559,6 +584,51 @@ static void g_CreatePatternBrush(void) {
     o->style = -1;
     o->color = hbm;
     RET(h, 1);
+}
+/* CreateDIBPatternBrushPt(packedDIB, iUsage): the brush form a game builds
+ * from one guest buffer holding a BITMAPINFO, its colour table and its pixels.
+ * We copy the pixels and table into the brush object (top-down, DWORD-aligned
+ * rows), so the brush survives the guest freeing that buffer and FillRect can
+ * tile it. 1/4/8/24/32bpp BI_RGB with DIB_RGB_COLORS are supported; anything
+ * else (BI_BITFIELDS, palette indices, absurd geometry) fails with 0 rather
+ * than handing back a phantom brush. */
+static void g_CreateDIBPatternBrushPt(void) {
+    uint32_t p = A32(0);
+    if (!p || !hle_ptr(p)) RET(0, 2);
+    uint32_t hsz = MEM32(p);
+    if (hsz < 40 || hsz > 4096) RET(0, 2);
+    int w = (int32_t)MEM32(p + 4), rh = (int32_t)MEM32(p + 8), h = rh < 0 ? -rh : rh;
+    int planes = (int)MEM16(p + 12), bpp = (int)MEM16(p + 14);
+    uint32_t comp = MEM32(p + 16), used = MEM32(p + 32);
+    if (planes != 1 || w <= 0 || h <= 0 || w > 256 || h > 256) RET(0, 2);
+    if (bpp != 1 && bpp != 4 && bpp != 8 && bpp != 24 && bpp != 32) RET(0, 2);
+    if (comp != 0 || A32(1) != 0) RET(0, 2);          /* BI_RGB, DIB_RGB_COLORS only */
+    uint32_t nc = 0;
+    if (bpp <= 8) { if (used > 256) RET(0, 2); nc = used ? used : 1u << bpp; }
+    uint32_t off = hsz + nc * 4u;
+    uint32_t pitch = ((uint32_t)w * (uint32_t)bpp + 31u) / 32u * 4u;
+    uint64_t need = (uint64_t)off + (uint64_t)pitch * (uint32_t)h;
+    if (need > 4u * 1024u * 1024u) RET(0, 2);        /* no allocation bomb */
+    uint8_t *px = (uint8_t *)calloc((size_t)pitch * (size_t)h, 1);
+    if (!px) RET(0, 2);
+    uint32_t *pal = NULL;
+    if (nc) {
+        pal = (uint32_t *)calloc(256, 4);
+        if (!pal) { free(px); RET(0, 2); }
+        for (uint32_t i = 0; i < nc; i++) pal[i] = MEM32(p + hsz + 4u * i) & 0xFFFFFFu;
+    }
+    int topdown = rh < 0;
+    for (int y = 0; y < h; y++) {
+        int sy = topdown ? y : h - 1 - y;
+        memcpy(px + (size_t)y * pitch, hle_ptr(p + off + (uint32_t)sy * pitch), pitch);
+    }
+    uint32_t hb = new_obj(GO_BRUSH);
+    if (!hb) { free(px); free(pal); RET(0, 2); }
+    gobj_t *o = GOBJ(hb);
+    o->style = BS_DIBPATTERNPT, o->color = p;        /* lbHatch: the packed DIB */
+    o->px = px, o->pitch = (int)pitch, o->w = w, o->h = h, o->bpp = bpp, o->owns = 1;
+    o->pal = pal, o->paln = (int)nc;
+    RET(hb, 2);
 }
 static void g_CreatePenIndirect(void)   { uint32_t lp = A32(0); RET(make_pen(lp ? (int)MEM32(lp) : 0, lp ? (int)MEM32(lp + 4) : 1, lp ? MEM32(lp + 8) : 0), 1); }
 
@@ -670,16 +740,18 @@ uint32_t hle_gdi_make_dib(int w, int h, int bpp, uint8_t *bits, int topdown, con
     }
     return handle;
 }
-/* GetObjectA(h, size, buf): what an object is, in the caller's buffer.
- * A bitmap is a BITMAP (24 bytes), or a DIBSECTION (84) when asked for that
+/* GetObjectA/GetObjectW(h, size, buf): what an object is, in the caller's
+ * buffer. A bitmap is a BITMAP (24), or a DIBSECTION (84) when asked for that
  * much - bmBits is the pixels' address for a DIB section, NULL for a bitmap
- * this layer owns. Pens are a LOGPEN, brushes a LOGBRUSH, fonts a LOGFONTA,
- * palettes their entry count. A NULL buffer asks for the size. */
+ * this layer owns. Pens are a LOGPEN, brushes a LOGBRUSH (a packed-DIB brush
+ * reports lbStyle=BS_DIBPATTERNPT and lbHatch=its DIB), fonts a LOGFONTA or
+ * LOGFONTW (the face name is UTF-16 in the W form), palettes their count.
+ * A NULL buffer asks for the size; a short buffer gets a truncated copy. */
 static void put32(uint8_t *b, int off, uint32_t v) { memcpy(b + off, &v, 4); }
 static void put16(uint8_t *b, int off, uint32_t v) { uint16_t w = (uint16_t)v; memcpy(b + off, &w, 2); }
-static void g_GetObjectA(void) {
+static void get_object(int wide) {
     uint32_t h = A32(0), n = A32(1), out = A32(2);
-    uint8_t tmp[84];
+    uint8_t tmp[96];                                     /* LOGFONTW is the largest: 92 */
     uint32_t len = 0;
     memset(tmp, 0, sizeof tmp);
     gobj_t *o = GOBJ(h);
@@ -698,14 +770,26 @@ static void g_GetObjectA(void) {
     } else if (o && o->type == GO_PEN) {
         put32(tmp, 0, o->style), put32(tmp, 4, o->width), put32(tmp, 12, o->color), len = 16;
     } else if (o && o->type == GO_BRUSH) {
-        put32(tmp, 0, o->style == HS_HOLLOW ? 1 : 0), put32(tmp, 4, o->color), len = 12;
+        int style = o->style == HS_HOLLOW ? 1 : o->style;
+        int pattern = style == BS_DIBPATTERNPT;
+        put32(tmp, 0, (uint32_t)style), put32(tmp, 4, pattern ? 0 : o->color);
+        put32(tmp, 8, pattern ? o->color : 0);           /* lbHatch */
+        len = 12;
     } else if (o && o->type == GO_PALETTE) {
         put16(tmp, 0, o->paln), len = 2;
     } else if (h >= FONT_BASE && h <= SYSTEM_FONT) {
-        font_t *f = FONT(h);                             /* LOGFONTA */
+        font_t *f = FONT(h);                             /* LOGFONTA / LOGFONTW */
         put32(tmp, 0, f ? -f->height : -13), put32(tmp, 16, f ? f->weight : 400), tmp[20] = (uint8_t)(f && f->italic);
-        snprintf((char *)tmp + 28, 32, "%s", f ? f->face : "MS Sans Serif");
-        len = 60;
+        char face[32];
+        snprintf(face, sizeof face, "%s", f ? f->face : "MS Sans Serif");
+        if (wide) {
+            uint16_t wface[32] = { 0 };
+            if (hle_ansi_to_wide(face, wface, 32)) memcpy(tmp + 28, wface, sizeof wface);
+            len = 92;
+        } else {
+            memcpy(tmp + 28, face, sizeof face);
+            len = 60;
+        }
     }
     if (!len) RET(0, 3);
     if (!out) RET(len, 3);
@@ -713,6 +797,8 @@ static void g_GetObjectA(void) {
     memcpy(hle_ptr(out), tmp, len);
     RET(len, 3);
 }
+static void g_GetObjectA(void) { get_object(0); }
+static void g_GetObjectW(void) { get_object(1); }
 /* Regions are rectangles, which is what a game clipping its blits makes:
  * left, top in style and width, right, bottom in w and h. */
 static uint32_t make_region(int l, int t, int r, int b) {
@@ -1012,10 +1098,34 @@ static void rectfill(dc_t *d, int l, int t, int r, int b, uint32_t cr) {
     for (int y = t; y < b; y++) for (int x = l; x < r; x++) put(d, x, y, v);
     if (d->win) g_win_seq++;
 }
+/* A packed-DIB brush really tiles: the same rectangle filled with it is a
+ * repetition of the guest's pattern pixels, aligned to device coordinates.
+ * The clip rectangle, window origins and surface depth are the same as for a
+ * solid fill; each pattern pixel is converted through the DC's depth. */
+static void rectfill_pattern(dc_t *d, int l, int t, int r, int b, const gobj_t *pat) {
+    if (!d || !d->px || !pat || !pat->px || pat->w <= 0 || pat->h <= 0) return;
+    int ox = d->wox - d->vox, oy = d->woy - d->voy;
+    l -= ox; r -= ox; t -= oy; b -= oy;
+    if (l > r) { int x = l; l = r; r = x; }
+    if (t > b) { int y = t; t = b; b = y; }
+    if (l < 0) l = 0;
+    if (t < 0) t = 0;
+    if (r > d->w) r = d->w;
+    if (b > d->h) b = d->h;
+    for (int y = t; y < b; y++) for (int x = l; x < r; x++) {
+        int px = (x - ox) % pat->w; if (px < 0) px += pat->w;
+        int py = (y - oy) % pat->h; if (py < 0) py += pat->h;
+        put(d, x, y, from_rgb(d, pattern_rgb(pat, px, py)));
+    }
+    if (d->win) g_win_seq++;
+}
 static void g_FillRect(void) {                           /* (hdc, &RECT, hbrush) */
     dc_t *d = DC(A32(0)); uint32_t rc = A32(1); gobj_t *b = GOBJ(A32(2));
-    if (d && rc && b && b->style != HS_HOLLOW)
-        rectfill(d, (int)MEM32(rc), (int)MEM32(rc + 4), (int)MEM32(rc + 8), (int)MEM32(rc + 12), b->color);
+    if (d && rc && b && b->style != HS_HOLLOW) {
+        int l = (int)MEM32(rc), t = (int)MEM32(rc + 4), r = (int)MEM32(rc + 8), bo = (int)MEM32(rc + 12);
+        if (b->style == BS_DIBPATTERNPT) rectfill_pattern(d, l, t, r, bo, b);
+        else rectfill(d, l, t, r, bo, b->color);
+    }
     RET(1, 3);
 }
 static void g_FrameRect(void) {                          /* (hdc, &RECT, hbrush): 1px border */
@@ -1408,6 +1518,28 @@ static void g_GetTextExtentExPointA(void) {
     if (sz_va) { MEM32(sz_va) = (uint32_t)w; MEM32(sz_va + 4) = (uint32_t)h; }
     RET(1, 7);
 }
+/* GetTextExtentExPointW: the wide form. UTF-16 code units are measured with
+ * the same per-glyph advances, and the fit count, per-character advances and
+ * SIZE are written into the guest's arrays. Bad counts or a missing string
+ * fail honestly (0) without touching the output buffers. */
+static void g_GetTextExtentExPointW(void) {
+    dc_t *d = DC(A32(0));
+    const uint16_t *ws = (const uint16_t *)hle_ptr(A32(1));
+    int n = (int)A32(2), max_ext = (int)A32(3);
+    uint32_t fit_va = A32(4), dx_va = A32(5), sz_va = A32(6);
+    if (n < 0 || n > 65536 || (n > 0 && !ws)) RET(0, 7);
+    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
+    TTF_Font *t = ttf_of(f);
+    int h = t ? TTF_FontHeight(t) : 13, fit = 0, w = 0;
+    for (int i = 0; i < n; i++) {
+        w += glyph_adv(t, f, ws[i]);
+        if (dx_va) MEM32(dx_va + 4u * (uint32_t)i) = (uint32_t)w;
+        if (!fit_va || max_ext < 0 || w <= max_ext) fit = i + 1;
+    }
+    if (fit_va) MEM32(fit_va) = (uint32_t)fit;
+    if (sz_va) { MEM32(sz_va) = (uint32_t)w; MEM32(sz_va + 4) = (uint32_t)h; }
+    RET(1, 7);
+}
 
 static void g_GetDIBits(void) {
     gobj_t *o = GOBJ(A32(1));
@@ -1553,9 +1685,11 @@ static void sp_EnumPrintersA(void) {
 
 const win32hle_shim win32hle_gdidc[] = {
     { "GetSysColorBrush", g_GetSysColorBrush },
-    { "GetObjectA", g_GetObjectA },
+    { "GetObjectA", g_GetObjectA }, { "GetObjectW", g_GetObjectW },
     { "CreateSolidBrush", g_CreateSolidBrush }, { "CreateHatchBrush", g_CreateHatchBrush },
-    { "CreateBrushIndirect", g_CreateBrushIndirect }, { "CreatePatternBrush", g_CreatePatternBrush }, { "CreatePen", g_CreatePen }, { "CreatePenIndirect", g_CreatePenIndirect },
+    { "CreateBrushIndirect", g_CreateBrushIndirect }, { "CreatePatternBrush", g_CreatePatternBrush },
+    { "CreateDIBPatternBrushPt", g_CreateDIBPatternBrushPt },
+    { "CreatePen", g_CreatePen }, { "CreatePenIndirect", g_CreatePenIndirect },
     { "CreateCompatibleBitmap", g_CreateCompatibleBitmap }, { "CreateBitmap", g_CreateBitmap },
     { "CreateCompatibleDC", g_CreateCompatibleDC }, { "CreateICA", g_CreateICA }, { "DeleteDC", g_DeleteDC },
     { "CreatePalette", g_CreatePalette }, { "GetPaletteEntries", g_GetPaletteEntries },
@@ -1600,7 +1734,7 @@ const win32hle_shim win32hle_gdidc[] = {
     { "GetCharABCWidthsFloatA", g_GetCharABCWidthsFloatA },
     { "GetCharacterPlacementW", g_GetCharacterPlacementW },
     { "GetOutlineTextMetricsA", g_GetOutlineTextMetricsA },
-    { "GetTextExtentExPointA", g_GetTextExtentExPointA },
+    { "GetTextExtentExPointA", g_GetTextExtentExPointA }, { "GetTextExtentExPointW", g_GetTextExtentExPointW },
     { "GetDIBits", g_GetDIBits }, { "CreateDIBitmap", g_CreateDIBitmap },
     { "GetDIBColorTable", g_GetDIBColorTable }, { "GetBitmapBits", g_GetBitmapBits },
     { "MaskBlt", g_MaskBlt }, { "CreateDCA", g_CreateDCA },
