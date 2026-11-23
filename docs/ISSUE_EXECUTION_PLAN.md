@@ -20,7 +20,7 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 | 8 | Win16 / NE | DEFERRED | — | — | roadmap requires x86 PE32 macOS+Linux first; parser dispatch fix on `feature/upstream-issue-8` (`c75c7df1…`) is independent groundwork | OPEN |
 | 9 | PE32 loader / DLL / TLS / SEH / CRT | IN_PROGRESS | `feature/agent1-pe32-loader`, `feature/upstream-issue-9`, `feature/agent-26-seh` | `ee6e966591956e3bc5d3df4630ce89b911d0d633`, `d223d8de…`, `90db86e1…` | ordinal/forwarded exports, TLS callbacks, relocation bounds, SEH; 15 selftests ok, 168 passed | OPEN |
 | 10 | Audio / video | IN_PROGRESS | `feature/upstream-issue-10` | `9c37a9e5cff4231032c5b78d0e59a78a22a6d643` | real waveOut PCM path; 15 selftests ok, 170 passed | OPEN |
-| 11 | Controllers / input | IN_PROGRESS | `feature/upstream-issue-11`, `feature/p10-igi-input` | `8cbc16e`, `460d631`, `c31d82f` | wheel/focus fixes + synthetic input fixture; 15 selftests ok, 170 passed | OPEN |
+| 11 | Controllers / input | IN_PROGRESS | `feature/upstream-issue-11`, `feature/p10-igi-input`, `feature/dinput8-abi-fix` | `8cbc16e`, `460d631`, `c31d82f`, `8f9ef78` | DInput error codes + DIMOUSESTATE2 fixed; synthetic input fixture; selftests ok | OPEN |
 | 12 | Networking | IN_PROGRESS | `feature/agent2-runtime`, `feature/upstream-issue-12` | `52674039798a33aa2aa992956024d99bf111c245`, `4276c1a1…` | blocking recv/accept + loopback fixture; 15 selftests ok, 168 passed, 8 fast-tier checks pass | OPEN |
 | 13 | PE32+ / x64 | DEFERRED | — | — | roadmap prerequisite not met; no production x64 work | OPEN |
 | 14 | Compatibility matrix / CI | IN_PROGRESS | `feature/ci-release-gate`, `feature/p10-matrix-tests` | `7015f401…`, `8529d6c` | CI matrix + evidence gate; matrix tests 5 passed/26 subtests; 175 full tests passed | OPEN |
@@ -58,3 +58,15 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - Upstream provenance consolidation `feature/p10-provenance-docs` at `768fb9c1883f359bb6ba3d9f9580d1f6301f6a0a`.
 - OpenAL audit `feature/p10-openal-audit` at `2d50432…`, Bink audit `feature/p10-bink-audit` at `91a3bc6…`.
 - All listed commits were verified against `git ls-remote` by their owners.
+
+## Integration checkpoint 2 (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `8f9ef7827ec69a01b99360c47e45ab534e1e2974`.
+- Merged: agent2 runtime, matrix tests, provenance/audit docs, mmioOpenW, DInput constants.
+- `python3 -m pytest tests/ -q` → 173 passed, 2 skipped, 26 subtests passed.
+- `bash runtime/win32hle/build_selftests.sh` → 15 selftests ok.
+- GUI repair `feature/gui-repair` at `cfaaf36b…`: cargo PASS, cmake PASS,
+  `verify.sh --fast` PASS, `regress --tier fast` 8 checks PASS.
+- mmioOpenW `feature/mmio-openw` at `23aad3c…`: real on-disk RIFF fixture.
+- No issue was closed: remaining acceptance criteria (live gameplay per game,
+  Linux target, GUI agent integration) are not yet verified.
