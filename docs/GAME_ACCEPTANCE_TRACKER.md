@@ -48,7 +48,7 @@ Full hashes and DLL lists: `test-results/_inventory.json`.
 
 | Game | Source path | Executable | SHA-256 | Verdict | Evidence |
 |---|---|---|---|---|---|
-| Project I.G.I. | `/Users/haseeb-mir/Downloads/IGI` | `igi.exe` | see `test-results/game-igi/original_hash.txt` | PARTIAL (boots, black frames) | `test-results/game-igi/` |
+| Project I.G.I. | `/Users/haseeb-mir/Downloads/IGI` | `igi.exe` | see `test-results/game-igi/original_hash.txt` | PARTIAL (main menu renders; gameplay not reached) | `test-results/game-igi/` |
 
 Not part of the `recomp-apps` corpus inventory; added because the user supplied it explicitly.
 
@@ -56,7 +56,7 @@ Not part of the `recomp-apps` corpus inventory; added because the user supplied 
 
 | Game | Native build | Execution | Graphics | Gameplay | Evidence |
 |---|---|---|---|---|---|
-| Project I.G.I. | PASS | PARTIAL | FAIL (black frames) | BLOCKED | `test-results/game-igi/` |
+| Project I.G.I. | PASS | PASS | PASS (main menu) | PARTIAL | `test-results/game-igi/` |
 | Cave Story | PASS | PASS | PASS (title frames) | PARTIAL | `test-results/game-cavestory/` |
 
 All other discovered games remain UNTESTED until their individual pipeline runs are completed.

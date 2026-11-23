@@ -200,3 +200,27 @@ Status text is quoted from each project's own README; the architecture and OS co
 | [The Magic School Bus Explores the Human Body](https://github.com/sp00nznet/msbus) | Windows 3.x | x86-16 (NE) | 1994; upstream README claim | P0 - ~60 KB code driving 190 MB of content† |
 | [Black & White 2](https://github.com/sp00nznet/bw2) | Windows | x86 (PE32) | 2005; upstream README claim | P0 partial - white.exe (21.7 MB) not extracted† |
 | [The Electronic Whole Earth Catalog](https://github.com/sp00nznet/wholeearth) | Classic Mac OS | 68k | 1988; upstream README claim | Format project - no PC binary; classic-HFS lister + macrecomp† |
+
+## Agent 3 — ordered game acceptance addendum
+
+Generated from actual files in `/Users/haseeb-mir/Downloads/IGI` and
+`/Users/haseeb-mir/Downloads/recomp-apps`. Statuses are PASS / PARTIAL / FAIL /
+BLOCKED / NOT TESTED. `BLOCKED` means the original Windows files are absent
+from this environment; no version or hash is invented.
+
+| # | Game | Original executable | SHA-256 | Native build | Runtime | Graphics | Input | Audio | Gameplay | Modding | Evidence / blocker |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 15 | Project I.G.I. | `igi.exe` | `dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01` | PASS | PASS | PASS (v1.0 main menu, 3,713 colours) | NOT TESTED | PARTIAL (dummy device) | PARTIAL (menu only) | NOT TESTED | `test-results/game-igi/` |
+| 16 | Hitman: Codename 47 | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
+| 17 | Max Payne | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
+| 18 | Max Payne 2 | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
+| 19 | Hitman 2: Silent Assassin | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
+| 20 | Hitman: Contracts | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
+| 21 | Hitman: Blood Money | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files in workspace |
+| 22 | TrackMania Nations ESWC | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
+| 23 | TrackMania Nations Forever | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
+| 24 | TrackMania United Forever | — | — | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | BLOCKED: no Windows game files; only a native macOS app present |
+
+Correction: an earlier IGI verdict of `FAIL (black frames)` was caused by
+capturing frames 0–1 before the first rendered menu. Later frames show the
+correct main menu; the verdict above supersedes it.
