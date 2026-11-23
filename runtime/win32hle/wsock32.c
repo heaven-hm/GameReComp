@@ -169,18 +169,45 @@ static void w_sendto(void) {                             /* (s, buf, len, flags,
     RET((uint32_t)n, 6);
 }
 static void w_send(void) { ssize_t n = send(fd_of(A32(0)), APTR(1), A32(2), MSG_NOSIGNAL); if (n < 0) FAIL(4); RET((uint32_t)n, 4); }
+/* Winsock recv() blocks by default; the old MSG_DONTWAIT made a normal read
+ * fail with WSAEWOULDBLOCK. A blocking wait must give the machine to other
+ * guest threads (hle_block_begin/end), as the other blocking waits here do. */
+static int socket_nonblocking(int fd) { return (fcntl(fd, F_GETFL) & O_NONBLOCK) != 0; }
+static void recv_yield(void) {
+    hle_block_begin();
+    usleep(200);
+    hle_block_end();
+}
 static void w_recvfrom(void) {                           /* (s, buf, len, flags, from, &fromlen) */
     struct sockaddr_in a;
     socklen_t al = sizeof a;
-    ssize_t n = recvfrom(fd_of(A32(0)), APTR(1), A32(2), MSG_DONTWAIT, (struct sockaddr *)&a, &al);
-    if (n < 0) FAIL(6);
+    int fd = fd_of(A32(0));
+    ssize_t n;
+    for (;;) {
+        n = recvfrom(fd, APTR(1), A32(2), 0, (struct sockaddr *)&a, &al);
+        if (n >= 0) break;
+        if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) FAIL(6);
+        if (socket_nonblocking(fd)) FAIL(6);
+        recv_yield();
+    }
     if (nettrace()) fprintf(stderr, "[net] recvfrom %s:%u %d bytes\n", inet_ntoa(a.sin_addr), ntohs(a.sin_port), (int)n);
-    int ipx = is_ipx(fd_of(A32(0)));
+    int ipx = is_ipx(fd);
     if (A32(4)) { if (ipx) ipx_to_guest(&a, (uint8_t *)APTR(4), 0); else to_guest(&a, (uint8_t *)APTR(4)); }
     if (A32(5)) MEM32(A32(5)) = ipx ? 14 : 16;
     RET((uint32_t)n, 6);
 }
-static void w_recv(void) { ssize_t n = recv(fd_of(A32(0)), APTR(1), A32(2), MSG_DONTWAIT); if (n < 0) FAIL(4); RET((uint32_t)n, 4); }
+static void w_recv(void) {
+    int fd = fd_of(A32(0));
+    ssize_t n;
+    for (;;) {
+        n = recv(fd, APTR(1), A32(2), 0);
+        if (n >= 0) break;
+        if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) FAIL(4);
+        if (socket_nonblocking(fd)) FAIL(4);
+        recv_yield();
+    }
+    RET((uint32_t)n, 4);
+}
 
 /* Socket options: SOL_SOCKET is 0xFFFF on Winsock, and its option numbers are
  * BSD's own (SO_BROADCAST 0x20, SO_REUSEADDR 4, SO_RCVBUF 0x1002, ...). */
@@ -368,7 +395,14 @@ static void w_accept(void) {
     if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(INVALID_SOCKET, 3); return; }
     struct sockaddr_in sa;
     socklen_t sal = sizeof sa;
-    int nfd = accept(fd, (struct sockaddr *)&sa, &sal);
+    int nfd;
+    for (;;) {
+        nfd = accept(fd, (struct sockaddr *)&sa, &sal);
+        if (nfd >= 0 || errno == EINTR) { if (nfd >= 0) break; continue; }
+        if (errno != EAGAIN && errno != EWOULDBLOCK) break;
+        if (socket_nonblocking(fd)) break;
+        recv_yield();
+    }
     if (nfd < 0) { g_wsa_error = wsa_errno(errno); RET(INVALID_SOCKET, 3); return; }
     if (nfd >= 0x10000) { close(nfd); g_wsa_error = 10024u; RET(INVALID_SOCKET, 3); return; }
     if (APTR(1) && A32(2) && MEM32(A32(2)) >= 16) {
