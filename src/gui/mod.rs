@@ -4416,7 +4416,7 @@ fn file_identity(path: &Path) -> io::Result<FileIdentity> {
     #[cfg(unix)]
     let (volume, file) = {
         use std::os::unix::fs::MetadataExt;
-        (metadata.dev(), metadata.ino())
+        (metadata.dev(), u128::from(metadata.ino()))
     };
     #[cfg(windows)]
     let (volume, file) = {
