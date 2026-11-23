@@ -69,7 +69,7 @@ def run_game(name: str, binary: Path, folder: Path, out: Path, timeout: int) -> 
     try:
         p = subprocess.run(cmd, cwd=str(folder), env=env, stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT, text=True, timeout=timeout,
-                           check=False)
+                           encoding='utf-8', errors='replace', check=False)
         rec['exit_code'] = p.returncode
         (evidence / 'run.log').write_text(p.stdout)
         rec['stdout_tail'] = p.stdout[-3000:]
@@ -99,6 +99,10 @@ def main(argv=None) -> int:
     if not (len(args.game) == len(args.binary) == len(args.folder)):
         print('--game/--binary/--folder counts must match', file=sys.stderr)
         return 2
+    # The runtime resolves RECOMP_SCREENSHOT relative to the game folder, so
+    # always pass an absolute path; a relative one silently writes captures
+    # outside the evidence tree.
+    args.out = args.out.resolve()
     args.out.mkdir(parents=True, exist_ok=True)
     results = []
     for name, binary, folder in zip(args.game, args.binary, args.folder):
