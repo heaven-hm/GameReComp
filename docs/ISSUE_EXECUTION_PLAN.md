@@ -286,3 +286,22 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - Verification: feature suite **335 passed, 8 skipped, 55 subtests**;
   integration **332 passed, 11 skipped**; **52 selftests ok**.
 - All issues remain OPEN; no game/generic-app acceptance or 100% claim.
+
+## Integration checkpoint 14 — one-command E2E suite
+
+- `feature/integration-checkpoint` and `feature/game-matrix-all` pushed/verified
+  at `a17b81a7dfae49fb65d76c11a81de61278bd6ccd`.
+- `tools/e2e_suite.py` chains CLI smoke (version/about/inspect on a real PE32),
+  CLI AI readability, a CUA-driven GUI click on the labelled AI button, game
+  frame evidence and the recompile ledger into one machine-readable report.
+  Final run: `verdict PASS`; both CLI and GUI readability `outcome=complete`.
+- Defect fixed: rejected AI edits previously removed the baseline binary and
+  falsely blocked later runs; `_revert_and_rebuild()` restores it. The ledger
+  now requires `compile: ok` before counting a native binary. Evidence
+  `docs/E2E_SUITE.md`.
+- Aggregate evidence in the final report: 11 games executed (4 with frames,
+  12 frames, 8 non-blank), 8 native binaries with successful compile, 2
+  header-only/partial.
+- Verification: feature suite **340 passed, 8 skipped, 55 subtests**;
+  integration **337 passed, 11 skipped**; **52 selftests ok**.
+- All issues remain OPEN; no 100% or game-acceptance claim.
