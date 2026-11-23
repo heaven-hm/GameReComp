@@ -82,6 +82,36 @@ static void set_value(rkey_t *k, const char *name, uint32_t type, const void *da
     v->type = type, v->size = size;
 }
 
+/* Detach every value and every descendant key of k, leaving k itself in
+ * place.  Values are freed (the store hands out no handles to them); key
+ * structs are only unlinked, never freed, exactly as RegDeleteKeyA does.  An
+ * open HKEY is a handle to the rkey_t itself, so freeing a key here would
+ * leave any such handle dangling and crash the next call that used it. */
+static void delete_tree_contents(rkey_t *k) {
+    if (!k) return;
+    for (value_t *v = k->values; v; ) {
+        value_t *next = v->next;
+        free(v->data);
+        free(v);
+        v = next;
+    }
+    k->values = NULL;
+    for (rkey_t *c = k->child; c; ) {
+        rkey_t *next = c->next;
+        delete_tree_contents(c);
+        c->parent = NULL, c->next = NULL;
+        c = next;
+    }
+    k->child = NULL;
+}
+/* Remove one (already emptied) key from its parent's child list.  Roots have
+ * no parent and can never be removed this way. */
+static void unlink_key(rkey_t *k) {
+    if (!k || !k->parent) return;
+    for (rkey_t **c = &k->parent->child; *c; c = &(*c)->next)
+        if (*c == k) { *c = k->next; k->next = NULL, k->parent = NULL; break; }
+}
+
 static int root_index(const char *name) {
     for (int i = 0; i < 6; i++) if (!strcasecmp(name, g_root_names[i])) return i;
     if (!strcasecmp(name, "HKLM")) return 2;
@@ -342,6 +372,77 @@ static void r_RegQueryInfoKeyA(void) {                   /* (key, class, &classN
     if (A32(10)) MEM32(A32(10)) = 0;
     if (A32(11)) MEM32(A32(11)) = 0, MEM32(A32(11) + 4) = 0;
     RET(ERROR_SUCCESS, 12);
+}
+/* RegQueryInfoKeyW: (key, class, &classN, reserved, &subkeys, &maxSub,
+ * &maxClass, &values, &maxName, &maxData, &security, &time).
+ *
+ * Name counts are UTF-16 code units, not bytes: the store keeps CP1252 bytes
+ * and hle_ansi_to_wide maps each of those to one WCHAR, so strlen() is also the
+ * WCHAR length for every name we can hold.  Value data is still counted in
+ * bytes.  classN is a WCHAR capacity including the NUL on entry and the class
+ * length without it on exit; no key stores a class, so an empty string is
+ * written when there is room for its NUL and the length is always 0.  An lpClass
+ * without its capacity word is invalid (as in Wine and ReactOS); lpReserved is
+ * accepted and ignored, as in both. */
+static void r_RegQueryInfoKeyW(void) {
+    uint32_t class_va = A32(1), class_len_va = A32(2);
+    if (class_va && !class_len_va) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 12); }
+    rkey_t *k = root_of(A32(0));
+    if (!k) { hle_set_last_error(6u); RET(6u, 12); }              /* ERROR_INVALID_HANDLE */
+    uint32_t nsub = 0, maxsub = 0, nval = 0, maxname = 0, maxdata = 0;
+    for (rkey_t *c = k->child; c; c = c->next) {
+        nsub++;
+        uint32_t n = (uint32_t)strlen(c->name);
+        if (n > maxsub) maxsub = n;
+    }
+    for (value_t *v = k->values; v; v = v->next) {
+        nval++;
+        uint32_t n = (uint32_t)strlen(v->name);
+        if (n > maxname) maxname = n;
+        if (v->size > maxdata) maxdata = v->size;
+    }
+    if (class_va && MEM32(class_len_va) >= 1u) MEM16(class_va) = 0; /* empty class */
+    if (class_len_va) MEM32(class_len_va) = 0;
+    if (A32(4)) MEM32(A32(4)) = nsub;
+    if (A32(5)) MEM32(A32(5)) = maxsub;
+    if (A32(6)) MEM32(A32(6)) = 0;                               /* no classes are stored */
+    if (A32(7)) MEM32(A32(7)) = nval;
+    if (A32(8)) MEM32(A32(8)) = maxname;
+    if (A32(9)) MEM32(A32(9)) = maxdata;
+    if (A32(10)) MEM32(A32(10)) = 0;                             /* no security descriptor */
+    if (A32(11)) { MEM32(A32(11)) = 0; MEM32(A32(11) + 4) = 0; } /* no timestamps stored */
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 12);
+}
+/* RegDeleteTreeA/W: (key, subkey).  A NULL (or empty) subkey clears hKey's own
+ * values and subkeys but keeps hKey open; a named subkey is itself removed
+ * once its subtree is empty, matching RegDeleteTreeW in Wine/ReactOS.  A
+ * missing subkey is ERROR_FILE_NOT_FOUND, a bad handle ERROR_INVALID_HANDLE. */
+static void r_RegDeleteTreeA(void) {
+    rkey_t *base = root_of(A32(0));
+    const char *sub = ASTR(1);
+    if (!base) { hle_set_last_error(6u); RET(6u, 2); }
+    rkey_t *target = (sub && *sub) ? subkey(base, sub, 0) : base;
+    if (!target) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(ERROR_FILE_NOT_FOUND, 2); }
+    delete_tree_contents(target);
+    if (target != base) unlink_key(target);
+    reg_save();
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 2);
+}
+static void r_RegDeleteTreeW(void) {
+    char sub[256];
+    const uint16_t *w = (const uint16_t *)APTR(1);
+    if (w && !hle_wide_to_ansi(w, sub, sizeof sub)) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(ERROR_INVALID_PARAMETER, 2); }
+    rkey_t *base = root_of(A32(0));
+    if (!base) { hle_set_last_error(6u); RET(6u, 2); }
+    rkey_t *target = (w && *w) ? subkey(base, sub, 0) : base;
+    if (!target) { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(ERROR_FILE_NOT_FOUND, 2); }
+    delete_tree_contents(target);
+    if (target != base) unlink_key(target);
+    reg_save();
+    hle_set_last_error(ERROR_SUCCESS);
+    RET(ERROR_SUCCESS, 2);
 }
 static void r_GetUserNameA(void) { if (A32(1) && MEM32(A32(1)) > 6) { strcpy(ASTR(0), "player"); MEM32(A32(1)) = 7; RET(1, 2); } RET(0, 2); }
 
@@ -1031,6 +1132,7 @@ const win32hle_shim win32hle_advapi32[] = {
     { "RegQueryValueExA", r_RegQueryValueExA }, { "RegQueryValueExW", r_RegQueryValueExW }, { "RegSetValueExA", r_RegSetValueExA },
     { "RegDeleteValueA", r_RegDeleteValueA }, { "RegDeleteValueW", r_RegDeleteValueW }, { "RegDeleteKeyA", r_RegDeleteKeyA },
     { "RegEnumKeyExA", r_RegEnumKeyExA }, { "RegEnumKeyExW", r_RegEnumKeyExW }, { "RegEnumValueA", r_RegEnumValueA }, { "RegEnumValueW", r_RegEnumValueW }, { "RegEnumKeyA", r_RegEnumKeyA }, { "RegQueryInfoKeyA", r_RegQueryInfoKeyA },
+    { "RegQueryInfoKeyW", r_RegQueryInfoKeyW }, { "RegDeleteTreeA", r_RegDeleteTreeA }, { "RegDeleteTreeW", r_RegDeleteTreeW },
     { "GetUserNameA", r_GetUserNameA },
     { "AllocateAndInitializeSid", adv_AllocateAndInitializeSid }, { "CopySid", adv_CopySid },
     { "EqualSid", adv_EqualSid }, { "GetLengthSid", adv_GetLengthSid },
