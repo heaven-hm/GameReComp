@@ -208,24 +208,122 @@ static void k_LoadLibraryExA(void) {
 }
 static void k_FreeLibrary(void) { int i = find_mod(A32(0)); if (i >= 0 && g_mod[i].refs > 1) g_mod[i].refs--; RET(1, 1); }
 
-static void k_GetProcAddress(void) {                     /* (hModule, name or ordinal) */
-    int i = find_mod(A32(0));
-    uint32_t n = A32(1), va = 0;
-    if (i >= 0 && g_mod[i].system) {
-        if (n < 0x10000u) {
-            char nm[96];
-            snprintf(nm, sizeof nm, "%s#%u", g_mod[i].base_name, n);
-            va = hle_resolve(nm);
-        } else {
-            va = hle_resolve((const char *)hle_ptr(n));
+/* ---- exports of a mapped image, including forwarders ----
+ * An export table may hold, instead of a code RVA, the RVA of a NUL-terminated
+ * string in the export section: "KERNEL32.Sleep" or "NTDLL.#8". Windows loads
+ * the named DLL and resolves the name or ordinal there. The MSVC CRT DLLs and
+ * the api-ms-win-* layer do this for almost every entry point, so a game that
+ * uses LoadLibrary + GetProcAddress on one of them got 0 from us even though
+ * the real target is an ordinary registered shim.
+ *
+ * The same lookup also answers GetProcAddress on an image mapped at load time
+ * (a companion DLL), which previously only worked for system pseudo-modules. */
+#define MAX_FORWARDER_DEPTH 8
+
+/* Export data directory (index 0) of a mapped PE32, from the optional header. */
+static int export_directory(uint32_t base, uint32_t *rva, uint32_t *size) {
+    if (!base || MEM16(base) != 0x5A4D) return 0;         /* MZ */
+    uint32_t nt = base + MEM32(base + 0x3Cu);
+    if (MEM32(nt) != 0x00004550u || MEM16(nt + 24) != 0x10Bu) return 0;
+    uint32_t opt = nt + 24;
+    if (MEM32(opt + 92) < 1) return 0;                    /* NumberOfRvaAndSizes */
+    *rva = MEM32(opt + 96);                               /* DataDirectory[0] */
+    *size = MEM32(opt + 100);
+    return *rva != 0;
+}
+
+/* Resolve `name` (NULL means the ordinal `ord`) in the module behind `hmod`.
+ * Forwarder strings are followed recursively; the depth bound also breaks a
+ * cycle between two images. Returns a guest VA, or 0 with nothing guessed. */
+static uint32_t resolve_module_export(uint32_t hmod, const char *name, uint32_t ord, int depth) {
+    if (depth > MAX_FORWARDER_DEPTH) return 0;
+    int m = find_mod(hmod);
+    if (m < 0) return 0;
+
+    if (g_mod[m].system) {                                /* no image: the shim registry is the export table */
+        char shim[96];
+        if (name) snprintf(shim, sizeof shim, "%s", name);
+        else snprintf(shim, sizeof shim, "%s#%u", g_mod[m].base_name, ord);
+        return hle_resolve(shim);
+    }
+
+    uint32_t base = g_mod[m].base, exp_rva, exp_size;
+    if (!export_directory(base, &exp_rva, &exp_size)) return 0;
+    uint32_t dir = base + exp_rva, nfunc = MEM32(dir + 20);
+    uint32_t funcs = MEM32(dir + 28);
+    if (!nfunc || nfunc > 0x100000u || !funcs) return 0;
+    uint32_t idx;
+    if (!name) {
+        uint32_t first = MEM32(dir + 16);
+        if (ord < first) return 0;
+        idx = ord - first;
+    } else {
+        uint32_t nnames = MEM32(dir + 24);
+        if (!nnames || nnames > 0x100000u) return 0;
+        uint32_t names = MEM32(dir + 32), ords = MEM32(dir + 36);
+        if (!names || !ords) return 0;
+        idx = 0xFFFFFFFFu;
+        for (uint32_t i = 0; i < nnames; i++) {
+            const char *cand = (const char *)hle_ptr(base + MEM32(base + names + 4u * i));
+            if (cand && !strcmp(cand, name)) { idx = MEM16(base + ords + 2u * i); break; }
         }
     }
+    if (idx >= nfunc) return 0;
+
+    uint32_t frva = MEM32(base + funcs + 4u * idx);
+    if (!frva) return 0;
+    if (frva < exp_rva || frva - exp_rva >= exp_size) return base + frva;
+
+    /* A forwarder is inside the export directory. Copy it out of guest memory
+     * with a bound: an unterminated string must not be followed as a name. */
+    const char *fwd = (const char *)hle_ptr(base + frva);
+    if (!fwd) return 0;
+    char text[256];
+    size_t k = 0;
+    while (k + 1 < sizeof text && fwd[k]) { text[k] = fwd[k]; k++; }
+    if (!k || fwd[k]) return 0;                           /* empty or unterminated */
+    text[k] = 0;
+    /* Windows splits on the last dot: the DLL part of an api-ms-win forwarder
+     * contains dashes but no dot, and an explicit ".dll" may precede it. */
+    char *dot = strrchr(text, '.');
+    if (!dot || dot == text) return 0;
+    *dot = 0;
+    const char *target_name = dot + 1;
+    uint32_t target = load_library(text);
+    if (!target) {
+        /* api-ms-win-* has no pseudo-module here, but shims are global by
+         * symbol: a registered name still resolves to the right shim. */
+        return target_name[0] == '#' ? 0 : hle_resolve(target_name);
+    }
+    if (target_name[0] == '#') {
+        char *end = NULL;
+        unsigned long ord10 = strtoul(target_name + 1, &end, 10);
+        if (end == target_name + 1 || *end) return 0;
+        return resolve_module_export(target, NULL, (uint32_t)ord10, depth + 1);
+    }
+    return resolve_module_export(target, target_name, 0, depth + 1);
+}
+
+/* GetProcAddress's core, kept separate from the shim's stack argument ABI so
+ * the runtime and the selftest can call it without synthesising a guest frame. */
+uint32_t hle_get_proc_address(uint32_t hmod, uint32_t name_or_ord) {
+    if (!name_or_ord) { hle_set_last_error(ERROR_PROC_NOT_FOUND); return 0; }
+    uint32_t va = name_or_ord < 0x10000u
+        ? resolve_module_export(hmod, NULL, name_or_ord, 0)
+        : resolve_module_export(hmod, (const char *)hle_ptr(name_or_ord), 0, 0);
     if (!va) {
-        fprintf(stderr, "[module] GetProcAddress(%s, %s%s): not answered\n", i >= 0 ? g_mod[i].base_name : "?",
-                n < 0x10000u ? "#" : "", n < 0x10000u ? "" : (const char *)hle_ptr(n));
+        if (name_or_ord < 0x10000u)
+            fprintf(stderr, "[module] GetProcAddress(%08X, #%u): not answered\n", hmod, name_or_ord);
+        else
+            fprintf(stderr, "[module] GetProcAddress(%08X, %s): not answered\n", hmod,
+                    (const char *)hle_ptr(name_or_ord));
         hle_set_last_error(ERROR_PROC_NOT_FOUND);
     }
-    RET(va, 2);
+    return va;
+}
+
+static void k_GetProcAddress(void) {                     /* (hModule, name or ordinal) */
+    RET(hle_get_proc_address(A32(0), A32(1)), 2);
 }
 
 /* ---- resources ----
