@@ -27,15 +27,14 @@ def main(argv=None) -> int:
         if isinstance(x, (int, float)) and isinstance(y, (int, float)):
             rows.append({'metric': k, 'before': x, 'after': y,
                          'delta_percent': pct(float(x), float(y))})
-    for name, stages in (('before', b.get('stages_seconds', {})),
-                         ('after', n.get('stages_seconds', {}))):
-        for stage, secs in stages.items():
-            if isinstance(secs, (int, float)):
-                other = (n if name == 'before' else b).get('stages_seconds', {}).get(stage)
-                if isinstance(other, (int, float)):
-                    x, y = (secs, other) if name == 'before' else (other, secs)
-                    rows.append({'metric': f'stage:{stage}', 'before': x,
-                                 'after': y, 'delta_percent': pct(float(x), float(y))})
+    before_stages = b.get('stages_seconds', {})
+    after_stages = n.get('stages_seconds', {})
+    for stage, before_secs in before_stages.items():
+        after_secs = after_stages.get(stage)
+        if isinstance(before_secs, (int, float)) and isinstance(after_secs, (int, float)):
+            rows.append({'metric': f'stage:{stage}', 'before': before_secs,
+                         'after': after_secs,
+                         'delta_percent': pct(float(before_secs), float(after_secs))})
     result = {'before': str(a.before), 'after': str(a.after),
               'same_input': b.get('input_sha256') == n.get('input_sha256'),
               'rows': rows}
