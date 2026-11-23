@@ -379,10 +379,25 @@ static void o_CoGetClassObject(void) {
     if (A32(4)) MEM32(A32(4)) = 0;
     RET(0x80040111u /* CLASS_E_CLASSNOTAVAILABLE */, 5);
 }
-static void o_CoTaskMemAlloc(void) {
-    uint32_t sz = A32(0);
-    void *p = hle_alloc(sz ? sz : 1u);
-    RET(p ? hle_va(p) : 0u, 1);
+/* ---- the COM task allocator ----
+ * Its blocks come from the same guest heap as Heap/Local/Global (guest_mem.c),
+ * so every pointer handed back is a guest VA (hle_va/RETP), never a host
+ * address. Windows' task allocator follows the process heap: Alloc(0) still
+ * returns a non-NULL block the caller must free; Realloc(NULL, cb) is
+ * Alloc(cb); Realloc(pv, 0) frees pv and returns NULL. hle_heap_realloc keeps
+ * min(old, cb) bytes and zeroes the growth, so a larger block reads back with
+ * its old contents intact and a clean tail. */
+static void o_CoTaskMemAlloc(void) {                     /* (cb) -> pv */
+    uint32_t cb = A32(0);
+    RETP(hle_alloc(cb ? cb : 1u), 1);
+}
+static void o_CoTaskMemRealloc(void) {                   /* (pv, cb) -> pv */
+    uint32_t pv = A32(0), cb = A32(1);
+    void *p;
+    if (!pv) p = hle_alloc(cb ? cb : 1u);                /* NULL source: like Alloc(cb) */
+    else if (!cb) { hle_free(APTR(0)); p = NULL; }       /* zero size: free it, return NULL */
+    else p = hle_heap_realloc(APTR(0), cb, 1);          /* grow/shrink within the guest heap */
+    RETP(p, 2);
 }
 static void o_CoTaskMemFree(void) { if (A32(0)) hle_free(APTR(0)); RETV(1); }
 static void o_CreateStreamOnHGlobal(void) {
@@ -573,6 +588,7 @@ const win32hle_shim win32hle_ole32[] = {
     { "CoCreateInstance",      o_CoCreateInstance },
     { "CoGetClassObject",      o_CoGetClassObject },
     { "CoTaskMemAlloc",        o_CoTaskMemAlloc },
+    { "CoTaskMemRealloc",      o_CoTaskMemRealloc },
     { "CoTaskMemFree",         o_CoTaskMemFree },
     { "CreateStreamOnHGlobal", o_CreateStreamOnHGlobal },
     { "OleInitialize",         o_OleInitialize },
