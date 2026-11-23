@@ -112,3 +112,15 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - `bash runtime/win32hle/build_selftests.sh` → 23 selftests ok.
 - No game-level thread-safety claim: no original-game deterministic scenario
   was executed; Linux host testing remains unavailable.
+
+## Integration checkpoint 6 (`feature/integration-checkpoint`)
+
+- Branch pushed and verified at `f73f7b474f16d64c4c81d2ba8bf8fe84836da592`.
+- `feature/fsreg-compat` (`f73f7b4`) merged the existing resource-bounds work
+  from `feature/agent-32-resources` and adds `RegOpenKeyExW`, `RegEnumValueA/W`
+  over the isolated persistent registry store with a real guest ABI selftest.
+- The selftest caught and fixed an argument-index bug (type slot vs reserved slot).
+- `python3 -m pytest tests/ -q` → 177 passed, 2 skipped, 26 subtests passed.
+- `bash runtime/win32hle/build_selftests.sh` → 25 selftests ok.
+- Linux host results remain UNTESTABLE here; no game-level registry/resource
+  scenario was executed, so no issue was closed.
