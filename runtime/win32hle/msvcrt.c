@@ -1789,22 +1789,72 @@ static void u_terminate(void) {
     fprintf(stderr, "[msvcrt] std::terminate called\n");
     hle_exit(3);
 }
+/* Read a TypeDescriptor's mangled name out of guest memory, bounded so a bad
+ * RTTI pointer can only truncate the name, never run the read away. MSVC x86
+ * TypeDescriptor is { int nRTTIBase; void *pVFTable; void *spare; char name[]; }
+ * so the name begins at +12. A pointer below 64 KB is treated as null: guest
+ * code and data live above that, and the same test eh32.c uses for a plausible
+ * metadata pointer. */
+static size_t cxx_type_name(uint32_t td, char *buf, size_t cap) {
+    size_t k;
+    if (!cap) return 0;
+    buf[0] = '\0';
+    if (td < 0x10000u) return 0;
+    for (k = 0; k + 1 < cap; k++) {
+        uint8_t c = MEM8(td + 12u + (uint32_t)k);
+        if (!c) break;
+        buf[k] = (char)c;
+    }
+    buf[k] = '\0';
+    return k;
+}
 /* _CxxThrowException(exceptionObject, throwInfo): MSVC's `throw` entry point.
  *
- * Reached only when a guest actually throws. This layer has no guest SEH (the
- * README says so: RaiseException ends the run), so it cannot walk the guest's
- * frame chain and find a catch. Answering "success" would resume the guest at
- * whatever PC followed the throw, with the exception uncaught and its frames
- * never unwound -- silent corruption. Report and stop instead, naming the
- * throw, so a title that never throws (TrackEditor, GeneRally) is unaffected
- * and one that does fails where it threw rather than somewhere later. */
+ * Dispatch is owned by hle_eh_cxx_throw in eh32.c. When a lifted frame has a
+ * registered checkpoint and a compatible catch, that helper longjmps to the
+ * catch continuation and never returns here. Reaching the code below therefore
+ * means it declined the throw: no checkpoint/TIB, no compatible handler, or an
+ * unsupported frame. We must not fake a catch by returning "success" -- the
+ * guest would resume after its throw with the exception uncaught and none of
+ * its unwind funclets run, i.e. silent stack corruption. Stop at the throw and
+ * say what was thrown, decoded from the guest's own ThrowInfo, so a title that
+ * never throws is unaffected and one that does fails at the throw rather than
+ * later with a corrupted stack. */
 static void u_cxx_throw_exception(void) {
-    /* A caught exception resumes through its owning function's setjmp
-     * checkpoint and therefore never returns here. */
-    hle_eh_cxx_throw(A32(0), A32(1));
-    fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
-                    "0x%08X type 0x%08X, no compatible guest handler\n",
-            A32(0), A32(1));
+    uint32_t object = A32(0), info = A32(1);
+    uint32_t arr, ct, td;
+    unsigned ncat = 0;
+    char type[64];
+
+    /* On a match this dispatches via longjmp and does not return. */
+    hle_eh_cxx_throw(object, info);
+
+    /* Diagnostic only; it makes no dispatch decision. Decode ThrowInfo ->
+     * CatchableTypeArray -> first CatchableType -> TypeDescriptor purely to
+     * name the thrown type. An absent or unreadable field is reported as such
+     * instead of being guessed at. */
+    type[0] = '\0';
+    if (info >= 0x10000u) {
+        arr = MEM32(info + 12u);                      /* pCatchableTypeArray */
+        if (arr >= 0x10000u) {
+            ncat = MEM32(arr);                        /* nCatchableTypes */
+            if (ncat >= 1u && ncat <= 32u) {
+                ct = MEM32(arr + 4u);                 /* first CatchableType */
+                td = ct >= 0x10000u ? MEM32(ct + 4u) : 0u;  /* pType */
+                (void)cxx_type_name(td, type, sizeof type);
+            }
+        }
+    }
+    if (type[0])
+        fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
+                        "0x%08X ThrowInfo 0x%08X, no compatible guest handler: "
+                        "type %s (%u catchable type%s)\n",
+                object, info, type, ncat, ncat == 1u ? "" : "s");
+    else
+        fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
+                        "0x%08X ThrowInfo 0x%08X, no compatible guest handler: "
+                        "throw type unreadable\n",
+                object, info);
     hle_exit(3);
 }
 /* _except_handler4_common: every /GS-checked MSVC function's handler stub
