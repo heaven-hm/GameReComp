@@ -1,6 +1,6 @@
 /*
  * dsound.c - DirectSound on SDL2 audio: IDirectSound and IDirectSoundBuffer,
- * with a software mixer.
+ * with a software mixer, and driver enumeration over SDL's device list.
  *
  * A secondary buffer is guest memory the game Locks and writes, as it would
  * be on Windows; the mixer (SDL's audio thread) reads it at the buffer's
@@ -445,13 +445,102 @@ static void s_DirectSoundCreate(void) {                  /* (guid, &out, outer) 
     MEM32(A32(1)) = o;
     RET(DS_OK, 3);
 }
-static void s_DirectSoundEnumerateA(void) {              /* (callback, context): the one device */
-    static uint32_t desc, mod;                           /* the guest may keep them */
-    if (!desc) desc = hle_guest_strdup("Primary Sound Driver"), mod = hle_guest_strdup("");
-    uint32_t a[4] = { 0, desc, mod, A32(1) };
-    if (A32(0)) hle_call_guest(A32(0), 4, a);
-    RET(DS_OK, 2);
+/* ---- driver enumeration ----
+ * DSEnumCallback is `BOOL CALLBACK (LPGUID, LPSTR, LPSTR, LPVOID)`: guest stdcall,
+ * four args, TRUE to continue and FALSE to stop. The strings and the GUID are
+ * guest memory, and are cached here because the callback may keep them: a
+ * Windows enumeration's device strings outlive the callback. Only devices SDL
+ * actually reports are enumerated -- no invented "Primary Sound Driver", which
+ * on a headless (dummy-driver) host would be a device that does not exist. */
+#define DS_MAX_ENUM 64
+typedef struct {
+    uint32_t desc_a[DS_MAX_ENUM], desc_w[DS_MAX_ENUM], guid[DS_MAX_ENUM];
+    uint32_t desc_hash[DS_MAX_ENUM];
+    uint32_t mod_a, mod_w, mod_hash;
+} ds_enum_cache;
+static ds_enum_cache g_play, g_capture;                  /* one set per direction */
+
+static uint32_t hash_text(const char *s) {
+    uint32_t h = 2166136261u;
+    for (; *s; s++) { h ^= (unsigned char)*s; h *= 16777619u; }
+    return h;
 }
+static uint32_t cache_ansi(uint32_t *slot, uint32_t *hash_slot, const char *s) {
+    uint32_t h = hash_text(s);
+    if (*slot && *hash_slot == h) return *slot;
+    uint32_t va = hle_guest_strdup(s);
+    if (va) { *slot = va, *hash_slot = h; }
+    return *slot;
+}
+static uint32_t cache_wide(uint32_t *slot, uint32_t *hash_slot, const char *s) {
+    uint32_t h = hash_text(s);
+    if (*slot && *hash_slot == h) return *slot;
+    size_t n = strlen(s) + 1;
+    if (n > 0x7FFFFFFEu / 2u) return 0;
+    uint32_t need = (uint32_t)n * 2u;
+    /* Reuse the guest block when a renamed device still fits in it. */
+    if (!*slot || hle_heap_size(hle_ptr(*slot)) < need) {
+        uint32_t va = hle_va(hle_alloc(need));
+        if (!va) return 0;
+        *slot = va;
+    }
+    uint16_t *w = (uint16_t *)hle_ptr(*slot);
+    for (size_t i = 0; i < n; i++) w[i] = (uint16_t)(unsigned char)s[i];
+    *hash_slot = h;
+    return *slot;
+}
+static uint32_t cache_guid(uint32_t *slot, const char *name, int capture) {
+    if (!*slot) {
+        *slot = hle_va(hle_alloc(16));
+        if (!*slot) return 0;
+    }
+    /* A stable GUID per (direction, SDL device name), so a caller can tell the
+     * devices apart and pass one back to DirectSoundCreate as it would on
+     * Windows. DirectSoundCreate ignores it: the mixer has one default device. */
+    uint32_t h = 0x811C9DC5u ^ (capture ? 0x5BD1E995u : 0u);
+    for (const char *p = name; *p; p++) { h ^= (unsigned char)*p; h *= 16777619u; }
+    uint32_t w[4] = { h, 0, 0, 0 };
+    for (int i = 1; i < 4; i++) { w[i] = h ^ (0x9E3779B9u * (uint32_t)i); w[i] ^= w[i] >> 16; w[i] *= 16777619u; }
+    uint8_t *g = (uint8_t *)hle_ptr(*slot);
+    memcpy(g, w, 16);
+    g[7] = (uint8_t)((g[7] & 0x0F) | 0x40);              /* version 4 */
+    g[8] = (uint8_t)((g[8] & 0x3F) | 0x80);              /* RFC 4122 variant */
+    return *slot;
+}
+
+static uint32_t enum_devices(uint32_t cb, uint32_t ctx, int capture, int wide) {
+    if (!cb) return DSERR_INVALIDPARAM;                  /* E_INVALIDARG, as Windows/Wine */
+    if (!(SDL_WasInit(SDL_INIT_AUDIO) & SDL_INIT_AUDIO)) {
+        if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
+            fprintf(stderr, "[dsound] enumerate: audio init failed (%s)\n", SDL_GetError());
+            return DSERR_NODRIVER;
+        }
+    }
+    int n = SDL_GetNumAudioDevices(capture);
+    if (n < 0) n = 0;
+    if (n > DS_MAX_ENUM) n = DS_MAX_ENUM;
+    ds_enum_cache *c = capture ? &g_capture : &g_play;
+    char module[128];
+    const char *driver = SDL_GetCurrentAudioDriver();
+    snprintf(module, sizeof module, "SDL2%s%s", driver && *driver ? " " : "", driver && *driver ? driver : "audio");
+    for (int i = 0; i < n; i++) {
+        const char *name = SDL_GetAudioDeviceName(i, capture);
+        if (!name) continue;
+        uint32_t a[4] = {
+            cache_guid(&c->guid[i], name, capture),
+            wide ? cache_wide(&c->desc_w[i], &c->desc_hash[i], name) : cache_ansi(&c->desc_a[i], &c->desc_hash[i], name),
+            wide ? cache_wide(&c->mod_w, &c->mod_hash, module) : cache_ansi(&c->mod_a, &c->mod_hash, module),
+            ctx
+        };
+        if (!hle_call_guest(cb, 4, a)) break;            /* BOOL: FALSE ends the enumeration */
+    }
+    return DS_OK;
+}
+
+static void s_DirectSoundEnumerateA(void) { RET(enum_devices(A32(0), A32(1), 0, 0), 2); }
+static void s_DirectSoundEnumerateW(void) { RET(enum_devices(A32(0), A32(1), 0, 1), 2); }
+static void s_DirectSoundCaptureEnumerateA(void) { RET(enum_devices(A32(0), A32(1), 1, 0), 2); }
+static void s_DirectSoundCaptureEnumerateW(void) { RET(enum_devices(A32(0), A32(1), 1, 1), 2); }
 
 /* CoCreateInstance(CLSID_DirectSound): the object DirectSoundCreate makes;
  * the caller's IDirectSound::Initialize follows. */
@@ -472,5 +561,9 @@ void hle_dsound_register_com(void) {
 const win32hle_shim win32hle_dsound[] = {
     { "dsound.dll#1", s_DirectSoundCreate }, { "DirectSoundCreate", s_DirectSoundCreate },
     { "dsound.dll#2", s_DirectSoundEnumerateA }, { "DirectSoundEnumerateA", s_DirectSoundEnumerateA },
+    /* Microsoft's dsound.dll ordinals: 3 = EnumerateW, 7/8 = capture A/W. */
+    { "dsound.dll#3", s_DirectSoundEnumerateW }, { "DirectSoundEnumerateW", s_DirectSoundEnumerateW },
+    { "dsound.dll#7", s_DirectSoundCaptureEnumerateA }, { "DirectSoundCaptureEnumerateA", s_DirectSoundCaptureEnumerateA },
+    { "dsound.dll#8", s_DirectSoundCaptureEnumerateW }, { "DirectSoundCaptureEnumerateW", s_DirectSoundCaptureEnumerateW },
     { 0, 0 }
 };
