@@ -98,11 +98,18 @@ class Section:
 
 @dataclass
 class ImportEntry:
-    """A single imported function."""
+    """A single imported function.
+
+    ``is_delayed`` marks an entry from the delay-import directory (13). Its
+    IAT slot is real and must be in the IAT map, but the Windows loader leaves
+    it pointing at a __delayLoadHelper thunk until the first call; a static
+    recompilation has no such helper and binds it at boot instead.
+    """
     dll: str
     name: Optional[str]
     ordinal: Optional[int]
     iat_rva: int          # IAT slot address (RVA)
+    is_delayed: bool = False
 
 
 @dataclass
@@ -261,16 +268,25 @@ def _analyze_with_pefile(filepath: str, info: PEInfo, pefile) -> None:
     info.overlay_size = max(0, info.filesize - max_raw_end)
 
     # ── Imports ───────────────────────────────────────────────────
-    if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT'):
-        for dll_entry in pe.DIRECTORY_ENTRY_IMPORT:
+    seen_dlls = set()
+    for entry_list in ('DIRECTORY_ENTRY_IMPORT', 'DIRECTORY_ENTRY_DELAY_IMPORT'):
+        if not hasattr(pe, entry_list):
+            continue
+        delayed = entry_list == 'DIRECTORY_ENTRY_DELAY_IMPORT'
+        for dll_entry in getattr(pe, entry_list):
             dll_name = dll_entry.dll.decode('ascii', errors='replace')
-            info.import_dlls.append(dll_name)
+            if dll_name not in seen_dlls:
+                seen_dlls.add(dll_name)
+                info.import_dlls.append(dll_name)
             for imp in dll_entry.imports:
+                # pefile's ImportData.address is the IAT slot VA (FirstThunk +
+                # ImageBase + index*4) for both ordinary and delay imports.
                 info.imports.append(ImportEntry(
                     dll=dll_name,
                     name=imp.name.decode('ascii', errors='replace') if imp.name else None,
                     ordinal=imp.ordinal if not imp.name else None,
                     iat_rva=imp.address - oh.ImageBase,
+                    is_delayed=delayed,
                 ))
 
     # ── Exports ───────────────────────────────────────────────────
@@ -406,6 +422,13 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
         return None
 
     # ── Imports ───────────────────────────────────────────────────
+    seen_dlls = set()
+
+    def add_dll(dll_name):
+        if dll_name not in seen_dlls:
+            seen_dlls.add(dll_name)
+            info.import_dlls.append(dll_name)
+
     if num_dirs >= 2:
         import_rva = struct.unpack_from('<I', data, dd_offset + 8)[0]
         if import_rva:
@@ -424,14 +447,17 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
                         dll_name = data[name_off:end].decode('ascii', errors='replace')
                     else:
                         dll_name = '???'
-                    info.import_dlls.append(dll_name)
+                    add_dll(dll_name)
 
-                    # Walk ILT / IAT entries
+                    # Walk the ILT for names/ordinals, but record the IAT slot
+                    # RVA: the IAT is what the recompiler dispatches through.
+                    # Using the ILT RVA here silently mis-binds every import
+                    # when pefile is unavailable (a bound PE has ILT != IAT).
                     lookup_rva = ilt_rva if ilt_rva else iat_rva_base
+                    slot_rva = iat_rva_base or lookup_rva
                     if lookup_rva:
                         loff = rva_to_offset(lookup_rva)
                         if loff:
-                            slot_rva = lookup_rva
                             p = loff
                             while True:
                                 entry = struct.unpack_from('<I', data, p)[0]
@@ -458,6 +484,63 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
                                 p += 4
                                 slot_rva += 4
                     pos += 20
+
+    # ── Delay imports (directory 13) ──────────────────────────────
+    # ImgDelayDescr is 8 dwords: grAttrs, szName, phmod, pIAT, pINT,
+    # pBoundIAT, pUnloadIAT, dwTimeStamp. Bit 0 of grAttrs says the fields are
+    # RVAs (VC7+); when it is clear old linkers stored VAs, so subtract the
+    # ImageBase. The IAT slots are real addresses the recompiler's IAT map must
+    # contain even though Windows would bind them lazily on first call.
+    if num_dirs >= 14:
+        delay_rva = struct.unpack_from('<I', data, dd_offset + 13 * 8)[0]
+        delay_off = rva_to_offset(delay_rva) if delay_rva else None
+        pos = delay_off
+        while pos is not None and pos + 32 <= len(data):
+            attrs, name_rva, _hmod, iat_rva, int_rva, _b, _u, _t = \
+                struct.unpack_from('<8I', data, pos)
+            if not (name_rva or iat_rva or int_rva):
+                break
+            pos += 32
+            if not (attrs & 1):                      # old-style VAs, not RVAs
+                name_rva -= info.image_base if name_rva >= info.image_base else 0
+                iat_rva -= info.image_base if iat_rva >= info.image_base else 0
+                int_rva -= info.image_base if int_rva >= info.image_base else 0
+
+            name_off = rva_to_offset(name_rva)
+            if name_off is None:
+                continue
+            end = data.find(b'\x00', name_off)
+            dll_name = data[name_off:end].decode('ascii', errors='replace')
+            add_dll(dll_name)
+
+            lookup_rva = int_rva or iat_rva          # some linkers omit the INT
+            loff = rva_to_offset(lookup_rva)
+            if loff is None:
+                continue
+            slot_rva = iat_rva
+            p = loff
+            while p + 4 <= len(data):
+                entry = struct.unpack_from('<I', data, p)[0]
+                if entry == 0:
+                    break
+                if entry & 0x80000000:               # ordinal import
+                    info.imports.append(ImportEntry(
+                        dll=dll_name, name=None, ordinal=entry & 0xFFFF,
+                        iat_rva=slot_rva, is_delayed=True,
+                    ))
+                else:
+                    if not (attrs & 1) and entry >= info.image_base:
+                        entry -= info.image_base
+                    hint_off = rva_to_offset(entry)
+                    if hint_off and hint_off + 2 < len(data):
+                        end2 = data.find(b'\x00', hint_off + 2)
+                        fname = data[hint_off + 2:end2].decode('ascii', errors='replace')
+                        info.imports.append(ImportEntry(
+                            dll=dll_name, name=fname, ordinal=None,
+                            iat_rva=slot_rva, is_delayed=True,
+                        ))
+                p += 4
+                slot_rva += 4
 
     # ── Exports ───────────────────────────────────────────────────
     if num_dirs >= 1:
@@ -532,7 +615,12 @@ def read_bytes_at_va(filepath: str, sections: list, image_base: int,
 
 
 def build_iat_map(info: PEInfo) -> dict:
-    """Build a map from IAT VA -> (dll, function_name) for resolving import calls."""
+    """Build a map from IAT VA -> (dll, function_name) for resolving import calls.
+
+    Delay-loaded imports are included: their slots hold a helper thunk in the
+    original PE, but static recompilation binds them at boot, so a call through
+    one must be recognised as an import and not left as an unresolved ICALL.
+    """
     iat = {}
     for imp in info.imports:
         va = info.image_base + imp.iat_rva
@@ -639,6 +727,7 @@ def export_json(info: PEInfo, output_path: str):
         'data_end': info.data_end,
         'sections': [asdict(s) for s in info.sections],
         'imports': [asdict(i) for i in info.imports],
+        'delay_import_count': sum(1 for i in info.imports if i.is_delayed),
         'exports': [asdict(e) for e in info.exports],
         'iat_map': {
             f"0x{info.image_base + imp.iat_rva:08X}": {

@@ -381,6 +381,10 @@ class Pipeline:
             "code_range": [f"0x{info.code_start:08X}", f"0x{info.code_end:08X}"],
             "import_dlls": list(info.import_dlls),
             "import_count": len(info.imports),
+            # Delay imports are folded into the ordinary import list/IAT map,
+            # so a game that binds them only on first use is visible here too.
+            "delay_import_count": sum(1 for i in info.imports
+                                      if getattr(i, 'is_delayed', False)),
             "iat_entries": len(self.iat_map),
         }
         self._write_json("reports/inspect.json", data)
