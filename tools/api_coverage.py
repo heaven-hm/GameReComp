@@ -80,6 +80,42 @@ SYSTEM_DLLS = frozenset({
     "uxtheme.dll", "ws2_32.dll", "wsock32.dll",
 })
 
+# APIs first registered in the most recent integration checkpoint recorded in
+# docs/ISSUE_EXECUTION_PLAN.md (the 10-agent coverage-refresh checkpoint:
+# A22 COMCTL32 FlatSB, A26 locale Ex, A27 SList/Rtl, A28 wide-string CRT,
+# A29 SDL clip/cursor/lower-blit).  Independently verified by diffing this
+# checkout's shim registry against the previous coverage checkpoint (a900ee5,
+# 2249 shims): these 24 names are exactly the additions.  Registration only -
+# see the per-API selftests for behaviour evidence.
+RECENTLY_REGISTERED_SHIMS = {
+    "A22 - COMCTL32 FlatSB (comctl32.dll)": [
+        "FlatSB_EnableScrollBar", "FlatSB_GetScrollInfo",
+        "FlatSB_GetScrollPos", "FlatSB_GetScrollProp",
+        "FlatSB_GetScrollRange", "FlatSB_ShowScrollBar",
+        "FlatSB_SetScrollInfo", "FlatSB_SetScrollPos",
+        "FlatSB_SetScrollRange",
+    ],
+    "A26 - locale Ex APIs (kernel32.dll)": [
+        "CompareStringEx", "GetLocaleInfoEx", "LCMapStringEx",
+    ],
+    "A27 - SList / Rtl extras (kernel32.dll)": [
+        "InterlockedFlushSList", "InterlockedPushEntrySList",
+        "RtlPcToFileHeader", "RtlUnwindEx",
+    ],
+    "A28 - wide-string CRT exports (msvcrt.dll)": [
+        "_wcsdup", "wcscat", "wcscmp", "wcsncat",
+    ],
+    "A29 - SDL 1.2 clip/cursor/lower-blit (sdl.dll / sdl2.dll)": [
+        "SDL_FreeCursor", "SDL_GetClipRect", "SDL_LowerBlit",
+        "SDL_SetClipRect",
+    ],
+}
+
+
+def recently_registered_names() -> list[str]:
+    """Flat list of the shim names added in the last recorded checkpoint."""
+    return [name for names in RECENTLY_REGISTERED_SHIMS.values() for name in names]
+
 
 def strip_comments(text: str) -> str:
     """Remove C comments so a string literal in a comment is never counted."""
@@ -262,7 +298,8 @@ def render_markdown(report: dict, *, corpus=None, out=None, generated_at=None) -
     Every number below is taken from ``report``; nothing is estimated.  The
     renderer deliberately states that the audit is registration-only and that
     the missing counts remain non-zero, so it cannot produce a completion or
-    100%-coverage claim.
+    100%-coverage claim.  The additive "recently registered shims" section is
+    sourced from :data:`RECENTLY_REGISTERED_SHIMS` and carries the same caveat.
     """
     s = report["summary"]
     corpus = str(corpus) if corpus else "(RECOMP_CORPUS)"
@@ -315,6 +352,20 @@ def render_markdown(report: dict, *, corpus=None, out=None, generated_at=None) -
              "selftests, not this report, are the behaviour evidence.")
     L.append("")
     L.append(f"**What this is not:** {report['is_not']}.")
+    L.append("")
+    recent = recently_registered_names()
+    L.append(f"## Recently registered shims ({len(recent)}, last checkpoint)")
+    L.append("")
+    L.append("APIs first registered in the last integration checkpoint recorded "
+             "in `docs/ISSUE_EXECUTION_PLAN.md` (the 10-agent coverage-refresh "
+             "checkpoint). This section is additive: it reports the "
+             "registration delta from the previous coverage checkpoint "
+             "(2,249 shims), not extra coverage. **Registration only proves a "
+             "name is present**; per-API selftests, not this list, are the "
+             "behaviour evidence.")
+    L.append("")
+    for group, names in RECENTLY_REGISTERED_SHIMS.items():
+        L.append(f"- {group}: " + ", ".join(f"`{n}`" for n in names) + ".")
     L.append("")
     L.append(f"## Missing Win32 system APIs ({len(system_missing)})")
     L.append("")

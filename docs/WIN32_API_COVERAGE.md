@@ -3,8 +3,8 @@
 Generated from real PE32 import tables by `python3 -m tools.api_coverage`.
 
 - Corpus: `/Users/haseeb-mir/Downloads/recomp-apps/games`
-- JSON report: `/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a30-coverage.json`
-- Regenerated (UTC): `2026-11-23T06:20:51Z`
+- JSON report: `/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a5-coverage.json`
+- Regenerated (UTC): `2026-11-23T08:31:19Z`
 - Schema: `1.1.0`
 
 ## Headline numbers
@@ -12,21 +12,31 @@ Generated from real PE32 import tables by `python3 -m tools.api_coverage`.
 | Metric | Value |
 |---|---|
 | PE32 inputs analysed | 19 |
-| Registered shim names (`registered_shim_count`) | 2249 |
-| Distinct PE import names covered (`registered_import_name_count`) | 2495 |
+| Registered shim names (`registered_shim_count`) | 2273 |
+| Distinct PE import names covered (`registered_import_name_count`) | 2519 |
 | Distinct DLLs referenced | 48 (22 system, 26 game-owned) |
-| Missing Win32 **system** APIs (`distinct_missing_api`) | 20 |
+| Missing Win32 **system** APIs (`distinct_missing_api`) | 13 |
 | Missing game-owned APIs (`game_owned_missing_api`) | 293 |
-| All missing APIs combined (`all_missing_api`) | 313 |
+| All missing APIs combined (`all_missing_api`) | 306 |
 | Ordinal imports (system / game-owned / all) | 0 / 0 / 0 |
 
 **Counting rule:** Implemented means the import name equals a registered shim name, the leaf of a '::' namespaced shim, or a '#N' ordinal alias. Registration is not proof of behaviour. Game-owned DLL imports are reported separately from Win32 system DLL imports.
 
-**Coverage is incomplete.** Only a registered shim *name* counts as implemented, and 20 system plus 293 game-owned import names are still unregistered. This is a name-registration audit; per-API selftests, not this report, are the behaviour evidence.
+**Coverage is incomplete.** Only a registered shim *name* counts as implemented, and 13 system plus 293 game-owned import names are still unregistered. This is a name-registration audit; per-API selftests, not this report, are the behaviour evidence.
 
 **What this is not:** proof that a function behaves correctly; registration only proves a name is present.
 
-## Missing Win32 system APIs (20)
+## Recently registered shims (24, last checkpoint)
+
+APIs first registered in the last integration checkpoint recorded in `docs/ISSUE_EXECUTION_PLAN.md` (the 10-agent coverage-refresh checkpoint). This section is additive: it reports the registration delta from the previous coverage checkpoint (2,249 shims), not extra coverage. **Registration only proves a name is present**; per-API selftests, not this list, are the behaviour evidence.
+
+- A22 - COMCTL32 FlatSB (comctl32.dll): `FlatSB_EnableScrollBar`, `FlatSB_GetScrollInfo`, `FlatSB_GetScrollPos`, `FlatSB_GetScrollProp`, `FlatSB_GetScrollRange`, `FlatSB_ShowScrollBar`, `FlatSB_SetScrollInfo`, `FlatSB_SetScrollPos`, `FlatSB_SetScrollRange`.
+- A26 - locale Ex APIs (kernel32.dll): `CompareStringEx`, `GetLocaleInfoEx`, `LCMapStringEx`.
+- A27 - SList / Rtl extras (kernel32.dll): `InterlockedFlushSList`, `InterlockedPushEntrySList`, `RtlPcToFileHeader`, `RtlUnwindEx`.
+- A28 - wide-string CRT exports (msvcrt.dll): `_wcsdup`, `wcscat`, `wcscmp`, `wcsncat`.
+- A29 - SDL 1.2 clip/cursor/lower-blit (sdl.dll / sdl2.dll): `SDL_FreeCursor`, `SDL_GetClipRect`, `SDL_LowerBlit`, `SDL_SetClipRect`.
+
+## Missing Win32 system APIs (13)
 
 | DLL | API | Files |
 |---|---|---|
@@ -36,13 +46,6 @@ Generated from real PE32 import tables by `python3 -m tools.api_coverage`.
 | `msvcrt.dll` | `_iob` | 2 |
 | `msvcrt.dll` | `_pctype` | 2 |
 | `comctl32.dll` | `ImageList_Replace` | 1 |
-| `kernel32.dll` | `CompareStringEx` | 1 |
-| `kernel32.dll` | `GetLocaleInfoEx` | 1 |
-| `kernel32.dll` | `InterlockedFlushSList` | 1 |
-| `kernel32.dll` | `InterlockedPushEntrySList` | 1 |
-| `kernel32.dll` | `LCMapStringEx` | 1 |
-| `kernel32.dll` | `RtlPcToFileHeader` | 1 |
-| `kernel32.dll` | `RtlUnwindEx` | 1 |
 | `ole32.dll` | `CreateBindCtx` | 1 |
 | `ole32.dll` | `CreateILockBytesOnHGlobal` | 1 |
 | `ole32.dll` | `OleGetIconOfClass` | 1 |
