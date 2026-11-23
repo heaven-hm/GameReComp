@@ -17,7 +17,7 @@ the per-game `run.log` + `screenshots/`. The runner is `tools/game_runner`
 | Warning Forever | 0 | 0 | FAIL — MessageBox: DirectDraw7 init failed |
 | Parsec47 | timeout (alive) | 0 | FAIL — unresolved indirect calls, no frames |
 | RRootage | timeout (alive) | 0 | FAIL — no frames captured |
-| Noiz2sa | timeout (alive) | 0 | FAIL — no frames captured |
+| Noiz2sa | timeout (alive) | 3 × 640×480 | **PARTIAL (fixed)** — 0 frames on the base runtime; 3 non-blank frames (27/36/30 colours) after A24's common frame sink + A29's SDL present wiring |
 | Chocolate Doom (downloaded) | 255 | 0 | BLOCKED on WAD — 0 unresolved imports, but no DOOM.WAD supplied |
 
 ## What this proves

@@ -24,6 +24,7 @@ Measured result from the final all-games run:
 |---|---|---|---|
 | Cave Story | 3 × 640×480 | 1, 5, 3 | frame 0 blank; frames 1–2 have real content but only 3–5 colours |
 | Ikachan | 3 × 351×238 | 1, 1, 1 | **all blank**; a longer 20 s / 10-frame run also produced 10 blank frames |
+| Noiz2sa (after A24/A29 present fix) | 3 × 640×480 | 27, 36, 30 | **non-blank, real rendered content** — the no-frame fix produced frames where the base run had none |
 | OUCC Tetris | 3 × 310×418 | 4, 5, 5 | non-blank; boot + some rendering, not gameplay |
 
 A single-colour frame is flagged `blank: true` and is **not** counted as
