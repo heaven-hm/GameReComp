@@ -264,3 +264,25 @@ INTEGRATION_VERIFIED, COMPLETED, BLOCKED, DEFERRED.
 - Verification: feature suite **328 passed, 8 skipped, 55 subtests**;
   integration **325 passed, 11 skipped**; **52 win32hle selftests ok**.
 - All issues remain OPEN; no 100% or game-acceptance claim.
+
+## Integration checkpoint 13 — AI readability E2E and app recompiles
+
+- `feature/integration-checkpoint` and `feature/game-matrix-all` pushed/verified
+  at `36d89200738fc64007ca9c7a0dc5bd7579e9b471`.
+- Optional AI readability provider: `tools/ai_openrouter_llm.py` uses an API key
+  only via `GAMERECOMP_AI_KEY` (never printed/logged/committed). Three unit tests.
+- Real end-to-end validation on a tiny CMake fixture with a tested baseline: two
+  consecutive CLI runs `outcome: complete` (rebuilt + process evidence matched);
+  a GUI-driven run also `outcome: complete`. Evidence `docs/AI_READABILITY_E2E.md`.
+- Defect fixed: accepted AI edits previously left the manifest digest stale,
+  blocking the next run; `_update_manifest_digest()` now records it, with a test.
+- Rust build fix (`ino() as u128`) allowed CLI and GUI binaries to be rebuilt
+  from this worktree.
+- New app recompiles: PrBoom+ (9,566 functions, 33 MB binary) and 7-Zip
+  (272 functions, 3.3 MB binary) reached A0-A3; PuTTY hit the 900 s build
+  timeout with 427 MB generated C; Notepad++/dhewm3/OpenTTD still header-only.
+  Evidence `docs/RECOMPILE_NEW_APPS.md`; `tools/recompile_ledger` distinguishes
+  native binaries from header-only checks.
+- Verification: feature suite **335 passed, 8 skipped, 55 subtests**;
+  integration **332 passed, 11 skipped**; **52 selftests ok**.
+- All issues remain OPEN; no game/generic-app acceptance or 100% claim.
