@@ -372,6 +372,7 @@ extern const win32hle_shim win32hle_ole32[];          /* OLE32 + OLEAUT32 */
 extern const win32hle_shim win32hle_storage[];        /* structured storage: compound files */
 extern const win32hle_shim win32hle_dsound[];         /* DirectSound on SDL audio (dsound.c) */
 extern const win32hle_shim win32hle_ddraw[];          /* DirectDraw in software (ddraw.c) */
+extern const win32hle_shim win32hle_d3d8[];           /* D3D8 guest COM frontend (d3d8.c) */
 uint32_t hle_d3d7_create(void);                       /* IDirect3D7 COM object; zero if GL screen is unavailable */
 uint32_t hle_d3d7_get(void);                          /* the same object, without taking a reference */
 void hle_d3d7_present_begin(void);                    /* bind the window framebuffer while presenting a frame */
