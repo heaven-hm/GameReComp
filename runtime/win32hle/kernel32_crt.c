@@ -104,6 +104,28 @@ static void k_TerminateThread(void) {
 static void k_ExitThread(void) {
     hle_thread_exit_self(A32(0));
 }
+
+/* FreeLibraryAndExitThread(hModule, dwExitCode): decrement the module's load
+ * count through the same FreeLibrary shim every other guest caller uses, then
+ * end *this guest thread* exactly as ExitThread does. It never returns and it
+ * never calls hle_exit - that would take down the host process (and every other
+ * guest thread) for what is only a thread's exit.
+ *
+ * Counters are observable to kernel32_misc_selftest.c: a DLL whose code is not
+ * lifted leaves no other trace of its unload, and this call cannot report one
+ * through its own dead thread. */
+volatile uint32_t hle_free_lib_exit_calls;
+volatile uint32_t hle_free_lib_exit_frees;
+static void k_FreeLibraryAndExitThread(void) { /* (hModule, dwExitCode) */
+    uint32_t hmod = A32(0), code = A32(1);
+    hle_free_lib_exit_calls++;
+    uint32_t free_va = hle_resolve("FreeLibrary");
+    if (free_va) {
+        (void)hle_call_guest(free_va, 1, &hmod);  /* nested: restores this shim's registers */
+        hle_free_lib_exit_frees++;
+    }
+    hle_thread_exit_self(code);              /* does not return */
+}
 static void k_GetExitCodeThread(void) {        /* (h, &code) */
     struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
     if (A32(1)) MEM32(A32(1)) = a && a->done ? a->code : 259u;   /* STILL_ACTIVE */
@@ -930,6 +952,7 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "TerminateThread",              k_TerminateThread },
     { "GetThreadContext",             k_GetThreadContext },
     { "ExitThread",                   k_ExitThread },
+    { "FreeLibraryAndExitThread",     k_FreeLibraryAndExitThread },
     { "GetExitCodeThread",            k_GetExitCodeThread },
     { "SetThreadPriority",            k_SetThreadPriority },
     { "GetThreadPriority",            k_GetThreadPriority },
