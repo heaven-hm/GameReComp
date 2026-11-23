@@ -76,3 +76,22 @@ runtime and re-executed with the same runner/timeout:
 
 Neither game reached a frame yet; this is an import-binding improvement, not a
 gameplay claim.
+
+## Final import-binding result (issue #28)
+
+After the remaining implementations (`CreatePatternBrush`, `CreateIconIndirect`,
+`__initenv`, SDL cursor trio, four MSVCRT symbols and `Mix_SetPostMix`), both
+downloaded games rebuild and boot with **0 unresolved imports**:
+
+- **OUCC Tetris**: 97 imports bound, 0 unresolved, stayed alive for 10 s and
+  produced **3 frames (310×418)**. This is the first newly downloaded game to
+  reach real rendering through GameReComp. Logs/frames under
+  `test-results/game-matrix/execution/tetris-oucc/`.
+- **Chocolate Doom**: 166 imports in the EXE + 34 in `SDL_net.dll`, all bound,
+  0 unresolved. It exits 255 with no frames because no DOOM WAD is supplied
+  (copyrighted asset, not included in the GPL binary archive). Import binding
+  is proven; gameplay requires a legally supplied WAD fixture.
+
+`Mix_SetPostMix` records the guest callback but deliberately never invokes it
+from the host audio thread; `fscanf` fails explicitly with ENOSYS. These are
+documented limits, not fake success.
