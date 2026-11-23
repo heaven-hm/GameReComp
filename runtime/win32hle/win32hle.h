@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "recomp_types.h"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */
+#include "pe_loader.h"      /* pe_image: TLS callback dispatch takes a mapped image */
 
 /* ---- the Win32 ABI, portably ----
  * Win32 is 32-bit stdcall. HANDLE/HWND/HDC are uint32_t; a guest pointer is a
@@ -545,3 +546,4 @@ extern const uint32_t recomp_companion_count;
 /* The export VA for `dll`/`name`, or 0. dll is matched by base name, case
  * insensitively. Called by the IAT binder before falling back to a shim. */
 uint32_t recomp_companion_resolve(const char *dll, const char *name);
+void hle_pe_run_tls_callbacks(const pe_image *img);

@@ -63,6 +63,33 @@ static void setup_static_tls(const pe_image *img) {
             start, end, g_tls_zero_fill, g_tls_index);
 }
 
+/* Run the PE's TLS callbacks (DataDirectory[9].AddressOfCallBacks) before the
+ * entry point. Windows calls them with DLL_PROCESS_ATTACH after imports are
+ * bound; the array is NULL-terminated. Every callback VA must lie inside the
+ * mapped image, and hle_call_guest still refuses any VA with no lifted body. */
+void hle_pe_run_tls_callbacks(const pe_image *img) {
+    pe_dos_header *dos = (pe_dos_header *)hle_ptr(img->base);
+    if (!dos || dos->e_magic != 0x5A4D) return;
+    pe_nt_headers32 *nt = (pe_nt_headers32 *)hle_ptr(img->base + (uint32_t)dos->e_lfanew);
+    pe_opt_header32 *opt = &nt->OptionalHeader;
+    if (opt->NumberOfRvaAndSizes <= PE_DIR_TLS) return;
+    pe_data_dir d = opt->DataDirectory[PE_DIR_TLS];
+    if (!d.VirtualAddress || !d.Size || d.VirtualAddress + d.Size > img->span) return;
+    pe_tls_dir32 *tls = (pe_tls_dir32 *)hle_ptr(img->base + d.VirtualAddress);
+    uint32_t array = tls->AddressOfCallBacks;
+    if (!array || array < img->base || array >= img->base + img->span) return;
+    uint32_t args[3] = { img->base, 1u /* DLL_PROCESS_ATTACH */, 0u };
+    for (unsigned i = 0; i < 64; i++) {
+        uint32_t cb = MEM32(array + 4u * i);
+        if (!cb) break;
+        if (!recomp_lookup(cb)) {
+            fprintf(stderr, "[pe] TLS callback 0x%08X has no lifted body; chain rejected\n", cb);
+            break;
+        }
+        (void)hle_call_guest(cb, 3, args);
+    }
+}
+
 /* A fault in lifted code is a bad guest address, and without a debugger the
  * only useful fact is which function and which address. Report both, then let
  * the default action proceed so the exit status still says what happened. */
@@ -385,6 +412,9 @@ static int finish_boot(const char *log_name, const char *guest_name,
     int comp_ok = (map_companions() == 0);
     int unresolved = recomp_pe_bind_companions(&g_img, resolve,
                                                comp_ok ? companion_import : NULL);
+    /* Imports are bound, so a TLS callback may call them. This must precede
+     * the guest entry point. */
+    hle_pe_run_tls_callbacks(&g_img);
     g_booted = 1;
     fprintf(stderr, "[host] %s booted: entry 0x%08X, %d unresolved imports\n",
             log_name, g_img.entry, unresolved);
