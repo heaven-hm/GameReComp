@@ -60,6 +60,13 @@ class GameMatrixToolTest(unittest.TestCase):
             self.assertIn('sha256', rec)
             self.assertEqual(len(rec['sha256']), 64)
             self.assertIn('stages', rec)
+            if rec.get('run_cwd') is not None:
+                # A game that needs its own folder must have been launched
+                # from exactly the folder holding the PE32 that was hashed.
+                self.assertTrue(rec['cwd_ok'], rec['input'])
+                self.assertEqual(
+                    Path(rec['run_cwd']).resolve(),
+                    Path(rec['input']).parent.resolve())
 
 
 if __name__ == '__main__':

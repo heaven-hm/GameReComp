@@ -16,6 +16,7 @@ import concurrent.futures
 import hashlib
 import json
 import os
+import shutil
 import struct
 import subprocess
 import sys
@@ -49,7 +50,7 @@ def sha256(path: Path) -> str:
 
 
 def run_one(exe: Path, out: Path, jobs: int, timeout: int, run_timeout: int,
-            reuse_build: bool, headless: bool) -> dict:
+            reuse_build: bool, headless: bool, clean: bool) -> dict:
     name = exe.stem.replace(' ', '_')
     log = out / f'{name}.log'
     project = out / 'projects' / name
@@ -111,6 +112,13 @@ def run_one(exe: Path, out: Path, jobs: int, timeout: int, run_timeout: int,
             run = outcome.get('run') or {}
             record['run_exit_code'] = run.get('exit_code')
             record['unresolved_imports'] = run.get('unresolved_imports')
+            # Games read their own data relative to the working directory.
+            # The runner supplies --assets-dir <exe's folder>; verify the
+            # pipeline actually launched the binary there, do not assume it.
+            run_cwd = run.get('cwd')
+            record['run_cwd'] = run_cwd
+            record['cwd_ok'] = (run_cwd is not None and
+                                Path(run_cwd).resolve() == exe.parent.resolve())
             record['stdout_tail'] = (run.get('stdout') or '')[-1500:]
             record['stderr_tail'] = (run.get('stderr') or '')[-1500:]
             record['report'] = str(report)
@@ -118,6 +126,19 @@ def run_one(exe: Path, out: Path, jobs: int, timeout: int, run_timeout: int,
             record['report_error'] = str(exc)
     else:
         record['report_error'] = 'no report.json produced'
+
+    # Generated C can be several GB per game. Keep the durable reports and
+    # release the build tree so the whole corpus can be tested on a small disk.
+    durable = out / 'reports' / name
+    durable.mkdir(parents=True, exist_ok=True)
+    if report.exists():
+        shutil.copy2(report, durable / 'report.json')
+    verification = project / 'reports' / 'verification.json'
+    if verification.exists():
+        shutil.copy2(verification, durable / 'verification.json')
+    record['durable_report'] = str(durable)
+    if clean and project.exists():
+        shutil.rmtree(project, ignore_errors=True)
     return record
 
 
@@ -135,6 +156,8 @@ def main(argv=None) -> int:
     p.add_argument('--headless', action='store_true',
                    help='use SDL dummy drivers (no OpenGL; games will exit 1 before drawing)')
     p.add_argument('--parallel', type=int, default=4)
+    p.add_argument('--no-clean', action='store_true',
+                   help='keep generated C and build trees after recording the report')
     args = p.parse_args(argv)
 
     exes = list(args.exe or [])
@@ -149,7 +172,8 @@ def main(argv=None) -> int:
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
         futures = {pool.submit(run_one, e, args.out, args.jobs, args.timeout,
-                               args.run_timeout, args.reuse_build, args.headless): e for e in exes}
+                               args.run_timeout, args.reuse_build, args.headless,
+                               not args.no_clean): e for e in exes}
         for future in concurrent.futures.as_completed(futures):
             rec = future.result()
             results.append(rec)
