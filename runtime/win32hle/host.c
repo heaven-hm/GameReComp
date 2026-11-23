@@ -7,6 +7,7 @@
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700                     /* macOS: ucontext_t for the fault PC */
 #endif
+#define _GNU_SOURCE   /* strcasestr for forwarded export names */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -254,13 +255,43 @@ static int map_companions(void) {
     return 0;
 }
 
-/* The import a bundled DLL answers, or 0. */
+/* Case-insensitive substring search (the BSD/GNU strcasestr is not declared
+ * by the macOS SDK headers even with the feature macros above). */
+static const char *ci_find(const char *hay, const char *needle) {
+    size_t nl = strlen(needle);
+    for (; *hay; hay++)
+        if (!strncasecmp(hay, needle, nl)) return hay;
+    return NULL;
+}
+
+/* The import a bundled DLL answers, or 0.
+ * Ordinal imports arrive from the binder as "dll#N" (not "#N"), so the '#' is
+ * searched anywhere in the string. Forwarded exports ("other.dll.Func" or
+ * "other.dll.#N" in the export name table) are resolved recursively instead
+ * of handing the guest a string address as if it were code. */
 static uint32_t companion_import(const char *dll, const char *name) {
     if (!recomp_companion_count || !dll || !name) return 0;
-    /* Base names only: the import table carries a path, the companion table a
-     * bare file name. */
     const char *d = dll, *n = name;
     for (const char *p = dll; *p; p++) if (*p == '\\' || *p == '/') d = p + 1;
+    uint32_t ordinal = 0;
+    const char *hash = strchr(n, '#');
+    if (hash) ordinal = (uint32_t)strtoul(hash + 1, NULL, 10);
+    /* An explicit ordinal name must belong to this DLL: "a.dll#3" must not be
+     * answered by b.dll's export number 3. */
+    const char *hash_dll = NULL;
+    if (hash) {
+        size_t prefix = (size_t)(hash - n);
+        if (prefix > 0) {                 /* "#N" (a forwarder's target) has no DLL prefix */
+            char want[96];
+            if (prefix >= sizeof want) return 0;
+            memcpy(want, n, prefix); want[prefix] = 0;
+            hash_dll = want;
+            const char *cmp_dll = hash_dll;
+            size_t k = 0;
+            while (d[k] && cmp_dll[k] && (d[k] == cmp_dll[k] || (d[k] | 32) == (cmp_dll[k] | 32))) k++;
+            if (d[k] || cmp_dll[k]) return 0;
+        }
+    }
     for (uint32_t i = 0; i < recomp_companion_count; i++) {
         const recomp_companion_t *c = &recomp_companion_list[i];
         const char *cb = c->dll;
@@ -268,11 +299,34 @@ static uint32_t companion_import(const char *dll, const char *name) {
         size_t k = 0;
         while (d[k] && cb[k] && (d[k] == cb[k] || (d[k] | 32) == (cb[k] | 32))) k++;
         if (d[k] || cb[k]) continue;                     /* not this companion */
-        /* An ordinal import ("dll#N") has no name to match by. */
-        if (n[0] == '#') return 0;
-        for (uint32_t e = 0; e < c->export_count; e++)
-            if (c->exports[e].name && !strcmp(c->exports[e].name, n))
-                return c->exports[e].va;
+        for (uint32_t e = 0; e < c->export_count; e++) {
+            const recomp_export_t *x = &c->exports[e];
+            int match = ordinal ? (x->ordinal == ordinal)
+                                : (x->name && !strcmp(x->name, n));
+            if (!match) continue;
+            /* A forwarder's VA points into the export string table, not code. */
+            if (x->name) {
+                /* Forwarders are "DLL.dll.Func" or "DLL.dll.#N". Locate the
+                 * ".dll" marker so the DLL's own dot is not mistaken for the
+                 * separator before the function/ordinal. */
+                const char *marker = ci_find(x->name, ".dll");
+                if (marker) {
+                    const char *rest = marker + 4;
+                    if (*rest == '.') rest++;
+                    if (*rest) {
+                        char other[128], what[128];
+                        size_t dl = (size_t)(rest - x->name) - (*(rest - 1) == '.' ? 1u : 0u);
+                        if (dl >= sizeof other || strlen(rest) >= sizeof what) return 0;
+                        memcpy(other, x->name, dl); other[dl] = 0;
+                        snprintf(what, sizeof what, "%s", rest);
+                        uint32_t forwarded = companion_import(other, what);
+                        if (forwarded) return forwarded;
+                        return hle_resolve_import(what);
+                    }
+                }
+            }
+            return x->va;
+        }
         return 0;
     }
     return 0;

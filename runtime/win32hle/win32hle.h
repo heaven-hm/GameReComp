@@ -525,7 +525,7 @@ int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
  * them. The host maps each DLL at its preferred base at boot and answers the
  * main image's IAT slots for its exports with the export VA. Nothing here is
  * a shim: the code that runs is the lifted DLL's own. */
-typedef struct { const char *name; uint32_t va; } recomp_export_t;
+typedef struct { const char *name; uint32_t va; uint16_t ordinal; } recomp_export_t;
 typedef struct {
     const char *dll;             /* as imported: "bulletml.dll" */
     uint32_t base;               /* ImageBase the lifted code targets */

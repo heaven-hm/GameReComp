@@ -749,12 +749,15 @@ class Pipeline:
             lines.append(f"static const recomp_export_t recomp_exports_{i}[] = {{")
             seen = set()
             for e in ci.exports:
-                if not e.name or not e.rva or e.name in seen:
+                # Ordinal-only exports have no name; keep them because the
+                # IAT binder asks for "dll#N" when an import is by ordinal.
+                if not e.rva or (e.name and e.name in seen):
                     continue
-                seen.add(e.name)
+                if e.name:
+                    seen.add(e.name)
                 va = ci.image_base + e.rva
-                esc = e.name.replace('\\', '\\\\').replace('"', '\\"')
-                lines.append(f'    {{ "{esc}", 0x{va:08X}u }},')
+                esc = (e.name or "").replace('\\', '\\\\').replace('"', '\\"')
+                lines.append(f'    {{ "{esc}", 0x{va:08X}u, 0x{e.ordinal:04X}u }},')
             lines.append("};")
         lines.append("")
         lines.append("const recomp_companion_t recomp_companion_array[] = {")
