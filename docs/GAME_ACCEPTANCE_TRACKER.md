@@ -60,3 +60,4 @@ Not part of the `recomp-apps` corpus inventory; added because the user supplied 
 | Cave Story | PASS | PASS | PASS (title frames) | PARTIAL | `test-results/game-cavestory/` |
 
 All other discovered games remain UNTESTED until their individual pipeline runs are completed.
+| Noiz2sa | PASS | PARTIAL | UNTESTABLE (no frames) | UNTESTABLE | `test-results/game-noiz2sa/` |
