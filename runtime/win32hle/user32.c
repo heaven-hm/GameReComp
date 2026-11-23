@@ -166,6 +166,9 @@ static void gdi_desktop_repaint(void);
 static int  desktop_menubar_click(int x, int y);
 static uint32_t load_menu_res(uint32_t hmod, uint32_t name);
 static void move(win_t *x, int px, int py, int pw, int ph, int do_move, int do_size);
+/* Defined with the other W-text helpers below; the Unicode dialog/icon shims
+ * use it earlier in this file. Copies at most sz-1 WCHARs into buf. */
+static int wide_to_stack_ansi(uint32_t va, char *buf, size_t sz);
 /* A display mode change: a top-level window that covered the old screen
  * covers the new one, as an exclusive-mode game's window does on Windows
  * (the game sizes things, and takes mouse coordinates, by it). */
@@ -1416,8 +1419,44 @@ static uint32_t dialog_template(uint32_t hinst, uint32_t name) {
     return r ? hle_resource_data(hinst, r, NULL) : 0;
 }
 
+/* A guest that names a dialog template we do not have still gets a real
+ * object: an empty #32770 window registered in the window table. Its HWND
+ * comes from HWND_OF(i) (i < MAX_WIN), so it is bounded and IsDialogMessageW
+ * and GetDlgItemTextW can find it and answer for it honestly (a dialog with
+ * no controls has no items). This is not a fabricated success value: W(h)
+ * succeeds on the handle we return, and the guest's dialog proc receives
+ * WM_INITDIALOG with the caller's dwInitParam. */
+static uint32_t create_empty_dialog(uint32_t hinst, uint32_t parent, uint32_t proc, uint32_t param) {
+    builtin_classes();
+    uint32_t h = hle_create_window(0, "#32770", "", 0, 0, 0, 200, 100, parent, 0, hinst, param);
+    win_t *d = W(h);
+    if (!d) { fprintf(stderr, "[user32] CreateDialogParamW: could not register an empty dialog\n"); return 0; }
+    d->kind = K_DIALOG;
+    d->dlgproc = proc;
+    hle_send(h, WM_INITDIALOG, 0, param);
+    if ((d = W(h)) && !d->parent) {
+        d->style |= WS_VISIBLE;
+        invalidate(d, 1);
+        hle_send(h, WM_SHOWWINDOW, 1, 0);
+        if (!parent) g_active = h;
+    }
+    return h;
+}
+
 /* The host may want to know which dialog resource a window came from. */
 void (*hle_dialog_hook)(uint32_t hwnd, uint32_t resource_id);
+
+/* A W dialog's template name is MAKEINTRESOURCEW(id) in the low 16 bits or a
+ * LPCWSTR. The resource layer takes an ANSI name/id, so convert a wide name
+ * into the per-call guest scratch (bounded by buf's size) and use the exact
+ * same lookup the A form does. 0 means the name itself is unusable. */
+static uint32_t dialog_wide_name(uint32_t name_va, char *buf, size_t bufsz) {
+    if (!name_va) return 0;                              /* no template named */
+    if (name_va < 0x10000u) return name_va;              /* MAKEINTRESOURCEW(id) */
+    if (!wide_to_stack_ansi(name_va, buf, bufsz) || !buf[0]) return 0;
+    size_t n = strlen(buf) + 1u;
+    return hle_scratch_copy(buf, (uint32_t)n);
+}
 
 static void u_CreateDialogParamA(void) {                 /* (hinst, name, parent, proc, param) */
     uint32_t t = dialog_template(A32(0), A32(1));
@@ -1430,6 +1469,32 @@ static void u_CreateDialogIndirectParamA(void) {
     uint32_t id = hle_dialog_resource_id(A32(1));
     uint32_t h = create_dialog(A32(0), A32(1), A32(2), A32(3), A32(4), 0);
     if (h && id && hle_dialog_hook) hle_dialog_hook(h, id);
+    RET(h, 5);
+}
+
+/* CreateDialogParamW: if the guest's wide name resolves to a real dialog
+ * template, build the dialog with the existing model (controls, tab order,
+ * WM_INITDIALOG). Otherwise register an empty dialog object rather than
+ * returning a bare handle with nothing behind it. */
+static void u_CreateDialogParamW(void) {                 /* (hinst, name, parent, proc, param) */
+    char name_buf[256];
+    uint32_t mark = hle_scratch_mark();
+    uint32_t name = dialog_wide_name(A32(1), name_buf, sizeof name_buf);
+    uint32_t h = 0;
+    if (!name) {
+        fprintf(stderr, "[user32] CreateDialogParamW: invalid wide template name %08X\n", A32(1));
+    } else {
+        uint32_t t = dialog_template(A32(0), name);
+        if (t) {
+            h = create_dialog(A32(0), t, A32(2), A32(3), A32(4), 0);
+            if (h && hle_dialog_hook) hle_dialog_hook(h, name);
+        }
+        if (!h) {
+            fprintf(stderr, "[user32] CreateDialogParamW: no usable dialog template (%08X); registering an empty dialog\n", name);
+            h = create_empty_dialog(A32(0), A32(2), A32(3), A32(4));
+        }
+    }
+    hle_scratch_release(mark);
     RET(h, 5);
 }
 
@@ -1539,6 +1604,17 @@ static int is_dialog_message(uint32_t dlg, msg_t *m) {
 }
 static void u_IsDialogMessageA(void) {                   /* (dlg, msg) */
     uint32_t lp = A32(1);
+    msg_t m = { MEM32(lp), MEM32(lp + 4), MEM32(lp + 8), MEM32(lp + 12), MEM32(lp + 16), (int)MEM32(lp + 20), (int)MEM32(lp + 24) };
+    RET((uint32_t)is_dialog_message(A32(0), &m), 2);
+}
+
+/* IsDialogMessageW: MSG has no string fields, so the A and W forms share the
+ * same 28-byte layout and the same translation (tab/Return/Escape navigation,
+ * WM_CHAR synthesis). A null MSG or an unregistered dialog is honestly
+ * declined with FALSE instead of being read or claimed as handled. */
+static void u_IsDialogMessageW(void) {                   /* (dlg, msg) */
+    uint32_t lp = A32(1);
+    if (!lp) RET(0, 2);
     msg_t m = { MEM32(lp), MEM32(lp + 4), MEM32(lp + 8), MEM32(lp + 12), MEM32(lp + 16), (int)MEM32(lp + 20), (int)MEM32(lp + 24) };
     RET((uint32_t)is_dialog_message(A32(0), &m), 2);
 }
@@ -2311,6 +2387,51 @@ static void u_GetSystemMetrics(void) {
 
 /* resources the presenter does not draw: handles that are not NULL */
 static void u_LoadIconA(void)        { RET(0x1C000001u, 2); }
+
+/* The predefined IDI_* icons. LoadIconW with MAKEINTRESOURCEW(id) of one of
+ * these gets a stable, non-NULL stand-in handle (no rasterisation is claimed;
+ * the presenter does not draw these). The handles are distinct per id so a
+ * caller that compares them sees the same distinctions it would on Windows.
+ * Anything else -- a custom resource id or a named icon -- is not backed by
+ * an icon here, so it fails with a diagnostic instead of a fake HICON. */
+#define ICONW_BASE      0x1C000100u
+#define IDI_APPLICATION 32512u
+#define IDI_HAND        32513u
+#define IDI_QUESTION    32514u
+#define IDI_EXCLAMATION 32515u
+#define IDI_ASTERISK    32516u
+#define IDI_WINLOGO     32517u
+#define IDI_SHIELD      32518u
+
+static void u_LoadIconW(void) {                          /* (hInstance, lpIconName) */
+    uint32_t hinst = A32(0), name = A32(1);
+    if (name < 0x10000u) {                               /* MAKEINTRESOURCEW(id) */
+        uint32_t id = name & 0xFFFFu;
+        if (id >= IDI_APPLICATION && id <= IDI_SHIELD)
+            RET(ICONW_BASE + (id - IDI_APPLICATION), 2);
+        fprintf(stderr, "[user32] LoadIconW: unsupported icon resource id %u (module %08X)\n", id, hinst);
+        hle_set_last_error(1814u);                       /* ERROR_RESOURCE_NOT_FOUND */
+        RET(0, 2);
+    }
+    char buf[256];
+    if (wide_to_stack_ansi(name, buf, sizeof buf) && buf[0])
+        fprintf(stderr, "[user32] LoadIconW: unsupported icon resource name '%s' (module %08X)\n", buf, hinst);
+    else
+        fprintf(stderr, "[user32] LoadIconW: invalid wide icon name %08X (module %08X)\n", name, hinst);
+    hle_set_last_error(1814u);                           /* ERROR_RESOURCE_NOT_FOUND */
+    RET(0, 2);
+}
+
+/* ExitWindowsEx is deliberately inert: a guest's logoff/reboot/shutdown must
+ * never reach the host process (no exit(), no ExitProcess(), no SDL_Quit()).
+ * Report it as unsupported and take the documented BOOL failure path with
+ * GetLastError == ERROR_NOT_SUPPORTED. The emulator keeps running. */
+static void u_ExitWindowsEx(void) {                      /* (uFlags, dwReason) */
+    fprintf(stderr, "[user32] ExitWindowsEx(flags=%08X, reason=%08X): unsupported in HLE; guest shutdown ignored\n",
+            A32(0), A32(1));
+    hle_set_last_error(50u);                             /* ERROR_NOT_SUPPORTED */
+    RET(0, 2);
+}
 /* CreateIconIndirect(ICONINFO*): validate the 20-byte guest struct and hand
  * back the same stand-in icon identity LoadIconA uses. No rasterisation is
  * claimed; the handle is a real guest value that DestroyIcon accepts. */
@@ -3587,7 +3708,8 @@ const win32hle_shim win32hle_user32[] = {
     { "EqualRect", u_EqualRect },
     { "IsRectEmpty", u_IsRectEmpty }, { "IntersectRect", u_IntersectRect }, { "UnionRect", u_UnionRect },
     { "AdjustWindowRect", u_AdjustWindowRect }, { "AdjustWindowRectEx", u_AdjustWindowRectEx },
-    { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "CreateIconIndirect", u_CreateIconIndirect }, { "LoadCursorA", u_LoadCursorA }, { "LoadCursorW", u_LoadCursorW },
+    { "FindWindowA", u_FindWindowA }, { "LoadIconA", u_LoadIconA }, { "LoadIconW", u_LoadIconW }, { "CreateIconIndirect", u_CreateIconIndirect }, { "LoadCursorA", u_LoadCursorA }, { "LoadCursorW", u_LoadCursorW },
+    { "ExitWindowsEx", u_ExitWindowsEx },
     { "LoadImageA", u_LoadImageA }, { "LoadBitmapA", u_LoadBitmapA }, { "LoadAcceleratorsA", u_LoadAcceleratorsA },
     { "GetOpenFileNameA", u_GetOpenFileNameA }, { "GetOpenFileNameW", u_GetOpenFileNameW },
     { "GetSaveFileNameA", u_GetSaveFileNameA }, { "GetSaveFileNameW", u_GetSaveFileNameW },
@@ -3652,9 +3774,9 @@ const win32hle_shim win32hle_user32[] = {
     { "PeekMessageA", u_PeekMessageA }, { "WaitMessage", u_WaitMessage },
     { "TranslateMessage", u_TranslateMessage }, { "DispatchMessageA", u_DispatchMessageA },
     { "SendMessageA", u_SendMessageA }, { "SendMessageW", u_SendMessageW },
-    { "CreateDialogParamA", u_CreateDialogParamA }, { "CreateDialogIndirectParamA", u_CreateDialogIndirectParamA },
+    { "CreateDialogParamA", u_CreateDialogParamA }, { "CreateDialogParamW", u_CreateDialogParamW }, { "CreateDialogIndirectParamA", u_CreateDialogIndirectParamA },
     { "DialogBoxParamA", u_DialogBoxParamA }, { "DialogBoxIndirectParamA", u_DialogBoxIndirectParamA },
-    { "EndDialog", u_EndDialog }, { "IsDialogMessageA", u_IsDialogMessageA }, { "IsDialogMessage", u_IsDialogMessageA },
+    { "EndDialog", u_EndDialog }, { "IsDialogMessageA", u_IsDialogMessageA }, { "IsDialogMessageW", u_IsDialogMessageW }, { "IsDialogMessage", u_IsDialogMessageA },
     { "GetDlgItem", u_GetDlgItem }, { "GetDlgCtrlID", u_GetDlgCtrlID }, { "SendDlgItemMessageA", u_SendDlgItemMessageA },
     { "SetDlgItemTextA", u_SetDlgItemTextA }, { "GetDlgItemTextA", u_GetDlgItemTextA },
     { "CheckDlgButton", u_CheckDlgButton }, { "IsDlgButtonChecked", u_IsDlgButtonChecked },
