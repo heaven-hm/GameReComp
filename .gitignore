@@ -146,3 +146,10 @@ reports/oracle-sweep/*-project/
 
 # generated sweep projects (any depth)
 **/*-project/
+
+# local generated build trees (regenerable; never commit)
+/.chocd-new/
+/.igi-rebuild/
+/.tetris-new/
+/results/
+reports/linux-matrix/staging/
