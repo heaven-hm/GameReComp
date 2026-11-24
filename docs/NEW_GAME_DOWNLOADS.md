@@ -95,3 +95,69 @@ downloaded games rebuild and boot with **0 unresolved imports**:
 `Mix_SetPostMix` records the guest callback but deliberately never invokes it
 from the host audio thread; `fscanf` fails explicitly with ENOSYS. These are
 documented limits, not fake success.
+
+## P8 batch — Tetris JP/CH + Chocolate Heretic/Hexen (2026-11-24)
+
+Four more official, freely distributed PE32/i386 binaries were downloaded to
+`~/Downloads/recomp-new-tests/` (gitignored; **no binary or archive is
+committed**). Each local file was re-downloaded independently from the exact
+URL below and the two SHA-256 digests and byte sizes matched exactly. The two
+ZIPs were then extracted to a temporary directory; the main EXE inside each is
+also PE32 Intel 80386.
+
+| File | Exact source URL | Size (bytes) | SHA-256 |
+|---|---|---:|---|
+| `tetris-win-32-jp.exe` | `https://github.com/OUCC/tetris/releases/download/v1.3/tetris-win-32-jp.exe` | 43,520 | `f732c43fb147737a436d382a4e735519dbc13e7811ba304c3f6d500b559de249` |
+| `tetris-win-32-ch.exe` | `https://github.com/OUCC/tetris/releases/download/v1.3/tetris-win-32-ch.exe` | 43,520 | `27a64e559d735e383de67fda5658f72a212e92cf2090256f7a9157b22d61b8c4` |
+| `chocolate-heretic-3.1.0-win32.zip` | `https://github.com/chocolate-doom/chocolate-doom/releases/download/chocolate-doom-3.1.0/chocolate-heretic-3.1.0-win32.zip` | 8,077,273 | `c0e24bec9af1d642cff66dbe6705113f36848a0f945801002ab78b1b0f62af49` |
+| `chocolate-hexen-3.1.0-win32.zip` | `https://github.com/chocolate-doom/chocolate-doom/releases/download/chocolate-doom-3.1.0/chocolate-hexen-3.1.0-win32.zip` | 8,133,899 | `5570a00f9259bf3d88176ee6c0d8182f8e396312d18398457783fbb599ef0c5a` |
+
+Notes:
+
+- The Heretic archive was already present locally under the shortened name
+  `choc-heretic-3.1.0-win32.zip`; its hash matches a fresh download of the
+  canonical `chocolate-heretic-3.1.0-win32.zip` URL byte for byte.
+  The Hexen archive was missing from the killed download and was fetched again.
+- `file(1)` on both Tetris EXEs and on the extracted `chocolate-heretic.exe`
+  (960,014 bytes, SHA-256 `18620d715789844d021337783b6de2e086b6243a0faca53fd922c39caeabe639`)
+  and `chocolate-hexen.exe` (1,138,190 bytes, SHA-256
+  `d397847d9da20e4a7e49479cde30a9342b1a23d881370446a23efa147fcc7bb4`)
+  reports `PE32 executable (GUI) Intel 80386 (stripped to external PDB), for MS Windows`.
+- The Chocolate 3.1.0 archives contain GPL source/licence documentation
+  (`COPYING.html`) and SDL2-era DLLs; they ship no Heretic/Hexen IWAD game
+  data, so rendering cannot be claimed without a legally supplied IWAD.
+
+### P8 batch results (real runs, no mocked output)
+
+Both Tetris variants were rebuilt with the current pipeline and the exact
+command recorded in `evidence/p8-new-games/evidence.json`
+(`--out-mode binary-only --no-run --jobs 1`): exit 0, pipeline score 70,
+97 imports, 0 lift errors, native binaries `tetris_win_32_jp`
+(SHA-256 `3ff6ddaba46276f1dc267c00ee4aed010a9eac1fa4a4d8e58f0b318b0ca10591`)
+and `tetris_win_32_ch`
+(SHA-256 `c3312995972a762001af335789eb494e3ac29ba67a0c791c18f381da8ee60610`).
+
+`python3 -m tools.game_runner` + `python3 -m tools.frame_proof` were then run
+on the real native binaries with a 15 s timeout. **Both produced 3 non-blank
+310×418 frames each** (4, 5 and 5 distinct colours per game). Both native runs
+ended in `TIMEOUT` because the Tetris GUI stays open waiting for input — that
+is the real exit status, not a success. Original PE32 runs under the real
+Highball Wine engine also reached the 12 s timeout with 0 stdout bytes (GUI
+idle), so no process-level oracle exists for these games.
+
+Evidence: `evidence/p8-new-games/` — `runner-summary.json`, `frame-proof.json`,
+`wine-originals.json`, `evidence.json`, real `logs/` (rebuild, runner, frame
+proof, Wine stdout/stderr) and four small PNGs converted losslessly from the
+captured BMP frames in `screenshots/`. No EXE, ZIP or raw BMP is committed.
+
+**Classification: PARTIAL for both Tetris variants** — render evidence is
+real, but no Windows-original frame, input, audio or gameplay comparison was
+performed; the Japanese/Chinese menu glyphs also render as mojibake/tofu, so
+locale fidelity is not proven. No PASS is claimed.
+
+The Heretic rebuild was launched from the real extracted `chocolate-heretic.exe`
+but had not produced a pipeline report when this evidence was written; it is
+recorded as **BLOCKED (rebuild did not finish in session window)** with the
+exact command and live log under `evidence/p8-new-games/logs/heretic-rebuild.log`.
+Hexen is **BLOCKED (no IWAD; not attempted)**. Neither is claimed as built or
+running.
