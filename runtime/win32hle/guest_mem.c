@@ -81,7 +81,15 @@ void *hle_heap_realloc(void *u, uint32_t n, int zero) {
 #else
 /* =============================================================== based */
 
-#define SPAN      0x100000000ull       /* the guest's whole 32-bit space */
+/* A 32-bit Windows PE cannot reserve a full 4 GB, so a PE32 cross-build asks
+ * for a smaller span (RECOMP_GUEST_SPAN=0x40000000, i.e. 1 GB).  Guest VAs stay
+ * offsets into the reservation, exactly as on a 64-bit host; no guest address
+ * is ever a host address, which also avoids colliding with Wine's own low
+ * mappings at 0x400000. */
+#ifndef RECOMP_GUEST_SPAN
+#define RECOMP_GUEST_SPAN 0x100000000ull
+#endif
+#define SPAN      RECOMP_GUEST_SPAN     /* the guest's whole 32-bit space */
 #define ANY_LO    0x10000000u          /* "anywhere" starts above the images */
 #define ANY_HI    0x7F000000u          /* under GetSystemInfo's highest application address */
 #define SHIM_LO   0x7F000000u          /* host_lite.c's synthetic import VAs: never mapped */

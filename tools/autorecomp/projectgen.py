@@ -148,6 +148,16 @@ IMAGE_ASM = """\
 #if defined(__APPLE__)
 #define SYM(x) _##x
     .section __DATA,__const
+#elif defined(_WIN32) && defined(__i386__)
+/* i386 PE/COFF C symbols carry a leading underscore (like Mach-O) but the
+ * section is .rdata.  x86-64 PE/COFF has no underscore.  Without these
+ * branches the host keeps its weak placeholder and a Windows cross-build
+ * silently reports "no embedded image". */
+#define SYM(x) _##x
+    .section .rdata
+#elif defined(_WIN32)
+#define SYM(x) x
+    .section .rdata
 #else
 #define SYM(x) x
     .section .rodata
@@ -341,6 +351,32 @@ def _copy_runtime(project_dir: Path) -> dict:
         shutil.copyfile(RECOMP32 / name, dst)
         os.utime(dst, None)
         runtime_files.append(f"src/runtime/recomp32/{name}")
+
+    # The optional Windows port layer.  It is inert on POSIX hosts (the
+    # implementation is #ifdef _WIN32), but a generated project must carry it
+    # for tools/win32_console_build.py to cross-build without reaching back
+    # into this repository.  The compat/ headers are redirected POSIX headers
+    # (sys/mman.h, dlfcn.h, poll.h, sys/statvfs.h) used only by MinGW.
+    for name in ("win32_port.h", "win32_port.c"):
+        src = WIN32HLE / name
+        if not src.is_file():
+            continue
+        dst = win_dst / name
+        shutil.copyfile(src, dst)
+        os.utime(dst, None)
+        runtime_files.append(f"src/runtime/win32hle/{name}")
+    compat_src = WIN32HLE / "win32_compat"
+    if compat_src.is_dir():
+        compat_dst = win_dst / "win32_compat"
+        for path in sorted(compat_src.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(compat_src)
+            out = compat_dst / rel
+            out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, out)
+            os.utime(out, None)
+            runtime_files.append(f"src/runtime/win32hle/win32_compat/{rel}")
     return {"files": runtime_files}
 
 
