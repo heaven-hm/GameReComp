@@ -31,7 +31,8 @@ class HybridTests(unittest.TestCase):
                                return_value={"status": "OK", "calls": []}), \
              mock.patch.object(hybrid_diff.input_replay_diff, "diff_one",
                                return_value={"status": "MATCH"}):
-            rec = hybrid_diff.hybrid_one(exe, Path("/tmp/native"), b"", timeout=2)
+            rec = hybrid_diff.hybrid_one(exe, Path("/tmp/native"), b"", timeout=2,
+                                         live_frida=True)
         self.assertEqual(rec["status"], "MATCH")
 
     def test_native_absent_is_blocked_not_skip(self):

@@ -80,9 +80,15 @@ def frida_signal(exe: Path, timeout: int = 5, hooks=None) -> dict:
 
 
 def hybrid_one(exe: Path, native: Path | None, stdin: bytes,
-               hooks=None, timeout: int = 10) -> dict:
+               hooks=None, timeout: int = 10, live_frida: bool = False) -> dict:
     u = unicorn_signal(exe)
-    f = frida_signal(exe, min(timeout, 5), hooks)
+    if live_frida:
+        f = frida_signal(exe, min(timeout, 5), hooks)
+    else:
+        f = {"status": "BLOCKED",
+             "reason": "live Frida attach disabled (pass --live-frida to run it)",
+             "script_sha256": __import__("hashlib").sha256(
+                 frida_probe.script_source(hooks or []).encode()).hexdigest()[:16]}
     n = {"status": "BLOCKED", "reason": "no native binary supplied"}
     if native is not None:
         n = input_replay_diff.diff_one(exe, native, stdin, [], exe.parent, timeout)
@@ -108,10 +114,12 @@ def main(argv=None) -> int:
     ap.add_argument("--input", default="")
     ap.add_argument("--hook", action="append", default=[])
     ap.add_argument("--timeout", type=int, default=10)
+    ap.add_argument("--live-frida", action="store_true",
+                    help="attach Frida to the Wine process (can hang; bounded use only)")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
     rec = hybrid_one(args.exe, args.native, args.input.encode(), args.hook,
-                     args.timeout)
+                     args.timeout, args.live_frida)
     text = json.dumps(rec, indent=2) + "\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
