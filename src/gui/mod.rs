@@ -2322,8 +2322,66 @@ impl GameReCompApp {
         }
     }
 
+    /// Resolve the game-data root for a native launch when the user has not
+    /// picked one explicitly.
+    ///
+    /// The Python `run` stage starts the rebuilt binary with `cwd` set to
+    /// `--assets-dir` (or the original PE's parent by default), and the runtime
+    /// reads the same root from `RECOMP_ASSETS_DIR` or a single directory
+    /// argument. Without one, `boot_embedded(NULL, ...)` leaves the guest
+    /// unable to find its own data files, so a launch from `project/build/`
+    /// looks like a failed native build even though the binary is fine.
+    /// Prefer an explicitly configured assets dir, then the PE paths the GUI
+    /// already knows about (picked file, active job, loaded project).
+    pub fn native_launch_assets_root<'a>(
+        configured_assets_dir: &str,
+        pe_paths: impl IntoIterator<Item = &'a Path>,
+    ) -> Option<PathBuf> {
+        let configured = Path::new(configured_assets_dir.trim());
+        if !configured.as_os_str().is_empty() && configured.is_dir() {
+            return Some(normalized_path(configured));
+        }
+        for pe in pe_paths {
+            let Some(parent) = pe.parent() else {
+                continue;
+            };
+            if parent.as_os_str().is_empty() {
+                continue;
+            }
+            let root = normalized_path(parent);
+            if root.is_dir() {
+                return Some(root);
+            }
+        }
+        None
+    }
+
     pub fn launch_rebuilt_binary(&mut self, bin: &Path) {
-        self.launch_rebuilt_binary_with_data(bin, None);
+        let project_dir = bin.parent().and_then(Path::parent);
+        let project_pe = project_dir.and_then(read_project_pe_path);
+        let job_pe = project_dir.and_then(|dir| {
+            self.jobs
+                .iter()
+                .rev()
+                .find(|job| job.project_dir.as_deref() == Some(dir))
+                .map(|job| Path::new(job.pe_path.as_str()))
+        });
+        let mut pe_paths: Vec<&Path> = Vec::new();
+        // The binary's own project is the most reliable hint; a stale picked
+        // file or an unrelated active job must not win over it.
+        if let Some(pe) = project_pe.as_deref() {
+            pe_paths.push(Path::new(pe));
+        }
+        if let Some(pe) = job_pe {
+            pe_paths.push(pe);
+        }
+        if let Some(pe) = self.active_project.as_ref() {
+            pe_paths.push(Path::new(pe.pe_path.trim()));
+        }
+        pe_paths.push(self.picked_pe.as_path());
+        pe_paths.push(Path::new(self.opts.pe_file.trim()));
+        let assets_root = Self::native_launch_assets_root(&self.opts.assets_dir, pe_paths);
+        self.launch_rebuilt_binary_with_data(bin, assets_root.as_deref());
     }
 
     pub fn launch_rebuilt_binary_with_data(&mut self, bin: &Path, data_dir: Option<&Path>) {
@@ -2395,7 +2453,10 @@ impl GameReCompApp {
                 let data_path = normalized_path(Path::new(meta.game_data_dir.trim()));
                 self.launch_rebuilt_binary_with_data(&b, Some(&data_path));
             } else {
-                self.launch_rebuilt_binary_with_data(&b, None);
+                // No explicit data folder: infer the original PE's directory
+                // instead of starting the guest in project/build/, where it
+                // cannot find its own data files.
+                self.launch_rebuilt_binary(&b);
             }
         } else if has_wasm {
             self.launch_or_open_wasm(dir);
@@ -4847,6 +4908,52 @@ pub fn launch_gui(cfg: AppConfig, open_dir: Option<&Path>) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_launch_assets_root_prefers_configured_dir_then_pe_parent() {
+        let unique = format!(
+            "gr-launch-assets-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        );
+        let root = std::env::temp_dir().join(unique);
+        let game_data = root.join("game data");
+        let pe_dir = root.join("original");
+        fs::create_dir_all(&game_data).unwrap();
+        fs::create_dir_all(&pe_dir).unwrap();
+        let pe = pe_dir.join("game.exe");
+        fs::write(&pe, b"not a real PE").unwrap();
+
+        // No configured dir: the original PE's parent is the assets root.
+        assert_eq!(
+            GameReCompApp::native_launch_assets_root("", [pe.as_path()]),
+            Some(fs::canonicalize(&pe_dir).unwrap())
+        );
+        // An explicitly configured assets dir wins over the PE parent.
+        assert_eq!(
+            GameReCompApp::native_launch_assets_root(
+                game_data.to_str().unwrap(),
+                [pe.as_path()]
+            ),
+            Some(fs::canonicalize(&game_data).unwrap())
+        );
+        // Stale paths are skipped instead of producing an invalid launch cwd.
+        assert_eq!(
+            GameReCompApp::native_launch_assets_root(
+                root.join("missing").to_str().unwrap(),
+                [Path::new("/definitely/not/a/game.exe"), pe.as_path()]
+            ),
+            Some(fs::canonicalize(&pe_dir).unwrap())
+        );
+        assert_eq!(
+            GameReCompApp::native_launch_assets_root("", [Path::new("game.exe")]),
+            None
+        );
+        fs::remove_dir_all(&root).ok();
+    }
 
     #[test]
     fn executable_picker_filter_is_case_insensitive() {
