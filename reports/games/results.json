@@ -2159,6 +2159,19 @@
       "project_dir": "projects/snake_windows_x86_64",
       "generated_at": "2026-10-30T19:04:09Z",
       "port_details": "inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing"
+    },
+    {
+      "game": "base64-cli-oracle",
+      "filename": "base64.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "d805661c60b0b99eab94ad0359ece9b91e7a79fecccc630e92ffdf217c48f879",
+      "evidence": "reports/acceptance/base64-oracle-pass.md",
+      "project_dir": "/tmp/agent1-base64",
+      "notes": "Original PE32 executed under Wine/CrossOver Highball; not retail Windows. CLI scenario exit+stdout hash reproduced by native build."
     }
   ]
 }
