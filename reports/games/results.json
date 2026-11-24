@@ -2172,6 +2172,19 @@
       "evidence": "reports/acceptance/base64-oracle-pass.md",
       "project_dir": "/tmp/agent1-base64",
       "notes": "Original PE32 executed under Wine/CrossOver Highball; not retail Windows. CLI scenario exit+stdout hash reproduced by native build."
+    },
+    {
+      "game": "arith-calc-cli-oracle",
+      "filename": "arith-calc.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+      "evidence": "reports/acceptance/arith-calc-oracle-pass.md",
+      "project_dir": "/tmp/agent1-arith",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic arithmetic results (fib/gcd/popcount/rotl) reproduced by native build. Not retail Windows, not gameplay evidence."
     }
   ]
 }

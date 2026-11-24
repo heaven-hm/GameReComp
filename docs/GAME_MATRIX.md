@@ -8,9 +8,9 @@ Every game this product knows about, in one table: the locally supplied corpus t
 
 **Port details** are read from each project's own `reports/report.json`: functions recovered, generated C, the rebuilt binary, imports the runtime bound, and the low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed high-level source.
 
-Updated 2026-11-24T01:08:32Z by `python -m tools.gamesdb --matrix`.
+Updated 2026-11-24T01:10:13Z by `python -m tools.gamesdb --matrix`.
 
-**Running native macOS arm64 ports:** **94 / 121** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**94** with `0` unresolved imports).
+**Running native macOS arm64 ports:** **95 / 122** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**95** with `0` unresolved imports).
 
 ## This repository (measured)
 
@@ -58,6 +58,7 @@ Updated 2026-11-24T01:08:32Z by `python -m tools.gamesdb --matrix`.
 | Tumiki Fighters (tf.exe) | Windows | i386 (PE32) | 3768 fns recovered; 7 units / 37.6 MiB C; binary tf 9987 KiB [macOS arm64 (native)]; 58 imports bound; low-level 3768/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented |
 | Warning Forever (wf.exe) | Windows | i386 (PE32) | 2815 fns recovered; 6 units / 34.8 MiB C; binary wf 8540 KiB [macOS arm64 (native)]; 147 imports bound; low-level 2815/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | arith-calc | Windows | i386 (PE32) | 33 fns recovered; 2 units / 0.8 MiB C; binary arith_calc 946 KiB [macOS arm64 (native)]; 3 imports bound; low-level 33/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
+| arith-calc-cli-oracle (arith-calc.exe) | Windows | i386 (PE32) | 33 fns recovered; 2 units / 0.8 MiB C; binary arith_calc 1106 KiB [macOS arm64 (native)]; low-level 33/ high-level verified 0 | - | PASS - scenario verified |
 | base64 | Windows | i386 (PE32) | 255 fns recovered; 2 units / 3.4 MiB C; binary base64 1682 KiB [macOS arm64 (native)]; 44 imports bound; low-level 255/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | base64-cli-oracle (base64.exe) | Windows | i386 (PE32) | 255 fns recovered; 2 units / 3.4 MiB C; binary base64 1826 KiB [macOS arm64 (native)]; low-level 255/ high-level verified 0 | - | PASS - scenario verified |
 | blackbox | Windows | i386 (PE32) | 834 fns recovered; 3 units / 11.0 MiB C; binary blackbox 3545 KiB; 189 imports bound [macOS arm64 (native)]; low-level 834/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |

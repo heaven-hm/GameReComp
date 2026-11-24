@@ -38,6 +38,8 @@ Full evidence: `reports/acceptance/base64-oracle-pass.{json,md}`.
 - It is **not** gameplay equivalence for any GUI game. No frame, input or audio
   comparison was performed for this row.
 
+The same flow was repeated for `arith-calc.exe` (original SHA-256 `9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6`): the native build reproduced deterministic arithmetic results (`fib(20)=6765`, `gcd(1071,462)=21`, `popcount(0xF0F0F0F0)=16`, `rotl(0x12345678,8)=878082066`), pipeline score 100 / `scenario-pass`, corpus acceptance PASS 1 / FAIL 0. Evidence: `reports/acceptance/arith-calc-oracle-pass.{json,md}`. The matrix now has two PASS rows from this method.
+
 Consequently this does not by itself close issue #14 (coverage inventory) or
 any game-acceptance issue: those require full corpus coverage and, for games,
 render/gameplay evidence. Issues stay open until their own 100% criteria are met.
