@@ -17,6 +17,8 @@ Every tested binary gets BOTH signals attempted:
    wall-clock deadline; on expiry the group (and the spawned Wine PID) is
    SIGKILLed and the exact reason is recorded.
 3. The NATIVE port is replayed with identical stdin (tools/input_replay_diff).
+   The ORIGINAL side of that comparison always runs via ``highball run <exe>``
+   when the CLI is available; a raw Wine invocation is a labelled fallback only.
 
 A row is MATCH only when every engine that could run agrees. The default stays
 fail-closed: any BLOCKED engine makes the row BLOCKED. For hosts where Frida
@@ -172,6 +174,7 @@ def hybrid_one(exe: Path, native: Path | None, stdin: bytes,
             artifacts[label] = {"path": str(path),
                                 "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
     return {"exe": str(exe), "status": status, "reason": reason,
+            "original_runner": n.get("original", {}).get("runner", "not-run"),
             "matched_engines": [k for k, s in signals.items()
                                 if s.get("status") in ("OK", "MATCH")],
             "blocked_engines": env_blocked + faulted,

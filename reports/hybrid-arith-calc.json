@@ -1,7 +1,8 @@
 {
   "exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
   "status": "MATCH",
-  "reason": "process-level MATCH: Unicorn and native replay agree; frida: NotSupportedError: unexpected error while probing dyld of target process -- NOT a 100% compatibility claim",
+  "reason": "process-level MATCH: Unicorn and native replay agree; frida: PermissionDeniedError: unable to access process with pid 86596 from the current user account -- NOT a 100% compatibility claim",
+  "original_runner": "highball",
   "matched_engines": [
     "unicorn",
     "native"
@@ -56,8 +57,9 @@
   },
   "frida": {
     "status": "BLOCKED",
-    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "reason": "PermissionDeniedError: unable to access process with pid 86596 from the current user account",
     "script_sha256": "d981d7402c622f3c",
+    "runner": "highball",
     "timeout_s": 5,
     "killed_on_timeout": false,
     "blocked_class": "environment"
@@ -66,7 +68,13 @@
     "original": {
       "exit_code": 0,
       "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
-      "stdout_hash": "dc10bfee0bdb528994ae67cf9f5a8580f36447daf28b4744556ca178733fb38b"
+      "stdout_hash": "dc10bfee0bdb528994ae67cf9f5a8580f36447daf28b4744556ca178733fb38b",
+      "runner": "highball",
+      "command": [
+        "/Users/haseeb-mir/.local/bin/highball",
+        "run",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe"
+      ]
     },
     "native": {
       "exit_code": 0,

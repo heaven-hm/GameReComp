@@ -5,10 +5,10 @@ real arith-calc.exe from ~/Downloads/recomp-apps and the real pipeline-built
 native binary. They skip when those real artifacts are absent, and the committed
 report is validated for provenance either way.
 
-Set RECOMP_P6_NATIVE to the pipeline-built native binary. For the Wine replay
-test also set RECOMP_WINE_BOTTLE to an isolated prefix: a shared wineserver left
-in a different WINEMSYNC mode by another process makes Wine exit 1 with no
-stdout, which is an environment fault, not a guest divergence.
+The ORIGINAL side must run via `highball run <exe>`; raw Wine is only a labelled
+fallback when the highball CLI is missing. Set RECOMP_P6_NATIVE to the
+pipeline-built native binary. RECOMP_FORCE_WINE_FALLBACK=1 exercises the fallback
+path and is labelled as such in every record.
 """
 import hashlib
 import json
@@ -21,7 +21,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tools import frida_probe, hybrid_diff, input_replay_diff  # noqa: E402
+from tools import frida_probe, hybrid_diff, input_replay_diff, wine_oracle  # noqa: E402
 
 EXE = Path(os.environ.get(
     "RECOMP_P6_EXE",
@@ -58,6 +58,13 @@ class RealEvidenceTests(unittest.TestCase):
         if EXE.is_file():  # verify provenance when the real input is available
             self.assertEqual(doc["artifacts"]["original"]["sha256"],
                              hashlib.sha256(EXE.read_bytes()).hexdigest())
+        # The ORIGINAL side must be the highball runner when it is installed.
+        if wine_oracle.find_highball():
+            self.assertEqual(doc["original_runner"], "highball")
+            self.assertEqual(doc["native"]["original"]["runner"], "highball")
+            cmd = doc["native"]["original"]["command"]
+            self.assertEqual(cmd[:2], [wine_oracle.find_highball(), "run"])
+            self.assertIn(str(EXE), cmd)
 
     @unittest.skipUnless(EXE.is_file(), f"real executable not present: {EXE}")
     def test_unicorn_real_fib_function_and_entry_root_cause(self):
@@ -75,11 +82,48 @@ class RealEvidenceTests(unittest.TestCase):
         self.assertEqual(entry["blocked_class"], "fault")
         self.assertIn("unmapped", entry["reason"].lower())
 
+    @unittest.skipUnless(EXE.is_file() and bool(wine_oracle.find_highball()),
+                         "real exe or highball CLI not present")
+    def test_original_runs_through_highball_not_raw_wine(self):
+        run = wine_oracle.run_original(wine_oracle.find_wine(),
+                                       wine_oracle.find_bottle(), EXE, [], 25,
+                                       stdin_data=b"")
+        self.assertEqual(run["runner"], "highball")
+        self.assertEqual(run["command"][:2], [wine_oracle.find_highball(), "run"])
+        self.assertIn(str(EXE), run["command"])
+        lines = input_replay_diff.normalise(run["stdout"]).splitlines()
+        self.assertIn("fib(20)=6765", lines)
+        self.assertFalse(any("Launching" in ln or "after " in ln for ln in lines))
+
+    @unittest.skipUnless(EXE.is_file(), "real executable not present")
+    def test_raw_wine_fallback_is_explicitly_labelled(self):
+        # Only the process boundary is substituted; the assertion is about the
+        # runner label, never a claimed engine result.
+        class FakeProc:
+            pid = 1
+            returncode = 0
+
+            def communicate(self, input=None, timeout=None):
+                return "", ""
+
+        with mock.patch.dict(os.environ, {"RECOMP_FORCE_WINE_FALLBACK": "1"}), \
+             mock.patch.object(wine_oracle.subprocess, "Popen",
+                               return_value=FakeProc()) as popen:
+            self.assertIsNone(wine_oracle.find_highball())
+            run = wine_oracle.run_original(wine_oracle.find_wine(),
+                                           wine_oracle.find_bottle(), EXE, [], 5,
+                                           stdin_data=b"")
+        self.assertEqual(run["runner"], "wine-fallback")
+        self.assertNotIn("highball", run["command"])
+        self.assertEqual(popen.call_count, 1)
+
     @unittest.skipUnless(EXE.is_file() and NATIVE and NATIVE.is_file(),
                          "real native binary not provided (set RECOMP_P6_NATIVE)")
-    def test_native_replay_matches_wine_original(self):
-        rec = input_replay_diff.diff_one(EXE, NATIVE, b"", [], EXE.parent, 20)
+    def test_native_replay_matches_highball_original(self):
+        rec = input_replay_diff.diff_one(EXE, NATIVE, b"", [], EXE.parent, 25)
         self.assertEqual(rec["status"], "MATCH", rec)
+        self.assertEqual(rec["original"]["runner"],
+                         "highball" if wine_oracle.find_highball() else "wine-fallback")
         self.assertEqual(rec["original"]["exit_code"], 0)
         self.assertEqual(rec["native"]["exit_code"], 0)
         self.assertEqual(rec["original"]["stdout_hash"], rec["native"]["stdout_hash"])

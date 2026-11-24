@@ -46,7 +46,7 @@ def run_native(binary: Path, args: list[str], stdin_data: bytes,
 def normalise(text: str) -> str:
     lines = []
     for line in wine_oracle.ANSI.sub("", text).splitlines():
-        if wine_oracle.WINE_NOISE.search(line):
+        if wine_oracle.RUNNER_NOISE.search(line):
             continue
         clean = line.replace("C:\\recomp-oracle\\", "").replace(
             "C:/recomp-oracle/", "").strip()
@@ -58,8 +58,9 @@ def normalise(text: str) -> str:
 def diff_one(original: Path, binary: Path, stdin_data: bytes,
              args: list[str], cwd: Path, timeout: int) -> dict:
     wine = wine_oracle.find_wine()
-    if not wine:
-        return {"status": "BLOCKED", "reason": "no Wine/Highball engine found"}
+    highball = wine_oracle.find_highball()
+    if not wine and not highball:
+        return {"status": "BLOCKED", "reason": "neither highball nor a Wine engine found"}
     if not original.is_file() or not binary.is_file():
         return {"status": "BLOCKED", "reason": "missing original or native binary"}
     orig = wine_oracle.run_original(wine, wine_oracle.find_bottle(), original,
@@ -68,7 +69,8 @@ def diff_one(original: Path, binary: Path, stdin_data: bytes,
     o, n = normalise(orig["stdout"]), normalise(nat["stdout"])
     result = {
         "original": {"exit_code": orig["exit_code"], "sha256": orig["sha256"],
-                     "stdout_hash": hashlib.sha256(o.encode()).hexdigest()},
+                     "stdout_hash": hashlib.sha256(o.encode()).hexdigest(),
+                     "runner": orig["runner"], "command": orig["command"]},
         "native": {"exit_code": nat["exit_code"],
                    "stdout_hash": hashlib.sha256(n.encode()).hexdigest()},
         "stdin_bytes": len(stdin_data), "args": args,
