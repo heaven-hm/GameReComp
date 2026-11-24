@@ -1,0 +1,106 @@
+{
+  "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+  "stdin_hex": "330a",
+  "scope": "real PE32+ recompiled to native ARM64; BLOCKED means the bounded import shim cannot model this binary",
+  "pipeline": {
+    "disassembler": "disasm64.py",
+    "lifter": "generate64.py",
+    "meta": {
+      "image_base": 5368709120,
+      "entry_point": 5368714304,
+      "size_of_image": 163840,
+      "functions": 100,
+      "translation_units": 1,
+      "lift_errors": 0,
+      "recomp_todo_sites": 3,
+      "imports": 45
+    }
+  },
+  "native": {
+    "compiler": "/opt/homebrew/opt/llvm/bin/clang",
+    "target": "arm64-apple-macos11",
+    "binary": "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/grc-x64-expand-2db3phmj/base64/native",
+    "exit": 0,
+    "stdout_hex": "0d0a1b5b33366d1b5b316d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0d0a2020202020202020432042415345363420454e434f444552202f204445434f4445522020202020200d0a3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d1b5b306d0d0a312e2042617365363420456e636f646520537472696e670d0a322e20426173653634204465636f646520537472696e670d0a332e20457869740d0a43686f6f73652028312d33293a200d0a476f6f64627965210d0a0d0a",
+    "stderr": ""
+  },
+  "engines": {
+    "unicorn": {
+      "engine": "unicorn-ucrt",
+      "version": "2.1.4",
+      "pe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+      "stdin_hex": "330a",
+      "stdout_hex": "0d0a1b5b33366d1b5b316d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0d0a2020202020202020432042415345363420454e434f444552202f204445434f4445522020202020200d0a3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d1b5b306d0d0a312e2042617365363420456e636f646520537472696e670d0a322e20426173653634204465636f646520537472696e670d0a332e20457869740d0a43686f6f73652028312d33293a200d0a476f6f64627965210d0a0d0a",
+      "exit": 0,
+      "fault": null,
+      "imports": [
+        "KERNEL32.dll!DeleteCriticalSection",
+        "KERNEL32.dll!EnterCriticalSection",
+        "KERNEL32.dll!GetLastError",
+        "KERNEL32.dll!InitializeCriticalSection",
+        "KERNEL32.dll!LeaveCriticalSection",
+        "KERNEL32.dll!SetUnhandledExceptionFilter",
+        "KERNEL32.dll!Sleep",
+        "KERNEL32.dll!TlsGetValue",
+        "KERNEL32.dll!VirtualProtect",
+        "KERNEL32.dll!VirtualQuery",
+        "api-ms-win-crt-environment-l1-1-0.dll!__p__environ",
+        "api-ms-win-crt-heap-l1-1-0.dll!_set_new_mode",
+        "api-ms-win-crt-heap-l1-1-0.dll!calloc",
+        "api-ms-win-crt-heap-l1-1-0.dll!free",
+        "api-ms-win-crt-heap-l1-1-0.dll!malloc",
+        "api-ms-win-crt-locale-l1-1-0.dll!_configthreadlocale",
+        "api-ms-win-crt-math-l1-1-0.dll!__setusermatherr",
+        "api-ms-win-crt-private-l1-1-0.dll!__C_specific_handler",
+        "api-ms-win-crt-private-l1-1-0.dll!memcpy",
+        "api-ms-win-crt-runtime-l1-1-0.dll!__p___argc",
+        "api-ms-win-crt-runtime-l1-1-0.dll!__p___argv",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_cexit",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_configure_narrow_argv",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_crt_atexit",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_exit",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_initialize_narrow_environment",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_initterm",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_initterm_e",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_set_app_type",
+        "api-ms-win-crt-runtime-l1-1-0.dll!_set_invalid_parameter_handler",
+        "api-ms-win-crt-runtime-l1-1-0.dll!abort",
+        "api-ms-win-crt-runtime-l1-1-0.dll!exit",
+        "api-ms-win-crt-runtime-l1-1-0.dll!signal",
+        "api-ms-win-crt-stdio-l1-1-0.dll!__acrt_iob_func",
+        "api-ms-win-crt-stdio-l1-1-0.dll!__p__commode",
+        "api-ms-win-crt-stdio-l1-1-0.dll!__p__fmode",
+        "api-ms-win-crt-stdio-l1-1-0.dll!__stdio_common_vfprintf",
+        "api-ms-win-crt-stdio-l1-1-0.dll!__stdio_common_vfscanf",
+        "api-ms-win-crt-stdio-l1-1-0.dll!fflush",
+        "api-ms-win-crt-stdio-l1-1-0.dll!fgets",
+        "api-ms-win-crt-stdio-l1-1-0.dll!getchar",
+        "api-ms-win-crt-stdio-l1-1-0.dll!puts",
+        "api-ms-win-crt-stdio-l1-1-0.dll!setvbuf",
+        "api-ms-win-crt-string-l1-1-0.dll!strlen",
+        "api-ms-win-crt-string-l1-1-0.dll!strncmp"
+      ]
+    },
+    "wine": {
+      "engine": "highball-wine",
+      "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+      "attempts": [
+        {
+          "exit": 0,
+          "stdout_hex": "0d0a1b5b33366d1b5b316d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0d0a2020202020202020432042415345363420454e434f444552202f204445434f4445522020202020200d0a3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d1b5b306d0d0a312e2042617365363420456e636f646520537472696e670d0a322e20426173653634204465636f646520537472696e670d0a332e20457869740d0a43686f6f73652028312d33293a200d0a476f6f64627965210d0a0d0a",
+          "stderr": "r than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\n"
+        }
+      ],
+      "outcome": "PASS",
+      "exit": 0,
+      "stdout_hex": "0d0a1b5b33366d1b5b316d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0d0a2020202020202020432042415345363420454e434f444552202f204445434f4445522020202020200d0a3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d1b5b306d0d0a312e2042617365363420456e636f646520537472696e670d0a322e20426173653634204465636f646520537472696e670d0a332e20457869740d0a43686f6f73652028312d33293a200d0a476f6f64627965210d0a0d0a",
+      "stderr": "r than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\n"
+    }
+  },
+  "verdict": {
+    "native": "PASS",
+    "native_vs_unicorn": "MATCH",
+    "native_vs_wine": "MATCH",
+    "claim": "native ARM64 recompilation of THIS real PE matches the original bytes under both Unicorn and Highball Wine."
+  }
+}
