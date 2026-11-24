@@ -1,0 +1,4426 @@
+{
+  "schema": 1,
+  "roots": [
+    "/Users/haseeb-mir/Downloads/IGI",
+    "/Users/haseeb-mir/Downloads/Other/igi2_sp_demo2",
+    "/Users/haseeb-mir/Downloads/PDBs",
+    "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/IGI",
+    "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/GTA-SA",
+    "/Users/haseeb-mir/Downloads/Cheat_softs/Console_Games_Engine",
+    "/Users/haseeb-mir/Downloads/Cheat_softs/NES_GameGenie",
+    "/Users/haseeb-mir/Downloads/Other",
+    "/Users/haseeb-mir/Downloads/Programs",
+    "/Users/haseeb-mir/Downloads/TmForeverModLoader",
+    "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest",
+    "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever",
+    "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/TmNationsESWC",
+    "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo",
+    "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports",
+    "/Users/haseeb-mir/Documents/Code/GameReComp/.revng-in"
+  ],
+  "count": 262,
+  "rows": [
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/GameReComp/.revng-in/Doukutsu.exe",
+      "sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+      "bytes": 1478656,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 143,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "SHELL32.dll",
+        "DDRAW.dll",
+        "DINPUT.dll",
+        "DSOUND.dll",
+        "VERSION.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/imgview/imgview64-unpacked.exe",
+      "sha256": "42c04793768b949cdd193e7f5eb2fea2752ae85604ffbe04ea31fe18cd76f59c",
+      "bytes": 18944,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 92,
+      "dlls": [
+        "KERNEL32.DLL",
+        "COMCTL32.dll",
+        "GDI32.dll",
+        "gdiplus.dll",
+        "ole32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/Pixeltetris.exe",
+      "sha256": "3eabbe4a4de93c9d0b91589511203313697f60500e58f18dd67eb37f8e25ca81",
+      "bytes": 1118208,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 121,
+      "dlls": [
+        "SDL2.dll",
+        "SDL2_ttf.dll",
+        "SDL2_image.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/SDL2.dll",
+      "sha256": "347a07643cc6c70a9d68439037a69a90a0a817d03762fae029ed1c5c48942f83",
+      "bytes": 1609728,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 286,
+      "dlls": [
+        "ADVAPI32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "SETUPAPI.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/SDL2_image.dll",
+      "sha256": "1e364af75fee0c83506fbdfd4d5b0e386c4e9c6a33ddbddac61ddb131e360194",
+      "bytes": 125440,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 96,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "SDL2.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/SDL2_ttf.dll",
+      "sha256": "507dc8a977d543b3e06bd3fce41f5759d64b2b21ae829cd2ef41b77bf66968c4",
+      "bytes": 33792,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 74,
+      "dlls": [
+        "libfreetype-6.dll",
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "SDL2.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/libfreetype-6.dll",
+      "sha256": "8e263fd9257e8e83bafda0c943184a498c07424c4d558321fdb48c9a197e58a4",
+      "bytes": 586240,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 65,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "zlib1.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/libjpeg-9.dll",
+      "sha256": "3a224af540c96574800f5e9acf64b2cdfb9060e727919ec14fbd187a9b5bfe69",
+      "bytes": 244224,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 62,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/libpng16-16.dll",
+      "sha256": "e688b4a4d18f4b6ccc99c6ca4980f51218cb825610775192d9b60b2f05eff2d5",
+      "bytes": 210944,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 78,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "zlib1.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/libtiff-5.dll",
+      "sha256": "ebfe97ac5ef26b94945af3db5ffd110a4b8e92dc02559bf81ccb33f0d5ebce95",
+      "bytes": 432640,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 116,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll",
+        "libjpeg-9.dll",
+        "zlib1.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/libwebp-7.dll",
+      "sha256": "9a53563b6058f70f2725029b7dd2fe96f869c20e8090031cd303e994dfe07b50",
+      "bytes": 447488,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 55,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/pixeltetris/Pixeltetris-v1.0.0-Windows-64bit/bin/Version 1.0.0 - 64 bit/zlib1.dll",
+      "sha256": "b1f58a17f3bfd55523e7bef685acf5b32d1c2a6f25abdcd442681266fd26ab08",
+      "bytes": 108544,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 51,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/tetrisgame/Tetris/SDL2.dll",
+      "sha256": "32ef4501d8c81b7f34e700da215f14ec52d61d11c7c18756d9c38d6e4f24ec1a",
+      "bytes": 1599488,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 275,
+      "dlls": [
+        "SETUPAPI.dll",
+        "WINMM.dll",
+        "IMM32.dll",
+        "VERSION.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/tetrisgame/Tetris/SDL2_image.dll",
+      "sha256": "e73d75bafd7f63054c8531f95ffc9afddd512d818e02fa106433f0869cfd0b90",
+      "bytes": 286720,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 140,
+      "dlls": [
+        "SDL2.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/tetrisgame/Tetris/SDL2_mixer.dll",
+      "sha256": "79d84ea27b2b0402b5506bc6883e71fbca2874f983c727106fa26abb11b7f5b5",
+      "bytes": 421376,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 163,
+      "dlls": [
+        "SDL2.dll",
+        "WINMM.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/tetrisgame/Tetris/SDL2_ttf.dll",
+      "sha256": "86febaf2ca137e417808a646b5920cdd10d7093b30a2071abde40b012c923c3d",
+      "bytes": 1751552,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 100,
+      "dlls": [
+        "SDL2.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/native-ports/tetrisgame/Tetris/Tetris.exe",
+      "sha256": "846b7cf2db372981b5989863a8d560f7abfacb9c7f8219a7c059275d68760351",
+      "bytes": 2173952,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 258,
+      "dlls": [
+        "SDL2.dll",
+        "SDL2_image.dll",
+        "SDL2_ttf.dll",
+        "SDL2_mixer.dll",
+        "MSVCP140D.dll",
+        "VCRUNTIME140D.dll",
+        "VCRUNTIME140_1D.dll",
+        "ucrtbased.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/SDL2.dll",
+      "sha256": "bf9dc69cb577e40574fee505d2f2ff3e4e11b2077327ba8d3b3fd1b9f319284f",
+      "bytes": 2376192,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 400,
+      "dlls": [
+        "ADVAPI32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/SDL2_mixer.dll",
+      "sha256": "a0f45ecbee69ecb9e864cc21a30aaba93b07cfe8e9d2c5bedcc4bbc5fa4cbdb0",
+      "bytes": 177152,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 192,
+      "dlls": [
+        "libFLAC.dll",
+        "KERNEL32.dll",
+        "libmpg123-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/SDL2_net.dll",
+      "sha256": "6cead5c619b091d687fc94b0911ee620f4d8f395c411d1433a9a90a46bd6a479",
+      "bytes": 25088,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 75,
+      "dlls": [
+        "IPHLPAPI.DLL",
+        "KERNEL32.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/SDL3.dll",
+      "sha256": "373662367bf1b11259b4ea72d1be078fc147fe43a2e8b0eb4dea245d367f1454",
+      "bytes": 3472896,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 428,
+      "dlls": [
+        "ADVAPI32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/chocolate-doom-setup.exe",
+      "sha256": "0a483cc796b648ca79db303035a03b94ad607bd77ab9b54ddc0ea77b6c22ad75",
+      "bytes": 340480,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 198,
+      "dlls": [
+        "ADVAPI32.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/chocolate-doom.exe",
+      "sha256": "15e81c194df270fbd71450222e71846247926fabfb889e72e7d855903454d752",
+      "bytes": 875520,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 318,
+      "dlls": [
+        "ADVAPI32.dll",
+        "libfluidsynth-3.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libFLAC.dll",
+      "sha256": "1557ff8174ea22b7962c3926d480d3a187476d4c2bdc29d8649f005dc9018e5e",
+      "bytes": 461824,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 117,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libfluidsynth-3.dll",
+      "sha256": "d05bfd037706f086973fe328e817ef6d986dda77ed34c29a8da8e313108332b5",
+      "bytes": 523264,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 231,
+      "dlls": [
+        "DSOUND.dll",
+        "libgcc_s_seh-1.dll",
+        "libintl-8.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libgcc_s_seh-1.dll",
+      "sha256": "78c424ecc08f7d5aaf376b16c04e5ed65d602b5a113720b4e919003b9656370a",
+      "bytes": 148480,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 38,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "libwinpthread-1.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libglib-2.0-0.dll",
+      "sha256": "3e8b74cf52a154c64391e8ba9abd1c4a742c288e8f02caafaf50634216ed818a",
+      "bytes": 1529856,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 314,
+      "dlls": [
+        "ADVAPI32.dll",
+        "libintl-8.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libgmodule-2.0-0.dll",
+      "sha256": "0650c32ef280501a0d1374e881a25237c2126e5af6cf75912670091af9abfb4e",
+      "bytes": 23040,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 75,
+      "dlls": [
+        "libintl-8.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libgomp-1.dll",
+      "sha256": "2702269e5a76b4955835dc7ac91c02fff48ac2d65962a43d76902aa5e44edb9d",
+      "bytes": 305152,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 90,
+      "dlls": [
+        "libgcc_s_seh-1.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libiconv-2.dll",
+      "sha256": "10068a5dccd1ab2e2a2f21680a365ba2c74b68a3a5f213431f0ad53055571b3d",
+      "bytes": 1133056,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 45,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libintl-8.dll",
+      "sha256": "b6d7698601eeebb2c913722a49ef3248381a9df14b4dae0a087ae98d5874e22d",
+      "bytes": 293888,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 96,
+      "dlls": [
+        "ADVAPI32.dll",
+        "libiconv-2.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libmp3lame-0.dll",
+      "sha256": "da75c39bf51e26cb6c5a13bd74711e1b7f6d5a4ffd259325cd3e6ada8e296f0f",
+      "bytes": 325120,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 73,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libmpg123-0.dll",
+      "sha256": "3a073d41a1969932bb75e7e2f7178a0d232435291cfd79d7a485e36521d974b1",
+      "bytes": 443392,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 89,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libogg-0.dll",
+      "sha256": "0b031dc20f143da1ff04f6cb2707c1e545b219302ed854659520b1c4acfd473e",
+      "bytes": 39936,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 27,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libopus-0.dll",
+      "sha256": "b78d8b5a49919ce561c40e417d7fbf2ffd827d24b617cec7715a28cee64efeca",
+      "bytes": 432128,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 67,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libopusfile-0.dll",
+      "sha256": "3a23a5518eb20577c453dbee59f6e81b470e9a75aa293feb33323f8f89d7e91c",
+      "bytes": 54784,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 87,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libpcre2-8-0.dll",
+      "sha256": "88b787c07560c909107af162de1797ba05699238aa05b7718a947fc667065382",
+      "bytes": 703488,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 54,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libpng16-16.dll",
+      "sha256": "4c8b05e269b99206649968cf287c7ab197bd748d00eb81622aaa4671a4f018c8",
+      "bytes": 250368,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 67,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libportaudio.dll",
+      "sha256": "a358f092c60f0e050133977dfed6b834c758a88ad9eb8fd48fa593409b34e442",
+      "bytes": 202752,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 140,
+      "dlls": [
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libreadline8.dll",
+      "sha256": "a1f40075d99401ab951320b04bafb68162a131878073940ef72d21d51fca1ea0",
+      "bytes": 282624,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 121,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libsamplerate-0.dll",
+      "sha256": "3ccf38aa8d997393fff7194fb26461be2b263558ba99a1bd1412a1b1fe898f2b",
+      "bytes": 1502208,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 48,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-time-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libsndfile-1.dll",
+      "sha256": "5e1a267e58886c86c165c97824cd58b878a242b981976859db36d373380bb81e",
+      "bytes": 702976,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 264,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libstdc++-6.dll",
+      "sha256": "3c7bbe4198ed852f1b98e9b6f8a378ecff1e595849363dd6f6facef79fb4dab0",
+      "bytes": 2455552,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 176,
+      "dlls": [
+        "libgcc_s_seh-1.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libtermcap-0.dll",
+      "sha256": "55c40840e2cc5fdd8d686374b1256b92ec89acfd6874f4078cc22a693e80767b",
+      "bytes": 44544,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 63,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libvorbis-0.dll",
+      "sha256": "b662811545703e642ecef87d9bec058b877ee4e59a85f8513beaa9f5ced5261e",
+      "bytes": 181760,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 67,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libvorbisenc-2.dll",
+      "sha256": "e7ecd794ab65c8dd1c1b507e16048db8b58a75a5db49419e36dea83f6cf679cd",
+      "bytes": 580096,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 46,
+      "dlls": [
+        "libvorbis-0.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-time-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libvorbisfile-3.dll",
+      "sha256": "442e700a07c263043eb4a32e4251a4affc6fd28ab902d8f4219aa2598e13fdcb",
+      "bytes": 38400,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 94,
+      "dlls": [
+        "libvorbis-0.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libwavpack-1.dll",
+      "sha256": "8d994174a0d7be43340de09bd6e74a89e100e030fa9a6d982943e32fe92b38d5",
+      "bytes": 211456,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 70,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libwinpthread-1.dll",
+      "sha256": "7ce0cc95c629f624d6d40e75d6938b441d097df2c8839d498caccaede3c7399e",
+      "bytes": 59392,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 82,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/libxmp.dll",
+      "sha256": "526ea8fdf7d515d123c5b45a6a4f680862cbc2178688dc43899ec122af7a6453",
+      "bytes": 650240,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 86,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/choc/zlib1.dll",
+      "sha256": "292057e79b0d3f19531f53efaf500dd3251339685295c21c09cd5cc2e50ac6e2",
+      "bytes": 96768,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 58,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/putty/plink.exe",
+      "sha256": "969f36879d5716aa1a9811f43a6a6510e8f08372dbeb9695b810b9c776f39c75",
+      "bytes": 1036448,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 153,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/putty/putty.exe",
+      "sha256": "d01fdb5aae8f112526040a39b0bfb9e27d813003178645e65f8d1cfdb2a26c87",
+      "bytes": 1706136,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 348,
+      "dlls": [
+        "GDI32.dll",
+        "IMM32.dll",
+        "ole32.dll",
+        "USER32.dll",
+        "KERNEL32.dll",
+        "SHELL32.dll",
+        "COMDLG32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/_reference/port-demo/s2g/ScreenToGif.exe",
+      "sha256": "70998fa106e48ae83912353f1c40e839939fdb77b4dafcceeedb321fcaebddb7",
+      "bytes": 13206384,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 124,
+      "dlls": [
+        "SHELL32.dll",
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-time-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Console_Games_Engine/DigitsWar.exe",
+      "sha256": "5dbb0a0da298e75ec5882070fe3fd1ac4573c3046bd1bf7b44880c00e515ef30",
+      "bytes": 114058,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 76,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Console_Games_Engine/SnakesAndLadders.exe",
+      "sha256": "a3342c13eb9120f4d58188e87c2df09722090896d377d1869db831d543a8a2bc",
+      "bytes": 145131,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 77,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Console_Games_Engine/TicTacToe.exe",
+      "sha256": "121f24e412ccaf5560e4f65385f11ccc2e16beb7f607c3995df0ae66cd7da7c9",
+      "bytes": 137656,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 77,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Console_Games_Engine/WarCards.exe",
+      "sha256": "064f48dbed46232e0e7100431a3a9d3c33209d8709cb8dbe111bf0ed7b11d8e6",
+      "bytes": 132753,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 81,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/GTA-SA/GTA-SA-Trainer.exe",
+      "sha256": "47603b79c4485ff77540b0ca25f297c4b66182771c1ec01b8fd18b7cba65df3d",
+      "bytes": 155413,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 121,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll",
+        "WINMM.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/IGI/I.G.I-Object_Editor.exe",
+      "sha256": "96d5aa9bfe011b714c0cf6b045f49f4afe7572477a6516ab26963314d216266a",
+      "bytes": 116784,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 91,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/IGI/IGI1-QVM-Modifier-GUI.exe",
+      "sha256": "7f9cde68f0a8ca0d30bb4d230ddd719267af996a85100c099118c980314f68b9",
+      "bytes": 133403,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 101,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/IGI/IGI_6_PRO_TRAINER.exe",
+      "sha256": "fd3e0c109ad16e951a9c94b243453c4e1642026d508da21635ff90a1c57ebc81",
+      "bytes": 168607,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 121,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll",
+        "WINMM.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/IGI/IGI_AimBot.exe",
+      "sha256": "baea7e9cc29147c5823ad792361f409e7b959ba66b2294a0d6520ad99c5a9275",
+      "bytes": 829952,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 438,
+      "dlls": [
+        "WSOCK32.dll",
+        "WINMM.dll",
+        "VERSION.dll",
+        "COMCTL32.dll",
+        "PSAPI.DLL",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/IGI/Project I.G.I +5 Pro Trainer.exe",
+      "sha256": "2dce3925ebfebc4f05fbba7a128e225345e8b7e038e8e71d5a59063599aa8e4b",
+      "bytes": 134656,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 86,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "COMCTL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/NES_GameGenie/NES_GameGenieDecoder.exe",
+      "sha256": "095fdb3150f005438761afd9c68ee65441e4a6d25a668bcfd59b44ec39d534f5",
+      "bytes": 482373,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 43,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/NES_GameGenie/NES_GameGenieEncoder.exe",
+      "sha256": "cf0686e4f9225403a27892a2c9202c6ce30abf6a2cf45792632e0090e99144dd",
+      "bytes": 483899,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 42,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/NES_GameGenie/NES_GameGenieMaserListGenerator.exe",
+      "sha256": "2f1bc67a11bf30785adb33f7f689822109ed61cd67dcf8f5e0356002a5e2a8e5",
+      "bytes": 494930,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 48,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-Injector.exe",
+      "sha256": "81e6789212bf81f3bd4fd196aca5d1fa88fd92fc08b1f6d5c8713558728b7866",
+      "bytes": 486533,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 125,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-Keypress.exe",
+      "sha256": "3b1803a1eb79b42b601ac2b9543777b2dff9bc09947add1bb0c2fc0c7f8f09cc",
+      "bytes": 75341,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 62,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-MenuManager-External.exe",
+      "sha256": "0036433b855f1e78eb187ef998a27c014f6d489495cabda650a08c0b70621fb0",
+      "bytes": 308956,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 110,
+      "dlls": [
+        "libgcc_s_sjlj-1.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-MenuManager-Internal.dll",
+      "sha256": "cefbec8d2bff413354e320411b44b5891425d6650eb6237c84ae3a156a0d5e74",
+      "bytes": 2886815,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 176,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-RE-build/dinput.dll",
+      "sha256": "4b63b75b917933ba6d9f98f1ea0bdc7787cae8fc07b500183d464703a914072e",
+      "bytes": 2925512,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 101,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-RE-build/igidecomp-new.exe",
+      "sha256": "267e240dde1ba5ed121ad708b772c0879321b50dd61321f92a08f92013a28faa",
+      "bytes": 10692715,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 148,
+      "dlls": [
+        "ddraw.dll",
+        "dsound.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-RE-build/igidecomp.exe",
+      "sha256": "61fd796d85b561ac781f0a2abf57f67a64d41b7f144c2966ff85e301e7682a80",
+      "bytes": 10692715,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 148,
+      "dlls": [
+        "ddraw.dll",
+        "dsound.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI1-Injector.exe",
+      "sha256": "c9ecf17cb6d2c112ad630d1f3a0e80430963edc7062f3373dbb0191461fd3eb0",
+      "bytes": 2594896,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 123,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI1-Keypress.exe",
+      "sha256": "c39bff36ac24a26abf803bedd75b9f62faee15f67176a43a9254186a57fd0e85",
+      "bytes": 262683,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 62,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/Project-IGI.exe",
+      "sha256": "3f460b89495b5b9112447e453332258950d106874738f3efb2aa6d617eb5b26b",
+      "bytes": 176640,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 9,
+      "dlls": [
+        "KERNEL32.DLL",
+        "advapi32.dll",
+        "comctl32.dll",
+        "gdi32.dll",
+        "ole32.dll",
+        "oleaut32.dll",
+        "user32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/dgVoodooCpl.exe",
+      "sha256": "abed15a69b35fc81bde0aea358630030c8930ba3e8ceb41cbff24aba7604d68a",
+      "bytes": 452096,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 103,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHLWAPI.dll",
+        "ole32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-181700/dinput.dll",
+      "sha256": "bdad4268637602bcaf4ec9f9e4962d2bdb883e7a13f4c52e6e544796c16905c4",
+      "bytes": 2936106,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 106,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182036/msvfw32.dll",
+      "sha256": "ea720b1476625f00cd5de58d693e7aff22bf07235ce22d724ab64f4d81b4143e",
+      "bytes": 5418336,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 237,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "SHELL32.dll",
+        "ole32.dll",
+        "d3d9.dll",
+        "dbghelp.dll",
+        "WS2_32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182327/D3D8.dll",
+      "sha256": "9fe01ca0d2aa9310c5841a813393a56c0901144202a5950060a85496d75ec624",
+      "bytes": 414208,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 8,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "ole32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182327/D3D9.dll",
+      "sha256": "6f5ebabb8aacf87b38531235fd10cf5c1637c2e77f33c3b67b44ffa8c06a61f4",
+      "bytes": 482816,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 8,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "ole32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/D3DImm.dll",
+      "sha256": "81b63eb27f82227c219daf4765d9214436a37cd217ab44323b6afa272889072e",
+      "bytes": 208384,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 4,
+      "dlls": [
+        "KERNEL32.DLL",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/DDraw.dll",
+      "sha256": "b852598e957ffb46d5a618e70f9e2b6042d0fff96d7d1448fb87518f2d8eff3a",
+      "bytes": 256000,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 8,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "ole32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/IGI-Natives-SDK-IGI1.dll",
+      "sha256": "76bd0843133d87be9e6c471173f18c997e5947b0d6cad46ac403419bf7fbc17a",
+      "bytes": 10723201,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 122,
+      "dlls": [
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/IGIPatch.dll",
+      "sha256": "8b172cdf1825f90786faaf4a715b03e036094d9e5324e63c763a221c2193ec53",
+      "bytes": 47104,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 33,
+      "dlls": [
+        "GDI32.DLL",
+        "KERNEL32.DLL",
+        "USER32.DLL",
+        "SHLWAPI.DLL",
+        "WINMM.DLL"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/freeglut.dll",
+      "sha256": "b2d273ba52c2d842881c8584e9df94d17a25f96b9092b664ef3f275ce8a0d237",
+      "bytes": 198656,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 169,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "ADVAPI32.dll",
+        "OPENGL32.dll",
+        "WINMM.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/glew32.dll",
+      "sha256": "8c7805a05a321fab37a31822ea2d2a6997ddfd130cf0a09a54a428d6e6995700",
+      "bytes": 389632,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 4,
+      "dlls": [
+        "OPENGL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/igi-probe.dll",
+      "sha256": "9c6e506b0ce09ddb441c1aaeea8c5df6e4fc03621ecdbded2cbd3e4ad5cc7378",
+      "bytes": 354171,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 69,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/libgcc_s_sjlj-1.dll",
+      "sha256": "b3de52f1993b053a6dc6fb04e5bd6dca850398526f75d4046ae9eaeca1ec96b4",
+      "bytes": 1037767,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 34,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "libwinpthread-1.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/libstdc++-6.dll",
+      "sha256": "2ce0c1d38981e35cca22182756b98ca718e51424dee5d2d47ef059b46f094087",
+      "bytes": 26661530,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 169,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-182328/libwinpthread-1.dll",
+      "sha256": "f50c5eb0239f08818c9953fd6c22800b36020b7fed098ad098683b160b7743c8",
+      "bytes": 333020,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 79,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/disabled-proxies-20261106-212911/DDraw.dll",
+      "sha256": "b852598e957ffb46d5a618e70f9e2b6042d0fff96d7d1448fb87518f2d8eff3a",
+      "bytes": 256000,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 8,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "ole32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/D3Dcompiler_47.dll",
+      "sha256": "e994847e01a6f1e4cbdc5a864616ac262f67ee4f14db194984661a8d927ab7f4",
+      "bytes": 4173928,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 198,
+      "dlls": [
+        "msvcrt.dll",
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "RPCRT4.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt5Core.dll",
+      "sha256": "4f8dc460162407cfccb1be6ef9cce45c4449de838aeffa3fd33378f01a3f9cc4",
+      "bytes": 5381616,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 329,
+      "dlls": [
+        "MPR.dll",
+        "USERENV.dll",
+        "VERSION.dll",
+        "NETAPI32.dll",
+        "WS2_32.dll",
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "ole32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt5Gui.dll",
+      "sha256": "80016776efea2b2a838c3ffa4c82e5f146baff68c36073c0c34668809d1c4297",
+      "bytes": 5894128,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 1358,
+      "dlls": [
+        "d3d11.dll",
+        "dxgi.dll",
+        "Qt5Core.dll",
+        "GDI32.dll",
+        "ole32.dll",
+        "USER32.dll",
+        "MSVCP140.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt5Svg.dll",
+      "sha256": "ade28d4cbac1e033468cb48f380352f0df7fbbce03261c48827b8a5ed7a1548e",
+      "bytes": 264176,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 719,
+      "dlls": [
+        "Qt5Widgets.dll",
+        "Qt5Gui.dll",
+        "Qt5Core.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt5Widgets.dll",
+      "sha256": "600285754e7eee7239b9d252dbed5c9d2c9c4c432751b8953dcb2e8b45e0408a",
+      "bytes": 4459504,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 3040,
+      "dlls": [
+        "Qt5Gui.dll",
+        "Qt5Core.dll",
+        "UxTheme.dll",
+        "dwmapi.dll",
+        "SHELL32.dll",
+        "GDI32.dll",
+        "ole32.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt6Core.dll",
+      "sha256": "697026ff2b482df169794bd7b17a41fb47d87a518730588c668045e1f21a53da",
+      "bytes": 5793424,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 384,
+      "dlls": [
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "MPR.dll",
+        "USERENV.dll",
+        "ADVAPI32.dll",
+        "AUTHZ.dll",
+        "KERNEL32.dll",
+        "NETAPI32.dll",
+        "ole32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt6Gui.dll",
+      "sha256": "8b56854670882cbf1423929ffe64f22357ce2414ecfe8a6bf041efa8a2408bd1",
+      "bytes": 8071824,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 1468,
+      "dlls": [
+        "d3d11.dll",
+        "dxgi.dll",
+        "GDI32.dll",
+        "ole32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "DWrite.dll",
+        "Qt6Core.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt6Network.dll",
+      "sha256": "0b033bb04dd40520faec7d9e4b45a0e7a58d92c302af1d50869b4baef88dea75",
+      "bytes": 1373328,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 928,
+      "dlls": [
+        "Qt6Core.dll",
+        "ADVAPI32.dll",
+        "DNSAPI.dll",
+        "IPHLPAPI.DLL",
+        "Secur32.dll",
+        "WINHTTP.dll",
+        "WS2_32.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt6OpenGL.dll",
+      "sha256": "73940cb025f69cc9e05f72bd1705e7b693ac9511237462ddacaa559518ca9234",
+      "bytes": 1925264,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 656,
+      "dlls": [
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt6OpenGLWidgets.dll",
+      "sha256": "e6c6436cc548cd9f8ba602bf535f5cfc51aa67b5aec47203a83960e5428212ed",
+      "bytes": 60048,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 217,
+      "dlls": [
+        "Qt6OpenGL.dll",
+        "Qt6Widgets.dll",
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt6Svg.dll",
+      "sha256": "9834aa2cf53bef574b50dd597b283d8d83ab6825646811ce6fe9a3140d27dd6f",
+      "bytes": 364688,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 620,
+      "dlls": [
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/Qt6Widgets.dll",
+      "sha256": "ddce26294eaadd430b9f25f2eaa37a2155e9947882382cc3ed148fa25322c52a",
+      "bytes": 6026384,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 3028,
+      "dlls": [
+        "dwmapi.dll",
+        "UxTheme.dll",
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "MSVCP140.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/generic/qtuiotouchplugin.dll",
+      "sha256": "f5621f3dbf2ad8144a71b31b81f11da0e334e12532f8c2b6f847597ac15fdf1c",
+      "bytes": 95888,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 164,
+      "dlls": [
+        "Qt6Network.dll",
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "MSVCP140.dll",
+        "VCRUNTIME140.dll",
+        "VCRUNTIME140_1.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/iconengines/qsvgicon.dll",
+      "sha256": "0bb95ad1752da9a3c224357d09c2272c80c1fe9498561671b86b3ddd86e8316f",
+      "bytes": 64144,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 154,
+      "dlls": [
+        "Qt6Svg.dll",
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/igi1conv.exe",
+      "sha256": "84b85696ceaf0519af7b357a06dd0b33f6f3221ea478f3f69cc27ec72277001c",
+      "bytes": 1711616,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 1497,
+      "dlls": [
+        "Qt6OpenGLWidgets.dll",
+        "Qt6Widgets.dll",
+        "Qt6OpenGL.dll",
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "MSVCP140.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qgif.dll",
+      "sha256": "b5fb4c3f97f45c9c451f571c497a3451acf6783724e1f0569149be8679c3ba82",
+      "bytes": 48784,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 115,
+      "dlls": [
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qicns.dll",
+      "sha256": "f96e413dc1b8a67c025b3d1769241ee96dd8b079b367a6c868d650a6b68154c4",
+      "bytes": 38384,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 136,
+      "dlls": [
+        "Qt5Gui.dll",
+        "Qt5Core.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qico.dll",
+      "sha256": "8acd3c981f4059a0e40622776c98001b0a1b98d80534ccc4d4ab3eb5ea9259e5",
+      "bytes": 47248,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 134,
+      "dlls": [
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qjpeg.dll",
+      "sha256": "3c8eb893442e20623980aed846bfbef5bed0b95a964ef7bdf427d9e36a827c97",
+      "bytes": 620176,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 191,
+      "dlls": [
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qsvg.dll",
+      "sha256": "afc7959d919a8e829d8e995bc14a6b9a394ffe5856ba0de1906e88a19f06bec4",
+      "bytes": 40080,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 139,
+      "dlls": [
+        "Qt6Svg.dll",
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qtga.dll",
+      "sha256": "ccd620e74045d9c9157903120140b97419cbbe91fd43337e640c67cd4522072a",
+      "bytes": 27632,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 99,
+      "dlls": [
+        "Qt5Gui.dll",
+        "Qt5Core.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qtiff.dll",
+      "sha256": "5128aedf4bd9b747ac848bf85e0ffb99ba814bd8e671adff7d26391d31259050",
+      "bytes": 353776,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 149,
+      "dlls": [
+        "Qt5Gui.dll",
+        "Qt5Core.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qwbmp.dll",
+      "sha256": "7c946f750413716a714884c8836d24aa6d2561b48e7f3397bab88af348e078ec",
+      "bytes": 26608,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 103,
+      "dlls": [
+        "Qt5Gui.dll",
+        "Qt5Core.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/imageformats/qwebp.dll",
+      "sha256": "50fcf1fed7612ae4c346d7ae7dec3ebbbd2ac31c5e954263a7bbc655502e3b03",
+      "bytes": 412656,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 139,
+      "dlls": [
+        "Qt5Gui.dll",
+        "Qt5Core.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/lame_enc.dll",
+      "sha256": "90780666f78bee4315d6d2422ef78efcf50d29193e5d954660297df6aa37d61b",
+      "bytes": 983040,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 80,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/libEGL.dll",
+      "sha256": "12903d93a7f57b479401602a533849e6f813ff5c2c92f3a02d468fc98e7ac1d5",
+      "bytes": 23024,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 94,
+      "dlls": [
+        "libGLESv2.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/libGLESv2.dll",
+      "sha256": "8cfc024d09a6784486da7dc0ebfd90c0c8136b27c08ec1c3f352cd4fa43b9273",
+      "bytes": 2937328,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 212,
+      "dlls": [
+        "USER32.dll",
+        "d3d9.dll",
+        "MSVCP140.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/networkinformation/qnetworklistmanager.dll",
+      "sha256": "d60b3c0548a8a2aa5db3987a564465dfb793b6fc358cd0b26562aaef3610cee6",
+      "bytes": 70800,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 151,
+      "dlls": [
+        "OLEAUT32.dll",
+        "Qt6Network.dll",
+        "Qt6Core.dll",
+        "ole32.dll",
+        "MSVCP140.dll",
+        "VCRUNTIME140_1.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-string-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/platforms/qwindows.dll",
+      "sha256": "7e273516ab2f0778b8f2f645a854f8ed5535bf712755e94e114c29cd8fa9b7c9",
+      "bytes": 850576,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 1640,
+      "dlls": [
+        "ADVAPI32.dll",
+        "dwmapi.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "SETUPAPI.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/styles/qwindowsvistastyle.dll",
+      "sha256": "075a645475142e4a055d32a7f166a3f6f23960a6e24d34eb97369cfffd79e73e",
+      "bytes": 142992,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 493,
+      "dlls": [
+        "GDI32.dll",
+        "USER32.dll",
+        "UxTheme.dll",
+        "Qt6Widgets.dll",
+        "Qt6Gui.dll",
+        "Qt6Core.dll",
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/tls/qcertonlybackend.dll",
+      "sha256": "882fd8e18629221c0c6d2e105607cee116434ff025530da8ec9fc83ab0ca9afd",
+      "bytes": 98960,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 186,
+      "dlls": [
+        "Qt6Network.dll",
+        "Qt6Core.dll",
+        "MSVCP140.dll",
+        "VCRUNTIME140.dll",
+        "VCRUNTIME140_1.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/tls/qopensslbackend.dll",
+      "sha256": "ac34cfece276d051aa879efb49d350cae71328029bd89518b38d32572557c53a",
+      "bytes": 305808,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 448,
+      "dlls": [
+        "CRYPT32.dll",
+        "Qt6Network.dll",
+        "Qt6Core.dll",
+        "KERNEL32.dll",
+        "MSVCP140.dll",
+        "VCRUNTIME140.dll",
+        "VCRUNTIME140_1.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/editor/tools/igi1conv/tls/qschannelbackend.dll",
+      "sha256": "c50489fed60f86fc78e4df2dc55492bedf881a1cb2430b6615af6a28d17f67ed",
+      "bytes": 218256,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 387,
+      "dlls": [
+        "CRYPT32.dll",
+        "Secur32.dll",
+        "bcrypt.dll",
+        "Qt6Network.dll",
+        "Qt6Core.dll",
+        "MSVCP140.dll",
+        "VCRUNTIME140.dll",
+        "VCRUNTIME140_1.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-advanced-mod-external.dll",
+      "sha256": "ee27e67a5d212c7de3156053a2748bfd4c3b6e07d215b926cbfa5396b5fbe793",
+      "bytes": 4232013,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 221,
+      "dlls": [
+        "dwmapi.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-advanced-mod-internal.dll",
+      "sha256": "5c0df42943646d8f4c37a936f8342dd5cba0f4622a686f2324e0e9632f191467",
+      "bytes": 3312780,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 188,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-basic-mod-external.dll",
+      "sha256": "97ba9e02e5a22c48635f3db1a37591b325cc42545d8a80f02a0298fcd1e1176d",
+      "bytes": 4185289,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 220,
+      "dlls": [
+        "dwmapi.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-basic-mod-internal.dll",
+      "sha256": "24f45e31cd025a4c093a8b2f975800f46c9d43ef775edd3ec8f4d447804fbe80",
+      "bytes": 3265879,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 186,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-basic-mod-menu.dll",
+      "sha256": "78e0a6f394e3de63f1fe744e01191538e31288e44e66f0ebd2bb9da1ac742f2f",
+      "bytes": 2887027,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 176,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-custom-mod-external.dll",
+      "sha256": "010308d1f7acf9f20b72d15b47fc526c47a4f20168fde34376a85c3b095c6ddb",
+      "bytes": 3880064,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 211,
+      "dlls": [
+        "dwmapi.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-custom-mod-internal.dll",
+      "sha256": "1d400de6e62afb2c043d1f8f92b55d8b8d909ae6e48c6323bcc8ad032804e17c",
+      "bytes": 2922016,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 176,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-heaven-mod-advanced-external.dll",
+      "sha256": "6a71168f50397a12744adc03539cb49ab06f5e7348594f7bcf98b20e92f1c8b5",
+      "bytes": 4241011,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 221,
+      "dlls": [
+        "dwmapi.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-heaven-mod-advanced-internal.dll",
+      "sha256": "dffaa6c7229eb94ce77c536d66f333c6accded02b95e576f0d5b8a9723ca56e3",
+      "bytes": 3323513,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 188,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-heaven-mod-external.dll",
+      "sha256": "604cbf76c337dde7b41eee5aa8724eb156dbb549f035f2cbe51053ca47effdd1",
+      "bytes": 4229674,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 221,
+      "dlls": [
+        "dwmapi.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-heaven-mod-internal.dll",
+      "sha256": "9df9b081cd6efc451e5ce29ff281a93b8a1e4b245932c1586426d16f94bf2ca8",
+      "bytes": 3311664,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 188,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-simple-mod-external.dll",
+      "sha256": "d0b62723867835920793e0d0d6b40e1d954bc62c8e55702d222e0e3e600352a2",
+      "bytes": 4206537,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 220,
+      "dlls": [
+        "dwmapi.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-simple-mod-internal.dll",
+      "sha256": "03f9cf013a64ab49202c732324898816999b263623a5b4d2c8ae1383b608b760",
+      "bytes": 3286615,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 186,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi-simple-mod-menu.dll",
+      "sha256": "f35c0820ff8c41a4edd9ef55a417ebd8ef527aad4540d024c4647df1e8c5c0b9",
+      "bytes": 2914356,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 176,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi.exe",
+      "sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01",
+      "bytes": 1384448,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 128,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "ole32.dll",
+        "WINMM.dll",
+        "DINPUT.dll",
+        "DSOUND.dll",
+        "DDRAW.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi1.exe",
+      "sha256": "4215ffb0e961919d6e2520e5515b9db5af36027e96e689e74cc923809d44c71c",
+      "bytes": 14498361,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 176,
+      "dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi1ed.exe",
+      "sha256": "37c947cb137efdad6c0168fe91238c38a3e6b07b70b01ba902a38e3e14239e8a",
+      "bytes": 8143512,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 610,
+      "dlls": [
+        "ADVAPI32.dll",
+        "libgcc_s_sjlj-1.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi_mcp.exe",
+      "sha256": "fdb74a3513a8a7856fdc90c7b4bf5713911fd8b5bd91b3e9125d7e556de12bde",
+      "bytes": 959488,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 290,
+      "dlls": [
+        "WS2_32.dll",
+        "bcrypt.dll",
+        "gdiplus.dll",
+        "ole32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "OLEAUT32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igidecomp.app/Contents/Resources/igidecomp.exe",
+      "sha256": "7800fe01a0ff100935442d6804a649ea2a18a14ee19ad0e801cb4a56de37ae09",
+      "bytes": 10692715,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 148,
+      "dlls": [
+        "ddraw.dll",
+        "dsound.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igidecomp.exe",
+      "sha256": "7800fe01a0ff100935442d6804a649ea2a18a14ee19ad0e801cb4a56de37ae09",
+      "bytes": 10692715,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 148,
+      "dlls": [
+        "ddraw.dll",
+        "dsound.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IARR29E.dll",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IMUQMGJ.dll",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IQD1PY8.dll",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IT0E1AV.dll",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IT7KHTX.dll",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IU9K5RV.dll",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IV8AKVW.exe",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IW4WIWX.dll",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$IYCZQRU.dll",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RARR29E.dll",
+      "sha256": "ac62b3f194ffc4b6f66827e8912d3035949421025f1eb3a80be607527a9420b3",
+      "bytes": 211968,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 7,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/IGIEditor.exe",
+      "sha256": "883761d194f57999f85b30cf41ecc17cc519d132547ab4079a4c8f5ff7d9cf96",
+      "bytes": 454144,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 1,
+      "dlls": [
+        "mscoree.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/Newtonsoft.Json.dll",
+      "sha256": "c5c83bbc1741be6ff4c490c0aee34c162945423ec577c646538b2d21ce13199e",
+      "bytes": 711952,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 1,
+      "dlls": [
+        "mscoree.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/bin/IGI-Injector-GT.exe",
+      "sha256": "03ee3f3fd20f2e8d1298f164bb8345ce1b450f48abea34b030a0062e32559470",
+      "bytes": 153557,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 100,
+      "dlls": [
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "SHELL32.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/bin/IGI-Injector.exe",
+      "sha256": "a845f88e0882d74d14858fd477d495a84b766a5f6ce2853884939108e0f87459",
+      "bytes": 305664,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 95,
+      "dlls": [
+        "SHLWAPI.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/bin/IGI-Internals-Dbg.dll",
+      "sha256": "a6fa5b97381c5164cced187f068fe1a65e94cf63eb4ec342b62258441d46b394",
+      "bytes": 763904,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 353,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "MSVCP140D.dll",
+        "dbghelp.dll",
+        "VCRUNTIME140D.dll",
+        "ucrtbased.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/bin/IGI-Internals-Rls.dll",
+      "sha256": "15943ebc954a37dedc512b67191ab423d69b1aa2cbeec6ed74dccb313929a8bf",
+      "bytes": 314368,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 260,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "MSVCP140.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMUQMGJ.dll",
+      "sha256": "73498cd9ab3739f7462d9c3f2f22617b7f6feef6954090bc3261be23807bd8a5",
+      "bytes": 465408,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 8,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "ole32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RQD1PY8.dll",
+      "sha256": "d0a25279a57854a10cdffa53868349257683c7e968499e01d4b9341f63055536",
+      "bytes": 246272,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 8,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "ole32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RT0E1AV.dll",
+      "sha256": "bbfc82f46851c4444bd29be0fa33afeb5bb6a66ee8dddcdb9cdd4861b7bf0f6d",
+      "bytes": 2737152,
+      "machine": "0xAA64",
+      "pe_type": "PE32+",
+      "imports": 156,
+      "dlls": [
+        "SHLWAPI.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "SHELL32.dll",
+        "ole32.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RT7KHTX.dll",
+      "sha256": "3327d21fa162c77cc3b4f763da40a26475a79c10593ab6daa8ed2b3e811e858c",
+      "bytes": 399872,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 8,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "ole32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RU9K5RV.dll",
+      "sha256": "ce77b05cd7406028776e1dc2d0b31dd6abd561870023ed6bf89eeff5e218d2a9",
+      "bytes": 206848,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 7,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RV8AKVW.exe",
+      "sha256": "3f460b89495b5b9112447e453332258950d106874738f3efb2aa6d617eb5b26b",
+      "bytes": 176640,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 9,
+      "dlls": [
+        "KERNEL32.DLL",
+        "advapi32.dll",
+        "comctl32.dll",
+        "gdi32.dll",
+        "ole32.dll",
+        "oleaut32.dll",
+        "user32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RW4WIWX.dll",
+      "sha256": "45b8f6a8957e4b67dfd9fd198394b1dbf517e36658bf634306a7d39c9526852b",
+      "bytes": 207360,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 7,
+      "dlls": [
+        "GDI32.dll",
+        "KERNEL32.DLL",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RYCZQRU.dll",
+      "sha256": "fd09fba23b4d60a3a072b71659cea95aa0242f8335b1d8e44f141a4d72d2d770",
+      "bytes": 197120,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 4,
+      "dlls": [
+        "KERNEL32.DLL",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/IGI-Editor-master/IGIEditor/Interop.IWshRuntimeLibrary.dll",
+      "sha256": "abfb5e2bf528d5cd489c5e2fe25b495d5b0530e3b158be823124bab564842256",
+      "bytes": 37376,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 1,
+      "dlls": [
+        "mscoree.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/Resource_Convertor/gconv.exe",
+      "sha256": "5616139f4f94e7299b0703954d6a3eeda36fdda5cb17e19fa32163ba6b326c78",
+      "bytes": 196608,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 96,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "gconvapi.dll",
+        "WININET.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/Resource_Convertor/gconvapi.dll",
+      "sha256": "f76ce99b51402bba2b93b43135c1e6a622545e82b895f810309dad6fbaf4b6de",
+      "bytes": 393296,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 78,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "vqdll.dll",
+        "WININET.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/Resource_Convertor/vqdll.dll",
+      "sha256": "2491892b539d9072ca0704972ceac83bf5cb9fbcc3938be6a01495f9cbf40a69",
+      "bytes": 73216,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 54,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/MemoryDataMap.exe",
+      "sha256": "640ece4ea71ff17dbd7a09d49c2c918f6198362b5eae60e5c5b81dbdc64c4fac",
+      "bytes": 27690,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 26,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/hBitTest.exe",
+      "sha256": "f363446ee5e1d49ba73ba252ad4005aa3ed9126bf2d50fba22634f92809c656f",
+      "bytes": 22550,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 22,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/include/gitHub_C.zip (Unzipped Files)/gitHub_C/MemoryDataMap.exe",
+      "sha256": "640ece4ea71ff17dbd7a09d49c2c918f6198362b5eae60e5c5b81dbdc64c4fac",
+      "bytes": 27690,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 26,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/include/gitHub_C.zip (Unzipped Files)/gitHub_C/hBitTest.exe",
+      "sha256": "f363446ee5e1d49ba73ba252ad4005aa3ed9126bf2d50fba22634f92809c656f",
+      "bytes": 22550,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 22,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/include/gitHub_C.zip (Unzipped Files)/gitHub_C/test.exe",
+      "sha256": "862c2999333f763877bc69317f3a8eee59a2eb9d2653a7f95c1919e12ebf2ac3",
+      "bytes": 35826,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 28,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/test.exe",
+      "sha256": "a6cbded24d5cf5d5a0ae1df8227184ca18800c45315bb09c719a3b02fc8fe137",
+      "bytes": 32608,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 28,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/igi2.exe",
+      "sha256": "2ae67e6ac3c32d2b75e26f887b3a4bddd3dec029549743953c5a88719a505006",
+      "bytes": 3706808,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 216,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "mss32.dll",
+        "WINMM.dll",
+        "WININET.dll",
+        "MSVFW32.dll",
+        "AVIFIL32.dll",
+        "WSOCK32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/igi2_sp_demo2/DSETUP.dll",
+      "sha256": "0fdfff9a5db0bd4b16a9663a6616308c511a21e3bec0bbed60ddfa2597c73acf",
+      "bytes": 35328,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 99,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ADVAPI32.dll",
+        "WINMM.dll",
+        "VERSION.dll",
+        "ole32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/igi2_sp_demo2/dsetup32.dll",
+      "sha256": "04765ec4d164bbfcf1ca50c9834f3df4aa789cac82abf789d4399b026621e130",
+      "bytes": 1901056,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 142,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ADVAPI32.dll",
+        "WINMM.dll",
+        "VERSION.dll",
+        "SHELL32.dll",
+        "ole32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/igi2_sp_demo2/igi2.exe",
+      "sha256": "4e4dd1858676aa07a755f2811189c41c442e1e673bcdad6fa7fc983dea23db98",
+      "bytes": 2887680,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 242,
+      "dlls": [
+        "VERSION.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "mss32.dll",
+        "WINMM.dll",
+        "WININET.dll",
+        "WSOCK32.dll",
+        "GDI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/npp.8.6.Installer.x64.exe",
+      "sha256": "92b94f5df86bf73ccdce652e4e8b5d3085e16da2ae7fc9feeac6a6dcc01c4490",
+      "bytes": 4816456,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 165,
+      "dlls": [
+        "ADVAPI32.dll",
+        "SHELL32.dll",
+        "ole32.dll",
+        "COMCTL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/snake_game_linux.exe",
+      "error": "PEFormatError: 'DOS Header magic not found.'"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/PDBs/Dedicated Server 1.2/igi2.exe",
+      "sha256": "2f3f21e53b8e435e568c7883405ae932d56c5a9135685510ad0d85ef7347091d",
+      "bytes": 2375680,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 155,
+      "dlls": [
+        "VERSION.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "WININET.dll",
+        "WSOCK32.dll",
+        "ADVAPI32.dll",
+        "ole32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/PDBs/IGI2Editor 1.1/igi2ed.exe",
+      "sha256": "d9af60142412554bac38217c6ed95e9e770621f26d54e7bf1f0f25d3ff7b3f1d",
+      "bytes": 9014100,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 256,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "VERSION.dll",
+        "ADVAPI32.dll",
+        "ole32.dll",
+        "WINMM.dll",
+        "WININET.dll",
+        "WSOCK32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/PDBs/Unknown/LaunchIGI.exe",
+      "sha256": "4e1c996795d7700e79cece7d1285fa92dc460b384cde666c7f3ab20ab486445c",
+      "bytes": 77824,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 56,
+      "dlls": [
+        "USER32.dll",
+        "comdlg32.dll",
+        "ADVAPI32.dll",
+        "SHELL32.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Programs/CheatEngine75.exe",
+      "sha256": "93bc218fa7956dc4eb8d19f7fe8c8ebb2e0b60f06ff221bbab6e62b56fc94f6a",
+      "bytes": 29925096,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 141,
+      "dlls": [
+        "kernel32.dll",
+        "comctl32.dll",
+        "version.dll",
+        "user32.dll",
+        "oleaut32.dll",
+        "netapi32.dll",
+        "advapi32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Programs/IGI-Pro-Trainer_Demo.exe",
+      "sha256": "a89c025a9f91c5bcbd587d4901d5cc2296cc65dd1c2a497180f5e396c025cec7",
+      "bytes": 159755,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 122,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll",
+        "WINMM.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Programs/IGI-Pro-Trainer_Demo_2.exe",
+      "sha256": "a89c025a9f91c5bcbd587d4901d5cc2296cc65dd1c2a497180f5e396c025cec7",
+      "bytes": 159755,
+      "machine": "x86-64",
+      "pe_type": "PE32+",
+      "imports": 122,
+      "dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "USER32.dll",
+        "WINMM.dll"
+      ],
+      "in_scope": false
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Programs/npp.8.6.5.Installer.x64.exe",
+      "sha256": "eedf45e0803ce36c4b745e54fc7a7136d9b364c2a795e646548a4350cf88a366",
+      "bytes": 4840624,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 163,
+      "dlls": [
+        "ADVAPI32.dll",
+        "SHELL32.dll",
+        "ole32.dll",
+        "COMCTL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Programs/processhacker-2.39-setup.exe",
+      "sha256": "28042dd4a92a0033b8f1d419b9e989c5b8e32d1d2d881f5c8251d58ce35b9063",
+      "bytes": 2267848,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 96,
+      "dlls": [
+        "kernel32.dll",
+        "user32.dll",
+        "oleaut32.dll",
+        "advapi32.dll",
+        "comctl32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/CoreMod.dll",
+      "sha256": "ed551cebc3f72ccf188d7f4ecb86f09193f01b260fdbe789b68a7cc74739ebbc",
+      "bytes": 229888,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 199,
+      "dlls": [
+        "d3dx9_43.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ole32.dll",
+        "TmForever.exe",
+        "RPCRT4.dll",
+        "WININET.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/ModLoader.dll",
+      "sha256": "ce408a17b6f8a06c75e9482bade36ab8f98ce107cb389961da8390ece3eeccec",
+      "bytes": 531968,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 94,
+      "dlls": [
+        "kernel32.dll",
+        "advapi32.dll",
+        "ntdll.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/TMCompPatch.dll",
+      "sha256": "cf296c82bafeb71623d8574c3b6eeb45cf7453af73d28ae541c380aa4ec7677b",
+      "bytes": 3196928,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 301,
+      "dlls": [
+        "ModLoader.dll",
+        "KERNEL32.dll",
+        "TmForever.exe",
+        "WS2_32.dll",
+        "ADVAPI32.dll",
+        "USER32.dll",
+        "CRYPT32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/TMInterface.dll",
+      "sha256": "22077e949ab2be5f85c62a9ad4c0e2493ef0d0b913ffe87238cebed0d9a609fa",
+      "bytes": 3057152,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 336,
+      "dlls": [
+        "WS2_32.dll",
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/TMUnlimiter.dll",
+      "sha256": "29c27bbf3b384501b8c8fe9a4f74c0ea46e8f1723e20b46cd44d1080f9bfa328",
+      "bytes": 1928704,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 775,
+      "dlls": [
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "WININET.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/TmForever.exe",
+      "sha256": "5e287e79a07cccc9f58989120fda2668d5da1086321033f162492af7c2671672",
+      "bytes": 10685290,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 416,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "d3d9.dll",
+        "d3dx9_30.dll",
+        "DINPUT8.dll",
+        "WININET.dll",
+        "SHFOLDER.dll",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/d3dx9_31.dll",
+      "sha256": "e2065619fe6eb0034833b1dc0369deb4a6edc3110e38a1132eeafcf430c578a5",
+      "bytes": 2414360,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 177,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/d3dx9_43.dll",
+      "sha256": "0b28546be22c71834501f7d7185ede5d79742457331c7ee09efc14490dd64f5f",
+      "bytes": 1998168,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 191,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/TmForeverModLoader/discord_game_sdk.dll",
+      "sha256": "d8e7d9feb3de8482b186ae44fd1c9abb41fe2b3b3d2c7cd3a4d742ebbad30cdf",
+      "bytes": 3154744,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 120,
+      "dlls": [
+        "WS2_32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll",
+        "ktmw32.dll",
+        "ole32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/ShimRun.exe",
+      "sha256": "fd36a195396184abe7d67317a1df32cc4c20248baf38f555bbe1698a63f427bd",
+      "bytes": 376832,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 83,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/TMLoader.exe",
+      "sha256": "0cf4c92ad1cb2dc7b92f95b2ec63d9058fd930c200632aaa2aab3a5a3a65e2c3",
+      "bytes": 4316160,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 292,
+      "dlls": [
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "WTSAPI32.dll",
+        "USERENV.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/Competition Patch/1.5.3/TMCompPatch.dll",
+      "sha256": "eef7200a2f6d5a8b31ae43534752e807c3c146248bd941fdf54b21b61225a135",
+      "bytes": 2836480,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 194,
+      "dlls": [
+        "HID.DLL",
+        "USER32.dll",
+        "ModLoader.dll",
+        "TmForever.exe",
+        "bcrypt.dll",
+        "KERNEL32.dll",
+        "WS2_32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/CoreMod/1.0.9/CoreMod.dll",
+      "sha256": "f3ffdcaf2b15c040823d60bcc559e7f287f767b483c1b42588212cdf714d08cf",
+      "bytes": 223232,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 193,
+      "dlls": [
+        "d3dx9_43.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ole32.dll",
+        "TmForever.exe",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/CoreMod/1.0.9/ModLoader.dll",
+      "sha256": "fe884e4cfa728b60a8ae7000acb43ab56ce7adc49690d7751071126a8f6027e7",
+      "bytes": 3584,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 2,
+      "dlls": [
+        "KERNEL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/CoreMod/1.0.9/d3dx9_31.dll",
+      "sha256": "e2065619fe6eb0034833b1dc0369deb4a6edc3110e38a1132eeafcf430c578a5",
+      "bytes": 2414360,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 177,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/CoreMod/1.0.9/d3dx9_43.dll",
+      "sha256": "0b28546be22c71834501f7d7185ede5d79742457331c7ee09efc14490dd64f5f",
+      "bytes": 1998168,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 191,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/TMInterface/2.2.0/TMInterface.dll",
+      "sha256": "22077e949ab2be5f85c62a9ad4c0e2493ef0d0b913ffe87238cebed0d9a609fa",
+      "bytes": 3057152,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 336,
+      "dlls": [
+        "WS2_32.dll",
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/TMInterface/2.2.0/discord_game_sdk.dll",
+      "sha256": "d8e7d9feb3de8482b186ae44fd1c9abb41fe2b3b3d2c7cd3a4d742ebbad30cdf",
+      "bytes": 3154744,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 120,
+      "dlls": [
+        "WS2_32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll",
+        "ktmw32.dll",
+        "ole32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/TMUnlimiter/2.0.7/TMUnlimiter.dll",
+      "sha256": "920c00a59ce5a783110396327779bcc9ec3f67832cf665c711b855ef30a7c5d6",
+      "bytes": 1928704,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 774,
+      "dlls": [
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "WININET.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/TMUnlimiter/2.0.7/discord_game_sdk.dll",
+      "sha256": "d8e7d9feb3de8482b186ae44fd1c9abb41fe2b3b3d2c7cd3a4d742ebbad30cdf",
+      "bytes": 3154744,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 120,
+      "dlls": [
+        "WS2_32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll",
+        "ktmw32.dll",
+        "ole32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/TmForever/2.12.0-compat/TmForever.exe",
+      "sha256": "0a885e194131063be9f78d9e5cf81e0f3017dfc4331d176812109b6aefc633bf",
+      "bytes": 10685290,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 416,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "d3d9.dll",
+        "d3dx9_30.dll",
+        "DINPUT8.dll",
+        "WININET.dll",
+        "SHFOLDER.dll",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/database/TmForever/products/TmForever/2.12.0/TmForever.exe",
+      "sha256": "8c5325d04a10d5e6921afb9931770279cca8cdfc7f66425b6365d0a870f5694a",
+      "bytes": 10685290,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 416,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "d3d9.dll",
+        "d3dx9_30.dll",
+        "DINPUT8.dll",
+        "WININET.dll",
+        "SHFOLDER.dll",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/sciter.dll",
+      "sha256": "493e44c4a06d1d344b58dd567c7d0291882f5b53127c402c877ced095230b078",
+      "bytes": 6876672,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 594,
+      "dlls": [
+        "WS2_32.dll",
+        "WININET.dll",
+        "SHELL32.dll",
+        "ADVAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "GDI32.dll",
+        "COMDLG32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/TmNationsESWC/TmNationsESWC.exe",
+      "sha256": "822def6627f020035ef0819cf9f85493e952a2efb450d23770b330311ad8109d",
+      "bytes": 8989696,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 259,
+      "dlls": [
+        "advapi32.dll",
+        "avifil32.dll",
+        "dinput8.dll",
+        "dsound.dll",
+        "gdi32.dll",
+        "kernel32.dll",
+        "oleaut32.dll",
+        "rpcrt4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/TmNationsESWC/TmNationsESWCLauncher.exe",
+      "sha256": "4f22317a3b7bb4a6fd73a69dcca067e646f636ea21633584dbb05086a18ca773",
+      "bytes": 2658304,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 277,
+      "dlls": [
+        "d3d9.dll",
+        "KERNEL32.dll",
+        "GDI32.dll",
+        "USER32.dll",
+        "COMCTL32.dll",
+        "ADVAPI32.dll",
+        "WINSPOOL.DRV",
+        "WS2_32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/TmNationsESWC/binkw32.dll",
+      "sha256": "29a8dcac53adb64544c23d51692c353be5aa9e759522961bfc1030592bb698bc",
+      "bytes": 193024,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 120,
+      "dlls": [
+        "USER32.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "WINMM.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/TmNationsESWC/unicows.dll",
+      "sha256": "9948624dddef91c958132d5e56a0aca855dac83eeb0037ec243b0a50b3f27374",
+      "bytes": 258352,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 863,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "MPR.dll",
+        "ADVAPI32.dll",
+        "comdlg32.dll",
+        "VERSION.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/TmNationsESWC/unins000.exe",
+      "sha256": "7dabe791210b513b474603a0818d3de5557ada98ec60ee57f05454fd055186da",
+      "bytes": 683865,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 420,
+      "dlls": [
+        "kernel32.dll",
+        "user32.dll",
+        "oleaut32.dll",
+        "advapi32.dll",
+        "mpr.dll",
+        "version.dll",
+        "gdi32.dll",
+        "comctl32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/1TmForeverLauncher.exe",
+      "sha256": "d9b35fc92bffde6c9bd2657238cc56f562160d564f20be5d3e31a31d6c2b268f",
+      "bytes": 2322432,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 365,
+      "dlls": [
+        "d3d9.dll",
+        "d3dx9_30.dll",
+        "KERNEL32.dll",
+        "GDI32.dll",
+        "USER32.dll",
+        "OLEAUT32.dll",
+        "SHELL32.dll",
+        "COMDLG32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/CoreMod.dll",
+      "sha256": "ed551cebc3f72ccf188d7f4ecb86f09193f01b260fdbe789b68a7cc74739ebbc",
+      "bytes": 229888,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 199,
+      "dlls": [
+        "d3dx9_43.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ole32.dll",
+        "TmForever.exe",
+        "RPCRT4.dll",
+        "WININET.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/LuaEngine2.dll",
+      "sha256": "86854f69d473d46baa21d142ec7b545032fb631a8ac2c7861198cc2ae10c6e88",
+      "bytes": 751104,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 187,
+      "dlls": [
+        "KERNEL32.dll",
+        "MSVCP140.dll",
+        "lua54.dll",
+        "TwinkieModloader.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/ModLoader.dll",
+      "sha256": "ce408a17b6f8a06c75e9482bade36ab8f98ce107cb389961da8390ece3eeccec",
+      "bytes": 531968,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 94,
+      "dlls": [
+        "kernel32.dll",
+        "advapi32.dll",
+        "ntdll.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/OpenAL32.creative.dll",
+      "sha256": "26ba695d73fdf78ff133ab9c0e12300c26076441627a25ffba80c8b8aedb10ec",
+      "bytes": 110592,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 83,
+      "dlls": [
+        "WINMM.dll",
+        "KERNEL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/OpenAL32.dll",
+      "sha256": "606cf8b4c22c7ae00813585279ac045115907bc66d1483eb26355907021ea4b0",
+      "bytes": 4071950,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 220,
+      "dlls": [
+        "AVRT.dll",
+        "KERNEL32.dll",
+        "msvcrt.dll",
+        "ole32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "WINMM.DLL"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/ShimRun.exe",
+      "sha256": "fd36a195396184abe7d67317a1df32cc4c20248baf38f555bbe1698a63f427bd",
+      "bytes": 376832,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 83,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/T1mForever.exe",
+      "sha256": "3847cf9f20bfc63914450060ed528c12104f743d96ad23d6e76abd178de8c84f",
+      "bytes": 10498048,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 416,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "d3d9.dll",
+        "d3dx9_30.dll",
+        "DINPUT8.dll",
+        "WININET.dll",
+        "SHFOLDER.dll",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TMCompPatch.dll",
+      "sha256": "cf296c82bafeb71623d8574c3b6eeb45cf7453af73d28ae541c380aa4ec7677b",
+      "bytes": 3196928,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 301,
+      "dlls": [
+        "ModLoader.dll",
+        "KERNEL32.dll",
+        "TmForever.exe",
+        "WS2_32.dll",
+        "ADVAPI32.dll",
+        "USER32.dll",
+        "CRYPT32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TMInterface.dll",
+      "sha256": "22077e949ab2be5f85c62a9ad4c0e2493ef0d0b913ffe87238cebed0d9a609fa",
+      "bytes": 3057152,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 336,
+      "dlls": [
+        "WS2_32.dll",
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TMLoader.exe",
+      "sha256": "0cf4c92ad1cb2dc7b92f95b2ec63d9058fd930c200632aaa2aab3a5a3a65e2c3",
+      "bytes": 4316160,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 292,
+      "dlls": [
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "WTSAPI32.dll",
+        "USERENV.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TMUnlimiter.dll",
+      "sha256": "29c27bbf3b384501b8c8fe9a4f74c0ea46e8f1723e20b46cd44d1080f9bfa328",
+      "bytes": 1928704,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 775,
+      "dlls": [
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "WININET.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/ThumbGbx.dll",
+      "sha256": "b79f23adda4af8996803013741d90be4fcd6508234e4e0ae0d9f158d9649c6f8",
+      "bytes": 229376,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 267,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "WINSPOOL.DRV",
+        "ADVAPI32.dll",
+        "SHLWAPI.dll",
+        "ole32.dll",
+        "OLEAUT32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TmForever.exe",
+      "sha256": "5e287e79a07cccc9f58989120fda2668d5da1086321033f162492af7c2671672",
+      "bytes": 10685290,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 416,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "d3d9.dll",
+        "d3dx9_30.dll",
+        "DINPUT8.dll",
+        "WININET.dll",
+        "SHFOLDER.dll",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TwinkieModloader.dll",
+      "sha256": "9af89c1bbf459903cba99ff98cdd4da7c301645afd70dea1227546c2a19758b4",
+      "bytes": 1346048,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 300,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "ole32.dll",
+        "lua54.dll",
+        "LuaEngine2.dll",
+        "MSVCP140.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/binkw32.dll",
+      "sha256": "088cd328b6fad2514500714c777fa7dc8e30a9f61ea7dc96549a7835459c4ef6",
+      "bytes": 171008,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 110,
+      "dlls": [
+        "USER32.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "WINMM.dll",
+        "mss32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/d3dx9_31.dll",
+      "sha256": "e2065619fe6eb0034833b1dc0369deb4a6edc3110e38a1132eeafcf430c578a5",
+      "bytes": 2414360,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 177,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/d3dx9_43.dll",
+      "sha256": "0b28546be22c71834501f7d7185ede5d79742457331c7ee09efc14490dd64f5f",
+      "bytes": 1998168,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 191,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/Competition Patch/1.5.3/TMCompPatch.dll",
+      "sha256": "eef7200a2f6d5a8b31ae43534752e807c3c146248bd941fdf54b21b61225a135",
+      "bytes": 2836480,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 194,
+      "dlls": [
+        "HID.DLL",
+        "USER32.dll",
+        "ModLoader.dll",
+        "TmForever.exe",
+        "bcrypt.dll",
+        "KERNEL32.dll",
+        "WS2_32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/CoreMod/1.0.12/CoreMod.dll",
+      "sha256": "ed551cebc3f72ccf188d7f4ecb86f09193f01b260fdbe789b68a7cc74739ebbc",
+      "bytes": 229888,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 199,
+      "dlls": [
+        "d3dx9_43.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ole32.dll",
+        "TmForever.exe",
+        "RPCRT4.dll",
+        "WININET.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/CoreMod/1.0.12/ModLoader.dll",
+      "sha256": "59a4700fdda3ce1f64e7315039fecc5b13ebf7fe5d6f1d1b5743d36eaef9c56a",
+      "bytes": 85504,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 77,
+      "dlls": [
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/CoreMod/1.0.12/d3dx9_31.dll",
+      "sha256": "e2065619fe6eb0034833b1dc0369deb4a6edc3110e38a1132eeafcf430c578a5",
+      "bytes": 2414360,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 177,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/CoreMod/1.0.12/d3dx9_43.dll",
+      "sha256": "0b28546be22c71834501f7d7185ede5d79742457331c7ee09efc14490dd64f5f",
+      "bytes": 1998168,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 191,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/CoreMod/1.0.9/CoreMod.dll",
+      "sha256": "f3ffdcaf2b15c040823d60bcc559e7f287f767b483c1b42588212cdf714d08cf",
+      "bytes": 223232,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 193,
+      "dlls": [
+        "d3dx9_43.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "ole32.dll",
+        "TmForever.exe",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/CoreMod/1.0.9/ModLoader.dll",
+      "sha256": "fe884e4cfa728b60a8ae7000acb43ab56ce7adc49690d7751071126a8f6027e7",
+      "bytes": 3584,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 2,
+      "dlls": [
+        "KERNEL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/CoreMod/1.0.9/d3dx9_31.dll",
+      "sha256": "e2065619fe6eb0034833b1dc0369deb4a6edc3110e38a1132eeafcf430c578a5",
+      "bytes": 2414360,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 177,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/CoreMod/1.0.9/d3dx9_43.dll",
+      "sha256": "0b28546be22c71834501f7d7185ede5d79742457331c7ee09efc14490dd64f5f",
+      "bytes": 1998168,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 191,
+      "dlls": [
+        "msvcrt.dll",
+        "GDI32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/TMInterface/2.2.0/TMInterface.dll",
+      "sha256": "22077e949ab2be5f85c62a9ad4c0e2493ef0d0b913ffe87238cebed0d9a609fa",
+      "bytes": 3057152,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 336,
+      "dlls": [
+        "WS2_32.dll",
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/TMInterface/2.2.0/discord_game_sdk.dll",
+      "sha256": "d8e7d9feb3de8482b186ae44fd1c9abb41fe2b3b3d2c7cd3a4d742ebbad30cdf",
+      "bytes": 3154744,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 120,
+      "dlls": [
+        "WS2_32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll",
+        "ktmw32.dll",
+        "ole32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/TMUnlimiter/2.0.7/TMUnlimiter.dll",
+      "sha256": "920c00a59ce5a783110396327779bcc9ec3f67832cf665c711b855ef30a7c5d6",
+      "bytes": 1928704,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 774,
+      "dlls": [
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "WININET.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/TMUnlimiter/2.0.7/discord_game_sdk.dll",
+      "sha256": "d8e7d9feb3de8482b186ae44fd1c9abb41fe2b3b3d2c7cd3a4d742ebbad30cdf",
+      "bytes": 3154744,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 120,
+      "dlls": [
+        "WS2_32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll",
+        "ktmw32.dll",
+        "ole32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/TMUnlimiter/2.0.8/TMUnlimiter.dll",
+      "sha256": "29c27bbf3b384501b8c8fe9a4f74c0ea46e8f1723e20b46cd44d1080f9bfa328",
+      "bytes": 1928704,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 775,
+      "dlls": [
+        "discord_game_sdk.dll",
+        "ModLoader.dll",
+        "WININET.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "SHELL32.dll",
+        "TmForever.exe"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/TMUnlimiter/2.0.8/discord_game_sdk.dll",
+      "sha256": "d8e7d9feb3de8482b186ae44fd1c9abb41fe2b3b3d2c7cd3a4d742ebbad30cdf",
+      "bytes": 3154744,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 120,
+      "dlls": [
+        "WS2_32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll",
+        "ktmw32.dll",
+        "ole32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/TmForever/2.12.0-compat/TmForever.exe",
+      "sha256": "0a885e194131063be9f78d9e5cf81e0f3017dfc4331d176812109b6aefc633bf",
+      "bytes": 10685290,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 416,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "d3d9.dll",
+        "d3dx9_30.dll",
+        "DINPUT8.dll",
+        "WININET.dll",
+        "SHFOLDER.dll",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/database/TmForever/products/TmForever/2.12.0/TmForever.exe",
+      "sha256": "8c5325d04a10d5e6921afb9931770279cca8cdfc7f66425b6365d0a870f5694a",
+      "bytes": 10685290,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 416,
+      "dlls": [
+        "KERNEL32.dll",
+        "USER32.dll",
+        "d3d9.dll",
+        "d3dx9_30.dll",
+        "DINPUT8.dll",
+        "WININET.dll",
+        "SHFOLDER.dll",
+        "RPCRT4.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/discord_game_sdk.dll",
+      "sha256": "d8e7d9feb3de8482b186ae44fd1c9abb41fe2b3b3d2c7cd3a4d742ebbad30cdf",
+      "bytes": 3154744,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 120,
+      "dlls": [
+        "WS2_32.dll",
+        "KERNEL32.dll",
+        "ADVAPI32.dll",
+        "ktmw32.dll",
+        "ole32.dll",
+        "SHELL32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/lua54.dll",
+      "sha256": "8b18c27845e09a3f99536d272e57bc2dd5d897037a988c81ce520780a8ba6830",
+      "bytes": 261632,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 113,
+      "dlls": [
+        "KERNEL32.dll",
+        "VCRUNTIME140.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/sciter.dll",
+      "sha256": "493e44c4a06d1d344b58dd567c7d0291882f5b53127c402c877ced095230b078",
+      "bytes": 6876672,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 594,
+      "dlls": [
+        "WS2_32.dll",
+        "WININET.dll",
+        "SHELL32.dll",
+        "ADVAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "GDI32.dll",
+        "COMDLG32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/unins000.exe",
+      "sha256": "a502edd5841c46ab036ad343afb160b80b720f5e2001b7d98e22b3d239285b16",
+      "bytes": 695642,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 425,
+      "dlls": [
+        "kernel32.dll",
+        "user32.dll",
+        "oleaut32.dll",
+        "advapi32.dll",
+        "mpr.dll",
+        "version.dll",
+        "gdi32.dll",
+        "comctl32.dll"
+      ],
+      "in_scope": true
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/wrap_oal.dll",
+      "sha256": "c2ef86cbdb7fa07a9da8f56d5ffa548c57c5eaafd1ce5462ed397de7b8c823a3",
+      "bytes": 413696,
+      "machine": "i386",
+      "pe_type": "PE32",
+      "imports": 107,
+      "dlls": [
+        "KERNEL32.dll",
+        "WINMM.dll",
+        "USER32.dll",
+        "ole32.dll"
+      ],
+      "in_scope": true
+    }
+  ]
+}
