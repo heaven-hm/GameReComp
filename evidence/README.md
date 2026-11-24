@@ -103,3 +103,7 @@ python3 -m tools.oracle_sweep --exe <original.exe> --out evidence/sweep --timeou
 - noiz2sa / Pixeltetris builds were killed by host OOM (exit 137).
 - `TmForever.exe` and other large titles were not rebuilt here (multi-GB
   generated C); `TmNationsESWC.exe` is the tractable untested target.
+
+## 5. Newly downloaded Chocolate Doom 1.3.0 (win32)
+
+Official GPL release, SHA-256 `d1b9dabc567d0a79480a4b319850b69ea76e69a3b4be578586ae045b96af33cc` (matches the hash already recorded in `docs/NEW_GAME_DOWNLOADS.md`). Rebuilt with the current runtime: score 93, **166 EXE imports + 34 companion SDL_net.dll imports, 0 unresolved**, native binary booted. No frames: no legally supplied DOOM WAD. Evidence: `reports/frames/chocolate-doom/evidence.json`. Status **PARTIAL** — import binding and boot only, not gameplay.

@@ -2233,6 +2233,18 @@
       "sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82",
       "evidence": "reports/oracle-sweep/batch1/hangman_x86-acceptance.json",
       "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "Chocolate Doom 1.3.0 (downloaded)",
+      "filename": "chocolate-doom.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 93,
+      "verification": "partial",
+      "status": "process launched and booted, 0 unresolved imports; no WAD, no frames",
+      "sha256": "d1b9dabc567d0a79480a4b319850b69ea76e69a3b4be578586ae045b96af33cc",
+      "evidence": "reports/frames/chocolate-doom/evidence.json",
+      "notes": "166 EXE imports + 34 companion SDL_net.dll imports all bound. No gameplay oracle or WAD."
     }
   ]
 }

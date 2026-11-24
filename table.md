@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-24T04:02:20Z by `python -m tools.gamesdb`. Measured 126; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-24T04:45:32Z by `python -m tools.gamesdb`. Measured 127; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **arith-calc-cli-oracle** (arith-calc.exe) at 100/100, scenario-pass: process-level oracle matched (Wine original, CLI scenario).
 
@@ -23,6 +23,7 @@ Best measured result: **arith-calc-cli-oracle** (arith-calc.exe) at 100/100, sce
 | BusyBox | busybox-w32.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/busybox_w32/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | DoConfig.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/DoConfig/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | Doukutsu.exe | i386 (PE32) | Windows | 93 | partial: process launched and stayed alive until the 10s timeout; no crash observed, no oracle | projects/Doukutsu/reports/report.html (host: Darwin arm64 (host build)) |
+| Chocolate Doom 1.3.0 (downloaded) | chocolate-doom.exe | i386 (PE32) | Windows | 93 | partial: process launched and booted, 0 unresolved imports; no WAD, no frames | reports/frames/chocolate-doom/evidence.json |
 | Downloads | idman643build18.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/idman643build18/reports/report.html (host: Darwin arm64 (host build)) |
 | GeneRally | TrackEditor.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/TrackEditor/reports/report.html (host: Darwin arm64 (host build)) |
 | IGI | igi.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/igi/reports/report.html (host: Darwin arm64 (host build)) |

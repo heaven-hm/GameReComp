@@ -8,9 +8,9 @@ Every game this product knows about, in one table: the locally supplied corpus t
 
 **Port details** are read from each project's own `reports/report.json`: functions recovered, generated C, the rebuilt binary, imports the runtime bound, and the low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed high-level source.
 
-Updated 2026-11-24T04:02:20Z by `python -m tools.gamesdb --matrix`.
+Updated 2026-11-24T04:45:32Z by `python -m tools.gamesdb --matrix`.
 
-**Running native macOS arm64 ports:** **99 / 126** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**99** with `0` unresolved imports).
+**Running native macOS arm64 ports:** **100 / 127** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**100** with `0` unresolved imports).
 
 ## This repository (measured)
 
@@ -21,6 +21,7 @@ Updated 2026-11-24T04:02:20Z by `python -m tools.gamesdb --matrix`.
 | Cave Story (DoConfig.exe) | Windows | i386 (PE32) | 458 fns recovered; 2 units / 4.2 MiB C; binary DoConfig 1933 KiB [macOS arm64 (native)]; 90 imports bound; low-level 458/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
 | Cave Story (Doukutsu.exe) | Windows | i386 (PE32) | 3317 fns recovered; 8 units / 51.0 MiB C; binary Doukutsu 10404 KiB [macOS arm64 (native)]; 143 imports bound; low-level 3310/ high-level verified 7 | 2/3 non-blank frames | PARTIAL - launches, no scenario oracle - process launched and stayed alive until the 10s timeout; no crash observed, no oracle |
 | Cave Story (OrgView.exe) | Windows | i386 (PE32) | 603 fns recovered; 2 units / 5.6 MiB C; binary OrgView 2729 KiB [macOS arm64 (native)]; 122 imports bound; low-level 603/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process crashed (exit -11) |
+| Chocolate Doom 1.3.0 (downloaded) (chocolate-doom.exe) | Windows | i386 (PE32) | - | - | PARTIAL - launches, no scenario oracle - process launched and booted, 0 unresolved imports; no WAD, no frames |
 | Data (file0001.exe) | Windows | None | inspect failed: PEFormatError | - | NOT RUN |
 | Data (file0002.exe) | Windows | None | inspect failed: PEFormatError | - | NOT RUN |
 | Data (helpme.exe) | Windows | None | inspect failed: PEFormatError | - | NOT RUN |
