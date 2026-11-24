@@ -364,10 +364,16 @@ static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDES
     dd_desc_t sh = desc_shape(d);
     uint32_t fl = MEM32(d + 4), caps = fl & DDSD_CAPS ? MEM32(d + sh.caps) : 0;
     int primary = (caps & DDSCAPS_PRIMARYSURFACE) != 0;
-    int w = primary ? g_mode_w : (int)MEM32(d + 12), h = primary ? g_mode_h : (int)MEM32(d + 8);
+    /* DirectDraw inherits the display dimensions when DDSD_WIDTH/HEIGHT are
+     * absent. Games use that for the primary's attached back buffer (caps
+     * DDSCAPS_BACKBUFFER with only DDSD_CAPS set); reading the raw fields then
+     * yields 0x0 and IGI aborts with "Couldn't create device". */
+    int w = (primary || !(fl & DDSD_WIDTH)) ? g_mode_w : (int)MEM32(d + 12);
+    int h = (primary || !(fl & DDSD_HEIGHT)) ? g_mode_h : (int)MEM32(d + 8);
     int bpp = !primary && (fl & DDSD_PIXELFORMAT) ? (int)MEM32(d + sh.pf + 12) : g_mode_bpp;
     if (w <= 0 || h <= 0 || w > 8192 || h > 8192) {
-        fprintf(stderr, "[ddraw] CreateSurface %dx%d: DDERR_INVALIDPARAMS\n", w, h);
+        fprintf(stderr, "[ddraw] CreateSurface %dx%d flags=0x%X caps=0x%X size=%u: "
+                        "DDERR_INVALIDPARAMS\n", w, h, fl, caps, MEM32(d));
         RET(DDERR_INVALIDPARAMS, 4);
     }
     if (primary && !hle_screen_gl_active()) {
@@ -390,6 +396,14 @@ static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDES
     if (!primary && !(caps & 0x1000u)) caps |= DDSCAPS_OFFSCREENPLAIN;
     uint32_t o = new_surface(w, h, bpp, primary ? caps | DDSCAPS_VISIBLE | DDSCAPS_FRONTBUFFER : caps, primary);
     surf_t *s = S(o);
+    /* A separately created DDSCAPS_BACKBUFFER belongs to the primary's flip
+     * chain. Games (IGI) create the back buffer in its own CreateSurface call
+     * and then ask the primary for it with GetAttachedSurface; without this
+     * link that call returns DDERR_NOTFOUND and the game aborts. */
+    if (!primary && (caps & DDSCAPS_BACKBUFFER) && g_primary) {
+        g_primary->back = s;
+        s->back = g_primary;
+    }
     if (!primary && (fl & DDSD_PIXELFORMAT) && MEM32(d + sh.pf) >= 32 && (MEM32(d + sh.pf + 4) & DDPF_RGB)) {
         uint32_t r = MEM32(d + sh.pf + 16), g = MEM32(d + sh.pf + 20), b = MEM32(d + sh.pf + 24);
         uint32_t a = MEM32(d + sh.pf + 28);
@@ -548,7 +562,7 @@ static void dd_GetDisplayMode(void) {                    /* (this, &desc) */
     RET(DD_OK, 2);
 }
 static void dd_GetFourCCCodes(void) { if (A32(1)) MEM32(A32(1)) = 0; RET(DD_OK, 3); }
-static void dd_GetGDISurface(void) { if (!g_primary) RET(DDERR_NOTFOUND, 2); MEM32(A32(1)) = g_primary->self; MEM32(g_primary->self + 4)++; RET(DD_OK, 2); }
+static void dd_GetGDISurface(void) { if (!g_primary) { fprintf(stderr, "[ddraw] GetGDISurface: no primary -> DDERR_NOTFOUND\n"); RET(DDERR_NOTFOUND, 2); } MEM32(A32(1)) = g_primary->self; MEM32(g_primary->self + 4)++; RET(DD_OK, 2); }
 static void dd_GetMonitorFrequency(void) { if (A32(1)) MEM32(A32(1)) = 60; RET(DD_OK, 2); }
 static void dd_GetScanLine(void) { if (A32(1)) MEM32(A32(1)) = (hle_ticks_ms() * 29) % (uint32_t)g_mode_h; RET(DD_OK, 2); }
 static void dd_GetVerticalBlankStatus(void) { if (A32(1)) MEM32(A32(1)) = (hle_ticks_ms() % 16) == 0; RET(DD_OK, 2); }
@@ -581,7 +595,7 @@ static void dd2_GetAvailableVidMem(void) {               /* (this, &caps, &total
     if (A32(3)) MEM32(A32(3)) = 192u << 20;
     RET(DD_OK, 4);
 }
-static void dd_GetSurfaceFromDC(void) { if(A32(2))MEM32(A32(2))=0; RET(DDERR_NOTFOUND,3); }
+static void dd_GetSurfaceFromDC(void) { fprintf(stderr, "[ddraw] GetSurfaceFromDC -> DDERR_NOTFOUND\n"); if(A32(2))MEM32(A32(2))=0; RET(DDERR_NOTFOUND,3); }
 static void dd_RestoreAllSurfaces(void) { RET(DD_OK,1); }
 static void dd_TestCooperativeLevel(void) { RET(DD_OK,1); }
 static void dd_GetDeviceIdentifier(void) { RET(DDERR_UNSUPPORTED,3); }
@@ -784,7 +798,18 @@ static void sf_GetAttachedSurface(void) {                /* (this, &caps, &out) 
                 : s->back ? s->back : s->mip;
     if (trace()) fprintf(stderr, "[ddraw] GetAttachedSurface %dx%d caps=0x%X -> %dx%d\n",
                          s->w, s->h, want, got ? got->w : 0, got ? got->h : 0);
-    if (!got) { MEM32(A32(2)) = 0; RET(DDERR_NOTFOUND, 3); }
+    if (!got && (want & DDSCAPS_BACKBUFFER) && s) {
+        /* Some titles (IGI) request the back buffer with a flip-chain caps
+         * word our CreateSurface did not recognise. Return a real attached
+         * surface with the primary's geometry instead of DDERR_NOTFOUND. */
+        uint32_t b = new_surface(s->w, s->h, g_mode_bpp,
+                                 DDSCAPS_BACKBUFFER | DDSCAPS_SYSTEMMEMORY |
+                                 DDSCAPS_3DDEVICE, 0);
+        s->back = S(b);
+        S(b)->back = s;
+        got = S(b);
+    }
+    if (!got) { fprintf(stderr, "[ddraw] GetAttachedSurface caps=0x%X on %dx%d -> DDERR_NOTFOUND\n", want, s->w, s->h); MEM32(A32(2)) = 0; RET(DDERR_NOTFOUND, 3); }
     MEM32(A32(2)) = got->self;
     MEM32(got->self + 4)++;
     RET(DD_OK, 3);
