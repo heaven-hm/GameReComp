@@ -1,15 +1,23 @@
 # Linux platform status (local evidence, fail-closed)
 
-Recorded 2026-11-24. **Local Linux status: BLOCKED / NOT TESTED.** No Linux
-binary was built, launched or verified on this host, and no Linux PASS row
-exists. This document reports the absence of a runner, not a verdict on Linux
-compatibility.
+Recorded 2026-11-24, updated later the same day. **Local Linux status: BLOCKED / NOT TESTED.** No Linux binary was built, launched or verified on this host, and no Linux PASS row exists.
+
+Update: Colima was started successfully and `docker info` reports a working
+daemon (Server 29.5.2); `alpine:latest` is present locally. The first
+`tools.linux_matrix` run exposed a real defect — relative `--out` was passed to
+`docker -v` and Docker refused the volume name (fixed in commit `42a16d7`,
+absolute paths now resolved, regression test added). A corrected rerun reached
+`docker run ... alpine:latest sh -c apk add --no-cache build-base cmake
+pkgconf sdl2-dev sdl2_ttf-dev ...` but **stalled in the package download** and
+was terminated rather than left running for hours. Therefore no Linux build or
+run completed: status stays BLOCKED (runner cannot provision packages), NOT
+TESTED. No Linux PASS/FAIL is claimed.
 
 ## Local runner availability
 
 | Capability checked | Local observation | Consequence |
 |---|---|---|
-| Docker daemon | Unavailable (no usable socket/daemon) | No container to build or run generated projects. |
+| Docker daemon | Now available (Colima running, Server 29.5.2) | Runner exists, but container package provisioning stalled. |
 | Colima | No usable guest; image download previously stalled | No Linux VM. |
 | Lima | No usable Linux guest image | No Linux VM. |
 | qemu user/kernel | No usable emulator or guest kernel/image | No ELF execution on this host. |
