@@ -75,6 +75,10 @@ def run_original(wine: str | None, bottle: Path, exe: Path, args: list[str],
 
     ``runner`` may force "highball" or "wine"; otherwise Highball is used when
     installed. The returned record always names the runner actually used.
+    ``status`` is "BLOCKED" (with ``blocked_class``/``reason``) when the engine
+    could not produce a result, so callers can record NOT TESTED instead of a
+    run; it is "OK" when the process boundary itself completed, regardless of
+    the guest exit code.
     """
     if not exe.is_file():
         raise ValueError(f"original executable not found: {exe}")
@@ -116,36 +120,36 @@ def run_original(wine: str | None, bottle: Path, exe: Path, args: list[str],
                             text=True, encoding="utf-8", errors="replace",
                             start_new_session=True)
     payload = None if stdin_data is None else stdin_data.decode("utf-8", "replace")
+    reason = None
     try:
         out, err = proc.communicate(input=payload, timeout=timeout)
         rc = proc.returncode
     except subprocess.TimeoutExpired as exc:
+        # The first timeout is a real BLOCKED result, not an exception to let
+        # escape: callers must be able to record "NOT TESTED" instead of a run.
+        out, err = exc.output or "", exc.stderr or ""
         try:
             os.killpg(proc.pid, 9)
         except OSError:
             proc.kill()
         try:
+            # Helpers may keep the pipes open after the group is killed. Keep
+            # any partial output and still return a bounded BLOCKED record.
             out, err = proc.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            # Wine helpers may keep the inherited pipes open after the guest
-            # was killed. Keep the bytes captured so far and report BLOCKED;
-            # a timeout is never a successful run.
-            out = exc.output or ""
-            err = exc.stderr or ""
-            if isinstance(out, bytes):
-                out = out.decode("utf-8", "replace")
-            if isinstance(err, bytes):
-                err = err.decode("utf-8", "replace")
+        except subprocess.TimeoutExpired as drained:
+            out = out or drained.output or ""
+            err = err or drained.stderr or ""
         rc = "TIMEOUT"
+        reason = (f"{'highball' if use_hb else 'wine'} run produced no result "
+                  f"within {timeout}s; killed process group, output not claimed")
     record = {"exit_code": rc, "stdout": out or "", "stderr": err or "",
               "sha256": sha, "command": cmd, "wine": wine,
               "highball": highball if use_hb else None,
               "runner": "highball" if use_hb else "wine-fallback",
-              "bottle": str(bottle)}
-    if rc == "TIMEOUT":
-        record.update({"status": "BLOCKED", "blocked_class": "environment",
-                       "reason": "guest process and its Wine helpers timed out; "
-                                 "no verified stdout was produced"})
+              "bottle": str(bottle), "status": "OK"}
+    if reason is not None:
+        record.update(status="BLOCKED", blocked_class="environment",
+                      reason=reason)
     return record
 
 

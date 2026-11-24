@@ -1,0 +1,3 @@
+[*] guess.exe: base=0x140000000, 1 exec sections, 84,022 code bytes
+[*] seeds: pdata=185, guard_cf=0, exports=0, entry=1, reloc=65, thunk=2, funclet=2, chunks=0
+[*] functions: 269 (36 thunks)
