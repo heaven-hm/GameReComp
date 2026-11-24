@@ -20,7 +20,7 @@
 #define DSERR_NODRIVER 0x88780078u
 #define DSERR_INVALIDCALL 0x88780032u
 #define DSERR_UNSUPPORTED 0x80004001u
-#define DSERR_OBJECTNOTFOUND 0x87801161u
+#define DSERR_OBJECTNOTFOUND 0x88781161u
 
 /* IID_IDirectSoundBuffer8, in guest GUID byte order (wine-10.0 dsound.h). */
 static const uint8_t iid_buf8[16] = {
