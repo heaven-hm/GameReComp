@@ -29,6 +29,7 @@ int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
 #define ERROR_PROC_NOT_FOUND      127u
 #define ERROR_CALL_NOT_IMPLEMENTED 120u
 #define ERROR_RESOURCE_NOT_FOUND 1814u
+#define ERROR_DLL_INIT_FAILED    1114u
 
 #define MAX_MODULES 32
 static struct {
@@ -66,6 +67,16 @@ static int find_by_name(const char *name) {
     base_of(name, b, sizeof b);
     for (int i = 0; i < g_nmod; i++) if (!strcmp(g_mod[i].base_name, b)) return i;
     return -1;
+}
+
+/* Undo a registration (a failed attach). Keep g_main pointing at the main
+ * image when a module before it goes away. */
+static void forget_module(int i) {
+    if (i < 0 || i >= g_nmod) return;
+    for (int k = i + 1; k < g_nmod; k++) g_mod[k - 1] = g_mod[k];
+    g_nmod--;
+    if (g_main == i) g_main = -1;
+    else if (g_main > i) g_main--;
 }
 
 int hle_module_add(const char *guest_path, uint32_t base, uint32_t rsrc_rva, uint32_t rsrc_size, int main_image) {
@@ -143,17 +154,70 @@ static void k_GetModuleFileNameA(void) {                 /* (hModule, buf, size)
     RET(n, 3);
 }
 
+/* A runtime-loaded DLL's imports go through the same chain as the boot image:
+ * a DATA import first (its slot must hold the object, not a shim's code VA),
+ * then a registered shim, with a lifted companion export preferred by the
+ * binder before either. */
+static uint32_t attach_resolve(const char *name) {
+    uint32_t data = hle_msvcrt_data(name);
+    return data ? data : hle_resolve(name);
+}
+
+/* Attach a mapped DLL the way the Windows loader attaches one at runtime.
+ * Order matters: register the module before binding (a forwarder may point at
+ * this image), bind the IAT before the TLS callbacks (a callback may call an
+ * import), and run the TLS callbacks before DllMain (the CRT's static
+ * initialisers live behind the entry point and use those TLS values).
+ *
+ * Only *lifted* code is ever entered: recomp_lookup decides whether the
+ * entry point has a body, and hle_pe_run_tls_callbacks does the same per
+ * callback. A resource-only DLL stays data-only -- we never execute original
+ * PE bytes or invent a body for code that was not reconstructed. Returns 0 on
+ * success, -1 after a failed DllMain (the module is then unregistered and, if
+ * we mapped it, its reservation released). */
+int hle_module_attach(const pe_image *img, const char *guest_path, int owned) {
+    if (!img || !img->base || !guest_path) return -1;
+    int i = hle_module_add(guest_path, img->base, img->resource_rva, img->resource_size, 0);
+    if (i < 0) {
+        fprintf(stderr, "[module] %s: module table full\n", guest_path);
+        if (owned) hle_vm_release(img->base, img->span);
+        hle_set_last_error(ERROR_MOD_NOT_FOUND);
+        return -1;
+    }
+    g_mod[i].image_size = img->span;
+
+    int unresolved = recomp_pe_bind_companions(img, attach_resolve, recomp_companion_resolve);
+    if (unresolved)
+        fprintf(stderr, "[module] %s: %d unresolved imports\n", guest_path, unresolved);
+
+    hle_pe_run_tls_callbacks(img);
+
+    if (img->entry && recomp_lookup(img->entry)) {
+        uint32_t args[3] = { img->base, 1u /* DLL_PROCESS_ATTACH */, 0u };
+        uint32_t ok = hle_call_guest(img->entry, 3, args);
+        if (!ok) {
+            fprintf(stderr, "[module] %s: DllMain(DLL_PROCESS_ATTACH) failed\n", guest_path);
+            forget_module(i);
+            if (owned) hle_vm_release(img->base, img->span);
+            hle_set_last_error(ERROR_DLL_INIT_FAILED);
+            return -1;
+        }
+    } else {
+        fprintf(stderr, "[module] %s: no lifted DllMain; data only\n", guest_path);
+    }
+    return 0;
+}
+
 /* Map `name` (or find the already-mapped module) and return its guest base, or
  * 0 with the last error set. Shared by LoadLibraryA (1 argument) and
  * LoadLibraryExA (3, of which the flags only choose a search order this host
  * does not have), so both pop the right number of words.
  *
- * The module's own code is NOT run: what a static recompilation can offer a
- * DLL loaded at runtime is its data -- resources, a module handle for
- * GetProcAddress, and a base for anything that reads the image. An export the
- * guest then calls is either answered by a registered shim or it is not in the
- * recompiled dispatch table, and hle_call_guest says so by name instead of
- * returning a fabricated address. */
+ * A newly mapped DLL is attached through hle_module_attach: its imports are
+ * bound, its TLS callbacks and lifted DllMain run in loader order, and a
+ * failed DllMain makes LoadLibrary fail rather than handing back a half-init
+ * module. Exports the guest then calls are answered from the mapped image or
+ * a shim; a VA with no lifted body is never fabricated. */
 static uint32_t load_library(const char *name) {
     if (!name) { hle_set_last_error(ERROR_MOD_NOT_FOUND); return 0; }
     int i = find_by_name(name);
@@ -176,8 +240,11 @@ static uint32_t load_library(const char *name) {
     }
     char g[600];
     hle_guest_path(host, g, sizeof g);
-    hle_module_add(g, img.base, img.resource_rva, img.resource_size, 0);
-    fprintf(stderr, "[module] LoadLibrary(\"%s\") -> 0x%08X (its code is not run)\n", name, img.base);
+    if (hle_module_attach(&img, g, 1) != 0) {
+        fprintf(stderr, "[module] LoadLibrary(\"%s\"): attach failed\n", name);
+        return 0;                                       /* ERROR_DLL_INIT_FAILED */
+    }
+    fprintf(stderr, "[module] LoadLibrary(\"%s\") -> 0x%08X\n", name, img.base);
     return img.base;
 }
 
