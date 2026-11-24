@@ -57,6 +57,10 @@ def frida_signal(exe: Path, timeout: int = 5, hooks=None) -> dict:
         import time
         wine = wine_oracle.find_wine()
         if not wine:
+            rec['reason'] = (
+                'wine not found (RECOMP_WINE, Highball engine '
+                f'{wine_oracle.DEFAULT_WINE} and PATH all failed); '
+                'Frida has no Windows process to attach to')
             return rec
         # Spawn the original through the Highball Wine engine under Frida and
         # count the requested calls for a bounded window.

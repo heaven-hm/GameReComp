@@ -261,9 +261,12 @@ class LinuxMatrixResourcesTest(unittest.TestCase):
             project = self._project(root, RESOURCES)
             with patch('tools.game_matrix.shutil.disk_usage',
                        return_value=usage(10 * GIB)), \
+                 patch('tools.linux_matrix.elf_evidence',
+                       return_value={'status': 'OK'}), \
                  patch('tools.linux_matrix.subprocess.run',
                        return_value=SimpleNamespace(stdout='ok', returncode=0)) as run:
-                rec = build_one(project, root / 'out', 'alpine:3.20', 1, 8, 60)
+                rec = build_one(project, root / 'out', 'alpine:3.20', 1, 8, 60,
+                                provision='apk')
             self.assertEqual(rec['resources'], RESOURCES)
             self.assertEqual(rec['build_rc'], 0)
             self.assertEqual(run.call_count, 2)  # container build + run
@@ -277,7 +280,9 @@ class LinuxMatrixResourcesTest(unittest.TestCase):
             with patch('tools.game_matrix.shutil.disk_usage', return_value=usage(GIB)), \
                  patch('tools.linux_matrix.subprocess.run') as run, \
                  contextlib.redirect_stderr(io.StringIO()) as err:
-                rec = build_one(project, out, 'alpine:3.20', 1, 8, 60)
+                rec = build_one(project, out, 'alpine:3.20', 1, 8, 60,
+                                provision='prebuilt',
+                                probe={'toolchain_ok': True})
             run.assert_not_called()
             self.assertEqual(rec['skipped'], 'disk_guard')
             self.assertFalse(rec['build_started'])
@@ -292,6 +297,9 @@ class LinuxMatrixResourcesTest(unittest.TestCase):
             project = self._project(root)
             out = root / 'out'
             with patch('tools.linux_matrix.docker_ready', return_value=True), \
+                 patch('tools.linux_matrix.image_available', return_value=True), \
+                 patch('tools.linux_matrix.probe_image',
+                       return_value={'status': 'OK', 'toolchain_ok': True}), \
                  patch('tools.game_matrix.shutil.disk_usage', return_value=usage(GIB)), \
                  patch('tools.linux_matrix.subprocess.run') as run, \
                  contextlib.redirect_stderr(io.StringIO()) as err:

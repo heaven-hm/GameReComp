@@ -35,6 +35,14 @@ class HybridTests(unittest.TestCase):
                                          live_frida=True)
         self.assertEqual(rec["status"], "MATCH")
 
+    def test_frida_wine_missing_reason_is_specific(self):
+        with mock.patch.object(hybrid_diff.wine_oracle, "find_wine",
+                               return_value=None):
+            rec = hybrid_diff.frida_signal(Path("/tmp/x.exe"), timeout=1)
+        self.assertEqual(rec["status"], "BLOCKED")
+        self.assertIn("wine not found", rec["reason"])
+        self.assertIn("Highball", rec["reason"])
+
     def test_native_absent_is_blocked_not_skip(self):
         exe = Path("/tmp/x.exe")
         with mock.patch.object(hybrid_diff, "unicorn_signal",
