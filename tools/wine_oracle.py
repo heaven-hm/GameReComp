@@ -56,18 +56,26 @@ def run_original(wine: str, bottle: Path, exe: Path, args: list[str],
     })
     cmd = [wine, win_path] + args
     sha = hashlib.sha256(exe.read_bytes()).hexdigest()
+    # Wine spawns helper processes that inherit the pipe handles; subprocess.run
+    # with a timeout can therefore block forever after wine itself was killed.
+    # Use Popen + communicate and always drain/kill the process group.
+    proc = subprocess.Popen(cmd, cwd=str(bottle / "drive_c"), env=run_env,
+                            stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True, encoding="utf-8", errors="replace",
+                            start_new_session=True)
     try:
-        p = subprocess.run(cmd, cwd=str(bottle / "drive_c"), env=run_env,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                           text=True, encoding="utf-8", errors="replace",
-                           timeout=timeout, check=False)
-        return {"exit_code": p.returncode, "stdout": p.stdout,
-                "stderr": p.stderr, "sha256": sha,
-                "command": cmd, "wine": wine}
-    except subprocess.TimeoutExpired as exc:
-        return {"exit_code": "TIMEOUT", "stdout": exc.stdout or "",
-                "stderr": exc.stderr or "", "sha256": sha,
-                "command": cmd, "wine": wine}
+        out, err = proc.communicate(timeout=timeout)
+        rc = proc.returncode
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, 9)
+        except OSError:
+            proc.kill()
+        out, err = proc.communicate(timeout=10)
+        rc = "TIMEOUT"
+    return {"exit_code": rc, "stdout": out or "", "stderr": err or "",
+            "sha256": sha, "command": cmd, "wine": wine}
 
 
 def oracle_from_run(run: dict, stdout_lines: int = 6,
