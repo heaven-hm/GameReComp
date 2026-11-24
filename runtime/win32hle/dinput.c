@@ -78,6 +78,20 @@ int  hle_input_replay(const char *what, void *data, size_t n);
 #define DIENUM_STOP 0u
 #define DIENUM_CONTINUE 1u
 
+/* Legacy DIDEVTYPE_* codes (wine-10.0 include/dinput.h). IDirectInput (DX3/5/7)
+ * callers filter on these, and DIDEVICEINSTANCE_DX3.dwDevType carries one of
+ * them: 0x12/0x13 are the *DI8* type codes and must not be used here. */
+#define DIDEVTYPE_DEVICE   1u
+#define DIDEVTYPE_MOUSE    2u
+#define DIDEVTYPE_KEYBOARD 3u
+#define DIDEVTYPE_JOYSTICK 4u
+#define DIDEVTYPEMOUSE_TRADITIONAL   2u
+#define DIDEVTYPEKEYBOARD_PCENH      4u
+/* DIDEVICEINSTANCE_DX3A/W: dwSize, two GUIDs, dwDevType and two MAX_PATH
+ * names. 4+16+16+4+260+260 = 560 bytes on x86; the A and W layouts match. */
+enum { DIDEVICEINSTANCE_DX3_SIZE = 560, DIDEVICEINSTANCE_DX3_DEVTYPE = 36,
+       DIDEVICEINSTANCE_DX3_NAME = 40, DIDEVICEINSTANCE_DX3_PRODUCT = 300 };
+
 /* DI8 device classes/type codes used by IDirectInput8::EnumDevices and the
  * DIDEVICEINSTANCE.dwDevType it hands the callback. Values from wine-10.0's
  * include/dinput.h, not the legacy DI7 DIDEVTYPE_* numbers. */
@@ -153,7 +167,11 @@ static din_device g_dev[DIN_MAX_DEVICES];
 static int g_ndev;
 static uint32_t g_vt_di, g_vt_dev;    /* built on first use, DX3/5/7 layout */
 static uint32_t g_vt_di8, g_vt_dev8;  /* DI8 layouts: 11 and 32 slots */
-static uint32_t g_di;                 /* the IDirectInput object */
+/* One IDirectInput object per A/W string encoding, as on Windows: the encoding
+ * a caller selected must not change because a later Create asked for the other
+ * one. +8 in the object is the A/W flag read by the legacy EnumDevices. */
+enum { DI_HOST_UNICODE = 8 };
+static uint32_t g_di[2];              /* [0] = ANSI, [1] = wide */
 static uint32_t g_di_refs;
 
 /* SDL scancode -> DIK_* code. The DIK set is the PC set-1 make codes, and SDL's
@@ -484,31 +502,72 @@ static void di_Release(void) {
     uint32_t n = MEM32(self + 4) ? --MEM32(self + 4) : 0;
     if (n) RET(n, 1);
     if (g_di_refs) g_di_refs--;
-    if (g_di == self) { hle_com_free(self); g_di = 0; }
+    for (int k = 0; k < 2; k++)
+        if (g_di[k] == self) { hle_com_free(self); g_di[k] = 0; break; }
     RET(0, 1);
 }
 static void di_CreateDevice(void) {
     /* (this, rguid, &device, punkOuter) */
     RET(make_device(A32(1), g_vt_dev, A32(2)), 4);
 }
-static void di_EnumDevices(void) {
-    /* (this, devType, callback, ctx, flags): the keyboard and the mouse, which
-     * are the devices that exist. devType 0x05 = DI8DEVCLASS_KEYBOARD,
-     * 0x12 = MOUSE; 0 = all. */
-    uint32_t devtype = A32(1), cb = A32(2), ctx = A32(3);
-    if (!cb) RET(DIERR_INVALIDPARAM, 5);
-    uint32_t inst = hle_scratch(64 + 64 + 32);
-    for (int k = 1; k <= 2; k++) {
-        if (devtype == 0x05 && k != 1) continue;
-        if (devtype == 0x12 && k != 2) continue;
-        memset(hle_ptr(inst), 0, 160);
-        MEM32(inst + 0) = 20 + 64 + 64;                   /* dwSize */
-        memcpy(hle_ptr(inst + 4), k == 2 ? GUID_SYS_MOUSE : GUID_SYS_KEYBOARD, 16);
-        strncpy((char *)hle_ptr(inst + 20), k == 2 ? "Mouse" : "Keyboard", 63);
-        strncpy((char *)hle_ptr(inst + 84), k == 2 ? "Mouse" : "Keyboard", 63);
-        uint32_t args[3] = { inst, ctx, k == 2 ? 0x12u : 0x05u };
-        if (hle_call_guest(cb, 3, args) == DIENUM_STOP) RET(DI_OK, 5);
+static void di_legacy_name(uint32_t inst, uint32_t off, const char *s, int wide) {
+    size_t n = strlen(s) + 1;
+    if (!wide) {
+        memcpy(hle_ptr(inst + off), s, n);
+    } else {
+        for (size_t i = 0; i < n; i++)
+            MEM16(inst + off + 2u * (uint32_t)i) = (uint16_t)(unsigned char)s[i];
     }
+}
+static void di_EnumDevices(void) {
+    /* (this, devType, callback, ctx, flags).
+     *
+     * The guest callback is LPDIENUMDEVICESCALLBACK: exactly TWO stdcall args
+     * (instance, context). A third argument left an extra dword on the guest
+     * stack for a real callback to clean up, and the old 160-byte instance put
+     * the names where guidProduct and dwDevType belong. Fill the real
+     * DIDEVICEINSTANCE_DX3A/W (560 bytes) and push two args, as the ABI says.
+     *
+     * devType accepts the legacy DIDEVTYPE_* codes as well as the DI8 class
+     * and type codes that newer callers pass through this same vtable; both
+     * number spaces agree for keyboard and mouse (2 = mouse/pointer, 3 =
+     * keyboard). Force-feedback-only enumeration finds neither device. */
+    uint32_t devtype = A32(1), cb = A32(2), ctx = A32(3), flags = A32(4);
+    if (!cb) RET(DIERR_INVALIDPARAM, 5);
+    int wide = (int)MEM32(A32(0) + DI_HOST_UNICODE);
+    if (flags & DIEDFL_FORCEFEEDBACK) RET(DI_OK, 5);
+
+    uint32_t mark = hle_scratch_mark();
+    for (int k = 1; k <= 2; k++) {                        /* 1 = keyboard, 2 = mouse */
+        uint32_t legacy = k == 1 ? DIDEVTYPE_KEYBOARD : DIDEVTYPE_MOUSE;
+        uint32_t di8 = k == 1 ? DI8DEVTYPE_KEYBOARD : DI8DEVTYPE_MOUSE;
+        int want;
+        if (devtype == 0) want = 1;
+        else if (devtype <= DIDEVTYPE_JOYSTICK) want = (devtype == legacy);
+        else if (devtype <= DI8DEVCLASS_GAMECTRL)
+            want = (devtype == DI8DEVCLASS_ALL ||
+                    (devtype == DI8DEVCLASS_KEYBOARD && k == 1) ||
+                    (devtype == DI8DEVCLASS_POINTER && k == 2));
+        else if (devtype >= DI8DEVTYPE_DEVICE && devtype <= DI8DEVTYPE_SUPPLEMENTAL)
+            want = (devtype == di8);
+        else want = 0;
+        if (!want) continue;
+
+        uint32_t inst = hle_scratch(DIDEVICEINSTANCE_DX3_SIZE);
+        memset(hle_ptr(inst), 0, DIDEVICEINSTANCE_DX3_SIZE);
+        MEM32(inst) = DIDEVICEINSTANCE_DX3_SIZE;
+        const uint8_t *g = k == 2 ? GUID_SYS_MOUSE : GUID_SYS_KEYBOARD;
+        memcpy(hle_ptr(inst + 4), g, 16);                 /* guidInstance */
+        memcpy(hle_ptr(inst + 20), g, 16);                /* guidProduct */
+        uint32_t subtype = k == 2 ? DIDEVTYPEMOUSE_TRADITIONAL : DIDEVTYPEKEYBOARD_PCENH;
+        MEM32(inst + DIDEVICEINSTANCE_DX3_DEVTYPE) = legacy | (subtype << 8);
+        const char *name = k == 2 ? "Mouse" : "Keyboard";
+        di_legacy_name(inst, DIDEVICEINSTANCE_DX3_NAME, name, wide);
+        di_legacy_name(inst, DIDEVICEINSTANCE_DX3_PRODUCT, name, wide);
+        uint32_t args[2] = { inst, ctx };
+        if (hle_call_guest(cb, 2, args) == DIENUM_STOP) break;
+    }
+    hle_scratch_release(mark);
     RET(DI_OK, 5);
 }
 static void di_GetDeviceStatus(void) {
@@ -793,19 +852,26 @@ static void build_vtables(void) {
     g_vt_dev8 = hle_com_vtable(dev8);
 }
 
-/* DirectInputCreateA(hinst, version, &di, punkOuter) */
-static void d_CreateA(void) {
-    uint32_t out = A32(2);
-    if (!out) RET(DIERR_INVALIDPARAM, 4);
+/* One IDirectInput object per A/W encoding (the names EnumDevices reports are
+ * the only difference). The object's +8 slot carries the A/W flag. */
+static uint32_t di_create_impl(uint32_t out, int wide) {
+    if (!out) return DIERR_INVALIDPARAM;
     build_vtables();
-    if (!g_di) {
-        g_di = hle_com_new(g_vt_di, 16);
-        if (!g_di) RET(DIERR_DEVICENOTREG, 4);
-        g_di_refs = 1;
+    uint32_t *slot = &g_di[wide != 0];
+    if (!*slot) {
+        *slot = hle_com_new(g_vt_di, 16);
+        if (!*slot) return DIERR_DEVICENOTREG;
+        MEM32(*slot + 4) = 1;
+        g_di_refs++;
     }
-    MEM32(out) = g_di;
-    RET(DI_OK, 4);
+    MEM32(*slot + DI_HOST_UNICODE) = (uint32_t)wide;
+    MEM32(out) = *slot;
+    return DI_OK;
 }
+
+/* DirectInputCreateA/W(hinst, version, &di, punkOuter) */
+static void d_CreateA(void) { RET(di_create_impl(A32(2), 0), 4); }
+static void d_CreateW(void) { RET(di_create_impl(A32(2), 1), 4); }
 
 /* DirectInputCreateEx(hinst, version, riid, &di, punkOuter): DirectInput 7's
  * entry point, and the one place its argument order differs from
@@ -813,16 +879,11 @@ static void d_CreateA(void) {
  * after it. Same object; the GUID only selects a vtable layout this layer
  * answers identically. */
 static void d_CreateEx(void) {
-    uint32_t out = A32(3);   /* A32(2) is the interface id: one object serves them all */
-    if (!out) RET(DIERR_INVALIDPARAM, 5);
-    build_vtables();
-    if (!g_di) {
-        g_di = hle_com_new(g_vt_di, 16);
-        if (!g_di) RET(DIERR_DEVICENOTREG, 5);
-        g_di_refs = 1;
-    }
-    MEM32(out) = g_di;
-    RET(DI_OK, 5);
+    uint32_t iid = A32(2), out = A32(3);
+    /* DirectInputCreateEx takes IID_IDirectInput7W (…685) for the wide layout.
+     * The byte differs from the A IID at offset 0 only. */
+    int wide = iid && MEM8(iid) == 0x85;
+    RET(di_create_impl(out, wide), 5);
 }
 
 /* DirectInput8Create(hinst, version, riid, &di, outer): the ONLY public export
@@ -861,7 +922,7 @@ static void d_Create8(void) {
 
 const win32hle_shim win32hle_dinput[] = {
     { "DirectInputCreateA",  d_CreateA },
-    { "DirectInputCreateW",  d_CreateA },
+    { "DirectInputCreateW",  d_CreateW },
     { "DirectInputCreateEx", d_CreateEx },
     { "DirectInput8Create",  d_Create8 },
     { 0, 0 }
