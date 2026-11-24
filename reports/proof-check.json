@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "counts": {
+    "checked": 14,
+    "present": 14,
+    "screenshots": 5
+  },
+  "hybrid_status": "BLOCKED",
+  "gaps": [],
+  "classification": "EVIDENCE PRESENT - not 100% compatibility; see evidence/README.md",
+  "rows": [
+    {
+      "path": "tools/frida_probe.py",
+      "present": true,
+      "bytes": 3071,
+      "sha256": "bd86de0f5016b42a094c2e1b140c7e46182912b510b60ffef2bbdaf3915b6573"
+    },
+    {
+      "path": "tools/hybrid_diff.py",
+      "present": true,
+      "bytes": 5713,
+      "sha256": "aeb7946c18e4ead40e4b1e708854d3a16caac0d1fd9c5309b582ddaafbed609b"
+    },
+    {
+      "path": "tools/input_replay_diff.py",
+      "present": true,
+      "bytes": 4574,
+      "sha256": "9e7340650af41674782ba33fc0132302442ab89be753a2ed55fa8558c3e4da3e"
+    },
+    {
+      "path": "evidence/screenshots/cavestory-native-01.png",
+      "present": true,
+      "bytes": 4304,
+      "sha256": "794f41936012a114ac95b9e700ff4345b9ef1e165cdd446dfbc7582d4604345d"
+    },
+    {
+      "path": "evidence/screenshots/cavestory-native-02.png",
+      "present": true,
+      "bytes": 4304,
+      "sha256": "794f41936012a114ac95b9e700ff4345b9ef1e165cdd446dfbc7582d4604345d"
+    },
+    {
+      "path": "evidence/screenshots/cavestory-binary-01.png",
+      "present": true,
+      "bytes": 6888,
+      "sha256": "7cc57071e4e81c783631c5b2f4024dd55bf1319d8f4c11f55263750dbe76a9d5"
+    },
+    {
+      "path": "evidence/screenshots/tetris-oucc-new-01.png",
+      "present": true,
+      "bytes": 3693,
+      "sha256": "faec4330a2ff5c7981425d7a5354b40461d81de453d2ab2229c59f8638b839a6"
+    },
+    {
+      "path": "evidence/screenshots/tetris-oucc-new-02.png",
+      "present": true,
+      "bytes": 3693,
+      "sha256": "faec4330a2ff5c7981425d7a5354b40461d81de453d2ab2229c59f8638b839a6"
+    },
+    {
+      "path": "evidence/README.md",
+      "present": true,
+      "bytes": 6004,
+      "sha256": "43c9e3b718d77b46c87a9b74b2cf09867de8d4441f8b1f67e803557b2637be14"
+    },
+    {
+      "path": "reports/frames/cavestory/frame-proof.json",
+      "present": true,
+      "bytes": 2012,
+      "sha256": "befabd257fb2349f6d17e642192fcd725a2c96f8bbab8324c9000b8886f17bf5",
+      "json_ok": true
+    },
+    {
+      "path": "reports/frames/tetris-new/frame-proof.json",
+      "present": true,
+      "bytes": 1303,
+      "sha256": "c66a13be52ffbfd591979ff29db7319ec8869efdf19e75f90cb7194f2f0edc63",
+      "json_ok": true
+    },
+    {
+      "path": "reports/hybrid-tetris.json",
+      "present": true,
+      "bytes": 598,
+      "sha256": "332fc3e311e570aaa5272b1d2b85f7f1c4b6ac6f645ee0c565041ac9d17b463d",
+      "json_ok": true,
+      "hybrid_status": "BLOCKED"
+    },
+    {
+      "path": "reports/oracle/base64-oracle.json",
+      "present": true,
+      "bytes": 532,
+      "sha256": "066274964dda88d77fee7eb1cc2028730a31b18b927dd1a032bfb57ca6d6e77b",
+      "json_ok": true
+    },
+    {
+      "path": "reports/oracle/arith-calc-oracle.json",
+      "present": true,
+      "bytes": 503,
+      "sha256": "31e85540678fbac8eaccdfa651be174aec2a9b615f7d0c6919c5c814056f4bfa",
+      "json_ok": true
+    }
+  ]
+}
