@@ -2197,6 +2197,42 @@
       "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
       "evidence": "reports/oracle-sweep/busybox-acceptance.json",
       "notes": "Original PE32 under Wine/CrossOver; sweep tool reproduced process observables. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "tictactoe-cli-oracle",
+      "filename": "tictactoe.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "f3e562679f04a722650cd2099e6fc690e5ed748a2328c18c4dc7a424e235dcb9",
+      "evidence": "reports/oracle-sweep/batch1/tictactoe-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "game2048-cli-oracle",
+      "filename": "game2048.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940",
+      "evidence": "reports/oracle-sweep/batch1/game2048-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "hangman_x86-cli-oracle",
+      "filename": "hangman_x86.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82",
+      "evidence": "reports/oracle-sweep/batch1/hangman_x86-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
     }
   ]
 }

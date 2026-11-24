@@ -8,9 +8,9 @@ Every game this product knows about, in one table: the locally supplied corpus t
 
 **Port details** are read from each project's own `reports/report.json`: functions recovered, generated C, the rebuilt binary, imports the runtime bound, and the low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed high-level source.
 
-Updated 2026-11-24T01:59:38Z by `python -m tools.gamesdb --matrix`.
+Updated 2026-11-24T04:02:20Z by `python -m tools.gamesdb --matrix`.
 
-**Running native macOS arm64 ports:** **96 / 123** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**96** with `0` unresolved imports).
+**Running native macOS arm64 ports:** **99 / 126** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**99** with `0` unresolved imports).
 
 ## This repository (measured)
 
@@ -79,10 +79,12 @@ Updated 2026-11-24T01:59:38Z by `python -m tools.gamesdb --matrix`.
 | galaxiespicture | Windows | i386 (PE32) | 773 fns recovered; 3 units / 13.6 MiB C; binary galaxiespicture 2977 KiB; 63 imports bound [macOS arm64 (native)]; low-level 773/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
 | galaxiessolver | Windows | i386 (PE32) | 726 fns recovered; 3 units / 11.0 MiB C; binary galaxiessolver 2637 KiB; 60 imports bound [macOS arm64 (native)]; low-level 726/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and stayed alive until the 10s timeout; no crash observed, no oracle |
 | game2048 | Windows | i386 (PE32) | 219 fns recovered; 2 units / 1.3 MiB C; binary game2048 1309 KiB; 46 imports bound [macOS arm64 (native)]; low-level 219/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
+| game2048-cli-oracle (game2048.exe) | Windows | i386 (PE32) | - | - | PASS - scenario verified |
 | grapheditor | Windows | i386 (PE32) | 878 fns recovered; 3 units / 10.6 MiB C; binary grapheditor 3595 KiB; 192 imports bound [macOS arm64 (native)]; low-level 878/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | guess | Windows | i386 (PE32) | 847 fns recovered; 3 units / 10.2 MiB C; binary guess 3805 KiB; 190 imports bound [macOS arm64 (native)]; low-level 847/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | guess_game_x86 | Windows | i386 (PE32) | 221 fns recovered; 2 units / 1.4 MiB C; binary guess_game_x86 1390 KiB; 46 imports bound [macOS arm64 (native)]; low-level 221/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and stayed alive until the 3s timeout; no crash observed, no oracle |
 | hangman_x86 | Windows | i386 (PE32) | 221 fns recovered; 2 units / 1.4 MiB C; binary hangman_x86 1390 KiB; 48 imports bound [macOS arm64 (native)]; low-level 221/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
+| hangman_x86-cli-oracle (hangman_x86.exe) | Windows | i386 (PE32) | - | - | PASS - scenario verified |
 | inertia | Windows | i386 (PE32) | 976 fns recovered; 5 units / 24.4 MiB C; binary inertia 4955 KiB; 193 imports bound [macOS arm64 (native)]; low-level 976/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | keen | Windows | i386 (PE32) | 1235 fns recovered; 5 units / 24.9 MiB C; binary keen 5241 KiB; 190 imports bound [macOS arm64 (native)]; low-level 1235/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | keensolver | Windows | i386 (PE32) | 882 fns recovered; 4 units / 20.7 MiB C; binary keensolver 3773 KiB; 61 imports bound [macOS arm64 (native)]; low-level 882/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
@@ -128,6 +130,7 @@ Updated 2026-11-24T01:59:38Z by `python -m tools.gamesdb --matrix`.
 | tetris | Windows | i386 (PE32) | 767 fns recovered; 2 units / 4.8 MiB C; binary Tetris 2156 KiB [macOS arm64 (native)]; 57 imports bound, 42 unresolved; low-level 767/ high-level verified 0 | 2/2 non-blank frames | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | tetris | Windows | i386 (PE32) | 215 fns recovered; 2 units / 1.3 MiB C; binary tetris 1293 KiB; 45 imports bound [macOS arm64 (native)]; low-level 215/ high-level verified 0 | 2/2 non-blank frames | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | tictactoe | Windows | i386 (PE32) | 216 fns recovered; 2 units / 1.3 MiB C; binary tictactoe 1293 KiB; 43 imports bound [macOS arm64 (native)]; low-level 216/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
+| tictactoe-cli-oracle (tictactoe.exe) | Windows | i386 (PE32) | - | - | PASS - scenario verified |
 | towers | Windows | i386 (PE32) | 1219 fns recovered; 4 units / 21.5 MiB C; binary towers 4724 KiB; 189 imports bound [macOS arm64 (native)]; low-level 1219/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | towerssolver | Windows | i386 (PE32) | 833 fns recovered; 4 units / 16.9 MiB C; binary towerssolver 3222 KiB; 60 imports bound [macOS arm64 (native)]; low-level 833/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
 | tracks | Windows | i386 (PE32) | 1125 fns recovered; 3 units / 15.1 MiB C; binary tracks 4317 KiB; 191 imports bound [macOS arm64 (native)]; low-level 1125/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |

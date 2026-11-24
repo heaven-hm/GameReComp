@@ -1,0 +1,10 @@
+GameReComp generated-source budget (measured, not estimated)
+  per-unit soft cap : 8388608 B (8.00 MiB)
+  units             : 1
+  total emitted     : 1377160 B (1.31 MiB)
+  largest unit      : recomp_0000.c 1377160 B (1.31 MiB)
+  units over cap    : 0
+
+per-unit emitted bytes (os.path.getsize):
+  file                        bytes  functions
+  recomp_0000.c             1377160   216

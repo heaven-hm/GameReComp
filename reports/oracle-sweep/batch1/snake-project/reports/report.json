@@ -1,0 +1,251 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T04:01:51Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/snake.exe",
+  "project": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.02,
+      "status": "ok",
+      "message": "i386 PE32, 46 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/snake.exe",
+        "size": 137640,
+        "sha256": "2bc4bcea3e18edb9ba1c64161c7656e2822e361b196553c6b5183a5d53fc7ee4",
+        "md5": "57fcd1db4e6f61298b2bb62b34a53971",
+        "sha1": "c040b7b379779fd9a98e53ab993fa9d3d880bc79",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x00403000"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll",
+          "api-ms-win-crt-utility-l1-1-0.dll"
+        ],
+        "import_count": 46,
+        "delay_import_count": 0,
+        "iat_entries": 46
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 0.44,
+      "status": "ok",
+      "message": "223 functions, 13448 instructions",
+      "data": {
+        "count": 223,
+        "instructions": 13448,
+        "cache": "miss"
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.07,
+      "status": "ok",
+      "message": "2 source files, 1420577 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 1420577,
+        "lift_errors": 0,
+        "seconds": 0.1,
+        "cache": "miss"
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.01,
+      "status": "ok",
+      "message": "project at /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project",
+      "data": {
+        "project": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project",
+        "name": "snake",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 223,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "2bc4bcea3e18edb9ba1c64161c7656e2822e361b196553c6b5183a5d53fc7ee4"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "2bc4bcea3e18edb9ba1c64161c7656e2822e361b196553c6b5183a5d53fc7ee4"
+          }
+        ],
+        "runtime_files": 46,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 3.89,
+      "status": "ok",
+      "message": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/build/snake (1488152 bytes, 3.9s)",
+      "data": {
+        "binary": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/build/snake",
+        "sha256": "87bc40cfe15edda68c5ec3f61dbac805109fac6b42cea7e5326202d6ce401138",
+        "seconds": 3.9,
+        "source_bytes": 3246451,
+        "build_timeout_seconds": 615.4802846908569,
+        "build_timeout_adaptive": true
+      }
+    },
+    {
+      "name": "run",
+      "seconds": 1.71,
+      "status": "ok",
+      "message": "exited, exit=0, 1.7s, 0 unresolved imports",
+      "data": {
+        "command": [
+          "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/build/snake"
+        ],
+        "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+        "headless": true,
+        "timeout_seconds": 8.0,
+        "timed_out": false,
+        "status": "exited",
+        "exit_code": 0,
+        "seconds": 1.7,
+        "booted": true,
+        "entry_point": "0x00401460",
+        "unresolved_import_count": 0,
+        "bound_imports": null,
+        "unresolved_imports": [],
+        "import_trace_enabled": false,
+        "import_profile": [],
+        "import_calls_total": 0,
+        "log_stdout": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/logs/run.stdout.log",
+        "log_stderr": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/logs/run.stderr.log",
+        "stdout_tail": "\n=== Retro Snake (Score: 0) ===\n######################\n#            @       #\n#                    #\n#                    #\n#                    #\n#                    #\n#          O         #\n#                    #\n#                    #\n#                    #\n#                    #\n######################\nMove: W (Up), A (Left), S (Down), D (Right), Q (Quit): ",
+        "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\snake.exe booted: entry 0x00401460, 0 unresolved imports",
+        "output_tail": "\n=== Retro Snake (Score: 0) ===\n######################\n#            @       #\n#                    #\n#                    #\n#                    #\n#                    #\n#          O         #\n#                    #\n#                    #\n#                    #\n#                    #\n######################\nMove: W (Up), A (Left), S (Down), D (Right), Q (Quit): \n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\snake.exe booted: entry 0x00401460, 0 unresolved imports"
+      }
+    },
+    {
+      "name": "verify",
+      "seconds": 0.0,
+      "status": "ok",
+      "message": "trace-diverged: stdout missing '#@                   #'",
+      "data": {
+        "status": "trace-diverged",
+        "reason": "stdout missing '#@                   #'"
+      }
+    }
+  ],
+  "resources": {
+    "generated_source_bytes": 1420577,
+    "binary_bytes": 1488152,
+    "project_disk_bytes": 8375552,
+    "peak_rss_bytes": 55017472,
+    "stage_seconds_total": 6.14
+  },
+  "outcome": {
+    "schema": 1,
+    "generated_at": "2026-11-24T04:01:51Z",
+    "status": "trace-diverged",
+    "reason": "stdout missing '#@                   #'",
+    "scope": "process",
+    "game": "snake.exe",
+    "executable_sha256": "2bc4bcea3e18edb9ba1c64161c7656e2822e361b196553c6b5183a5d53fc7ee4",
+    "target": {
+      "os": "darwin",
+      "arch": "arm64",
+      "label": "Darwin arm64 (host build)"
+    },
+    "checks": [
+      {
+        "check": "exit_code",
+        "expected": 0,
+        "actual": 0,
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "=== Retro Snake (Score: 0) ===",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "######################",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "#@                   #",
+        "ok": false
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "#                    #",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "#          O         #",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "Move: W (Up), A (Left), S (Down), D (Right), Q (Quit):",
+        "ok": true
+      }
+    ],
+    "oracle_gaps": [
+      "no frame, input or audio comparison",
+      "low-level register C is not high-level reconstructed source"
+    ],
+    "run": {
+      "command": [
+        "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/build/snake"
+      ],
+      "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+      "headless": true,
+      "timeout_seconds": 8.0,
+      "timed_out": false,
+      "status": "exited",
+      "exit_code": 0,
+      "seconds": 1.7,
+      "booted": true,
+      "entry_point": "0x00401460",
+      "unresolved_import_count": 0,
+      "bound_imports": null,
+      "unresolved_imports": [],
+      "import_trace_enabled": false,
+      "import_profile": [],
+      "import_calls_total": 0,
+      "log_stdout": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/logs/run.stdout.log",
+      "log_stderr": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/logs/run.stderr.log",
+      "stdout_tail": "\n=== Retro Snake (Score: 0) ===\n######################\n#            @       #\n#                    #\n#                    #\n#                    #\n#                    #\n#          O         #\n#                    #\n#                    #\n#                    #\n#                    #\n######################\nMove: W (Up), A (Left), S (Down), D (Right), Q (Quit): ",
+      "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\snake.exe booted: entry 0x00401460, 0 unresolved imports",
+      "output_tail": "\n=== Retro Snake (Score: 0) ===\n######################\n#            @       #\n#                    #\n#                    #\n#                    #\n#                    #\n#          O         #\n#                    #\n#                    #\n#                    #\n#                    #\n######################\nMove: W (Up), A (Left), S (Down), D (Right), Q (Quit): \n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\snake.exe booted: entry 0x00401460, 0 unresolved imports"
+    }
+  },
+  "score": 85,
+  "manifest": "manifest.json"
+}

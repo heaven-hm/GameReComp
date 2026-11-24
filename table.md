@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-24T01:59:38Z by `python -m tools.gamesdb`. Measured 123; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-24T04:02:20Z by `python -m tools.gamesdb`. Measured 126; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **arith-calc-cli-oracle** (arith-calc.exe) at 100/100, scenario-pass: process-level oracle matched (Wine original, CLI scenario).
 
@@ -17,6 +17,9 @@ Best measured result: **arith-calc-cli-oracle** (arith-calc.exe) at 100/100, sce
 | arith-calc-cli-oracle | arith-calc.exe | i386 (PE32) | Windows | 100 | scenario-pass: process-level oracle matched (Wine original, CLI scenario) | reports/acceptance/arith-calc-oracle-pass.md |
 | base64-cli-oracle | base64.exe | i386 (PE32) | Windows | 100 | scenario-pass: process-level oracle matched (Wine original, CLI scenario) | reports/acceptance/base64-oracle-pass.md |
 | busybox-cli-oracle | busybox.exe | i386 (PE32) | Windows | 100 | scenario-pass: process-level oracle matched (Wine original, CLI scenario) | reports/oracle-sweep/busybox-acceptance.json |
+| game2048-cli-oracle | game2048.exe | i386 (PE32) | Windows | 100 | scenario-pass: process-level oracle matched (Wine original, CLI scenario) | reports/oracle-sweep/batch1/game2048-acceptance.json |
+| hangman_x86-cli-oracle | hangman_x86.exe | i386 (PE32) | Windows | 100 | scenario-pass: process-level oracle matched (Wine original, CLI scenario) | reports/oracle-sweep/batch1/hangman_x86-acceptance.json |
+| tictactoe-cli-oracle | tictactoe.exe | i386 (PE32) | Windows | 100 | scenario-pass: process-level oracle matched (Wine original, CLI scenario) | reports/oracle-sweep/batch1/tictactoe-acceptance.json |
 | BusyBox | busybox-w32.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/busybox_w32/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | DoConfig.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/DoConfig/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | Doukutsu.exe | i386 (PE32) | Windows | 93 | partial: process launched and stayed alive until the 10s timeout; no crash observed, no oracle | projects/Doukutsu/reports/report.html (host: Darwin arm64 (host build)) |

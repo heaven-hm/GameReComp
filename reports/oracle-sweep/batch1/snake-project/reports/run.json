@@ -1,0 +1,25 @@
+{
+  "command": [
+    "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/build/snake"
+  ],
+  "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+  "headless": true,
+  "timeout_seconds": 8.0,
+  "timed_out": false,
+  "status": "exited",
+  "exit_code": 0,
+  "seconds": 1.7,
+  "booted": true,
+  "entry_point": "0x00401460",
+  "unresolved_import_count": 0,
+  "bound_imports": null,
+  "unresolved_imports": [],
+  "import_trace_enabled": false,
+  "import_profile": [],
+  "import_calls_total": 0,
+  "log_stdout": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/logs/run.stdout.log",
+  "log_stderr": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/logs/run.stderr.log",
+  "stdout_tail": "\n=== Retro Snake (Score: 0) ===\n######################\n#            @       #\n#                    #\n#                    #\n#                    #\n#                    #\n#          O         #\n#                    #\n#                    #\n#                    #\n#                    #\n######################\nMove: W (Up), A (Left), S (Down), D (Right), Q (Quit): ",
+  "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\snake.exe booted: entry 0x00401460, 0 unresolved imports",
+  "output_tail": "\n=== Retro Snake (Score: 0) ===\n######################\n#            @       #\n#                    #\n#                    #\n#                    #\n#                    #\n#          O         #\n#                    #\n#                    #\n#                    #\n#                    #\n######################\nMove: W (Up), A (Left), S (Down), D (Right), Q (Quit): \n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\snake.exe booted: entry 0x00401460, 0 unresolved imports"
+}

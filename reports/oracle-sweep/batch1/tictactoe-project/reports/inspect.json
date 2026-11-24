@@ -1,0 +1,31 @@
+{
+  "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tictactoe.exe",
+  "size": 135893,
+  "sha256": "f3e562679f04a722650cd2099e6fc690e5ed748a2328c18c4dc7a424e235dcb9",
+  "md5": "51d1b4b081310196ecd22e843b79c6f8",
+  "sha1": "fe263f57917eb8a9d74172311e22dbb8e88d44c6",
+  "machine": "i386",
+  "pe_type": "PE32",
+  "subsystem": "Windows Console",
+  "image_base": "0x00400000",
+  "entry_point": "0x00401460",
+  "linker_version": "2.47",
+  "code_range": [
+    "0x00401000",
+    "0x00403000"
+  ],
+  "import_dlls": [
+    "KERNEL32.dll",
+    "api-ms-win-crt-environment-l1-1-0.dll",
+    "api-ms-win-crt-heap-l1-1-0.dll",
+    "api-ms-win-crt-locale-l1-1-0.dll",
+    "api-ms-win-crt-math-l1-1-0.dll",
+    "api-ms-win-crt-private-l1-1-0.dll",
+    "api-ms-win-crt-runtime-l1-1-0.dll",
+    "api-ms-win-crt-stdio-l1-1-0.dll",
+    "api-ms-win-crt-string-l1-1-0.dll"
+  ],
+  "import_count": 43,
+  "delay_import_count": 0,
+  "iat_entries": 43
+}

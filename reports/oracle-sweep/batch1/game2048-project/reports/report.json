@@ -1,0 +1,252 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T04:01:40Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/game2048.exe",
+  "project": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.03,
+      "status": "ok",
+      "message": "i386 PE32, 46 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/game2048.exe",
+        "size": 137107,
+        "sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940",
+        "md5": "fe9d767c5974e82f3674e09d727d8505",
+        "sha1": "f5b026c3a3b81e82f83a6521075ad5ffcbc146df",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x00402E00"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll",
+          "api-ms-win-crt-utility-l1-1-0.dll"
+        ],
+        "import_count": 46,
+        "delay_import_count": 0,
+        "iat_entries": 46
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 0.41,
+      "status": "ok",
+      "message": "219 functions, 13408 instructions",
+      "data": {
+        "count": 219,
+        "instructions": 13408,
+        "cache": "miss"
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.06,
+      "status": "ok",
+      "message": "2 source files, 1407508 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 1407508,
+        "lift_errors": 0,
+        "seconds": 0.1,
+        "cache": "miss"
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.02,
+      "status": "ok",
+      "message": "project at /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project",
+      "data": {
+        "project": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project",
+        "name": "game2048",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 219,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940"
+          }
+        ],
+        "runtime_files": 46,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 4.11,
+      "status": "ok",
+      "message": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/build/game2048 (1504488 bytes, 4.1s)",
+      "data": {
+        "binary": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/build/game2048",
+        "sha256": "ba7dbd469a46d7a35b29c604266045360a54f75e4980af40186e2cb55151cd15",
+        "seconds": 4.1,
+        "source_bytes": 3232683,
+        "build_timeout_seconds": 615.4146337509155,
+        "build_timeout_adaptive": true
+      }
+    },
+    {
+      "name": "run",
+      "seconds": 0.96,
+      "status": "ok",
+      "message": "exited, exit=0, 1.0s, 0 unresolved imports",
+      "data": {
+        "command": [
+          "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/build/game2048"
+        ],
+        "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+        "headless": true,
+        "timeout_seconds": 8.0,
+        "timed_out": false,
+        "status": "exited",
+        "exit_code": 0,
+        "seconds": 1.0,
+        "booted": true,
+        "entry_point": "0x00401460",
+        "unresolved_import_count": 0,
+        "bound_imports": null,
+        "unresolved_imports": [],
+        "import_trace_enabled": false,
+        "import_profile": [],
+        "import_calls_total": 0,
+        "log_stdout": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/logs/run.stdout.log",
+        "log_stderr": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/logs/run.stderr.log",
+        "stdout_tail": "\n=== 2048 (Score: 0) ===\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |      |      |    2 |\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |    2 |      |      |\n-----------------------------\nControls: W (Up), A (Left), S (Down), D (Right), Q (Quit)",
+        "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\game2048.exe booted: entry 0x00401460, 0 unresolved imports",
+        "output_tail": "\n=== 2048 (Score: 0) ===\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |      |      |    2 |\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |    2 |      |      |\n-----------------------------\nControls: W (Up), A (Left), S (Down), D (Right), Q (Quit)\n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\game2048.exe booted: entry 0x00401460, 0 unresolved imports"
+      }
+    },
+    {
+      "name": "verify",
+      "seconds": 0.0,
+      "status": "ok",
+      "message": "scenario-pass: process-level oracle matched",
+      "data": {
+        "status": "scenario-pass",
+        "reason": "process-level oracle matched"
+      }
+    }
+  ],
+  "resources": {
+    "generated_source_bytes": 1407508,
+    "binary_bytes": 1504488,
+    "project_disk_bytes": 8392827,
+    "peak_rss_bytes": 54231040,
+    "stage_seconds_total": 5.59
+  },
+  "outcome": {
+    "schema": 1,
+    "generated_at": "2026-11-24T04:01:40Z",
+    "status": "scenario-pass",
+    "reason": "process-level oracle matched",
+    "scope": "process",
+    "game": "game2048.exe",
+    "executable_sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940",
+    "target": {
+      "os": "darwin",
+      "arch": "arm64",
+      "label": "Darwin arm64 (host build)"
+    },
+    "checks": [
+      {
+        "check": "exit_code",
+        "expected": 0,
+        "actual": 0,
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "=== 2048 (Score: 0) ===",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "-----------------------------",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "|      |      |      |      |",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "|      |    2 |      |      |",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "|      |      |      |    2 |",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "Controls: W (Up), A (Left), S (Down), D (Right), Q (Quit)",
+        "ok": true
+      }
+    ],
+    "oracle_gaps": [
+      "oracle compares process observables only, not gameplay state",
+      "no frame, input or audio comparison",
+      "low-level register C is not high-level reconstructed source"
+    ],
+    "run": {
+      "command": [
+        "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/build/game2048"
+      ],
+      "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+      "headless": true,
+      "timeout_seconds": 8.0,
+      "timed_out": false,
+      "status": "exited",
+      "exit_code": 0,
+      "seconds": 1.0,
+      "booted": true,
+      "entry_point": "0x00401460",
+      "unresolved_import_count": 0,
+      "bound_imports": null,
+      "unresolved_imports": [],
+      "import_trace_enabled": false,
+      "import_profile": [],
+      "import_calls_total": 0,
+      "log_stdout": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/logs/run.stdout.log",
+      "log_stderr": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/logs/run.stderr.log",
+      "stdout_tail": "\n=== 2048 (Score: 0) ===\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |      |      |    2 |\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |    2 |      |      |\n-----------------------------\nControls: W (Up), A (Left), S (Down), D (Right), Q (Quit)",
+      "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\game2048.exe booted: entry 0x00401460, 0 unresolved imports",
+      "output_tail": "\n=== 2048 (Score: 0) ===\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |      |      |    2 |\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |    2 |      |      |\n-----------------------------\nControls: W (Up), A (Left), S (Down), D (Right), Q (Quit)\n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports (0 delay), 0 unresolved\n[host] C:\\game2048.exe booted: entry 0x00401460, 0 unresolved imports"
+    }
+  },
+  "score": 100,
+  "manifest": "manifest.json"
+}

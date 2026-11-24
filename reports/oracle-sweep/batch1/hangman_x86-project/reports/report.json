@@ -1,0 +1,252 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T04:02:01Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/hangman_x86.exe",
+  "project": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.02,
+      "status": "ok",
+      "message": "i386 PE32, 48 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/hangman_x86.exe",
+        "size": 138289,
+        "sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82",
+        "md5": "1ce80e80de76c640bc78fde80fbe688c",
+        "sha1": "f7012ef521f8cfe53c4eba23e6b9c08c2273b5de",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x00402E00"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll",
+          "api-ms-win-crt-utility-l1-1-0.dll"
+        ],
+        "import_count": 48,
+        "delay_import_count": 0,
+        "iat_entries": 48
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 0.4,
+      "status": "ok",
+      "message": "221 functions, 14358 instructions",
+      "data": {
+        "count": 221,
+        "instructions": 14358,
+        "cache": "miss"
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.06,
+      "status": "ok",
+      "message": "2 source files, 1499064 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 1499064,
+        "lift_errors": 0,
+        "seconds": 0.1,
+        "cache": "miss"
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.01,
+      "status": "ok",
+      "message": "project at /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project",
+      "data": {
+        "project": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project",
+        "name": "hangman_x86",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 221,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82"
+          }
+        ],
+        "runtime_files": 46,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 4.17,
+      "status": "ok",
+      "message": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project/build/hangman_x86 (1570616 bytes, 4.2s)",
+      "data": {
+        "binary": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project/build/hangman_x86",
+        "sha256": "6b0381c5e495974bb8abae7c8a58f8ce8fab1036c167bd070858b2b938a9afb5",
+        "seconds": 4.2,
+        "source_bytes": 3325513,
+        "build_timeout_seconds": 615.8572816848755,
+        "build_timeout_adaptive": true
+      }
+    },
+    {
+      "name": "run",
+      "seconds": 0.35,
+      "status": "ok",
+      "message": "exited, exit=0, 0.4s, 0 unresolved imports",
+      "data": {
+        "command": [
+          "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project/build/hangman_x86"
+        ],
+        "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+        "headless": true,
+        "timeout_seconds": 8.0,
+        "timed_out": false,
+        "status": "exited",
+        "exit_code": 0,
+        "seconds": 0.4,
+        "booted": true,
+        "entry_point": "0x00401460",
+        "unresolved_import_count": 0,
+        "bound_imports": null,
+        "unresolved_imports": [],
+        "import_trace_enabled": false,
+        "import_profile": [],
+        "import_calls_total": 0,
+        "log_stdout": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project/logs/run.stdout.log",
+        "log_stderr": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project/logs/run.stderr.log",
+        "stdout_tail": "\n\u001b[35m\u001b[1m========================================\n        C99 HANGMAN WORD PUZZLE         \n========================================\u001b[0m\n\n\u001b[33m  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\u001b[0m\n\nWord: _ _ _ _ _ _ _ _ _ _ _ \nGuessed so far: \nLives remaining: 6\nEnter a letter guess: \nPlay again? (y/n): \n\u001b[32mThanks for playing! Goodbye.\u001b[0m\n",
+        "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 48 imports (0 delay), 0 unresolved\n[host] C:\\hangman_x86.exe booted: entry 0x00401460, 0 unresolved imports",
+        "output_tail": "\n\u001b[35m\u001b[1m========================================\n        C99 HANGMAN WORD PUZZLE         \n========================================\u001b[0m\n\n\u001b[33m  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\u001b[0m\n\nWord: _ _ _ _ _ _ _ _ _ _ _ \nGuessed so far: \nLives remaining: 6\nEnter a letter guess: \nPlay again? (y/n): \n\u001b[32mThanks for playing! Goodbye.\u001b[0m\n\n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 48 imports (0 delay), 0 unresolved\n[host] C:\\hangman_x86.exe booted: entry 0x00401460, 0 unresolved imports"
+      }
+    },
+    {
+      "name": "verify",
+      "seconds": 0.0,
+      "status": "ok",
+      "message": "scenario-pass: process-level oracle matched",
+      "data": {
+        "status": "scenario-pass",
+        "reason": "process-level oracle matched"
+      }
+    }
+  ],
+  "resources": {
+    "generated_source_bytes": 1499064,
+    "binary_bytes": 1570616,
+    "project_disk_bytes": 8684601,
+    "peak_rss_bytes": 58490880,
+    "stage_seconds_total": 5.01
+  },
+  "outcome": {
+    "schema": 1,
+    "generated_at": "2026-11-24T04:02:01Z",
+    "status": "scenario-pass",
+    "reason": "process-level oracle matched",
+    "scope": "process",
+    "game": "hangman_x86.exe",
+    "executable_sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82",
+    "target": {
+      "os": "darwin",
+      "arch": "arm64",
+      "label": "Darwin arm64 (host build)"
+    },
+    "checks": [
+      {
+        "check": "exit_code",
+        "expected": 0,
+        "actual": 0,
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "========================================",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "C99 HANGMAN WORD PUZZLE",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "+---+",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "|   |",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "|",
+        "ok": true
+      },
+      {
+        "check": "stdout_contains",
+        "expected": "=========",
+        "ok": true
+      }
+    ],
+    "oracle_gaps": [
+      "oracle compares process observables only, not gameplay state",
+      "no frame, input or audio comparison",
+      "low-level register C is not high-level reconstructed source"
+    ],
+    "run": {
+      "command": [
+        "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project/build/hangman_x86"
+      ],
+      "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+      "headless": true,
+      "timeout_seconds": 8.0,
+      "timed_out": false,
+      "status": "exited",
+      "exit_code": 0,
+      "seconds": 0.4,
+      "booted": true,
+      "entry_point": "0x00401460",
+      "unresolved_import_count": 0,
+      "bound_imports": null,
+      "unresolved_imports": [],
+      "import_trace_enabled": false,
+      "import_profile": [],
+      "import_calls_total": 0,
+      "log_stdout": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project/logs/run.stdout.log",
+      "log_stderr": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/hangman_x86-project/logs/run.stderr.log",
+      "stdout_tail": "\n\u001b[35m\u001b[1m========================================\n        C99 HANGMAN WORD PUZZLE         \n========================================\u001b[0m\n\n\u001b[33m  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\u001b[0m\n\nWord: _ _ _ _ _ _ _ _ _ _ _ \nGuessed so far: \nLives remaining: 6\nEnter a letter guess: \nPlay again? (y/n): \n\u001b[32mThanks for playing! Goodbye.\u001b[0m\n",
+      "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 48 imports (0 delay), 0 unresolved\n[host] C:\\hangman_x86.exe booted: entry 0x00401460, 0 unresolved imports",
+      "output_tail": "\n\u001b[35m\u001b[1m========================================\n        C99 HANGMAN WORD PUZZLE         \n========================================\u001b[0m\n\n\u001b[33m  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\u001b[0m\n\nWord: _ _ _ _ _ _ _ _ _ _ _ \nGuessed so far: \nLives remaining: 6\nEnter a letter guess: \nPlay again? (y/n): \n\u001b[32mThanks for playing! Goodbye.\u001b[0m\n\n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 48 imports (0 delay), 0 unresolved\n[host] C:\\hangman_x86.exe booted: entry 0x00401460, 0 unresolved imports"
+    }
+  },
+  "score": 100,
+  "manifest": "manifest.json"
+}

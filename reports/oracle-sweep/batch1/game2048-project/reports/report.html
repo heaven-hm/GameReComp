@@ -1,0 +1,39 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>autorecomp report - game2048.exe</title>
+<style>
+body { font: 14px system-ui, sans-serif; margin: 2rem; color: #1b1b1b; }
+h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; margin-top: 1.6rem; }
+table { border-collapse: collapse; width: 100%; margin: .5rem 0; }
+td, th { border: 1px solid #ccc; padding: .35rem .5rem; text-align: left; vertical-align: top; }
+pre { margin: 0; white-space: pre-wrap; font-size: 12px; }
+.ok { color: #146c2e; } .failed { color: #a11; } .skipped { color: #666; }
+</style></head><body>
+<h1>autorecomp report: game2048.exe</h1>
+<p>Generated 2026-11-24T04:01:40Z. Project: <code>/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project</code>.
+Score: <strong>100/100</strong>.
+Verification: <strong>scenario-pass</strong> - process-level oracle matched</p>
+<h2>Stages</h2>
+<table><tr><th>Stage</th><th>Status</th><th>Time</th><th>Detail</th></tr><tr><td>inspect</td><td class='ok'>ok</td><td>0.0s</td><td><pre>i386 PE32, 46 imports, entry 0x00401460</pre></td></tr><tr><td>recover</td><td class='ok'>ok</td><td>0.4s</td><td><pre>219 functions, 13408 instructions</pre></td></tr><tr><td>translate</td><td class='ok'>ok</td><td>0.1s</td><td><pre>2 source files, 1407508 bytes, 0 lift errors</pre></td></tr><tr><td>project</td><td class='ok'>ok</td><td>0.0s</td><td><pre>project at /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project</pre></td></tr><tr><td>compile</td><td class='ok'>ok</td><td>4.1s</td><td><pre>/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/game2048-project/build/game2048 (1504488 bytes, 4.1s)</pre></td></tr><tr><td>run</td><td class='ok'>ok</td><td>1.0s</td><td><pre>exited, exit=0, 1.0s, 0 unresolved imports</pre></td></tr><tr><td>verify</td><td class='ok'>ok</td><td>0.0s</td><td><pre>scenario-pass: process-level oracle matched</pre></td></tr></table>
+<h2>Source provenance</h2>
+<table><tr><th>Category</th><th>Functions</th></tr><tr><td>HIGH_LEVEL_VERIFIED</td><td>0</td></tr><tr><td>HIGH_LEVEL_UNVERIFIED</td><td>0</td></tr><tr><td>LOW_LEVEL_FALLBACK</td><td>219</td></tr><tr><td>UNRESOLVED</td><td>0</td></tr></table>
+<p>Source digest: <code>f67bea4659b959c74bd62539945eea8454110761e6e18a20f203dd809967ad6c</code></p>
+<h2>Oracle checks</h2>
+<table><tr><th>Check</th><th>Expected</th><th>Actual</th><th>Result</th></tr><tr><td>exit_code</td><td>0</td><td>0</td><td>PASS</td></tr><tr><td>stdout_contains</td><td>=== 2048 (Score: 0) ===</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>-----------------------------</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>|      |      |      |      |</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>|      |    2 |      |      |</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>|      |      |      |    2 |</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>Controls: W (Up), A (Left), S (Down), D (Right), Q (Quit)</td><td></td><td>PASS</td></tr></table>
+<h2>Oracle gaps</h2><ul><li>oracle compares process observables only, not gameplay state</li><li>no frame, input or audio comparison</li><li>low-level register C is not high-level reconstructed source</li></ul>
+<h2>Run output (tail)</h2><pre>
+=== 2048 (Score: 0) ===
+-----------------------------
+|      |      |      |      |
+-----------------------------
+|      |      |      |    2 |
+-----------------------------
+|      |      |      |      |
+-----------------------------
+|      |    2 |      |      |
+-----------------------------
+Controls: W (Up), A (Left), S (Down), D (Right), Q (Quit)
+[pe] &lt;embedded image&gt; mapped at 0x00400000, span 0x22000
+[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0
+[pe] bound 46 imports (0 delay), 0 unresolved
+[host] C:\game2048.exe booted: entry 0x00401460, 0 unresolved imports</pre>
+</body></html>

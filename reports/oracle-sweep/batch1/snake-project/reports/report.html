@@ -1,0 +1,42 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>autorecomp report - snake.exe</title>
+<style>
+body { font: 14px system-ui, sans-serif; margin: 2rem; color: #1b1b1b; }
+h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; margin-top: 1.6rem; }
+table { border-collapse: collapse; width: 100%; margin: .5rem 0; }
+td, th { border: 1px solid #ccc; padding: .35rem .5rem; text-align: left; vertical-align: top; }
+pre { margin: 0; white-space: pre-wrap; font-size: 12px; }
+.ok { color: #146c2e; } .failed { color: #a11; } .skipped { color: #666; }
+</style></head><body>
+<h1>autorecomp report: snake.exe</h1>
+<p>Generated 2026-11-24T04:01:51Z. Project: <code>/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project</code>.
+Score: <strong>85/100</strong>.
+Verification: <strong>trace-diverged</strong> - stdout missing '#@                   #'</p>
+<h2>Stages</h2>
+<table><tr><th>Stage</th><th>Status</th><th>Time</th><th>Detail</th></tr><tr><td>inspect</td><td class='ok'>ok</td><td>0.0s</td><td><pre>i386 PE32, 46 imports, entry 0x00401460</pre></td></tr><tr><td>recover</td><td class='ok'>ok</td><td>0.4s</td><td><pre>223 functions, 13448 instructions</pre></td></tr><tr><td>translate</td><td class='ok'>ok</td><td>0.1s</td><td><pre>2 source files, 1420577 bytes, 0 lift errors</pre></td></tr><tr><td>project</td><td class='ok'>ok</td><td>0.0s</td><td><pre>project at /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project</pre></td></tr><tr><td>compile</td><td class='ok'>ok</td><td>3.9s</td><td><pre>/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/issue-work/reports/oracle-sweep/batch1/snake-project/build/snake (1488152 bytes, 3.9s)</pre></td></tr><tr><td>run</td><td class='ok'>ok</td><td>1.7s</td><td><pre>exited, exit=0, 1.7s, 0 unresolved imports</pre></td></tr><tr><td>verify</td><td class='ok'>ok</td><td>0.0s</td><td><pre>trace-diverged: stdout missing '#@                   #'</pre></td></tr></table>
+<h2>Source provenance</h2>
+<table><tr><th>Category</th><th>Functions</th></tr><tr><td>HIGH_LEVEL_VERIFIED</td><td>0</td></tr><tr><td>HIGH_LEVEL_UNVERIFIED</td><td>0</td></tr><tr><td>LOW_LEVEL_FALLBACK</td><td>223</td></tr><tr><td>UNRESOLVED</td><td>0</td></tr></table>
+<p>Source digest: <code>a3beb3e85b50b6374f12cbfaa7329a661840fdf8ef123d695ed1bbbcd8f3c2be</code></p>
+<h2>Oracle checks</h2>
+<table><tr><th>Check</th><th>Expected</th><th>Actual</th><th>Result</th></tr><tr><td>exit_code</td><td>0</td><td>0</td><td>PASS</td></tr><tr><td>stdout_contains</td><td>=== Retro Snake (Score: 0) ===</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>######################</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>#@                   #</td><td></td><td>FAIL</td></tr><tr><td>stdout_contains</td><td>#                    #</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>#          O         #</td><td></td><td>PASS</td></tr><tr><td>stdout_contains</td><td>Move: W (Up), A (Left), S (Down), D (Right), Q (Quit):</td><td></td><td>PASS</td></tr></table>
+<h2>Oracle gaps</h2><ul><li>no frame, input or audio comparison</li><li>low-level register C is not high-level reconstructed source</li></ul>
+<h2>Run output (tail)</h2><pre>
+=== Retro Snake (Score: 0) ===
+######################
+#            @       #
+#                    #
+#                    #
+#                    #
+#                    #
+#          O         #
+#                    #
+#                    #
+#                    #
+#                    #
+######################
+Move: W (Up), A (Left), S (Down), D (Right), Q (Quit): 
+[pe] &lt;embedded image&gt; mapped at 0x00400000, span 0x22000
+[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0
+[pe] bound 46 imports (0 delay), 0 unresolved
+[host] C:\snake.exe booted: entry 0x00401460, 0 unresolved imports</pre>
+</body></html>
