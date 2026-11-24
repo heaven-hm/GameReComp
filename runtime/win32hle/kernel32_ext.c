@@ -2155,6 +2155,39 @@ static void k_GetSystemDirectoryW(void) {
     RET(n, 2);
 }
 
+/* GetWindowsDirectoryW(lpBuffer, uSize): the wide counterpart of
+ * kernel32_crt.c's GetWindowsDirectoryA. The guest's Windows directory is the
+ * same notional "C:\\WINDOWS" the ANSI form answers; uSize is in WCHARs. As on
+ * Windows, success returns the text length WITHOUT the NUL, while a size probe
+ * (uSize == 0) or a too-small/NULL buffer returns the required size INCLUDING
+ * the NUL. A supplied but short buffer is an honest failure with
+ * ERROR_INSUFFICIENT_BUFFER; the buffer is left untouched.
+ *
+ * Unlike GetSystemDirectoryW, the caller supplies no UTF-16 input to scan, so
+ * the bound here is on the OUTPUT: a destination too close to the top of the
+ * guest's 4 GB would wrap the per-unit offsets past the block. Such an address
+ * fails with ERROR_INVALID_PARAMETER rather than writing outside guest memory.
+ * This is stricter than Windows (which has no such check) and strictly safer. */
+static void k_GetWindowsDirectoryW(void) {
+    static const char windir[] = "C:\\WINDOWS";
+    const uint32_t n = (uint32_t)(sizeof windir - 1u);       /* 10 WCHARs */
+    uint32_t dst = A32(0), cch = A32(1), i;
+    uint16_t wide[sizeof windir];                            /* n + 1 slots */
+    if (!hle_ansi_to_wide(windir, wide, sizeof wide / sizeof wide[0])) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2);
+    }
+    if (!cch) RET(n + 1u, 2);                                /* size probe, no write */
+    if (!dst || cch < n + 1u) {
+        hle_set_last_error(ERROR_INSUFFICIENT_BUFFER); RET(n + 1u, 2);
+    }
+    if ((uint64_t)dst + (uint64_t)(n + 1u) * 2u > 0x100000000ull) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2);
+    }
+    for (i = 0; i <= n; i++) MEM16(dst + i * 2u) = wide[i];  /* NUL included */
+    hle_set_last_error(0);
+    RET(n, 2);
+}
+
 /* ---- FormatMessageW: FORMAT_MESSAGE_FROM_STRING with insertions ----
  * Supported flags: FROM_STRING (required), IGNORE_INSERTS, ARGUMENT_ARRAY,
  * ALLOCATE_BUFFER and the MAX_WIDTH_MASK low byte (accepted; line rewrapping
@@ -2395,6 +2428,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "LocaleNameToLCID",           k_LocaleNameToLCID },
     { "FormatMessageW",             k_FormatMessageW },
     { "GetSystemDirectoryW",        k_GetSystemDirectoryW },
+    { "GetWindowsDirectoryW",       k_GetWindowsDirectoryW },
     { "MoveFileExW",                k_MoveFileExW },
     { "lstrcatW",                   k_lstrcatW },
     { "lstrcpyW",                   k_lstrcpyW },
