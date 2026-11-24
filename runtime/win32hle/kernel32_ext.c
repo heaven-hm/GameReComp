@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
@@ -45,6 +46,29 @@ int hle_ansi_to_wide(const char *s, uint16_t *out, size_t n);
 #define ERROR_INVALID_FUNCTION  1u
 #define ERROR_INVALID_PARAMETER  87u
 #define ERROR_WRITE_PROTECT      19u
+#define ERROR_WRITE_FAULT        29u
+#define ERROR_INSUFFICIENT_BUFFER 122u
+#define ERROR_INVALID_ADDRESS   487u
+#define ERROR_NOT_ENOUGH_MEMORY   8u
+#define ERROR_FILE_INVALID     1006u
+
+/* CreateFileMapping's SEC_PAGE_* protection values. */
+#define SEC_READONLY           0x02u
+#define SEC_READWRITE          0x04u
+#define SEC_WRITECOPY          0x08u
+#define SEC_EXECUTE_READ       0x20u
+#define SEC_EXECUTE_READWRITE  0x40u
+#define SEC_EXECUTE_WRITECOPY  0x80u
+#define SEC_WRITABLE_MASK (SEC_READWRITE | SEC_WRITECOPY | SEC_EXECUTE_READWRITE | SEC_EXECUTE_WRITECOPY)
+#define SEC_VALID_MASK    (SEC_READONLY | SEC_WRITABLE_MASK | 0x01u /* SEC_COMMIT */ | 0x10000000u /* SEC_IMAGE */)
+
+/* MapViewOfFile's dwDesiredAccess bits. */
+#define FILE_MAP_COPY     0x0001u
+#define FILE_MAP_WRITE    0x0002u
+#define FILE_MAP_READ     0x0004u
+#define FILE_MAP_EXECUTE  0x0020u
+
+#define CURRENT_PROCESS_HANDLE 0xFFFFFFFFu
 
 #define FILE_ATTRIBUTE_READONLY  0x01u
 #define FILE_ATTRIBUTE_HIDDEN    0x02u
@@ -82,8 +106,15 @@ static uint32_t errno_to_win(int e) {
 }
 
 /* ---- file objects ---- */
-typedef struct { int fd; } hfile;
-static void file_closer(void *o) { hfile *f = (hfile *)o; if (f->fd > 2) close(f->fd); free(f); }
+/* `name` is the guest (Windows) path the handle was opened with; GetMappedFileName
+ * reports it for a view backed by this file. Pipes leave it NULL. */
+typedef struct { int fd; char *name; } hfile;
+static void file_closer(void *o) {
+    hfile *f = (hfile *)o;
+    if (f->fd > 2) close(f->fd);
+    free(f->name);
+    free(f);
+}
 
 /* The standard handles (kernel32_crt.c's GetStdHandle) are 0x11..0x13. */
 static int fd_of(uint32_t h) {
@@ -96,15 +127,17 @@ static int fd_of(uint32_t h) {
 
 int hle_file_fd(uint32_t h) { return fd_of(h); }   /* a file HANDLE's descriptor, for a host (Bink reads the game's) */
 
-static uint32_t new_file(int fd) {
+static uint32_t new_file_named(int fd, const char *name) {
     static int closer_set;
     if (!closer_set) hle_handle_set_closer(HLE_H_FILE, file_closer), closer_set = 1;
     hfile *f = (hfile *)malloc(sizeof *f);
     f->fd = fd;
+    f->name = name ? strdup(name) : NULL;
     uint32_t h = hle_handle_alloc(HLE_H_FILE, f);
-    if (!h) { close(fd); free(f); return INVALID_HANDLE; }
+    if (!h) { file_closer(f); return INVALID_HANDLE; }   /* closer releases fd and name */
     return h;
 }
+static uint32_t new_file(int fd) { return new_file_named(fd, NULL); }
 
 /* Device names a Windows program may open that a host has no file for. */
 /* A port is COM1-COM9 or LPT1-LPT9, the whole name before any extension.
@@ -170,7 +203,7 @@ static uint32_t create_file(const char *what, const char *name, uint32_t access,
         fprintf(stderr, "[file] %s \"%s\" -> %s %s\n", what, name, path, fd >= 0 ? "ok" : strerror(errno));
     if (fd < 0) { hle_set_last_error(errno_to_win(errno)); return INVALID_HANDLE; }
     hle_set_last_error(exists && (disp == 2 || disp == 4) ? ERROR_ALREADY_EXISTS : 0);
-    return new_file(fd);
+    return new_file_named(fd, name);
 }
 static void k_CreateFileA(void) {
     const char *name = ASTR(0);
@@ -979,61 +1012,323 @@ static void k_SearchPathA(void) {
 }
 
 /* ---- file mappings ----
- * CreateFileMappingA keeps the file (a dup of its descriptor) or, for
- * INVALID_HANDLE_VALUE, only a size: anonymous shared memory. MapViewOfFile
- * mmaps it; a 32-bit host's address is the guest's. The views are
- * remembered so UnmapViewOfFile knows their length. */
-typedef struct { int fd; uint64_t size; int writable; } hmapping;
-static void mapping_closer(void *p) { hmapping *m = (hmapping *)p; if (m->fd >= 0) close(m->fd); free(m); }
-static void k_CreateFileMappingA(void) {                 /* (hFile, sa, protect, sizeHigh, sizeLow, name) */
+ * CreateFileMapping keeps a dup of the file descriptor (or, for
+ * INVALID_HANDLE_VALUE, just a size: anonymous shared memory), a protection,
+ * and an optional name. Named mappings are kept in a small process-local
+ * table: names are case-insensitive like Windows kernel object names, a
+ * second Create of the same name returns a *new* handle to the same object
+ * with ERROR_ALREADY_EXISTS (a valid handle; the error is informational), and
+ * OpenFileMapping fails with ERROR_FILE_NOT_FOUND when the name is absent.
+ * The table holds one permanent anchor per name; each handle owns its own dup
+ * of the descriptor, so closing one handle never frees the object behind
+ * another (the host handle table runs a type's closer on every close).
+ *
+ * A view is an mmap over a guest-memory reservation: its base is a guest VA.
+ * MapViewOfFileEx honours a caller-supplied base when it is free (64 KB
+ * granularity, like Windows allocations). FlushViewOfFile msyncs a range of a
+ * live view. GetMappedFileName reports the guest path the backing file was
+ * opened with. Invalid handles, bad offsets/sizes, permissions and busy
+ * addresses fail closed; no success is claimed that was not achieved. */
+typedef struct {
+    int      fd;            /* dup of the file descriptor; -1 for anonymous */
+    uint64_t size;          /* maximum size of the mapping */
+    uint32_t protect;       /* SEC_PAGE_* protection it was created with */
+    char    *name;          /* owned, lower-cased; NULL for unnamed mappings */
+    char    *file_path;     /* guest path of the backing file, when there is one */
+} hmapping;
+
+#define EX_MAX_NAMED_MAPS 64
+#define EX_MAP_NAME_MAX   128
+static struct { char name[EX_MAP_NAME_MAX]; hmapping *anchor; } g_named_maps[EX_MAX_NAMED_MAPS];
+
+static void mapping_closer(void *p) {
+    hmapping *m = (hmapping *)p;
+    if (m->fd >= 0) close(m->fd);
+    free(m->name);
+    free(m->file_path);
+    free(m);
+}
+
+/* An anonymous (pagefile-backed) mapping still needs real shared pages: two
+ * views of one mapping must see each other's writes. An unlinked temp file is
+ * a process-private shared object with no guest-visible name, which is exactly
+ * what CreateFileMapping(INVALID_HANDLE_VALUE) means. */
+static int anon_shared_fd(uint64_t size) {
+    FILE *f = tmpfile();
+    if (!f) return -1;
+    int fd = fileno(f);
+    int out = fd >= 0 ? dup(fd) : -1;
+    fclose(f);                              /* closes fd, leaves out open */
+    if (out < 0 || ftruncate(out, (off_t)size) != 0) {
+        if (out >= 0) close(out);
+        return -1;
+    }
+    return out;
+}
+
+/* A handle object is a private dup of an anchor: distinct handles to one named
+ * mapping never share the object a CloseHandle would free. */
+static hmapping *mapping_dup(const hmapping *src) {
+    hmapping *m = (hmapping *)malloc(sizeof *m);
+    if (!m) return NULL;
+    m->fd = src->fd >= 0 ? dup(src->fd) : -1;
+    if (src->fd >= 0 && m->fd < 0) { free(m); return NULL; }
+    m->size = src->size;
+    m->protect = src->protect;
+    m->name = src->name ? strdup(src->name) : NULL;
+    m->file_path = src->file_path ? strdup(src->file_path) : NULL;
+    if ((src->name && !m->name) || (src->file_path && !m->file_path)) {
+        mapping_closer(m); return NULL;
+    }
+    return m;
+}
+
+static hmapping *named_map_find(const char *name) {
+    for (int i = 0; i < EX_MAX_NAMED_MAPS; i++)
+        if (g_named_maps[i].anchor && !strcasecmp(g_named_maps[i].name, name))
+            return g_named_maps[i].anchor;
+    return NULL;
+}
+static hmapping *named_map_add(hmapping *anchor, const char *name) {
+    if (strlen(name) >= EX_MAP_NAME_MAX) return NULL;
+    for (int i = 0; i < EX_MAX_NAMED_MAPS; i++) {
+        if (g_named_maps[i].anchor) continue;
+        snprintf(g_named_maps[i].name, sizeof g_named_maps[i].name, "%s", name);
+        for (char *p = g_named_maps[i].name; *p; p++) *p = (char)tolower((unsigned char)*p);
+        g_named_maps[i].anchor = anchor;
+        return anchor;
+    }
+    return NULL;
+}
+
+/* (hFile, sa, protect, sizeHigh, sizeLow, name) -> HANDLE. `name` is the ANSI
+ * name (already converted from UTF-16 by the W entry point), or NULL. */
+static uint32_t create_file_mapping(const char *name, uint32_t file, uint32_t protect, uint64_t size) {
     static int closer_set;
     if (!closer_set) hle_handle_set_closer(HLE_H_MAPPING, mapping_closer), closer_set = 1;
-    uint32_t file = A32(0), protect = A32(2);
-    uint64_t size = (uint64_t)A32(3) << 32 | A32(4);
+    if (name && !*name) name = NULL;                       /* "" is an unnamed mapping */
+    if (!protect || (protect & ~SEC_VALID_MASK)) { hle_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
+
+    /* Opening an existing name reuses that object; the new size and file are
+     * ignored, exactly as Windows CreateFileMapping does. */
+    if (name) {
+        hmapping *anchor = named_map_find(name);
+        if (anchor) {
+            hmapping *m = mapping_dup(anchor);
+            if (!m) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+            uint32_t h = hle_handle_alloc(HLE_H_MAPPING, m);
+            if (!h) { mapping_closer(m); hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+            hle_set_last_error(ERROR_ALREADY_EXISTS);
+            return h;
+        }
+    }
+
     int fd = -1;
+    char *file_path = NULL;
     if (file != INVALID_HANDLE) {
         int f = fd_of(file);
         struct stat st;
-        if (f < 0 || fstat(f, &st) != 0) { hle_set_last_error(6); RET(0, 6); }   /* ERROR_INVALID_HANDLE */
+        if (f < 0 || fstat(f, &st) != 0) { hle_set_last_error(ERROR_INVALID_HANDLE); return 0; }
         if (!size) size = (uint64_t)st.st_size;
         fd = dup(f);
+        if (fd < 0) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+        hfile *hf = (hfile *)hle_handle_obj(file, HLE_H_FILE);
+        if (hf && hf->name) file_path = strdup(hf->name);
     }
-    if (!size) { hle_set_last_error(1006); RET(0, 6); }    /* ERROR_FILE_INVALID: an empty file */
-    hmapping *m = (hmapping *)malloc(sizeof *m);
-    m->fd = fd, m->size = size, m->writable = (protect & 0x0C) != 0;   /* PAGE_READWRITE | PAGE_WRITECOPY */
+    if (!size) {                                          /* an empty file/pagefile has nothing to map */
+        if (fd >= 0) close(fd);
+        free(file_path);
+        hle_set_last_error(ERROR_FILE_INVALID);
+        return 0;
+    }
+    if (fd < 0) {                                         /* anonymous: a shared, unlinked object */
+        fd = anon_shared_fd(size);
+        if (fd < 0) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+    }
+
+    hmapping *anchor = (hmapping *)malloc(sizeof *anchor);
+    if (!anchor) { if (fd >= 0) close(fd); free(file_path); hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+    anchor->fd = fd, anchor->size = size, anchor->protect = protect;
+    anchor->name = NULL, anchor->file_path = file_path;
+    hmapping *m = anchor;
+    if (name) {
+        anchor->name = (char *)malloc(EX_MAP_NAME_MAX);
+        if (!anchor->name) { mapping_closer(anchor); hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+        snprintf(anchor->name, EX_MAP_NAME_MAX, "%s", name);
+        for (char *p = anchor->name; *p; p++) *p = (char)tolower((unsigned char)*p);
+        if (!named_map_add(anchor, anchor->name)) {       /* the name table is full */
+            mapping_closer(anchor);
+            hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+            return 0;
+        }
+        /* The table keeps this anchor; hand out a private dup of it. */
+        m = mapping_dup(anchor);
+        if (!m) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+    }
     uint32_t h = hle_handle_alloc(HLE_H_MAPPING, m);
-    if (!h) { mapping_closer(m); RET(0, 6); }
+    if (!h) { mapping_closer(m); hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
     hle_set_last_error(0);
-    RET(h, 6);
+    return h;
 }
+
+static void k_CreateFileMappingA(void) {                 /* (hFile, sa, protect, hi, lo, name) */
+    RET(create_file_mapping(ASTR(5), A32(0), A32(2),
+                            ((uint64_t)A32(3) << 32) | A32(4)), 6);
+}
+static void k_CreateFileMappingW(void) {                 /* UTF-16 name */
+    char name[EX_MAP_NAME_MAX];
+    const uint16_t *w = (const uint16_t *)APTR(5);
+    if (w && !hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_INVALID_NAME); RET(0, 6); }
+    RET(create_file_mapping(w ? name : NULL, A32(0), A32(2),
+                            ((uint64_t)A32(3) << 32) | A32(4)), 6);
+}
+
+/* (desiredAccess, inheritHandle, name) -> HANDLE. Only named mappings can be
+ * opened; a write desire on a read-only mapping is denied. */
+static uint32_t open_file_mapping(const char *name, uint32_t access) {
+    if (!name || !*name) { hle_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
+    hmapping *anchor = named_map_find(name);
+    if (!anchor) { hle_set_last_error(ERROR_FILE_NOT_FOUND); return 0; }
+    if ((access & FILE_MAP_WRITE) && !(anchor->protect & SEC_WRITABLE_MASK)) {
+        hle_set_last_error(ERROR_ACCESS_DENIED); return 0;
+    }
+    hmapping *m = mapping_dup(anchor);
+    if (!m) { hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+    uint32_t h = hle_handle_alloc(HLE_H_MAPPING, m);
+    if (!h) { mapping_closer(m); hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return 0; }
+    hle_set_last_error(0);
+    return h;
+}
+static void k_OpenFileMappingA(void) { RET(open_file_mapping(ASTR(2), A32(0)), 3); }
+static void k_OpenFileMappingW(void) {
+    char name[EX_MAP_NAME_MAX];
+    const uint16_t *w = (const uint16_t *)APTR(2);
+    if (w && !hle_wide_to_ansi(w, name, sizeof name)) { hle_set_last_error(ERROR_INVALID_NAME); RET(0, 3); }
+    RET(open_file_mapping(w ? name : NULL, A32(0)), 3);
+}
+
 #define MAX_VIEWS 64
-static struct { uint32_t addr, len; } g_views[MAX_VIEWS];
-static void k_MapViewOfFile(void) {                      /* (hMap, access, offHigh, offLow, bytes) */
-    hmapping *m = (hmapping *)hle_handle_obj(A32(0), HLE_H_MAPPING);
-    uint64_t off = (uint64_t)A32(2) << 32 | A32(3);
-    if (!m || off >= m->size) { hle_set_last_error(6); RET(0, 5); }
-    uint64_t len = A32(4) ? A32(4) : m->size - off;
-    int copy = A32(1) == 1;                                /* FILE_MAP_COPY */
-    int prot = PROT_READ | (m->writable || copy ? PROT_WRITE : 0);
+static struct { uint32_t addr, len; char *file_path; } g_views[MAX_VIEWS];
+
+/* (hMap, access, offHigh, offLow, bytes, base) -> guest VA or 0. base is 0 for
+ * MapViewOfFile, a desired 64 KB-aligned guest address for MapViewOfFileEx. */
+static uint32_t map_view(uint32_t hmap, uint32_t access, uint64_t off, uint32_t len, uint32_t base) {
+    hmapping *m = (hmapping *)hle_handle_obj(hmap, HLE_H_MAPPING);
+    if (!m) { hle_set_last_error(ERROR_INVALID_HANDLE); return 0; }
+    /* Match Wine's interpretation: strip FILE_MAP_EXECUTE, then COPY is only
+     * exclusive when neither READ nor WRITE was also requested; the standard
+     * rights bits in FILE_MAP_ALL_ACCESS are ignored, not rejected. */
+    uint32_t bits = access & ~FILE_MAP_EXECUTE;
+    int copy = bits == FILE_MAP_COPY;
+    if (!copy && !(bits & FILE_MAP_WRITE) && !(bits & FILE_MAP_READ)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); return 0;
+    }
+    if ((bits & FILE_MAP_WRITE) && !(m->protect & SEC_WRITABLE_MASK)) {
+        hle_set_last_error(ERROR_ACCESS_DENIED); return 0;
+    }
+    if (off & 0xFFFu || off >= m->size) { hle_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
+    uint64_t avail = m->size - off;
+    if (!len) len = avail > 0xFFFFFFFFull ? 0xFFFFFFFFu : (uint32_t)avail;
+    if (len > avail) { hle_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
+    if (base & 0xFFFFu) { hle_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
+
     /* the view lives in guest memory: reserve it there, then put the file over
      * it (a pagefile mapping is the reservation's own zeroed pages) */
-    uint32_t va = hle_vm_reserve(0, (uint32_t)len);
-    if (!va) { hle_set_last_error(8); RET(0, 5); }       /* ERROR_NOT_ENOUGH_MEMORY */
-    if (m->fd >= 0 && mmap(hle_ptr(va), len, prot, MAP_FIXED | (copy ? MAP_PRIVATE : MAP_SHARED), m->fd, (off_t)off) == MAP_FAILED) {
-        hle_vm_release(va, (uint32_t)len); hle_set_last_error(8); RET(0, 5);
+    uint32_t va = hle_vm_reserve(base, len);
+    if (!va || (base && va != (base & ~0xFFFFu))) {
+        if (va) hle_vm_release(va, len);
+        hle_set_last_error(base ? ERROR_INVALID_ADDRESS : ERROR_NOT_ENOUGH_MEMORY);
+        return 0;
     }
-    for (int i = 0; i < MAX_VIEWS; i++) if (!g_views[i].addr) { g_views[i].addr = va, g_views[i].len = (uint32_t)len; break; }
-    RET(va, 5);
+    int prot = PROT_READ | (((bits & FILE_MAP_WRITE) || copy) ? PROT_WRITE : 0);
+    if (m->fd >= 0 &&
+        mmap(hle_ptr(va), len, prot, MAP_FIXED | (copy ? MAP_PRIVATE : MAP_SHARED), m->fd, (off_t)off) == MAP_FAILED) {
+        hle_vm_release(va, len);
+        hle_set_last_error(errno == EACCES ? ERROR_ACCESS_DENIED : ERROR_NOT_ENOUGH_MEMORY);
+        return 0;
+    }
+    int slot = -1;
+    for (int i = 0; i < MAX_VIEWS; i++) if (!g_views[i].addr) { slot = i; break; }
+    if (slot < 0) {                                         /* out of view slots */
+        hle_vm_release(va, len);
+        hle_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+        return 0;
+    }
+    g_views[slot].addr = va;
+    g_views[slot].len = len;
+    g_views[slot].file_path = m->file_path ? strdup(m->file_path) : NULL;
+    hle_set_last_error(0);
+    return va;
+}
+static void k_MapViewOfFile(void) {                       /* (hMap, access, hi, lo, bytes) */
+    RET(map_view(A32(0), A32(1), ((uint64_t)A32(2) << 32) | A32(3), A32(4), 0), 5);
+}
+static void k_MapViewOfFileEx(void) {                     /* (hMap, access, hi, lo, bytes, base) */
+    RET(map_view(A32(0), A32(1), ((uint64_t)A32(2) << 32) | A32(3), A32(4), A32(5)), 6);
+}
+static int view_of(uint32_t addr) {
+    for (int i = 0; i < MAX_VIEWS; i++)
+        if (g_views[i].addr && addr >= g_views[i].addr && addr - g_views[i].addr < g_views[i].len)
+            return i;
+    return -1;
 }
 static void k_UnmapViewOfFile(void) {
-    for (int i = 0; i < MAX_VIEWS; i++)
-        if (g_views[i].addr && g_views[i].addr == A32(0)) {
-            hle_vm_release(g_views[i].addr, g_views[i].len);
-            g_views[i].addr = 0;
-            RET(1, 1);
-        }
+    /* Windows (and Wine on Win9x compatibility) require the view's base, not
+     * just any address inside it. */
+    int i = -1;
+    for (int k = 0; k < MAX_VIEWS; k++) if (g_views[k].addr && g_views[k].addr == A32(0)) { i = k; break; }
+    if (i >= 0) {
+        hle_vm_release(g_views[i].addr, g_views[i].len);
+        free(g_views[i].file_path);
+        memset(&g_views[i], 0, sizeof g_views[i]);
+        RET(1, 1);
+    }
+    hle_set_last_error(ERROR_INVALID_ADDRESS);
     RET(0, 1);
 }
+
+/* FlushViewOfFile(base, bytes): 0 bytes means the whole view. msync needs a
+ * page-aligned start; Windows keeps a section alive while a view exists, so
+ * no file descriptor needs to be held here. */
+static void k_FlushViewOfFile(void) {
+    uint32_t va = A32(0), n = A32(1);
+    int i = view_of(va);
+    if (i < 0 || (n && n > g_views[i].len - (va - g_views[i].addr))) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2);
+    }
+    uint32_t start = va & ~0xFFFu;
+    uint32_t end = n ? (va + n + 0xFFFu) & ~0xFFFu : g_views[i].addr + g_views[i].len;
+    uint32_t vstart = g_views[i].addr & ~0xFFFu;
+    uint32_t vend = (g_views[i].addr + g_views[i].len + 0xFFFu) & ~0xFFFu;
+    if (start < vstart) start = vstart;
+    if (end > vend) end = vend;
+    if (msync(hle_ptr(start), end - start, MS_SYNC) != 0) {
+        hle_set_last_error(errno == EINVAL ? ERROR_INVALID_PARAMETER : ERROR_WRITE_FAULT);
+        RET(0, 2);
+    }
+    hle_set_last_error(0);
+    RET(1, 2);
+}
+
+/* GetMappedFileNameA/W(hProcess, addr, buffer, nSize) -> required length (no
+ * NUL), 0 on failure, like Wine/psapi's copy_filename. Only the current
+ * process is modelled; anonymous mappings have no name to report. */
+static uint32_t mapped_file_name(uint32_t proc, uint32_t va, uint32_t dst, uint32_t n, int wide) {
+    if (proc != CURRENT_PROCESS_HANDLE) { hle_set_last_error(ERROR_INVALID_HANDLE); return 0; }
+    int i = view_of(va);
+    if (i < 0 || !g_views[i].file_path) { hle_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
+    const char *path = g_views[i].file_path;
+    uint32_t need = wide ? (uint32_t)(strlen(path) + 1) * 2u : (uint32_t)strlen(path) + 1u;
+    if (dst && n >= need) {
+        if (wide) hle_ansi_to_wide(path, (uint16_t *)hle_ptr(dst), n / 2u);
+        else { memcpy(hle_ptr(dst), path, need); ((char *)hle_ptr(dst))[need - 1] = 0; }
+    }
+    hle_set_last_error(0);
+    /* the return is a TCHAR count (characters), not a byte count, in both A and W */
+    return (uint32_t)strlen(path);
+}
+static void k_GetMappedFileNameA(void) { RET(mapped_file_name(A32(0), A32(1), A32(2), A32(3), 0), 4); }
+static void k_GetMappedFileNameW(void) { RET(mapped_file_name(A32(0), A32(1), A32(2), A32(3), 1), 4); }
 
 /* ---- the process: one CPU of it, and no others to list ---- */
 static void k_GetProcessAffinityMask(void) {             /* (hProcess, &process, &system) */
@@ -1165,7 +1460,6 @@ static void k_FindFirstVolumeW(void)  { hle_set_last_error(ERROR_NO_MORE_FILES);
 static void k_FindNextVolumeW(void)   { hle_set_last_error(ERROR_NO_MORE_FILES); RET(0, 3); }
 static void k_FindVolumeClose(void)   { RET(1, 1); }
 static void k_ReadDirectoryChangesW(void) { hle_set_last_error(120u); RET(0, 8); }
-static void k_OpenFileMappingA(void)  { hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0, 3); }
 static void k_CreatePipe(void) {                         /* (&hRead, &hWrite, sa, size) */
     int fds[2];
     if (pipe(fds) != 0) { hle_set_last_error(errno_to_win(errno)); RET(0, 4); }
@@ -1800,8 +2094,11 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "Module32NextW", k_Process32First }, { "OpenProcess", k_OpenProcess },
     { "VirtualAllocEx", k_VirtualAllocEx }, { "VirtualFreeEx", k_VirtualFreeEx },
     { "WriteProcessMemory", k_WriteProcessMemory }, { "SetThreadContext", k_SetThreadContext },
-    { "CreateFileMappingA", k_CreateFileMappingA }, { "OpenFileMappingA", k_OpenFileMappingA },
-    { "MapViewOfFile", k_MapViewOfFile }, { "UnmapViewOfFile", k_UnmapViewOfFile },
+    { "CreateFileMappingA", k_CreateFileMappingA }, { "CreateFileMappingW", k_CreateFileMappingW },
+    { "OpenFileMappingA", k_OpenFileMappingA }, { "OpenFileMappingW", k_OpenFileMappingW },
+    { "MapViewOfFile", k_MapViewOfFile }, { "MapViewOfFileEx", k_MapViewOfFileEx },
+    { "UnmapViewOfFile", k_UnmapViewOfFile }, { "FlushViewOfFile", k_FlushViewOfFile },
+    { "GetMappedFileNameA", k_GetMappedFileNameA }, { "GetMappedFileNameW", k_GetMappedFileNameW },
     { "CreatePipe", k_CreatePipe }, { "CreateNamedPipeA", k_CreateNamedPipeA },
     { "ConnectNamedPipe", k_ConnectNamedPipe }, { "WaitNamedPipeA", k_WaitNamedPipeA },
     { "PeekNamedPipe", k_PeekNamedPipe },
