@@ -102,15 +102,32 @@ class PE64:
         o = rva_to_off(self.secs, rva)
         return struct.unpack_from('<I', self.data, o)[0] if o is not None else None
 
-    def pdata(self):
-        """(primary starts, chunk starts) from the exception directory."""
+    def pdata_entries(self):
+        """Yield valid RUNTIME_FUNCTIONs from the exception directory.
+
+        The directory's Size can describe entries that are not in the file:
+        imgview64.exe claims 2,135 entries while the image ends at byte 11,776,
+        and the old `range(size // 12)` raised struct.error out of
+        find_functions(). Clamp to the bytes actually mapped by the section,
+        then stop at the first incomplete triple. A truncated unwind table is
+        not a reason to lose every function in the image.
+        """
         rva, size = self.dd[3]
         o = rva_to_off(self.secs, rva) if rva else None
-        primary, chunks = set(), set()
         if o is None:
-            return primary, chunks
-        for i in range(size // 12):
-            begin, end, unwind = struct.unpack_from('<III', self.data, o + 12 * i)
+            return
+        sec = next((s for s in self.secs
+                    if s[1] <= rva < s[1] + max(s[2], s[4])), None)
+        avail = len(self.data) - o
+        if sec is not None:
+            avail = min(avail, sec[4] - (rva - sec[1]))
+        for i in range(min(size // 12, max(0, avail // 12))):
+            yield struct.unpack_from('<III', self.data, o + 12 * i)
+
+    def pdata(self):
+        """(primary starts, chunk starts) from the exception directory."""
+        primary, chunks = set(), set()
+        for begin, _end, unwind in self.pdata_entries():
             if not begin:
                 continue
             # Low bit set: UnwindData points at another RUNTIME_FUNCTION, which
@@ -132,13 +149,12 @@ class PE64:
         Any personality routine could sit there, so a table is believed only
         when every scope lies inside the function .pdata says it covers.
         """
-        rva, size = self.dd[3]
-        o = rva_to_off(self.secs, rva) if rva else None
         targets, funclets = {}, set()
-        for i in range(size // 12 if o is not None else 0):
-            begin, end, unwind = struct.unpack_from('<III', self.data, o + 12 * i)
+        for begin, end, unwind in self.pdata_entries():
             uo = None if unwind & 1 else rva_to_off(self.secs, unwind)
-            if uo is None or not self.data[uo] & 0x03:      # EHANDLER | UHANDLER
+            if uo is None or uo + 3 >= len(self.data):
+                continue
+            if not self.data[uo] & 0x03:                     # EHANDLER | UHANDLER
                 continue
             if self.data[uo] & 0x20:                        # chained: no handler here
                 continue

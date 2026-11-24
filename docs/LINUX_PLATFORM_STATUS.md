@@ -55,14 +55,16 @@ local Docker/Colima run, not from a workflow definition.
 
 ## Coverage scope reminder
 
-Architecture follows PCRecomp: PE32 x86 native is the only structurally
-supported class. PE32+ x64, .NET/CLR, Win16/NE, D3D10/11/DXGI, services and
-installers are DEFERRED / UNSUPPORTED on Linux as elsewhere. x64-to-Linux was
-attempted but is BLOCKED: `guess.exe` catalog/generation succeeded (321
-functions, 0 lift errors), but aarch64 Linux assembly fails on x86-64
-`%gs`-prefixed inline asm (`unknown mnemonic 'movq'`); no amd64 runner image is
-cached locally. See `docs/LINUX_RUNNER_EVIDENCE.md` for the exact commands and
-logs.
+Architecture follows PCRecomp for games: PE32 x86 native is the only
+structurally supported game class. .NET/CLR, Win16/NE, D3D10/11/DXGI, services
+and installers remain DEFERRED / UNSUPPORTED on Linux. PE32+ x64 now has a
+**bounded console smoke path** (not a game-support claim): the earlier
+`%gs`-prefixed inline asm that blocked aarch64 assembly was replaced by a
+modelled TEB base, and the real `arith-calc.exe` was lifted, built as an
+aarch64 ELF by `tools/linux_matrix.py`, run with exit 0 and stdout identical to
+the Highball original. Exact commands, hashes and limits:
+`docs/X64_LINUX_NATIVE_EVIDENCE.md` and
+`reports/linux/x64-linux-native-arith.json`.
 
 ## Status ladder (same vocabulary, kept distinct)
 

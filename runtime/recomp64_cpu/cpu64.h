@@ -109,13 +109,26 @@ static inline void wr128(uint64_t a, const XMM *s) { memcpy((void *)(uintptr_t)a
 /* ---- gs: the TEB ----
  * The only segment in long mode with a base that addresses anything. Thread
  * information block accesses (stack limits, TLS, the SEH chain) come through
- * it and nothing else does. */
+ * it and nothing else does.
+ *
+ * The default off-MSVC implementation is now a MODELLED base, not x86 inline
+ * asm. The old `#else` branch emitted `movq %%gs:(%1), %0`, which only assembles
+ * on x86-64: compiling a lifted PE32+ for the aarch64 Linux runner failed with
+ * `unknown mnemonic 'movq' -- 'movq %gs:(x3),x3'`. A modelled base is also more
+ * faithful -- the guest expects a WINDOWS TEB, not the host's TLS block, which
+ * is what %gs: would actually read on Linux. `g_gs_base` is defined by the
+ * loader (runtime/recomp64_cpu/host64_linux.c); it points at a TEB-sized buffer
+ * whose self-pointer lives at +0x30. Native host %gs is available only as an
+ * explicit opt-in for x86-64 differential testing (RECOMP64_GS_NATIVE).
+ */
 #if defined(_MSC_VER)
 static inline uint64_t rd_gs64(uint64_t off) { return __readgsqword((unsigned long)off); }
 static inline uint32_t rd_gs32(uint64_t off) { return __readgsdword((unsigned long)off); }
 static inline void wr_gs64(uint64_t off, uint64_t v) { __writegsqword((unsigned long)off, v); }
 static inline void wr_gs32(uint64_t off, uint32_t v) { __writegsdword((unsigned long)off, v); }
-#elif defined(__x86_64__)
+#elif defined(RECOMP64_GS_NATIVE) && defined(__x86_64__)
+/* Opt-in only: reads the HOST thread's GS base. Useful for difftest64 on
+ * x86-64, wrong for a reconstructed Windows guest. */
 static inline uint64_t rd_gs64(uint64_t off) {
     uint64_t v; __asm__ __volatile__("movq %%gs:(%1), %0" : "=r"(v) : "r"(off)); return v;
 }
