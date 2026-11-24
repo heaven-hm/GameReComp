@@ -1,0 +1,250 @@
+{
+  "schema": 1,
+  "name": "busybox",
+  "original_executable": "busybox.exe",
+  "generator": "GameReComp autorecomp",
+  "backend": "pcrecomp (tools/lift, tools/disasm, tools/pe)",
+  "runtime": "win32hle",
+  "target": {
+    "os": "host",
+    "arch": "host",
+    "note": "built and run on the machine that generated it"
+  },
+  "pe": {
+    "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/busybox.exe",
+    "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
+    "machine": "i386",
+    "pe_type": "PE32",
+    "image_base": "0x00400000",
+    "entry_point": "0x00406EE0"
+  },
+  "runtime_files": [
+    "src/runtime/win32hle/advapi32.c",
+    "src/runtime/win32hle/avifil32.c",
+    "src/runtime/win32hle/bink.c",
+    "src/runtime/win32hle/clock.c",
+    "src/runtime/win32hle/comctl32.c",
+    "src/runtime/win32hle/d3d7.c",
+    "src/runtime/win32hle/d3d8.c",
+    "src/runtime/win32hle/d3d9.c",
+    "src/runtime/win32hle/ddraw.c",
+    "src/runtime/win32hle/dinput.c",
+    "src/runtime/win32hle/dsound.c",
+    "src/runtime/win32hle/eh32.c",
+    "src/runtime/win32hle/gdi32.c",
+    "src/runtime/win32hle/gdidc.c",
+    "src/runtime/win32hle/gl32.c",
+    "src/runtime/win32hle/guest_mem.c",
+    "src/runtime/win32hle/hle_path.c",
+    "src/runtime/win32hle/host.c",
+    "src/runtime/win32hle/host.h",
+    "src/runtime/win32hle/host_lite.c",
+    "src/runtime/win32hle/input_rec.c",
+    "src/runtime/win32hle/kernel32.c",
+    "src/runtime/win32hle/kernel32_atom.c",
+    "src/runtime/win32hle/kernel32_crt.c",
+    "src/runtime/win32hle/kernel32_ext.c",
+    "src/runtime/win32hle/lz32.c",
+    "src/runtime/win32hle/module.c",
+    "src/runtime/win32hle/mss.c",
+    "src/runtime/win32hle/msvcrt.c",
+    "src/runtime/win32hle/ole32.c",
+    "src/runtime/win32hle/pe_format.h",
+    "src/runtime/win32hle/pe_loader.c",
+    "src/runtime/win32hle/pe_loader.h",
+    "src/runtime/win32hle/present.c",
+    "src/runtime/win32hle/screen.c",
+    "src/runtime/win32hle/screenshot.c",
+    "src/runtime/win32hle/sdl12.c",
+    "src/runtime/win32hle/sdl2.c",
+    "src/runtime/win32hle/sdlmix.c",
+    "src/runtime/win32hle/storage.c",
+    "src/runtime/win32hle/user32.c",
+    "src/runtime/win32hle/win32hle.h",
+    "src/runtime/win32hle/wininet.c",
+    "src/runtime/win32hle/winmm.c",
+    "src/runtime/win32hle/wsock32.c",
+    "src/runtime/recomp32/recomp_types.h"
+  ],
+  "highlevel_files": [],
+  "image_files": [
+    "src/recomp/gen/recomp_image.bin",
+    "src/recomp/gen/recomp_image.c",
+    "src/recomp/gen/recomp_image.S"
+  ],
+  "image_embedded": true,
+  "functions": 6991,
+  "source_categories": {
+    "HIGH_LEVEL_VERIFIED": 0,
+    "HIGH_LEVEL_UNVERIFIED": 0,
+    "LOW_LEVEL_FALLBACK": 6991,
+    "UNRESOLVED": 0
+  },
+  "high_level_functions": [],
+  "source_budget": {
+    "schema": 1,
+    "cap_bytes": 8388608,
+    "unit_count": 23,
+    "total_bytes": 189902171,
+    "largest_unit_bytes": 8535853,
+    "largest_unit_file": "recomp_0001.c",
+    "over_cap_count": 22,
+    "over_cap_units": [
+      {
+        "file": "recomp_0000.c",
+        "bytes": 8476768,
+        "functions": 162,
+        "over_by_bytes": 88160,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0001.c",
+        "bytes": 8535853,
+        "functions": 88,
+        "over_by_bytes": 147245,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0002.c",
+        "bytes": 8399978,
+        "functions": 395,
+        "over_by_bytes": 11370,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0003.c",
+        "bytes": 8389774,
+        "functions": 667,
+        "over_by_bytes": 1166,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0004.c",
+        "bytes": 8401679,
+        "functions": 527,
+        "over_by_bytes": 13071,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0005.c",
+        "bytes": 8415577,
+        "functions": 303,
+        "over_by_bytes": 26969,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0006.c",
+        "bytes": 8390595,
+        "functions": 337,
+        "over_by_bytes": 1987,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0007.c",
+        "bytes": 8497740,
+        "functions": 97,
+        "over_by_bytes": 109132,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0008.c",
+        "bytes": 8399590,
+        "functions": 160,
+        "over_by_bytes": 10982,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0009.c",
+        "bytes": 8393059,
+        "functions": 695,
+        "over_by_bytes": 4451,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0010.c",
+        "bytes": 8436053,
+        "functions": 302,
+        "over_by_bytes": 47445,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0011.c",
+        "bytes": 8391984,
+        "functions": 317,
+        "over_by_bytes": 3376,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0012.c",
+        "bytes": 8403848,
+        "functions": 391,
+        "over_by_bytes": 15240,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0013.c",
+        "bytes": 8421087,
+        "functions": 502,
+        "over_by_bytes": 32479,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0014.c",
+        "bytes": 8415409,
+        "functions": 52,
+        "over_by_bytes": 26801,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0015.c",
+        "bytes": 8409478,
+        "functions": 201,
+        "over_by_bytes": 20870,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0016.c",
+        "bytes": 8404315,
+        "functions": 194,
+        "over_by_bytes": 15707,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0017.c",
+        "bytes": 8389199,
+        "functions": 592,
+        "over_by_bytes": 591,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0018.c",
+        "bytes": 8389164,
+        "functions": 278,
+        "over_by_bytes": 556,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0019.c",
+        "bytes": 8429286,
+        "functions": 433,
+        "over_by_bytes": 40678,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0020.c",
+        "bytes": 8485020,
+        "functions": 196,
+        "over_by_bytes": 96412,
+        "single_oversized_function": false
+      },
+      {
+        "file": "recomp_0021.c",
+        "bytes": 8400145,
+        "functions": 58,
+        "over_by_bytes": 11537,
+        "single_oversized_function": false
+      }
+    ],
+    "measured_from": "os.path.getsize(recomp_*.c)"
+  }
+}

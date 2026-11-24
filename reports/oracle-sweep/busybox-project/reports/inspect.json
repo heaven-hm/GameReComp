@@ -1,0 +1,27 @@
+{
+  "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/busybox.exe",
+  "size": 637454,
+  "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
+  "md5": "e78b2b805621bc6ec6619109f44e9146",
+  "sha1": "a3043b1673b67435b439ab3cdfffa1729b1ac467",
+  "machine": "i386",
+  "pe_type": "PE32",
+  "subsystem": "Windows Console",
+  "image_base": "0x00400000",
+  "entry_point": "0x00406EE0",
+  "linker_version": "2.45",
+  "code_range": [
+    "0x00401000",
+    "0x0047BE00"
+  ],
+  "import_dlls": [
+    "ADVAPI32.dll",
+    "KERNEL32.dll",
+    "msvcrt.dll",
+    "USER32.dll",
+    "WS2_32.dll"
+  ],
+  "import_count": 311,
+  "delay_import_count": 0,
+  "iat_entries": 311
+}
