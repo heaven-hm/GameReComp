@@ -1,0 +1,1999 @@
+[pe] <embedded image> mapped at 0x00400000, span 0x835000
+[pe] bound 128 imports (0 delay), 0 unresolved
+[host] C:\igi.exe booted: entry 0x004A50F5, 0 unresolved imports
+[ddraw] IDirectDraw::QueryInterface {B3A6F3E0-2B43-11CF-A2DE-00AA00B93356}
+[ddraw] SetCooperativeLevel(hwnd=00000000, flags=0x8): accepted, no real mode change
+[screen] window 1280x925 fullscreen=0 (RECOMP_WINDOW_SIZE/RECOMP_FULLSCREEN)
+[screen] cocoa, OpenGL context, scaling sharp (F12), fullscreen F11
+[ddraw] CreateSurface 640x480 16 bpp caps 0xA00 flags 0x1 mips 0 desc1(108) -> 0x10003FD0 ret=00498480
+[dsound] coreaudio, 44100 Hz
+[ddraw] IDirectDraw::QueryInterface {F5049E77-4861-11D2-A407-00A0C90629A8}
+[ddraw] QueryInterface(IDirect3D7) -> 10041980
+[d3d7] EnumDevices: HAL and T&L HAL advertised, devCaps 0x00090540
+[d3d7] IDirect3D7::Release 10041980 -> refs 1
+[ddraw] EnumDisplayModes -> 0x00492670: 640x480x8
+[ddraw] EnumDisplayModes -> 0x00492670: 800x600x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1024x768x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1152x864x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x720x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x768x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x800x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x960x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x1024x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1360x768x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1366x768x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1440x900x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x900x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x1200x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1680x1050x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1080x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1200x8
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1080x8
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1440x8
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1600x8
+[ddraw] EnumDisplayModes -> 0x00492670: 3440x1440x8
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x1600x8
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x2160x8
+[ddraw] EnumDisplayModes -> 0x00492670: 640x480x16
+[ddraw] EnumDisplayModes -> 0x00492670: 800x600x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1024x768x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1152x864x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x720x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x768x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x800x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x960x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x1024x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1360x768x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1366x768x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1440x900x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x900x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x1200x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1680x1050x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1080x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1200x16
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1080x16
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1440x16
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1600x16
+[ddraw] EnumDisplayModes -> 0x00492670: 3440x1440x16
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x1600x16
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x2160x16
+[ddraw] EnumDisplayModes -> 0x00492670: 640x480x32
+[ddraw] EnumDisplayModes -> 0x00492670: 800x600x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1024x768x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1152x864x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x720x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x768x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x800x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x960x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x1024x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1360x768x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1366x768x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1440x900x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x900x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x1200x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1680x1050x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1080x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1200x32
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1080x32
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1440x32
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1600x32
+[ddraw] EnumDisplayModes -> 0x00492670: 3440x1440x32
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x1600x32
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x2160x32
+[pump] screen pump runs
+[pump] motion 674,907 -> game 674,907
+[ddraw] IDirectDraw::QueryInterface {F5049E77-4861-11D2-A407-00A0C90629A8}
+[ddraw] QueryInterface(IDirect3D7) -> 10041980
+[d3d7] EnumDevices: HAL and T&L HAL advertised, devCaps 0x00090540
+[d3d7] IDirect3D7::Release 10041980 -> refs 1
+[ddraw] SetCooperativeLevel(hwnd=00010010, flags=0x1011): accepted, no real mode change
+[ddraw] IDirectDraw::QueryInterface {F5049E77-4861-11D2-A407-00A0C90629A8}
+[ddraw] QueryInterface(IDirect3D7) -> 10041980
+[ddraw] SetDisplayMode(640x480x16)
+[ddraw] CreateSurface 640x480 16 bpp caps 0x82A18 flags 0x21 mips 0 desc1(124) -> 0x100E9B90 ret=004942A0
+[ddraw] GetAttachedSurface 640x480 caps=0x82004 -> 640x480
+[ddraw] CreateSurface 640x480 32 bpp caps 0x20840 flags 0x1007 mips 0 desc1(124) -> 0x100E9D40 ret=004942A0
+[ddraw] IDirectDraw::CreateClipper(flags=0x0, out=104FEA4C, outer=00000000)
+[d3d7] CreateVertexBuffer desc=104fea18 fvf=000001c4 count=32768 stride=32
+[d3d7] tex fmt 0 flags=0x40 bpp=16 masks=00F800/0007E0/00001F cb=1
+[d3d7] tex fmt 1 flags=0x41 bpp=16 masks=007C00/0003E0/00001F cb=1
+[d3d7] tex fmt 2 flags=0x41 bpp=16 masks=000F00/0000F0/00000F cb=1
+[d3d7] tex fmt 3 flags=0x40 bpp=16 masks=007C00/0003E0/00001F cb=1
+[d3d7] tex fmt 4 flags=0x41 bpp=32 masks=FF0000/00FF00/0000FF cb=1
+[d3d7] tex fmt 5 flags=0x40 bpp=32 masks=FF0000/00FF00/0000FF cb=1
+[d3d7] tex fmt 6 flags=0x41 bpp=16 masks=00F800/0007E0/00001F cb=1
+[d3d7] tex fmt 7 flags=0x40 bpp=24 masks=FF0000/00FF00/0000FF cb=1
+[d3d7] tex fmt 8 flags=0x20 bpp=8 masks=000000/000000/000000 cb=1
+[d3d7] tex fmt 9 flags=0x20 bpp=4 masks=000000/000000/000000 cb=1
+[d3d7] tex fmt 10 flags=0x40 bpp=8 masks=0000E0/00001C/000003 cb=1
+[d3d7] tex fmt 11 flags=0x1 bpp=8 masks=000000/000000/000000 cb=1
+[d3d7] tex fmt 12 flags=0x20000 bpp=8 masks=0000FF/000000/000000 cb=1
+[d3d7] tex fmt 13 flags=0x40 bpp=16 masks=000F00/0000F0/00000F cb=1
+[d3d7] tex fmt 14 flags=0x41 bpp=32 masks=0000FF/00FF00/FF0000 cb=1
+[d3d7] tex fmt 15 flags=0x40 bpp=32 masks=0000FF/00FF00/FF0000 cb=1
+[d3d7] tex fmt 16 flags=0x41 bpp=16 masks=00001F/0003E0/007C00 cb=1
+[d3d7] tex fmt 17 flags=0x40 bpp=16 masks=00001F/0003E0/007C00 cb=1
+[d3d7] tex fmt 18 flags=0x41 bpp=16 masks=00000F/0000F0/000F00 cb=1
+[d3d7] tex fmt 19 flags=0x40 bpp=8 masks=00001C/0000E0/000003 cb=1
+[d3d7] EnumTextureFormats: delivered 20 formats
+[d3d7] CreateVertexBuffer desc=104fe624 fvf=00000112 count=4000 stride=32
+[d3d7] CreateVertexBuffer desc=104fe624 fvf=00000142 count=1000 stride=24
+[d3d7] CreateVertexBuffer desc=104fe624 fvf=00000144 count=1000 stride=28
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128B830 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128B8F0 ret=0050B4F0
+[ddraw] unlock 1128b8f0 64x32 bpp=16 pitch=128 caps=00001800 first=00001947 mid=00001966
+[ddraw] Blt dst=1128b830 src=1128b8f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128B8F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128B9B0 ret=0050B4F0
+[ddraw] unlock 1128b9b0 64x32 bpp=16 pitch=128 caps=00001800 first=00001925 mid=00002186
+[ddraw] Blt dst=1128b8f0 src=1128b9b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128B9B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128BA70 ret=0050B4F0
+[ddraw] unlock 1128ba70 64x32 bpp=16 pitch=128 caps=00001800 first=00001905 mid=00002145
+[ddraw] Blt dst=1128b9b0 src=1128ba70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128BA70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128BB30 ret=0050B4F0
+[ddraw] unlock 1128bb30 64x32 bpp=16 pitch=128 caps=00001800 first=00002966 mid=000029e7
+[ddraw] Blt dst=1128ba70 src=1128bb30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128BB30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128BBF0 ret=0050B4F0
+[ddraw] unlock 1128bbf0 64x32 bpp=16 pitch=128 caps=00001800 first=000029c6 mid=00004268
+[ddraw] Blt dst=1128bb30 src=1128bbf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128BBF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128BCB0 ret=0050B4F0
+[ddraw] unlock 1128bcb0 64x32 bpp=16 pitch=128 caps=00001800 first=00003206 mid=000029c5
+[ddraw] Blt dst=1128bbf0 src=1128bcb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128BCB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128BD70 ret=0050B4F0
+[ddraw] unlock 1128bd70 64x32 bpp=16 pitch=128 caps=00001800 first=000031c6 mid=00003227
+[ddraw] Blt dst=1128bcb0 src=1128bd70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128BD70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128BE30 ret=0050B4F0
+[ddraw] unlock 1128be30 64x32 bpp=16 pitch=128 caps=00001800 first=000031e6 mid=00003207
+[ddraw] Blt dst=1128bd70 src=1128be30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128BE30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128BEF0 ret=0050B4F0
+[ddraw] unlock 1128bef0 64x32 bpp=16 pitch=128 caps=00001800 first=000031a6 mid=00002145
+[ddraw] Blt dst=1128be30 src=1128bef0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128BEF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128BFB0 ret=0050B4F0
+[ddraw] unlock 1128bfb0 64x32 bpp=16 pitch=128 caps=00001800 first=00003165 mid=000029c7
+[ddraw] Blt dst=1128bef0 src=1128bfb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128BFB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C070 ret=0050B4F0
+[ddraw] unlock 1128c070 64x32 bpp=16 pitch=128 caps=00001800 first=00001946 mid=00002166
+[ddraw] Blt dst=1128bfb0 src=1128c070 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C070 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C130 ret=0050B4F0
+[ddraw] unlock 1128c130 64x32 bpp=16 pitch=128 caps=00001800 first=00002166 mid=00001905
+[ddraw] Blt dst=1128c070 src=1128c130 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C130 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C1F0 ret=0050B4F0
+[ddraw] unlock 1128c1f0 64x32 bpp=16 pitch=128 caps=00001800 first=000029c7 mid=00002145
+[ddraw] Blt dst=1128c130 src=1128c1f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C1F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C2B0 ret=0050B4F0
+[ddraw] unlock 1128c2b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002165 mid=000031a6
+[ddraw] Blt dst=1128c1f0 src=1128c2b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C2B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C370 ret=0050B4F0
+[ddraw] unlock 1128c370 64x32 bpp=16 pitch=128 caps=00001800 first=000029e6 mid=00003a07
+[ddraw] Blt dst=1128c2b0 src=1128c370 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C370 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C430 ret=0050B4F0
+[ddraw] unlock 1128c430 64x32 bpp=16 pitch=128 caps=00001800 first=000029e6 mid=00003a47
+[ddraw] Blt dst=1128c370 src=1128c430 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C430 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C4F0 ret=0050B4F0
+[ddraw] unlock 1128c4f0 64x32 bpp=16 pitch=128 caps=00001800 first=000041e5 mid=00003a26
+[ddraw] Blt dst=1128c430 src=1128c4f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C4F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C5B0 ret=0050B4F0
+[ddraw] unlock 1128c5b0 64x32 bpp=16 pitch=128 caps=00001800 first=00003226 mid=00003227
+[ddraw] Blt dst=1128c4f0 src=1128c5b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C5B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C670 ret=0050B4F0
+[ddraw] unlock 1128c670 64x32 bpp=16 pitch=128 caps=00001800 first=000031e6 mid=000021a6
+[ddraw] Blt dst=1128c5b0 src=1128c670 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C670 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C730 ret=0050B4F0
+[ddraw] unlock 1128c730 64x32 bpp=16 pitch=128 caps=00001800 first=000039a7 mid=000029c7
+[ddraw] Blt dst=1128c670 src=1128c730 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C730 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C7F0 ret=0050B4F0
+[ddraw] unlock 1128c7f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002166 mid=00002145
+[ddraw] Blt dst=1128c730 src=1128c7f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C7F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C8B0 ret=0050B4F0
+[ddraw] unlock 1128c8b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002166 mid=000031a6
+[ddraw] Blt dst=1128c7f0 src=1128c8b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C8B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128C970 ret=0050B4F0
+[ddraw] unlock 1128c970 64x32 bpp=16 pitch=128 caps=00001800 first=000029a6 mid=00002965
+[ddraw] Blt dst=1128c8b0 src=1128c970 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128C970 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128CA30 ret=0050B4F0
+[ddraw] unlock 1128ca30 64x32 bpp=16 pitch=128 caps=00001800 first=000039a6 mid=000029a6
+[ddraw] Blt dst=1128c970 src=1128ca30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128CA30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128CAF0 ret=0050B4F0
+[ddraw] unlock 1128caf0 64x32 bpp=16 pitch=128 caps=00001800 first=00004226 mid=000042a7
+[ddraw] Blt dst=1128ca30 src=1128caf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128CAF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128CBB0 ret=0050B4F0
+[ddraw] unlock 1128cbb0 64x32 bpp=16 pitch=128 caps=00001800 first=000031e5 mid=00004226
+[ddraw] Blt dst=1128caf0 src=1128cbb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128CBB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128CC70 ret=0050B4F0
+[ddraw] unlock 1128cc70 64x32 bpp=16 pitch=128 caps=00001800 first=00003226 mid=00003206
+[ddraw] Blt dst=1128cbb0 src=1128cc70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128CC70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128CD30 ret=0050B4F0
+[ddraw] unlock 1128cd30 64x32 bpp=16 pitch=128 caps=00001800 first=000039e6 mid=00003a26
+[ddraw] Blt dst=1128cc70 src=1128cd30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128CD30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128CDF0 ret=0050B4F0
+[ddraw] unlock 1128cdf0 64x32 bpp=16 pitch=128 caps=00001800 first=00004227 mid=00003206
+[ddraw] Blt dst=1128cd30 src=1128cdf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128CDF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128CEB0 ret=0050B4F0
+[ddraw] unlock 1128ceb0 64x32 bpp=16 pitch=128 caps=00001800 first=000029a6 mid=00002986
+[ddraw] Blt dst=1128cdf0 src=1128ceb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128CEB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128CF70 ret=0050B4F0
+[ddraw] unlock 1128cf70 64x32 bpp=16 pitch=128 caps=00001800 first=00002145 mid=00002986
+[ddraw] Blt dst=1128ceb0 src=1128cf70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128CF70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D030 ret=0050B4F0
+[ddraw] unlock 1128d030 64x32 bpp=16 pitch=128 caps=00001800 first=000029a6 mid=00002165
+[ddraw] Blt dst=1128cf70 src=1128d030 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D030 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D0F0 ret=0050B4F0
+[ddraw] unlock 1128d0f0 64x32 bpp=16 pitch=128 caps=00001800 first=000029a6 mid=000029a5
+[ddraw] Blt dst=1128d030 src=1128d0f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D0F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D1B0 ret=0050B4F0
+[ddraw] unlock 1128d1b0 64x32 bpp=16 pitch=128 caps=00001800 first=000031e6 mid=00004205
+[ddraw] Blt dst=1128d0f0 src=1128d1b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D1B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D270 ret=0050B4F0
+[ddraw] unlock 1128d270 64x32 bpp=16 pitch=128 caps=00001800 first=00003226 mid=000029c5
+[ddraw] Blt dst=1128d1b0 src=1128d270 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D270 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D330 ret=0050B4F0
+[ddraw] unlock 1128d330 64x32 bpp=16 pitch=128 caps=00001800 first=00003a47 mid=00003205
+[ddraw] Blt dst=1128d270 src=1128d330 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D330 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D3F0 ret=0050B4F0
+[ddraw] unlock 1128d3f0 64x32 bpp=16 pitch=128 caps=00001800 first=00003246 mid=00003a26
+[ddraw] Blt dst=1128d330 src=1128d3f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D3F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D4B0 ret=0050B4F0
+[ddraw] unlock 1128d4b0 64x32 bpp=16 pitch=128 caps=00001800 first=00003a46 mid=000039c5
+[ddraw] Blt dst=1128d3f0 src=1128d4b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D4B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D570 ret=0050B4F0
+[ddraw] unlock 1128d570 64x32 bpp=16 pitch=128 caps=00001800 first=00003267 mid=00003227
+[ddraw] Blt dst=1128d4b0 src=1128d570 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D570 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D630 ret=0050B4F0
+[ddraw] unlock 1128d630 64x32 bpp=16 pitch=128 caps=00001800 first=000029c7 mid=00002966
+[ddraw] Blt dst=1128d570 src=1128d630 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D630 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D6F0 ret=0050B4F0
+[ddraw] unlock 1128d6f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002146 mid=00002145
+[ddraw] Blt dst=1128d630 src=1128d6f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D6F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D7B0 ret=0050B4F0
+[ddraw] unlock 1128d7b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002965 mid=00002186
+[ddraw] Blt dst=1128d6f0 src=1128d7b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D7B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D870 ret=0050B4F0
+[ddraw] unlock 1128d870 64x32 bpp=16 pitch=128 caps=00001800 first=000029c6 mid=00003206
+[ddraw] Blt dst=1128d7b0 src=1128d870 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D870 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D930 ret=0050B4F0
+[ddraw] unlock 1128d930 64x32 bpp=16 pitch=128 caps=00001800 first=000029a5 mid=000029a6
+[ddraw] Blt dst=1128d870 src=1128d930 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D930 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128D9F0 ret=0050B4F0
+[ddraw] unlock 1128d9f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002a05 mid=00004226
+[ddraw] Blt dst=1128d930 src=1128d9f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128D9F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128DAB0 ret=0050B4F0
+[ddraw] unlock 1128dab0 64x32 bpp=16 pitch=128 caps=00001800 first=00004247 mid=00003226
+[ddraw] Blt dst=1128d9f0 src=1128dab0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128DAB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128DB70 ret=0050B4F0
+[ddraw] unlock 1128db70 64x32 bpp=16 pitch=128 caps=00001800 first=00003246 mid=00002a06
+[ddraw] Blt dst=1128dab0 src=1128db70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128DB70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128DC30 ret=0050B4F0
+[ddraw] unlock 1128dc30 64x32 bpp=16 pitch=128 caps=00001800 first=000031e6 mid=00003227
+[ddraw] Blt dst=1128db70 src=1128dc30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128DC30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128DCF0 ret=0050B4F0
+[ddraw] unlock 1128dcf0 64x32 bpp=16 pitch=128 caps=00001800 first=00003226 mid=000041e6
+[ddraw] Blt dst=1128dc30 src=1128dcf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128DCF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128DDB0 ret=0050B4F0
+[ddraw] unlock 1128ddb0 64x32 bpp=16 pitch=128 caps=00001800 first=000029c6 mid=000039c6
+[ddraw] Blt dst=1128dcf0 src=1128ddb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128DDB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128DE70 ret=0050B4F0
+[ddraw] unlock 1128de70 64x32 bpp=16 pitch=128 caps=00001800 first=00002145 mid=00002965
+[ddraw] Blt dst=1128ddb0 src=1128de70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128DE70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128DF30 ret=0050B4F0
+[ddraw] unlock 1128df30 64x32 bpp=16 pitch=128 caps=00001800 first=00002986 mid=000029a6
+[ddraw] Blt dst=1128de70 src=1128df30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128DF30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128DFF0 ret=0050B4F0
+[ddraw] unlock 1128dff0 64x32 bpp=16 pitch=128 caps=00001800 first=000029a5 mid=000029a5
+[ddraw] Blt dst=1128df30 src=1128dff0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128DFF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E0B0 ret=0050B4F0
+[ddraw] unlock 1128e0b0 64x32 bpp=16 pitch=128 caps=00001800 first=000031c6 mid=000029a5
+[ddraw] Blt dst=1128dff0 src=1128e0b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E0B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E170 ret=0050B4F0
+[ddraw] unlock 1128e170 64x32 bpp=16 pitch=128 caps=00001800 first=00004a66 mid=000039e5
+[ddraw] Blt dst=1128e0b0 src=1128e170 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E170 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E230 ret=0050B4F0
+[ddraw] unlock 1128e230 64x32 bpp=16 pitch=128 caps=00001800 first=000041e5 mid=00003164
+[ddraw] Blt dst=1128e170 src=1128e230 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E230 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E2F0 ret=0050B4F0
+[ddraw] unlock 1128e2f0 64x32 bpp=16 pitch=128 caps=00001800 first=000039e6 mid=00004226
+[ddraw] Blt dst=1128e230 src=1128e2f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E2F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E3B0 ret=0050B4F0
+[ddraw] unlock 1128e3b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002a06 mid=00004226
+[ddraw] Blt dst=1128e2f0 src=1128e3b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E3B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E470 ret=0050B4F0
+[ddraw] unlock 1128e470 64x32 bpp=16 pitch=128 caps=00001800 first=00004227 mid=000039e6
+[ddraw] Blt dst=1128e3b0 src=1128e470 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E470 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E530 ret=0050B4F0
+[ddraw] unlock 1128e530 64x32 bpp=16 pitch=128 caps=00001800 first=00002986 mid=000031a6
+[ddraw] Blt dst=1128e470 src=1128e530 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E530 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E5F0 ret=0050B4F0
+[ddraw] unlock 1128e5f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002124 mid=00002104
+[ddraw] Blt dst=1128e530 src=1128e5f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E5F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E6B0 ret=0050B4F0
+[ddraw] unlock 1128e6b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002986 mid=000031a6
+[ddraw] Blt dst=1128e5f0 src=1128e6b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E6B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E770 ret=0050B4F0
+[ddraw] unlock 1128e770 64x32 bpp=16 pitch=128 caps=00001800 first=000029a5 mid=000029a5
+[ddraw] Blt dst=1128e6b0 src=1128e770 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E770 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E830 ret=0050B4F0
+[ddraw] unlock 1128e830 64x32 bpp=16 pitch=128 caps=00001800 first=000031c5 mid=000021c5
+[ddraw] Blt dst=1128e770 src=1128e830 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E830 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E8F0 ret=0050B4F0
+[ddraw] unlock 1128e8f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002185 mid=00002965
+[ddraw] Blt dst=1128e830 src=1128e8f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E8F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128E9B0 ret=0050B4F0
+[ddraw] unlock 1128e9b0 64x32 bpp=16 pitch=128 caps=00001800 first=00003a05 mid=00003246
+[ddraw] Blt dst=1128e8f0 src=1128e9b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128E9B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128EA70 ret=0050B4F0
+[ddraw] unlock 1128ea70 64x32 bpp=16 pitch=128 caps=00001800 first=00003206 mid=00003a06
+[ddraw] Blt dst=1128e9b0 src=1128ea70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128EA70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128EB30 ret=0050B4F0
+[ddraw] unlock 1128eb30 64x32 bpp=16 pitch=128 caps=00001800 first=000029c5 mid=000041c6
+[ddraw] Blt dst=1128ea70 src=1128eb30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128EB30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128EBF0 ret=0050B4F0
+[ddraw] unlock 1128ebf0 64x32 bpp=16 pitch=128 caps=00001800 first=000031c6 mid=000031c7
+[ddraw] Blt dst=1128eb30 src=1128ebf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128EBF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128ECB0 ret=0050B4F0
+[ddraw] unlock 1128ecb0 64x32 bpp=16 pitch=128 caps=00001800 first=00003186 mid=000018a2
+[ddraw] Blt dst=1128ebf0 src=1128ecb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128ECB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128ED70 ret=0050B4F0
+[ddraw] unlock 1128ed70 64x32 bpp=16 pitch=128 caps=00001800 first=00002186 mid=00002124
+[ddraw] Blt dst=1128ecb0 src=1128ed70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128ED70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128EE30 ret=0050B4F0
+[ddraw] unlock 1128ee30 64x32 bpp=16 pitch=128 caps=00001800 first=00002986 mid=00001904
+[ddraw] Blt dst=1128ed70 src=1128ee30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128EE30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128EEF0 ret=0050B4F0
+[ddraw] unlock 1128eef0 64x32 bpp=16 pitch=128 caps=00001800 first=00003985 mid=000031c6
+[ddraw] Blt dst=1128ee30 src=1128eef0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128EEF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128EFB0 ret=0050B4F0
+[ddraw] unlock 1128efb0 64x32 bpp=16 pitch=128 caps=00001800 first=00002185 mid=000031a5
+[ddraw] Blt dst=1128eef0 src=1128efb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128EFB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F070 ret=0050B4F0
+[ddraw] unlock 1128f070 64x32 bpp=16 pitch=128 caps=00001800 first=00003985 mid=000039a4
+[ddraw] Blt dst=1128efb0 src=1128f070 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F070 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F130 ret=0050B4F0
+[ddraw] unlock 1128f130 64x32 bpp=16 pitch=128 caps=00001800 first=000039e6 mid=000039c5
+[ddraw] Blt dst=1128f070 src=1128f130 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F130 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F1F0 ret=0050B4F0
+[ddraw] unlock 1128f1f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002985 mid=000031c5
+[ddraw] Blt dst=1128f130 src=1128f1f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F1F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F2B0 ret=0050B4F0
+[ddraw] unlock 1128f2b0 64x32 bpp=16 pitch=128 caps=00001800 first=000031a5 mid=000031a6
+[ddraw] Blt dst=1128f1f0 src=1128f2b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F2B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F370 ret=0050B4F0
+[ddraw] unlock 1128f370 64x32 bpp=16 pitch=128 caps=00001800 first=000031c6 mid=000039e7
+[ddraw] Blt dst=1128f2b0 src=1128f370 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F370 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F430 ret=0050B4F0
+[ddraw] unlock 1128f430 64x32 bpp=16 pitch=128 caps=00001800 first=00003186 mid=00002166
+[ddraw] Blt dst=1128f370 src=1128f430 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F430 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F4F0 ret=0050B4F0
+[ddraw] unlock 1128f4f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002145 mid=00002145
+[ddraw] Blt dst=1128f430 src=1128f4f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F4F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F5B0 ret=0050B4F0
+[ddraw] unlock 1128f5b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002965 mid=00002965
+[ddraw] Blt dst=1128f4f0 src=1128f5b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F5B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F670 ret=0050B4F0
+[ddraw] unlock 1128f670 64x32 bpp=16 pitch=128 caps=00001800 first=000031a5 mid=000039e6
+[ddraw] Blt dst=1128f5b0 src=1128f670 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F670 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F730 ret=0050B4F0
+[ddraw] unlock 1128f730 64x32 bpp=16 pitch=128 caps=00001800 first=00003185 mid=00003185
+[ddraw] Blt dst=1128f670 src=1128f730 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F730 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F7F0 ret=0050B4F0
+[ddraw] unlock 1128f7f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002985 mid=000039c4
+[ddraw] Blt dst=1128f730 src=1128f7f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F7F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F8B0 ret=0050B4F0
+[ddraw] unlock 1128f8b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002985 mid=000031a5
+[ddraw] Blt dst=1128f7f0 src=1128f8b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F8B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128F970 ret=0050B4F0
+[ddraw] unlock 1128f970 64x32 bpp=16 pitch=128 caps=00001800 first=000039e5 mid=00002185
+[ddraw] Blt dst=1128f8b0 src=1128f970 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128F970 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128FA30 ret=0050B4F0
+[ddraw] unlock 1128fa30 64x32 bpp=16 pitch=128 caps=00001800 first=000031a5 mid=000039e5
+[ddraw] Blt dst=1128f970 src=1128fa30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128FA30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128FAF0 ret=0050B4F0
+[ddraw] unlock 1128faf0 64x32 bpp=16 pitch=128 caps=00001800 first=00003164 mid=00002986
+[ddraw] Blt dst=1128fa30 src=1128faf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128FAF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128FBB0 ret=0050B4F0
+[ddraw] unlock 1128fbb0 64x32 bpp=16 pitch=128 caps=00001800 first=00002165 mid=00002966
+[ddraw] Blt dst=1128faf0 src=1128fbb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128FBB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128FC70 ret=0050B4F0
+[ddraw] unlock 1128fc70 64x32 bpp=16 pitch=128 caps=00001800 first=00001905 mid=00002925
+[ddraw] Blt dst=1128fbb0 src=1128fc70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128FC70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128FD30 ret=0050B4F0
+[ddraw] unlock 1128fd30 64x32 bpp=16 pitch=128 caps=00001800 first=00002146 mid=00003145
+[ddraw] Blt dst=1128fc70 src=1128fd30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128FD30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128FDF0 ret=0050B4F0
+[ddraw] unlock 1128fdf0 64x32 bpp=16 pitch=128 caps=00001800 first=000031a6 mid=000029a5
+[ddraw] Blt dst=1128fd30 src=1128fdf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128FDF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128FEB0 ret=0050B4F0
+[ddraw] unlock 1128feb0 64x32 bpp=16 pitch=128 caps=00001800 first=00002944 mid=00002944
+[ddraw] Blt dst=1128fdf0 src=1128feb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128FEB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1128FF70 ret=0050B4F0
+[ddraw] unlock 1128ff70 64x32 bpp=16 pitch=128 caps=00001800 first=000031a5 mid=000031a4
+[ddraw] Blt dst=1128feb0 src=1128ff70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1128FF70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290030 ret=0050B4F0
+[ddraw] unlock 11290030 64x32 bpp=16 pitch=128 caps=00001800 first=000031c5 mid=00004267
+[ddraw] Blt dst=1128ff70 src=11290030 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290030 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112900F0 ret=0050B4F0
+[ddraw] unlock 112900f0 64x32 bpp=16 pitch=128 caps=00001800 first=000039a5 mid=00001945
+[ddraw] Blt dst=11290030 src=112900f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112900F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112901B0 ret=0050B4F0
+[ddraw] unlock 112901b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002985 mid=00002145
+[ddraw] Blt dst=112900f0 src=112901b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112901B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290270 ret=0050B4F0
+[ddraw] unlock 11290270 64x32 bpp=16 pitch=128 caps=00001800 first=000039a5 mid=000039c6
+[ddraw] Blt dst=112901b0 src=11290270 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290270 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290330 ret=0050B4F0
+[ddraw] unlock 11290330 64x32 bpp=16 pitch=128 caps=00001800 first=00003186 mid=00003186
+[ddraw] Blt dst=11290270 src=11290330 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290330 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112903F0 ret=0050B4F0
+[ddraw] unlock 112903f0 64x32 bpp=16 pitch=128 caps=00001800 first=00001926 mid=00002125
+[ddraw] Blt dst=11290330 src=112903f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112903F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112904B0 ret=0050B4F0
+[ddraw] unlock 112904b0 64x32 bpp=16 pitch=128 caps=00001800 first=00003165 mid=00001924
+[ddraw] Blt dst=112903f0 src=112904b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112904B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290570 ret=0050B4F0
+[ddraw] unlock 11290570 64x32 bpp=16 pitch=128 caps=00001800 first=00002145 mid=00003165
+[ddraw] Blt dst=112904b0 src=11290570 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290570 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290630 ret=0050B4F0
+[ddraw] unlock 11290630 64x32 bpp=16 pitch=128 caps=00001800 first=00002144 mid=000039a4
+[ddraw] Blt dst=11290570 src=11290630 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290630 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112906F0 ret=0050B4F0
+[ddraw] unlock 112906f0 64x32 bpp=16 pitch=128 caps=00001800 first=000031a5 mid=00002944
+[ddraw] Blt dst=11290630 src=112906f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112906F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112907B0 ret=0050B4F0
+[ddraw] unlock 112907b0 64x32 bpp=16 pitch=128 caps=00001800 first=00001944 mid=00002964
+[ddraw] Blt dst=112906f0 src=112907b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112907B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290870 ret=0050B4F0
+[ddraw] unlock 11290870 64x32 bpp=16 pitch=128 caps=00001800 first=00002985 mid=00003965
+[ddraw] Blt dst=112907b0 src=11290870 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290870 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290930 ret=0050B4F0
+[ddraw] unlock 11290930 64x32 bpp=16 pitch=128 caps=00001800 first=000031c5 mid=00002965
+[ddraw] Blt dst=11290870 src=11290930 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290930 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112909F0 ret=0050B4F0
+[ddraw] unlock 112909f0 64x32 bpp=16 pitch=128 caps=00001800 first=000021a5 mid=00002965
+[ddraw] Blt dst=11290930 src=112909f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112909F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290AB0 ret=0050B4F0
+[ddraw] unlock 11290ab0 64x32 bpp=16 pitch=128 caps=00001800 first=00003186 mid=00001946
+[ddraw] Blt dst=112909f0 src=11290ab0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290AB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290B70 ret=0050B4F0
+[ddraw] unlock 11290b70 64x32 bpp=16 pitch=128 caps=00001800 first=000010c4 mid=00001905
+[ddraw] Blt dst=11290ab0 src=11290b70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290B70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290C30 ret=0050B4F0
+[ddraw] unlock 11290c30 64x32 bpp=16 pitch=128 caps=00001800 first=00002125 mid=00003166
+[ddraw] Blt dst=11290b70 src=11290c30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290C30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290CF0 ret=0050B4F0
+[ddraw] unlock 11290cf0 64x32 bpp=16 pitch=128 caps=00001800 first=00002923 mid=00001924
+[ddraw] Blt dst=11290c30 src=11290cf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290CF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290DB0 ret=0050B4F0
+[ddraw] unlock 11290db0 64x32 bpp=16 pitch=128 caps=00001800 first=00003143 mid=00001924
+[ddraw] Blt dst=11290cf0 src=11290db0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290DB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290E70 ret=0050B4F0
+[ddraw] unlock 11290e70 64x32 bpp=16 pitch=128 caps=00001800 first=00003184 mid=000039a4
+[ddraw] Blt dst=11290db0 src=11290e70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290E70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290F30 ret=0050B4F0
+[ddraw] unlock 11290f30 64x32 bpp=16 pitch=128 caps=00001800 first=000031a4 mid=00002185
+[ddraw] Blt dst=11290e70 src=11290f30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290F30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11290FF0 ret=0050B4F0
+[ddraw] unlock 11290ff0 64x32 bpp=16 pitch=128 caps=00001800 first=000039c4 mid=00003164
+[ddraw] Blt dst=11290f30 src=11290ff0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11290FF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112910B0 ret=0050B4F0
+[ddraw] unlock 112910b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002144 mid=00002944
+[ddraw] Blt dst=11290ff0 src=112910b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112910B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291170 ret=0050B4F0
+[ddraw] unlock 11291170 64x32 bpp=16 pitch=128 caps=00001800 first=000039c5 mid=00002986
+[ddraw] Blt dst=112910b0 src=11291170 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291170 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291230 ret=0050B4F0
+[ddraw] unlock 11291230 64x32 bpp=16 pitch=128 caps=00001800 first=00002945 mid=00001105
+[ddraw] Blt dst=11291170 src=11291230 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291230 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112912F0 ret=0050B4F0
+[ddraw] unlock 112912f0 64x32 bpp=16 pitch=128 caps=00001800 first=00001906 mid=000010e5
+[ddraw] Blt dst=11291230 src=112912f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112912F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112913B0 ret=0050B4F0
+[ddraw] unlock 112913b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002946 mid=00002125
+[ddraw] Blt dst=112912f0 src=112913b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112913B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291470 ret=0050B4F0
+[ddraw] unlock 11291470 64x32 bpp=16 pitch=128 caps=00001800 first=00002124 mid=00002144
+[ddraw] Blt dst=112913b0 src=11291470 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291470 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291530 ret=0050B4F0
+[ddraw] unlock 11291530 64x32 bpp=16 pitch=128 caps=00001800 first=00002984 mid=00001924
+[ddraw] Blt dst=11291470 src=11291530 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291530 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112915F0 ret=0050B4F0
+[ddraw] unlock 112915f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002984 mid=00003143
+[ddraw] Blt dst=11291530 src=112915f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112915F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112916B0 ret=0050B4F0
+[ddraw] unlock 112916b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002144 mid=00003184
+[ddraw] Blt dst=112915f0 src=112916b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112916B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291770 ret=0050B4F0
+[ddraw] unlock 11291770 64x32 bpp=16 pitch=128 caps=00001800 first=00002123 mid=00002964
+[ddraw] Blt dst=112916b0 src=11291770 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291770 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291830 ret=0050B4F0
+[ddraw] unlock 11291830 64x32 bpp=16 pitch=128 caps=00001800 first=00002984 mid=00003164
+[ddraw] Blt dst=11291770 src=11291830 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291830 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112918F0 ret=0050B4F0
+[ddraw] unlock 112918f0 64x32 bpp=16 pitch=128 caps=00001800 first=00001965 mid=00002125
+[ddraw] Blt dst=11291830 src=112918f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112918F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112919B0 ret=0050B4F0
+[ddraw] unlock 112919b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002125 mid=00002126
+[ddraw] Blt dst=112918f0 src=112919b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112919B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291A70 ret=0050B4F0
+[ddraw] unlock 11291a70 64x32 bpp=16 pitch=128 caps=00001800 first=00001906 mid=00001906
+[ddraw] Blt dst=112919b0 src=11291a70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291A70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291B30 ret=0050B4F0
+[ddraw] unlock 11291b30 64x32 bpp=16 pitch=128 caps=00001800 first=000010e5 mid=00002125
+[ddraw] Blt dst=11291a70 src=11291b30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291B30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291BF0 ret=0050B4F0
+[ddraw] unlock 11291bf0 64x32 bpp=16 pitch=128 caps=00001800 first=00002904 mid=00001944
+[ddraw] Blt dst=11291b30 src=11291bf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291BF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291CB0 ret=0050B4F0
+[ddraw] unlock 11291cb0 64x32 bpp=16 pitch=128 caps=00001800 first=000018e4 mid=00003984
+[ddraw] Blt dst=11291bf0 src=11291cb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291CB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291D70 ret=0050B4F0
+[ddraw] unlock 11291d70 64x32 bpp=16 pitch=128 caps=00001800 first=00002964 mid=00002123
+[ddraw] Blt dst=11291cb0 src=11291d70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291D70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291E30 ret=0050B4F0
+[ddraw] unlock 11291e30 64x32 bpp=16 pitch=128 caps=00001800 first=00002964 mid=00002144
+[ddraw] Blt dst=11291d70 src=11291e30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291E30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291EF0 ret=0050B4F0
+[ddraw] unlock 11291ef0 64x32 bpp=16 pitch=128 caps=00001800 first=00002144 mid=00002144
+[ddraw] Blt dst=11291e30 src=11291ef0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291EF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11291FB0 ret=0050B4F0
+[ddraw] unlock 11291fb0 64x32 bpp=16 pitch=128 caps=00001800 first=00002944 mid=00001925
+[ddraw] Blt dst=11291ef0 src=11291fb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11291FB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292070 ret=0050B4F0
+[ddraw] unlock 11292070 64x32 bpp=16 pitch=128 caps=00001800 first=00002966 mid=00001926
+[ddraw] Blt dst=11291fb0 src=11292070 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292070 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292130 ret=0050B4F0
+[ddraw] unlock 11292130 64x32 bpp=16 pitch=128 caps=00001800 first=00001905 mid=00001105
+[ddraw] Blt dst=11292070 src=11292130 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292130 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112921F0 ret=0050B4F0
+[ddraw] unlock 112921f0 64x32 bpp=16 pitch=128 caps=00001800 first=00001906 mid=00001905
+[ddraw] Blt dst=11292130 src=112921f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112921F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112922B0 ret=0050B4F0
+[ddraw] unlock 112922b0 64x32 bpp=16 pitch=128 caps=00001800 first=00002926 mid=00002104
+[ddraw] Blt dst=112921f0 src=112922b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112922B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292370 ret=0050B4F0
+[ddraw] unlock 11292370 64x32 bpp=16 pitch=128 caps=00001800 first=00001904 mid=00002165
+[ddraw] Blt dst=112922b0 src=11292370 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292370 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292430 ret=0050B4F0
+[ddraw] unlock 11292430 64x32 bpp=16 pitch=128 caps=00001800 first=00003163 mid=000020e3
+[ddraw] Blt dst=11292370 src=11292430 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292430 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112924F0 ret=0050B4F0
+[ddraw] unlock 112924f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002103 mid=00001903
+[ddraw] Blt dst=11292430 src=112924f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112924F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112925B0 ret=0050B4F0
+[ddraw] unlock 112925b0 64x32 bpp=16 pitch=128 caps=00001800 first=00003183 mid=00003184
+[ddraw] Blt dst=112924f0 src=112925b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112925B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292670 ret=0050B4F0
+[ddraw] unlock 11292670 64x32 bpp=16 pitch=128 caps=00001800 first=00002924 mid=00003185
+[ddraw] Blt dst=112925b0 src=11292670 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292670 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292730 ret=0050B4F0
+[ddraw] unlock 11292730 64x32 bpp=16 pitch=128 caps=00001800 first=00002124 mid=000018e4
+[ddraw] Blt dst=11292670 src=11292730 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292730 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112927F0 ret=0050B4F0
+[ddraw] unlock 112927f0 64x32 bpp=16 pitch=128 caps=00001800 first=00002986 mid=00002146
+[ddraw] Blt dst=11292730 src=112927f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112927F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112928B0 ret=0050B4F0
+[ddraw] unlock 112928b0 64x32 bpp=16 pitch=128 caps=00001800 first=000010e5 mid=000010c5
+[ddraw] Blt dst=112927f0 src=112928b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112928B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292A70 ret=0050B4F0
+[ddraw] unlock 11292a70 64x32 bpp=16 pitch=128 caps=00001800 first=00000000 mid=0000fbbb
+[ddraw] Blt dst=112928b0 src=11292a70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292A70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292B30 ret=0050B4F0
+[ddraw] unlock 11292b30 64x32 bpp=16 pitch=128 caps=00001800 first=00000000 mid=0000fbcc
+[ddraw] Blt dst=11292a70 src=11292b30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292B30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292BF0 ret=0050B4F0
+[ddraw] unlock 11292bf0 64x32 bpp=16 pitch=128 caps=00001800 first=00000000 mid=0000fbbc
+[ddraw] Blt dst=11292b30 src=11292bf0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292BF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292CB0 ret=0050B4F0
+[ddraw] unlock 11292cb0 64x32 bpp=16 pitch=128 caps=00001800 first=00000ede mid=000012f2
+[ddraw] Blt dst=11292bf0 src=11292cb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292CB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292D70 ret=0050B4F0
+[ddraw] unlock 11292d70 64x32 bpp=16 pitch=128 caps=00001800 first=00000000 mid=00000010
+[ddraw] Blt dst=11292cb0 src=11292d70 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292D70 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292E30 ret=0050B4F0
+[ddraw] unlock 11292e30 64x32 bpp=16 pitch=128 caps=00001800 first=000009c1 mid=00009d36
+[ddraw] Blt dst=11292d70 src=11292e30 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292E30 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292EF0 ret=0050B4F0
+[ddraw] unlock 11292ef0 64x32 bpp=16 pitch=128 caps=00001800 first=0000b000 mid=0000fabb
+[ddraw] Blt dst=11292e30 src=11292ef0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292EF0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11292FB0 ret=0050B4F0
+[ddraw] unlock 11292fb0 64x32 bpp=16 pitch=128 caps=00001800 first=0000e000 mid=00001050
+[ddraw] Blt dst=11292ef0 src=11292fb0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11292FB0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293070 ret=0050B4F0
+[ddraw] unlock 11293070 64x32 bpp=16 pitch=128 caps=00001800 first=0000fe81 mid=00000010
+[ddraw] Blt dst=11292fb0 src=11293070 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293070 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293130 ret=0050B4F0
+[ddraw] unlock 11293130 64x32 bpp=16 pitch=128 caps=00001800 first=0000fbde mid=00004000
+[ddraw] Blt dst=11293070 src=11293130 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293130 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112931F0 ret=0050B4F0
+[ddraw] unlock 112931f0 64x32 bpp=16 pitch=128 caps=00001800 first=00000080 mid=0000a5b8
+[ddraw] Blt dst=11293130 src=112931f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112931F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112932B0 ret=0050B4F0
+[ddraw] unlock 112932b0 64x32 bpp=16 pitch=128 caps=00001800 first=0000b000 mid=0000fabb
+[ddraw] Blt dst=112931f0 src=112932b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112932B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293370 ret=0050B4F0
+[ddraw] unlock 11293370 64x32 bpp=16 pitch=128 caps=00001800 first=00000000 mid=0000f9aa
+[ddraw] Blt dst=112932b0 src=11293370 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293370 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293430 ret=0050B4F0
+[ddraw] unlock 11293430 64x32 bpp=16 pitch=128 caps=00001800 first=0000fabc mid=00000030
+[ddraw] Blt dst=11293370 src=11293430 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293430 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112934F0 ret=0050B4F0
+[ddraw] unlock 112934f0 64x32 bpp=16 pitch=128 caps=00001800 first=0000f9ac mid=00004000
+[ddraw] Blt dst=11293430 src=112934f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112934F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112935B0 ret=0050B4F0
+[ddraw] unlock 112935b0 64x32 bpp=16 pitch=128 caps=00001800 first=00000050 mid=00000000
+[ddraw] Blt dst=112934f0 src=112935b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112935B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293670 ret=0050B4F0
+[ddraw] unlock 11293670 64x32 bpp=16 pitch=128 caps=00001800 first=0000d000 mid=00000000
+[ddraw] Blt dst=112935b0 src=11293670 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293670 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293730 ret=0050B4F0
+[ddraw] unlock 11293730 64x32 bpp=16 pitch=128 caps=00001800 first=00000000 mid=00000000
+[ddraw] Blt dst=11293670 src=11293730 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293730 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112937F0 ret=0050B4F0
+[ddraw] unlock 112937f0 64x32 bpp=16 pitch=128 caps=00001800 first=0000f050 mid=00000000
+[ddraw] Blt dst=11293730 src=112937f0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112937F0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112938B0 ret=0050B4F0
+[ddraw] unlock 112938b0 64x32 bpp=16 pitch=128 caps=00001800 first=0000f050 mid=00000000
+[ddraw] Blt dst=112937f0 src=112938b0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112938B0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293AC0 ret=0050B4F0
+[ddraw] unlock 11293ac0 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=000005f5
+[ddraw] Blt dst=112938b0 src=11293ac0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293AC0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293B80 ret=0050B4F0
+[ddraw] unlock 11293b80 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=000001f1
+[ddraw] Blt dst=11293ac0 src=11293b80 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293B80 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293C40 ret=0050B4F0
+[ddraw] unlock 11293c40 64x32 bpp=16 pitch=128 caps=00001800 first=00001020 mid=00007070
+[ddraw] Blt dst=11293b80 src=11293c40 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293C40 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293D00 ret=0050B4F0
+[ddraw] unlock 11293d00 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=00000020
+[ddraw] Blt dst=11293c40 src=11293d00 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293D00 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293DC0 ret=0050B4F0
+[ddraw] unlock 11293dc0 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=000005f5
+[ddraw] Blt dst=11293d00 src=11293dc0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293DC0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293E80 ret=0050B4F0
+[ddraw] unlock 11293e80 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=000005f5
+[ddraw] Blt dst=11293dc0 src=11293e80 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293E80 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11293F40 ret=0050B4F0
+[ddraw] unlock 11293f40 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=000005f5
+[ddraw] Blt dst=11293e80 src=11293f40 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11293F40 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294000 ret=0050B4F0
+[ddraw] unlock 11294000 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=0000fabb
+[ddraw] Blt dst=11293f40 src=11294000 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294000 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112940C0 ret=0050B4F0
+[ddraw] unlock 112940c0 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=0000f99a
+[ddraw] Blt dst=11294000 src=112940c0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112940C0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294180 ret=0050B4F0
+[ddraw] unlock 11294180 64x32 bpp=16 pitch=128 caps=00001800 first=0000be17 mid=00008100
+[ddraw] Blt dst=112940c0 src=11294180 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294180 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294240 ret=0050B4F0
+[ddraw] unlock 11294240 64x32 bpp=16 pitch=128 caps=00001800 first=00007010 mid=000034f4
+[ddraw] Blt dst=11294180 src=11294240 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294240 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294300 ret=0050B4F0
+[ddraw] unlock 11294300 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=0000fbbb
+[ddraw] Blt dst=11294240 src=11294300 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294300 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112943C0 ret=0050B4F0
+[ddraw] unlock 112943c0 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=0000f9ab
+[ddraw] Blt dst=11294300 src=112943c0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112943C0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294480 ret=0050B4F0
+[ddraw] unlock 11294480 64x32 bpp=16 pitch=128 caps=00001800 first=00000010 mid=0000fabb
+[ddraw] Blt dst=112943c0 src=11294480 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294480 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294540 ret=0050B4F0
+[ddraw] unlock 11294540 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=0000e222
+[ddraw] Blt dst=11294480 src=11294540 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294540 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294600 ret=0050B4F0
+[ddraw] unlock 11294600 64x32 bpp=16 pitch=128 caps=00001800 first=0000f9bb mid=0000fbbd
+[ddraw] Blt dst=11294540 src=11294600 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294600 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112946C0 ret=0050B4F0
+[ddraw] unlock 112946c0 64x32 bpp=16 pitch=128 caps=00001800 first=00009577 mid=00008d75
+[ddraw] Blt dst=11294600 src=112946c0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112946C0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294780 ret=0050B4F0
+[ddraw] unlock 11294780 64x32 bpp=16 pitch=128 caps=00001800 first=00009d57 mid=00009d55
+[ddraw] Blt dst=112946c0 src=11294780 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294780 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294840 ret=0050B4F0
+[ddraw] unlock 11294840 64x32 bpp=16 pitch=128 caps=00001800 first=00009bc2 mid=0000ae37
+[ddraw] Blt dst=11294780 src=11294840 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294840 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294900 ret=0050B4F0
+[ddraw] unlock 11294900 64x32 bpp=16 pitch=128 caps=00001800 first=0000f89a mid=0000f9ab
+[ddraw] Blt dst=11294840 src=11294900 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294900 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112949C0 ret=0050B4F0
+[ddraw] unlock 112949c0 64x32 bpp=16 pitch=128 caps=00001800 first=0000e171 mid=0000e222
+[ddraw] Blt dst=11294900 src=112949c0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112949C0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294A80 ret=0050B4F0
+[ddraw] unlock 11294a80 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=00000000
+[ddraw] Blt dst=112949c0 src=11294a80 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294A80 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294B40 ret=0050B4F0
+[ddraw] unlock 11294b40 64x32 bpp=16 pitch=128 caps=00001800 first=00000131 mid=00000000
+[ddraw] Blt dst=11294a80 src=11294b40 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294B40 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294C00 ret=0050B4F0
+[ddraw] unlock 11294c00 64x32 bpp=16 pitch=128 caps=00001800 first=000070a0 mid=00000000
+[ddraw] Blt dst=11294b40 src=11294c00 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294C00 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294CC0 ret=0050B4F0
+[ddraw] unlock 11294cc0 64x32 bpp=16 pitch=128 caps=00001800 first=00000000 mid=00000000
+[ddraw] Blt dst=11294c00 src=11294cc0 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294CC0 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294D80 ret=0050B4F0
+[ddraw] unlock 11294d80 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=00000000
+[ddraw] Blt dst=11294cc0 src=11294d80 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294D80 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294E40 ret=0050B4F0
+[ddraw] unlock 11294e40 64x32 bpp=16 pitch=128 caps=00001800 first=00000020 mid=00000000
+[ddraw] Blt dst=11294d80 src=11294e40 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294E40 ret=0050AD90
+[ddraw] CreateSurface 64x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11294F00 ret=0050B4F0
+[ddraw] unlock 11294f00 64x32 bpp=16 pitch=128 caps=00001800 first=000005f5 mid=00000000
+[ddraw] Blt dst=11294e40 src=11294f00 flags=1000000 64x32
+[ddraw] GetAttachedSurface 64x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 64x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 32x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11294F00 ret=0050AD90
+[ddraw] CreateSurface 32x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11295F60 ret=0050B4F0
+[ddraw] unlock 11295f60 32x32 bpp=16 pitch=64 caps=00001800 first=000000ff mid=0000f000
+[ddraw] Blt dst=11294f00 src=11295f60 flags=1000000 32x32
+[ddraw] GetAttachedSurface 32x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 32x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 128x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11295F60 ret=0050AD90
+[ddraw] CreateSurface 128x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11296150 ret=0050B4F0
+[ddraw] unlock 11296150 128x128 bpp=16 pitch=256 caps=00001800 first=00000fff mid=00000fff
+[ddraw] Blt dst=11295f60 src=11296150 flags=1000000 128x128
+[ddraw] GetAttachedSurface 128x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 128x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 2x2 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11296150 ret=0050AD90
+[ddraw] CreateSurface 2x2 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11296390 ret=0050B4F0
+[ddraw] unlock 11296390 2x2 bpp=16 pitch=4 caps=00001800 first=0000ef5d mid=00009d13
+[ddraw] Blt dst=11296150 src=11296390 flags=1000000 2x2
+[ddraw] GetAttachedSurface 2x2 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 2x2 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 1x2 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11296390 ret=0050AD90
+[ddraw] CreateSurface 1x2 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11296570 ret=0050B4F0
+[ddraw] unlock 11296570 1x2 bpp=16 pitch=4 caps=00001800 first=0000ef5d mid=00009d13
+[ddraw] Blt dst=11296390 src=11296570 flags=1000000 1x2
+[ddraw] GetAttachedSurface 1x2 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 1x2 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 2x2 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11296570 ret=0050AD90
+[ddraw] CreateSurface 2x2 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11296770 ret=0050B4F0
+[ddraw] unlock 11296770 2x2 bpp=16 pitch=4 caps=00001800 first=0000ef5d mid=00009d13
+[ddraw] Blt dst=11296570 src=11296770 flags=1000000 2x2
+[ddraw] GetAttachedSurface 2x2 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 2x2 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 2x1 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11296770 ret=0050AD90
+[ddraw] CreateSurface 2x1 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11296950 ret=0050B4F0
+[ddraw] unlock 11296950 2x1 bpp=16 pitch=4 caps=00001800 first=0000ce99 mid=00008c91
+[ddraw] Blt dst=11296770 src=11296950 flags=1000000 2x1
+[ddraw] GetAttachedSurface 2x1 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 2x1 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 2x2 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11296950 ret=0050AD90
+[ddraw] CreateSurface 2x2 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11296B50 ret=0050B4F0
+[ddraw] unlock 11296b50 2x2 bpp=16 pitch=4 caps=00001800 first=0000ce99 mid=00009d53
+[ddraw] Blt dst=11296950 src=11296b50 flags=1000000 2x2
+[ddraw] GetAttachedSurface 2x2 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 2x2 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 1x2 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11296B50 ret=0050AD90
+[ddraw] CreateSurface 1x2 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11296D30 ret=0050B4F0
+[ddraw] unlock 11296d30 1x2 bpp=16 pitch=4 caps=00001800 first=0000ef5d mid=00009d13
+[ddraw] Blt dst=11296b50 src=11296d30 flags=1000000 1x2
+[ddraw] GetAttachedSurface 1x2 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 1x2 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 2x2 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11296D30 ret=0050AD90
+[ddraw] CreateSurface 2x2 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11296F30 ret=0050B4F0
+[ddraw] unlock 11296f30 2x2 bpp=16 pitch=4 caps=00001800 first=0000ce99 mid=0000ef5d
+[ddraw] Blt dst=11296d30 src=11296f30 flags=1000000 2x2
+[ddraw] GetAttachedSurface 2x2 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 2x2 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 2x1 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11296F30 ret=0050AD90
+[ddraw] CreateSurface 2x1 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11297110 ret=0050B4F0
+[ddraw] unlock 11297110 2x1 bpp=16 pitch=4 caps=00001800 first=0000ce99 mid=00009d53
+[ddraw] Blt dst=11296f30 src=11297110 flags=1000000 2x1
+[ddraw] GetAttachedSurface 2x1 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 2x1 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 8x8 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11297110 ret=0050AD90
+[ddraw] CreateSurface 8x8 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11297480 ret=0050B4F0
+[ddraw] unlock 11297480 8x8 bpp=16 pitch=16 caps=00001800 first=00000000 mid=0000ffff
+[ddraw] Blt dst=11297110 src=11297480 flags=1000000 8x8
+[ddraw] GetAttachedSurface 8x8 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 8x8 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 1x4 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11297480 ret=0050AD90
+[ddraw] CreateSurface 1x4 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x112976C0 ret=0050B4F0
+[ddraw] unlock 112976c0 1x4 bpp=16 pitch=4 caps=00001800 first=0000ffdf mid=0000ffdf
+[ddraw] Blt dst=11297480 src=112976c0 flags=1000000 1x4
+[ddraw] GetAttachedSurface 1x4 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 1x4 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 8x8 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x112976C0 ret=0050AD90
+[ddraw] CreateSurface 8x8 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11297860 ret=0050B4F0
+[ddraw] unlock 11297860 8x8 bpp=16 pitch=16 caps=00001800 first=0000ffff mid=0000ffff
+[ddraw] Blt dst=112976c0 src=11297860 flags=1000000 8x8
+[ddraw] GetAttachedSurface 8x8 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 8x8 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 4x1 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11297860 ret=0050AD90
+[ddraw] CreateSurface 4x1 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11297AA0 ret=0050B4F0
+[ddraw] unlock 11297aa0 4x1 bpp=16 pitch=8 caps=00001800 first=00009dd5 mid=00009dd5
+[ddraw] Blt dst=11297860 src=11297aa0 flags=1000000 4x1
+[ddraw] GetAttachedSurface 4x1 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 4x1 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 8x8 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11297AA0 ret=0050AD90
+[ddraw] CreateSurface 8x8 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11297C40 ret=0050B4F0
+[ddraw] unlock 11297c40 8x8 bpp=16 pitch=16 caps=00001800 first=00000000 mid=0000ec0f
+[ddraw] Blt dst=11297aa0 src=11297c40 flags=1000000 8x8
+[ddraw] GetAttachedSurface 8x8 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 8x8 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 1x4 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11297C40 ret=0050AD90
+[ddraw] CreateSurface 1x4 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11297E80 ret=0050B4F0
+[ddraw] unlock 11297e80 1x4 bpp=16 pitch=4 caps=00001800 first=00006c0f mid=00006c0f
+[ddraw] Blt dst=11297c40 src=11297e80 flags=1000000 1x4
+[ddraw] GetAttachedSurface 1x4 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 1x4 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 8x8 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11297E80 ret=0050AD90
+[ddraw] CreateSurface 8x8 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11298020 ret=0050B4F0
+[ddraw] unlock 11298020 8x8 bpp=16 pitch=16 caps=00001800 first=0000ec0f mid=0000ec0f
+[ddraw] Blt dst=11297e80 src=11298020 flags=1000000 8x8
+[ddraw] GetAttachedSurface 8x8 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 8x8 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 4x1 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11298020 ret=0050AD90
+[ddraw] CreateSurface 4x1 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11298260 ret=0050B4F0
+[ddraw] unlock 11298260 4x1 bpp=16 pitch=8 caps=00001800 first=00009dd5 mid=00009dd5
+[ddraw] Blt dst=11298020 src=11298260 flags=1000000 4x1
+[ddraw] GetAttachedSurface 4x1 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 4x1 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 128x64 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11298260 ret=0050AD90
+[ddraw] CreateSurface 128x64 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11298360 ret=0050B4F0
+[ddraw] unlock 11298360 128x64 bpp=16 pitch=256 caps=00001800 first=0000ffff mid=0000ffff
+[ddraw] Blt dst=11298260 src=11298360 flags=1000000 128x64
+[ddraw] GetAttachedSurface 128x64 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 128x64 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11298360 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x11299DE0 ret=0050B4F0
+[ddraw] unlock 11299de0 256x128 bpp=16 pitch=512 caps=00001800 first=00000fff mid=00005fff
+[ddraw] Blt dst=11298360 src=11299de0 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 128x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x11299DE0 ret=0050AD90
+[ddraw] CreateSurface 128x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129B860 ret=0050B4F0
+[ddraw] unlock 1129b860 128x128 bpp=16 pitch=256 caps=00001800 first=00000fff mid=00000000
+[ddraw] Blt dst=11299de0 src=1129b860 flags=1000000 128x128
+[ddraw] GetAttachedSurface 128x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 128x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 16x16 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129B860 ret=0050AD90
+[ddraw] CreateSurface 16x16 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129BB80 ret=0050B4F0
+[ddraw] unlock 1129bb80 16x16 bpp=16 pitch=32 caps=00001800 first=0000e75c mid=0000d6da
+[ddraw] Blt dst=1129b860 src=1129bb80 flags=1000000 16x16
+[ddraw] GetAttachedSurface 16x16 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 16x16 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 16x16 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129BB80 ret=0050AD90
+[ddraw] CreateSurface 16x16 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129BD70 ret=0050B4F0
+[ddraw] unlock 1129bd70 16x16 bpp=16 pitch=32 caps=00001800 first=0000a554 mid=00008cd1
+[ddraw] Blt dst=1129bb80 src=1129bd70 flags=1000000 16x16
+[ddraw] GetAttachedSurface 16x16 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 16x16 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 8x16 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129BD70 ret=0050AD90
+[ddraw] CreateSurface 8x16 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129C1E0 ret=0050B4F0
+[ddraw] unlock 1129c1e0 8x16 bpp=16 pitch=16 caps=00001800 first=0000ffdf mid=00007c4f
+[ddraw] Blt dst=1129bd70 src=1129c1e0 flags=1000000 8x16
+[ddraw] GetAttachedSurface 8x16 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 8x16 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 16x16 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129C1E0 ret=0050AD90
+[ddraw] CreateSurface 16x16 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129C3D0 ret=0050B4F0
+[ddraw] unlock 1129c3d0 16x16 bpp=16 pitch=32 caps=00001800 first=0000c657 mid=0000d6da
+[ddraw] Blt dst=1129c1e0 src=1129c3d0 flags=1000000 16x16
+[ddraw] GetAttachedSurface 16x16 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 16x16 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 16x16 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129C3D0 ret=0050AD90
+[ddraw] CreateSurface 16x16 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129C5C0 ret=0050B4F0
+[ddraw] unlock 1129c5c0 16x16 bpp=16 pitch=32 caps=00001800 first=00007c0e mid=0000744e
+[ddraw] Blt dst=1129c3d0 src=1129c5c0 flags=1000000 16x16
+[ddraw] GetAttachedSurface 16x16 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 16x16 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 16x32 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129C5C0 ret=0050AD90
+[ddraw] CreateSurface 16x32 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129D1B0 ret=0050B4F0
+[ddraw] unlock 1129d1b0 16x32 bpp=16 pitch=32 caps=00001800 first=0000ffdf mid=00007c4f
+[ddraw] Blt dst=1129c5c0 src=1129d1b0 flags=1000000 16x32
+[ddraw] GetAttachedSurface 16x32 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 16x32 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129D1B0 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129D410 ret=0050B4F0
+[ddraw] unlock 1129d410 256x128 bpp=16 pitch=512 caps=00001800 first=000084d3 mid=00007b8c
+[ddraw] Blt dst=1129d1b0 src=1129d410 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129D410 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129D600 ret=0050B4F0
+[ddraw] unlock 1129d600 256x128 bpp=16 pitch=512 caps=00001800 first=0000734a mid=00009d14
+[ddraw] Blt dst=1129d410 src=1129d600 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129D600 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129D7F0 ret=0050B4F0
+[ddraw] unlock 1129d7f0 256x128 bpp=16 pitch=512 caps=00001800 first=0000428d mid=000042cd
+[ddraw] Blt dst=1129d600 src=1129d7f0 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129D7F0 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129D9E0 ret=0050B4F0
+[ddraw] unlock 1129d9e0 256x128 bpp=16 pitch=512 caps=00001800 first=00007558 mid=00006b0a
+[ddraw] Blt dst=1129d7f0 src=1129d9e0 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129D9E0 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129DBD0 ret=0050B4F0
+[ddraw] unlock 1129dbd0 256x128 bpp=16 pitch=512 caps=00001800 first=00005cdb mid=00008c0f
+[ddraw] Blt dst=1129d9e0 src=1129dbd0 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129DBD0 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129DDC0 ret=0050B4F0
+[ddraw] unlock 1129ddc0 256x128 bpp=16 pitch=512 caps=00001800 first=0000f79e mid=00004289
+[ddraw] Blt dst=1129dbd0 src=1129ddc0 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129DDC0 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129DFB0 ret=0050B4F0
+[ddraw] unlock 1129dfb0 256x128 bpp=16 pitch=512 caps=00001800 first=00003b10 mid=0000a4d4
+[ddraw] Blt dst=1129ddc0 src=1129dfb0 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129DFB0 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129E1A0 ret=0050B4F0
+[ddraw] unlock 1129e1a0 256x128 bpp=16 pitch=512 caps=00001800 first=00007d17 mid=0000d6dc
+[ddraw] Blt dst=1129dfb0 src=1129e1a0 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129E1A0 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129E390 ret=0050B4F0
+[ddraw] unlock 1129e390 256x128 bpp=16 pitch=512 caps=00001800 first=0000634d mid=00004207
+[ddraw] Blt dst=1129e1a0 src=1129e390 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129E390 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129E580 ret=0050B4F0
+[ddraw] unlock 1129e580 256x128 bpp=16 pitch=512 caps=00001800 first=0000dedb mid=0000638c
+[ddraw] Blt dst=1129e390 src=1129e580 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129E580 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129E770 ret=0050B4F0
+[ddraw] unlock 1129e770 256x128 bpp=16 pitch=512 caps=00001800 first=000029cb mid=00004b10
+[ddraw] Blt dst=1129e580 src=1129e770 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129E770 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129E960 ret=0050B4F0
+[ddraw] unlock 1129e960 256x128 bpp=16 pitch=512 caps=00001800 first=00004b52 mid=0000530e
+[ddraw] Blt dst=1129e770 src=1129e960 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129E960 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129EB50 ret=0050B4F0
+[ddraw] unlock 1129eb50 256x128 bpp=16 pitch=512 caps=00001800 first=00005146 mid=00008a47
+[ddraw] Blt dst=1129e960 src=1129eb50 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x101007 mips 0 desc1(124) -> 0x1129EB50 ret=0050AD90
+[ddraw] CreateSurface 256x128 16 bpp caps 0x1800 flags 0x1007 mips 0 desc1(124) -> 0x1129ED40 ret=0050B4F0
+[ddraw] unlock 1129ed40 256x128 bpp=16 pitch=512 caps=00001800 first=00002945 mid=00002946
+[ddraw] Blt dst=1129eb50 src=1129ed40 flags=1000000 256x128
+[ddraw] GetAttachedSurface 256x128 caps=0x401000 -> 0x0
+[ddraw] GetAttachedSurface caps=0x401000 on 256x128 -> DDERR_NOTFOUND
+[diag] Flip primary=0x70100e9af0 back=0x70100e9bb0 px=0x7010cf0010 backpx=0x7010da0010 v0=0000 vb=0000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTexture(stage=0,112927f0)
+[d3d7] SetTexture(stage=0,112927f0)
+[d3d7] tex#1 112927f0 64x32 bpp=16 fmt=63488,2016,31,0 first=192610e5 mid=000010c5
+[d3d7] SetTexture(stage=0,11292730)
+[d3d7] tex#2 11292730 64x32 bpp=16 fmt=63488,2016,31,0 first=31862986 mid=00002146
+[d3d7] SetTexture(stage=0,11292670)
+[d3d7] tex#3 11292670 64x32 bpp=16 fmt=63488,2016,31,0 first=21242124 mid=000018e4
+[d3d7] SetTexture(stage=0,112925b0)
+[d3d7] tex#4 112925b0 64x32 bpp=16 fmt=63488,2016,31,0 first=31852924 mid=00003185
+[d3d7] SetTexture(stage=0,112924f0)
+[d3d7] tex#5 112924f0 64x32 bpp=16 fmt=63488,2016,31,0 first=31a33183 mid=00003184
+[d3d7] SetTexture(stage=0,11292430)
+[d3d7] tex#6 11292430 64x32 bpp=16 fmt=63488,2016,31,0 first=29432103 mid=00001903
+[d3d7] SetTexture(stage=0,11292370)
+[d3d7] tex#7 11292370 64x32 bpp=16 fmt=63488,2016,31,0 first=29643163 mid=000020e3
+[d3d7] SetTexture(stage=0,112922b0)
+[d3d7] tex#8 112922b0 64x32 bpp=16 fmt=63488,2016,31,0 first=21451904 mid=00002165
+[d3d7] SetTexture(stage=0,112921f0)
+[d3d7] tex#9 112921f0 64x32 bpp=16 fmt=63488,2016,31,0 first=21052926 mid=00002104
+[d3d7] SetTexture(stage=0,11292130)
+[d3d7] tex#10 11292130 64x32 bpp=16 fmt=63488,2016,31,0 first=11061906 mid=00001905
+[d3d7] SetTexture(stage=0,11292070)
+[d3d7] tex#11 11292070 64x32 bpp=16 fmt=63488,2016,31,0 first=10e51905 mid=00001105
+[d3d7] SetTexture(stage=0,11291fb0)
+[d3d7] tex#12 11291fb0 64x32 bpp=16 fmt=63488,2016,31,0 first=29662966 mid=00001926
+[d3d7] SetTexture(stage=0,11291ef0)
+[d3d7] tex#13 11291ef0 64x32 bpp=16 fmt=63488,2016,31,0 first=21242944 mid=00001925
+[d3d7] SetTexture(stage=0,11291e30)
+[d3d7] tex#14 11291e30 64x32 bpp=16 fmt=63488,2016,31,0 first=21242144 mid=00002144
+[d3d7] SetTexture(stage=0,11291d70)
+[d3d7] tex#15 11291d70 64x32 bpp=16 fmt=63488,2016,31,0 first=31842964 mid=00002144
+[d3d7] SetTexture(stage=0,11291cb0)
+[d3d7] tex#16 11291cb0 64x32 bpp=16 fmt=63488,2016,31,0 first=21232964 mid=00002123
+[d3d7] SetTexture(stage=0,11291bf0)
+[d3d7] tex#17 11291bf0 64x32 bpp=16 fmt=63488,2016,31,0 first=10e318e4 mid=00003984
+[d3d7] SetTexture(stage=0,11291b30)
+[d3d7] tex#18 11291b30 64x32 bpp=16 fmt=63488,2016,31,0 first=21042904 mid=00001944
+[d3d7] SetTexture(stage=0,11291a70)
+[d3d7] tex#19 11291a70 64x32 bpp=16 fmt=63488,2016,31,0 first=10e510e5 mid=00002125
+[d3d7] SetTexture(stage=0,112919b0)
+[d3d7] tex#20 112919b0 64x32 bpp=16 fmt=63488,2016,31,0 first=21271906 mid=00001906
+[d3d7] SetTexture(stage=0,112918f0)
+[d3d7] tex#21 112918f0 64x32 bpp=16 fmt=63488,2016,31,0 first=19042125 mid=00002126
+[d3d7] SetTexture(stage=0,11291830)
+[d3d7] tex#22 11291830 64x32 bpp=16 fmt=63488,2016,31,0 first=19651965 mid=00002125
+[d3d7] SetTexture(stage=0,11291770)
+[d3d7] tex#23 11291770 64x32 bpp=16 fmt=63488,2016,31,0 first=29842984 mid=00003164
+[d3d7] SetTexture(stage=0,112916b0)
+[d3d7] tex#24 112916b0 64x32 bpp=16 fmt=63488,2016,31,0 first=21852123 mid=00002964
+[d3d7] SetTexture(stage=0,112915f0)
+[d3d7] tex#25 112915f0 64x32 bpp=16 fmt=63488,2016,31,0 first=21442144 mid=00003184
+[d3d7] SetTexture(stage=0,11291530)
+[d3d7] tex#26 11291530 64x32 bpp=16 fmt=63488,2016,31,0 first=31432984 mid=00003143
+[d3d7] SetTexture(stage=0,11291470)
+[d3d7] tex#27 11291470 64x32 bpp=16 fmt=63488,2016,31,0 first=21442984 mid=00001924
+[d3d7] SetTexture(stage=0,112913b0)
+[d3d7] tex#28 112913b0 64x32 bpp=16 fmt=63488,2016,31,0 first=21242124 mid=00002144
+[d3d7] SetTexture(stage=0,112912f0)
+[d3d7] tex#29 112912f0 64x32 bpp=16 fmt=63488,2016,31,0 first=21462946 mid=00002125
+[d3d7] SetTexture(stage=0,11291230)
+[d3d7] tex#30 11291230 64x32 bpp=16 fmt=63488,2016,31,0 first=10c41906 mid=000010e5
+[d3d7] SetTexture(stage=0,11291170)
+[d3d7] tex#31 11291170 64x32 bpp=16 fmt=63488,2016,31,0 first=29862945 mid=00001105
+[d3d7] SetTexture(stage=0,112910b0)
+[d3d7] tex#32 112910b0 64x32 bpp=16 fmt=63488,2016,31,0 first=318439c5 mid=00002986
+[d3d7] SetTexture(stage=0,11290ff0)
+[d3d7] tex#33 11290ff0 64x32 bpp=16 fmt=63488,2016,31,0 first=19242144 mid=00002944
+[d3d7] SetTexture(stage=0,11290f30)
+[d3d7] tex#34 11290f30 64x32 bpp=16 fmt=63488,2016,31,0 first=39e439c4 mid=00003164
+[d3d7] SetTexture(stage=0,11290e70)
+[d3d7] tex#35 11290e70 64x32 bpp=16 fmt=63488,2016,31,0 first=318431a4 mid=00002185
+[d3d7] SetTexture(stage=0,11290db0)
+[d3d7] tex#36 11290db0 64x32 bpp=16 fmt=63488,2016,31,0 first=31843184 mid=000039a4
+[d3d7] SetTexture(stage=0,11290cf0)
+[d3d7] tex#37 11290cf0 64x32 bpp=16 fmt=63488,2016,31,0 first=29433143 mid=00001924
+[d3d7] SetTexture(stage=0,11290c30)
+[d3d7] tex#38 11290c30 64x32 bpp=16 fmt=63488,2016,31,0 first=21242923 mid=00001924
+[d3d7] SetTexture(stage=0,11290b70)
+[d3d7] tex#39 11290b70 64x32 bpp=16 fmt=63488,2016,31,0 first=29452125 mid=00003166
+[d3d7] tex#40 11290ab0 64x32 bpp=16 fmt=63488,2016,31,0 first=10c410c4 mid=00001905
+[d3d7] tex#41 112909f0 64x32 bpp=16 fmt=63488,2016,31,0 first=29663186 mid=00001946
+[d3d7] tex#42 11290930 64x32 bpp=16 fmt=63488,2016,31,0 first=298521a5 mid=00002965
+[d3d7] tex#43 11290870 64x32 bpp=16 fmt=63488,2016,31,0 first=318531c5 mid=00002965
+[d3d7] tex#44 112907b0 64x32 bpp=16 fmt=63488,2016,31,0 first=31852985 mid=00003965
+[d3d7] tex#45 112906f0 64x32 bpp=16 fmt=63488,2016,31,0 first=31c51944 mid=00002964
+[d3d7] tex#46 11290630 64x32 bpp=16 fmt=63488,2016,31,0 first=420531a5 mid=00002944
+[d3d7] tex#47 11290570 64x32 bpp=16 fmt=63488,2016,31,0 first=19242144 mid=000039a4
+[d3d7] tex#48 112904b0 64x32 bpp=16 fmt=63488,2016,31,0 first=29452145 mid=00003165
+[d3d7] tex#49 112903f0 64x32 bpp=16 fmt=63488,2016,31,0 first=31653165 mid=00001924
+[d3d7] tex#50 11290330 64x32 bpp=16 fmt=63488,2016,31,0 first=19261926 mid=00002125
+[d3d7] tex#51 11290270 64x32 bpp=16 fmt=63488,2016,31,0 first=31a63186 mid=00003186
+[d3d7] tex#52 112901b0 64x32 bpp=16 fmt=63488,2016,31,0 first=39c539a5 mid=000039c6
+[d3d7] tex#53 112900f0 64x32 bpp=16 fmt=63488,2016,31,0 first=39a52985 mid=00002145
+[d3d7] tex#54 11290030 64x32 bpp=16 fmt=63488,2016,31,0 first=39a639a5 mid=00001945
+[d3d7] tex#55 1128ff70 64x32 bpp=16 fmt=63488,2016,31,0 first=31a431c5 mid=00004267
+[d3d7] tex#56 1128feb0 64x32 bpp=16 fmt=63488,2016,31,0 first=216531a5 mid=000031a4
+[d3d7] tex#57 1128fdf0 64x32 bpp=16 fmt=63488,2016,31,0 first=21242944 mid=00002944
+[d3d7] tex#58 1128fd30 64x32 bpp=16 fmt=63488,2016,31,0 first=31a531a6 mid=000029a5
+[d3d7] tex#59 1128fc70 64x32 bpp=16 fmt=63488,2016,31,0 first=19462146 mid=00003145
+[d3d7] tex#60 1128fbb0 64x32 bpp=16 fmt=63488,2016,31,0 first=21261905 mid=00002925
+[d3d7] tex#61 1128faf0 64x32 bpp=16 fmt=63488,2016,31,0 first=21452165 mid=00002966
+[d3d7] tex#62 1128fa30 64x32 bpp=16 fmt=63488,2016,31,0 first=10813164 mid=00002986
+[d3d7] tex#63 1128f970 64x32 bpp=16 fmt=63488,2016,31,0 first=31a531a5 mid=000039e5
+[d3d7] tex#64 1128f8b0 64x32 bpp=16 fmt=63488,2016,31,0 first=39c639e5 mid=00002185
+[d3d7] SetTextureStageState(0,4,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[diag] Flip primary=0x70100e9af0 back=0x70100e9bb0 px=0x7010da0010 backpx=0x7010cf0010 v0=0000 vb=1947
+[d3d7] SetTextureStageState(0,4,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[diag] Flip primary=0x70100e9af0 back=0x70100e9bb0 px=0x7010cf0010 backpx=0x7010da0010 v0=1947 vb=1947
+[d3d7] SetTextureStageState(0,4,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[diag] Flip primary=0x70100e9af0 back=0x70100e9bb0 px=0x7010da0010 backpx=0x7010cf0010 v0=1947 vb=1947
+[d3d7] SetTextureStageState(0,4,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,1,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,2,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,3,0x0) -> 00000000
+[d3d7] SetTextureStageState(1,1,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,17,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,16,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,12,0x3) -> 00000000
+[d3d7] SetTextureStageState(0,18,0x1) -> 00000000
+[d3d7] SetTextureStageState(0,11,0x0) -> 00000000
+[d3d7] SetTextureStageState(0,4,0x4) -> 00000000
+[d3d7] SetTextureStageState(0,5,0x2) -> 00000000
+[d3d7] SetTextureStageState(0,6,0x0) -> 00000000
+[present] GL 2.1 Metal - 91.7 | Apple M2
+[present] 640x480 bpp=16 pitch=1280 drawable=1280x960 dst=0,0 1280x960 px0=00001947 err=0
+[present] after draw err=0
+[present] back center=293521ff
+[present] front center=293521ff
+[diag] Flip primary=0x70100e9af0 back=0x70100e9bb0 px=0x7010cf0010 backpx=0x7010da0010 v0=1947 vb=1947
+[present] GL 2.1 Metal - 91.7 | Apple M2
+[present] 640x480 bpp=16 pitch=1280 drawable=1280x960 dst=0,0 1280x960 px0=00001947 err=1282
+[present] after draw err=0
+[present] back center=293d21ff
+[present] front center=293d21ff
+[diag] Flip primary=0x70100e9af0 back=0x70100e9bb0 px=0x7010da0010 backpx=0x7010cf0010 v0=1947 vb=1947
+[present] GL 2.1 Metal - 91.7 | Apple M2
+[present] 640x480 bpp=16 pitch=1280 drawable=1280x960 dst=0,0 1280x960 px0=00001947 err=1282
+[present] after draw err=0
+[present] back center=294921ff
+[present] front center=294921ff
+[diag] Flip primary=0x70100e9af0 back=0x70100e9bb0 px=0x7010cf0010 backpx=0x7010da0010 v0=1947 vb=1947
+[present] GL 2.1 Metal - 91.7 | Apple M2
+[present] 640x480 bpp=16 pitch=1280 drawable=1280x960 dst=0,0 1280x960 px0=00001947 err=1282
+[present] after draw err=0
+[present] back center=294921ff
+[present] front center=294921ff
+[diag] Flip primary=0x70100e9af0 back=0x70100e9bb0 px=0x7010da0010 backpx=0x7010cf0010 v0=1947 vb=1947
+[diag] EndScene target=100e9c50 primary=0 stored=1 px=0x7010da0010 640x480 nz=4800/4800 center=00001a45
+[diag] draws calls=373 ok=373 rej=[0,0,0,0,0,0,0,0] tex=11294f00 fvf=00000144 vp=0,0,640,480
+[diag] light=0 lights=0 cmat=1 csrc=1/0 mdiff=00000000 mamb=00000000 amb=00000000
+[diag] fog=0 mode=0/0 color=00000000 start=0 end=1 dens=1
+[diag] tss0 op=4 a1=2 a2=0 tci=0 addr=3/3 filt=1/1/1
+[diag] lit=0 unlit=373 fvfs= 00000144:373
+[diag] draw tex=112927f0 fvf=00000144 n=1 64x32 bpp=16 first=000010e5 mid=000010c5
+[diag] draw tex=11292730 fvf=00000144 n=1 64x32 bpp=16 first=00002986 mid=00002146
+[diag] draw tex=11292670 fvf=00000144 n=1 64x32 bpp=16 first=00002124 mid=000018e4
+[diag] draw tex=112925b0 fvf=00000144 n=1 64x32 bpp=16 first=00002924 mid=00003185
+[diag] draw tex=112924f0 fvf=00000144 n=1 64x32 bpp=16 first=00003183 mid=00003184
+[diag] draw tex=11292430 fvf=00000144 n=1 64x32 bpp=16 first=00002103 mid=00001903
+[diag] draw tex=11292370 fvf=00000144 n=1 64x32 bpp=16 first=00003163 mid=000020e3
+[diag] draw tex=112922b0 fvf=00000144 n=1 64x32 bpp=16 first=00001904 mid=00002165
+[diag] draw tex=112921f0 fvf=00000144 n=1 64x32 bpp=16 first=00002926 mid=00002104
+[diag] draw tex=11292130 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=00001905
+[diag] draw tex=11292070 fvf=00000144 n=1 64x32 bpp=16 first=00001905 mid=00001105
+[diag] draw tex=11291fb0 fvf=00000144 n=1 64x32 bpp=16 first=00002966 mid=00001926
+[diag] draw tex=11291ef0 fvf=00000144 n=1 64x32 bpp=16 first=00002944 mid=00001925
+[diag] draw tex=11291e30 fvf=00000144 n=1 64x32 bpp=16 first=00002144 mid=00002144
+[diag] draw tex=11291d70 fvf=00000144 n=1 64x32 bpp=16 first=00002964 mid=00002144
+[diag] draw tex=11291cb0 fvf=00000144 n=1 64x32 bpp=16 first=00002964 mid=00002123
+[diag] draw tex=11291bf0 fvf=00000144 n=1 64x32 bpp=16 first=000018e4 mid=00003984
+[diag] draw tex=11291b30 fvf=00000144 n=1 64x32 bpp=16 first=00002904 mid=00001944
+[diag] draw tex=11291a70 fvf=00000144 n=1 64x32 bpp=16 first=000010e5 mid=00002125
+[diag] draw tex=112919b0 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=00001906
+[diag] draw tex=112918f0 fvf=00000144 n=1 64x32 bpp=16 first=00002125 mid=00002126
+[diag] draw tex=11291830 fvf=00000144 n=1 64x32 bpp=16 first=00001965 mid=00002125
+[diag] draw tex=11291770 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00003164
+[diag] draw tex=112916b0 fvf=00000144 n=1 64x32 bpp=16 first=00002123 mid=00002964
+[diag] draw tex=112915f0 fvf=00000144 n=1 64x32 bpp=16 first=00002144 mid=00003184
+[diag] draw tex=11291530 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00003143
+[diag] draw tex=11291470 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00001924
+[diag] draw tex=112913b0 fvf=00000144 n=1 64x32 bpp=16 first=00002124 mid=00002144
+[diag] draw tex=112912f0 fvf=00000144 n=1 64x32 bpp=16 first=00002946 mid=00002125
+[diag] draw tex=11291230 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=000010e5
+[diag] draw tex=11291170 fvf=00000144 n=1 64x32 bpp=16 first=00002945 mid=00001105
+[diag] draw tex=112910b0 fvf=00000144 n=1 64x32 bpp=16 first=000039c5 mid=00002986
+[diag] EndScene target=100e9c50 primary=0 stored=1 px=0x7010da0010 640x480 nz=4800/4800 center=00001a45
+[diag] draws calls=347 ok=347 rej=[0,0,0,0,0,0,0,0] tex=11294f00 fvf=00000144 vp=0,0,640,480
+[diag] light=0 lights=0 cmat=1 csrc=1/0 mdiff=00000000 mamb=00000000 amb=00000000
+[diag] fog=0 mode=0/0 color=00000000 start=0 end=1 dens=1
+[diag] tss0 op=4 a1=2 a2=0 tci=0 addr=3/3 filt=1/1/1
+[diag] lit=0 unlit=347 fvfs= 00000144:347
+[diag] draw tex=112927f0 fvf=00000144 n=1 64x32 bpp=16 first=000010e5 mid=000010c5
+[diag] draw tex=11292730 fvf=00000144 n=1 64x32 bpp=16 first=00002986 mid=00002146
+[diag] draw tex=11292670 fvf=00000144 n=1 64x32 bpp=16 first=00002124 mid=000018e4
+[diag] draw tex=112925b0 fvf=00000144 n=1 64x32 bpp=16 first=00002924 mid=00003185
+[diag] draw tex=112924f0 fvf=00000144 n=1 64x32 bpp=16 first=00003183 mid=00003184
+[diag] draw tex=11292430 fvf=00000144 n=1 64x32 bpp=16 first=00002103 mid=00001903
+[diag] draw tex=11292370 fvf=00000144 n=1 64x32 bpp=16 first=00003163 mid=000020e3
+[diag] draw tex=112922b0 fvf=00000144 n=1 64x32 bpp=16 first=00001904 mid=00002165
+[diag] draw tex=112921f0 fvf=00000144 n=1 64x32 bpp=16 first=00002926 mid=00002104
+[diag] draw tex=11292130 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=00001905
+[diag] draw tex=11292070 fvf=00000144 n=1 64x32 bpp=16 first=00001905 mid=00001105
+[diag] draw tex=11291fb0 fvf=00000144 n=1 64x32 bpp=16 first=00002966 mid=00001926
+[diag] draw tex=11291ef0 fvf=00000144 n=1 64x32 bpp=16 first=00002944 mid=00001925
+[diag] draw tex=11291e30 fvf=00000144 n=1 64x32 bpp=16 first=00002144 mid=00002144
+[diag] draw tex=11291d70 fvf=00000144 n=1 64x32 bpp=16 first=00002964 mid=00002144
+[diag] draw tex=11291cb0 fvf=00000144 n=1 64x32 bpp=16 first=00002964 mid=00002123
+[diag] draw tex=11291bf0 fvf=00000144 n=1 64x32 bpp=16 first=000018e4 mid=00003984
+[diag] draw tex=11291b30 fvf=00000144 n=1 64x32 bpp=16 first=00002904 mid=00001944
+[diag] draw tex=11291a70 fvf=00000144 n=1 64x32 bpp=16 first=000010e5 mid=00002125
+[diag] draw tex=112919b0 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=00001906
+[diag] draw tex=112918f0 fvf=00000144 n=1 64x32 bpp=16 first=00002125 mid=00002126
+[diag] draw tex=11291830 fvf=00000144 n=1 64x32 bpp=16 first=00001965 mid=00002125
+[diag] draw tex=11291770 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00003164
+[diag] draw tex=112916b0 fvf=00000144 n=1 64x32 bpp=16 first=00002123 mid=00002964
+[diag] draw tex=112915f0 fvf=00000144 n=1 64x32 bpp=16 first=00002144 mid=00003184
+[diag] draw tex=11291530 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00003143
+[diag] draw tex=11291470 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00001924
+[diag] draw tex=112913b0 fvf=00000144 n=1 64x32 bpp=16 first=00002124 mid=00002144
+[diag] draw tex=112912f0 fvf=00000144 n=1 64x32 bpp=16 first=00002946 mid=00002125
+[diag] draw tex=11291230 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=000010e5
+[diag] draw tex=11291170 fvf=00000144 n=1 64x32 bpp=16 first=00002945 mid=00001105
+[diag] draw tex=112910b0 fvf=00000144 n=1 64x32 bpp=16 first=000039c5 mid=00002986
+[diag] EndScene target=100e9c50 primary=0 stored=1 px=0x7010da0010 640x480 nz=4800/4800 center=00001a45
+[diag] draws calls=345 ok=345 rej=[0,0,0,0,0,0,0,0] tex=11294f00 fvf=00000144 vp=0,0,640,480
+[diag] light=0 lights=0 cmat=1 csrc=1/0 mdiff=00000000 mamb=00000000 amb=00000000
+[diag] fog=0 mode=0/0 color=00000000 start=0 end=1 dens=1
+[diag] tss0 op=4 a1=2 a2=0 tci=0 addr=3/3 filt=1/1/1
+[diag] lit=0 unlit=345 fvfs= 00000144:345
+[diag] draw tex=112927f0 fvf=00000144 n=1 64x32 bpp=16 first=000010e5 mid=000010c5
+[diag] draw tex=11292730 fvf=00000144 n=1 64x32 bpp=16 first=00002986 mid=00002146
+[diag] draw tex=11292670 fvf=00000144 n=1 64x32 bpp=16 first=00002124 mid=000018e4
+[diag] draw tex=112925b0 fvf=00000144 n=1 64x32 bpp=16 first=00002924 mid=00003185
+[diag] draw tex=112924f0 fvf=00000144 n=1 64x32 bpp=16 first=00003183 mid=00003184
+[diag] draw tex=11292430 fvf=00000144 n=1 64x32 bpp=16 first=00002103 mid=00001903
+[diag] draw tex=11292370 fvf=00000144 n=1 64x32 bpp=16 first=00003163 mid=000020e3
+[diag] draw tex=112922b0 fvf=00000144 n=1 64x32 bpp=16 first=00001904 mid=00002165
+[diag] draw tex=112921f0 fvf=00000144 n=1 64x32 bpp=16 first=00002926 mid=00002104
+[diag] draw tex=11292130 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=00001905
+[diag] draw tex=11292070 fvf=00000144 n=1 64x32 bpp=16 first=00001905 mid=00001105
+[diag] draw tex=11291fb0 fvf=00000144 n=1 64x32 bpp=16 first=00002966 mid=00001926
+[diag] draw tex=11291ef0 fvf=00000144 n=1 64x32 bpp=16 first=00002944 mid=00001925
+[diag] draw tex=11291e30 fvf=00000144 n=1 64x32 bpp=16 first=00002144 mid=00002144
+[diag] draw tex=11291d70 fvf=00000144 n=1 64x32 bpp=16 first=00002964 mid=00002144
+[diag] draw tex=11291cb0 fvf=00000144 n=1 64x32 bpp=16 first=00002964 mid=00002123
+[diag] draw tex=11291bf0 fvf=00000144 n=1 64x32 bpp=16 first=000018e4 mid=00003984
+[diag] draw tex=11291b30 fvf=00000144 n=1 64x32 bpp=16 first=00002904 mid=00001944
+[diag] draw tex=11291a70 fvf=00000144 n=1 64x32 bpp=16 first=000010e5 mid=00002125
+[diag] draw tex=112919b0 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=00001906
+[diag] draw tex=112918f0 fvf=00000144 n=1 64x32 bpp=16 first=00002125 mid=00002126
+[diag] draw tex=11291830 fvf=00000144 n=1 64x32 bpp=16 first=00001965 mid=00002125
+[diag] draw tex=11291770 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00003164
+[diag] draw tex=112916b0 fvf=00000144 n=1 64x32 bpp=16 first=00002123 mid=00002964
+[diag] draw tex=112915f0 fvf=00000144 n=1 64x32 bpp=16 first=00002144 mid=00003184
+[diag] draw tex=11291530 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00003143
+[diag] draw tex=11291470 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00001924
+[diag] draw tex=112913b0 fvf=00000144 n=1 64x32 bpp=16 first=00002124 mid=00002144
+[diag] draw tex=112912f0 fvf=00000144 n=1 64x32 bpp=16 first=00002946 mid=00002125
+[diag] draw tex=11291230 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=000010e5
+[diag] draw tex=11291170 fvf=00000144 n=1 64x32 bpp=16 first=00002945 mid=00001105
+[diag] draw tex=112910b0 fvf=00000144 n=1 64x32 bpp=16 first=000039c5 mid=00002986
+[diag] EndScene target=100e9c50 primary=0 stored=1 px=0x7010da0010 640x480 nz=4800/4800 center=000012a5
+[diag] draws calls=394 ok=394 rej=[0,0,0,0,0,0,0,0] tex=11294f00 fvf=00000144 vp=0,0,640,480
+[diag] light=0 lights=0 cmat=1 csrc=1/0 mdiff=00000000 mamb=00000000 amb=00000000
+[diag] fog=0 mode=0/0 color=00000000 start=0 end=1 dens=1
+[diag] tss0 op=4 a1=2 a2=0 tci=0 addr=3/3 filt=1/1/1
+[diag] lit=0 unlit=394 fvfs= 00000144:394
+[diag] draw tex=112927f0 fvf=00000144 n=1 64x32 bpp=16 first=000010e5 mid=000010c5
+[diag] draw tex=11292730 fvf=00000144 n=1 64x32 bpp=16 first=00002986 mid=00002146
+[diag] draw tex=11292670 fvf=00000144 n=1 64x32 bpp=16 first=00002124 mid=000018e4
+[diag] draw tex=112925b0 fvf=00000144 n=1 64x32 bpp=16 first=00002924 mid=00003185
+[diag] draw tex=112924f0 fvf=00000144 n=1 64x32 bpp=16 first=00003183 mid=00003184
+[diag] draw tex=11292430 fvf=00000144 n=1 64x32 bpp=16 first=00002103 mid=00001903
+[diag] draw tex=11292370 fvf=00000144 n=1 64x32 bpp=16 first=00003163 mid=000020e3
+[diag] draw tex=112922b0 fvf=00000144 n=1 64x32 bpp=16 first=00001904 mid=00002165
+[diag] draw tex=112921f0 fvf=00000144 n=1 64x32 bpp=16 first=00002926 mid=00002104
+[diag] draw tex=11292130 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=00001905
+[diag] draw tex=11292070 fvf=00000144 n=1 64x32 bpp=16 first=00001905 mid=00001105
+[diag] draw tex=11291fb0 fvf=00000144 n=1 64x32 bpp=16 first=00002966 mid=00001926
+[diag] draw tex=11291ef0 fvf=00000144 n=1 64x32 bpp=16 first=00002944 mid=00001925
+[diag] draw tex=11291e30 fvf=00000144 n=1 64x32 bpp=16 first=00002144 mid=00002144
+[diag] draw tex=11291d70 fvf=00000144 n=1 64x32 bpp=16 first=00002964 mid=00002144
+[diag] draw tex=11291cb0 fvf=00000144 n=1 64x32 bpp=16 first=00002964 mid=00002123
+[diag] draw tex=11291bf0 fvf=00000144 n=1 64x32 bpp=16 first=000018e4 mid=00003984
+[diag] draw tex=11291b30 fvf=00000144 n=1 64x32 bpp=16 first=00002904 mid=00001944
+[diag] draw tex=11291a70 fvf=00000144 n=1 64x32 bpp=16 first=000010e5 mid=00002125
+[diag] draw tex=112919b0 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=00001906
+[diag] draw tex=112918f0 fvf=00000144 n=1 64x32 bpp=16 first=00002125 mid=00002126
+[diag] draw tex=11291830 fvf=00000144 n=1 64x32 bpp=16 first=00001965 mid=00002125
+[diag] draw tex=11291770 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00003164
+[diag] draw tex=112916b0 fvf=00000144 n=1 64x32 bpp=16 first=00002123 mid=00002964
+[diag] draw tex=112915f0 fvf=00000144 n=1 64x32 bpp=16 first=00002144 mid=00003184
+[diag] draw tex=11291530 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00003143
+[diag] draw tex=11291470 fvf=00000144 n=1 64x32 bpp=16 first=00002984 mid=00001924
+[diag] draw tex=112913b0 fvf=00000144 n=1 64x32 bpp=16 first=00002124 mid=00002144
+[diag] draw tex=112912f0 fvf=00000144 n=1 64x32 bpp=16 first=00002946 mid=00002125
+[diag] draw tex=11291230 fvf=00000144 n=1 64x32 bpp=16 first=00001906 mid=000010e5
+[diag] draw tex=11291170 fvf=00000144 n=1 64x32 bpp=16 first=00002945 mid=00001105
+[diag] draw tex=112910b0 fvf=00000144 n=1 64x32 bpp=16 first=000039c5 mid=00002986

@@ -257,22 +257,32 @@ static void put_pf_bpp(uint32_t pf, int bpp) {
     put_pf(pf, &f);
 }
 
-/* DDSURFACEDESC (108 bytes) and DDSURFACEDESC2 (124/128 bytes) share the
- * leading scalars but shift four fields by four bytes after dwReserved:
- *   lpSurface 36 -> 40, ddckCKSrcBlt 64 -> 68,
- *   ddpfPixelFormat 72 -> 76, ddsCaps 104 -> 108.
- * IDirectDraw7::CreateSurface/GetDisplayMode receive the 2 shape; older
- * interfaces receive the 1 shape. dwSize is the contract. A few DX7 callers
- * leave it at 0 even though they fill the 2 fields, so a valid pixel format
- * or a nonzero DDSCAPS2 at byte 108 is used as a fallback signature. */
+/* DDSURFACEDESC (108 bytes) and DDSURFACEDESC2 (124 bytes) have the SAME
+ * offsets through ddsCaps: lpSurface +36, ddpfPixelFormat +72, ddsCaps +104.
+ * DDSURFACEDESC2 widens ddsCaps to DDSCAPS2 (whose first DWORD is the same
+ * caps word) and appends dwTextureStage at +120. See mingw-w64's ddraw.h.
+ * Retail IGI confirms it: its 0x50B4F0 pixel-conversion routine passes a
+ * 124-byte descriptor and reads DDPF_RGB from +76 and dwRGBBitCount from
+ * +84, i.e. a pixel format based at +72. Treating every size >= 124 as a
+ * four-byte-shifted variant made GetSurfaceDesc write the pixel format at
+ * +76 instead, so IGI read dwSize (32) as dwFlags and aborted with
+ * "Invalid texture format".
+ *
+ * Some titles (wf.exe) instead use a nonstandard 128-byte descriptor with
+ * fields shifted by four; keep recognising that shape by its dwSize, and
+ * the old signature fallback for callers that leave dwSize at 0. A genuine
+ * 124-byte descriptor must never be shifted. */
 typedef struct { uint32_t size, caps, pf, surface, cksrc; } dd_desc_t;
 static dd_desc_t desc_shape(uint32_t d) {
     uint32_t size = MEM32(d);
-    int two = size >= 124;
-    if (!two && MEM32(d + 76) == 32 && (MEM32(d + 80) & DDPF_RGB) &&
-        !(MEM32(d + 72) == 32 && (MEM32(d + 76) & DDPF_RGB))) two = 1;
-    if (!two && MEM32(d + 108) && !MEM32(d + 104)) two = 1;
-    if (two) return (dd_desc_t){ size >= 124 ? size : 124, 108, 76, 40, 68 };
+    if (size >= 128) return (dd_desc_t){ size, 108, 76, 40, 68 }; /* nonstandard 128-byte shape */
+    if (size < 124) {
+        if (MEM32(d + 76) == 32 && (MEM32(d + 80) & DDPF_RGB) &&
+            !(MEM32(d + 72) == 32 && (MEM32(d + 76) & DDPF_RGB)))
+            return (dd_desc_t){ 124, 108, 76, 40, 68 };
+        if (MEM32(d + 108) && !MEM32(d + 104))
+            return (dd_desc_t){ 124, 108, 76, 40, 68 };
+    }
     return (dd_desc_t){ size >= 108 ? size : 108, 104, 72, 36, 64 };
 }
 static void put_desc(uint32_t d, surf_t *s) {
