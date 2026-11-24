@@ -115,7 +115,7 @@ static inline uint64_t rd_gs64(uint64_t off) { return __readgsqword((unsigned lo
 static inline uint32_t rd_gs32(uint64_t off) { return __readgsdword((unsigned long)off); }
 static inline void wr_gs64(uint64_t off, uint64_t v) { __writegsqword((unsigned long)off, v); }
 static inline void wr_gs32(uint64_t off, uint32_t v) { __writegsdword((unsigned long)off, v); }
-#else
+#elif defined(__x86_64__)
 static inline uint64_t rd_gs64(uint64_t off) {
     uint64_t v; __asm__ __volatile__("movq %%gs:(%1), %0" : "=r"(v) : "r"(off)); return v;
 }
@@ -128,6 +128,19 @@ static inline void wr_gs64(uint64_t off, uint64_t v) {
 static inline void wr_gs32(uint64_t off, uint32_t v) {
     __asm__ __volatile__("movl %0, %%gs:(%1)" :: "r"(v), "r"(off));
 }
+#else
+/* Apple Silicon has no GS segment. A simulated, process-wide TEB/PEB lives in
+ * cpu64.c so every translation unit sees the same one. It is deliberately
+ * minimal: gs:[0x30] (the PEB) is what MSVC CRT startup reads here. */
+uint64_t cpu64_rd_gs64(uint64_t off);
+uint32_t cpu64_rd_gs32(uint64_t off);
+void cpu64_wr_gs64(uint64_t off, uint64_t v);
+void cpu64_wr_gs32(uint64_t off, uint32_t v);
+void cpu64_set_peb_image_base(uint64_t va);
+static inline uint64_t rd_gs64(uint64_t off) { return cpu64_rd_gs64(off); }
+static inline uint32_t rd_gs32(uint64_t off) { return cpu64_rd_gs32(off); }
+static inline void wr_gs64(uint64_t off, uint64_t v) { cpu64_wr_gs64(off, v); }
+static inline void wr_gs32(uint64_t off, uint32_t v) { cpu64_wr_gs32(off, v); }
 #endif
 
 /* ---- atomics ---- */
@@ -205,8 +218,11 @@ static inline void do_cpuid(CPU *c)
     SET32(c->rdx, (uint32_t)r[3]);
 }
 
+/* A runner may replace this with a reporting implementation (see -DRECOMP_TODO
+ * in the regression harness) to get an exact VA/text for an unmodelled op. */
+void x64_todo(uint64_t va, const char *text);
 #ifndef RECOMP_TODO
-#define RECOMP_TODO(va, text) abort()
+#define RECOMP_TODO(va, text) x64_todo((va), (text))
 #endif
 
 /* ---- absolute image references ----

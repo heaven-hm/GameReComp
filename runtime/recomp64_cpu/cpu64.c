@@ -47,6 +47,52 @@
 /* ---- the one global the generated GVA() macro needs --------------------- */
 int64_t g_image_delta = 0;   /* live_base - PE ImageBase; 0 when MAP_FIXED works */
 
+/* ---- simulated TEB/PEB on hosts without a GS segment (Apple Silicon) ----
+ * Win64 CRT startup reads gs:[0x30] for the PEB and PEB+0x10 for the image
+ * base. x86 hosts use the real GS segment; here we keep one process-wide,
+ * zeroed pair of pages and let the simulated TEB point at the PEB. */
+#if !defined(__x86_64__) && !defined(_MSC_VER)
+static uint8_t g_teb[0x1000] __attribute__((aligned(16)));
+static uint8_t g_peb[0x400]  __attribute__((aligned(16)));
+
+static void cpu64_teb_init(void) {
+    static int done;
+    if (done) return;
+    done = 1;
+    memset(g_teb, 0, sizeof g_teb);
+    memset(g_peb, 0, sizeof g_peb);
+    *(uint64_t *)(void *)(g_teb + 0x30) = (uint64_t)(uintptr_t)g_peb; /* PEB */
+}
+uint64_t cpu64_rd_gs64(uint64_t off) {
+    cpu64_teb_init();
+    return off + 8 <= sizeof g_teb ? rd64((uint64_t)(uintptr_t)g_teb + off) : 0;
+}
+uint32_t cpu64_rd_gs32(uint64_t off) {
+    cpu64_teb_init();
+    return off + 4 <= sizeof g_teb ? rd32((uint64_t)(uintptr_t)g_teb + off) : 0;
+}
+void cpu64_wr_gs64(uint64_t off, uint64_t v) {
+    cpu64_teb_init();
+    if (off + 8 <= sizeof g_teb) wr64((uint64_t)(uintptr_t)g_teb + off, v);
+}
+void cpu64_wr_gs32(uint64_t off, uint32_t v) {
+    cpu64_teb_init();
+    if (off + 4 <= sizeof g_teb) wr32((uint64_t)(uintptr_t)g_teb + off, v);
+}
+void cpu64_set_peb_image_base(uint64_t va) {
+    cpu64_teb_init();
+    wr64((uint64_t)(uintptr_t)g_peb + 0x10, va);
+}
+#endif
+
+/* ---- default unmodelled-op handler: override with a strong symbol ------- */
+__attribute__((weak))
+void x64_todo(uint64_t va, const char *text) {
+    fprintf(stderr, "cpu64: RECOMP_TODO at %#llx: %s\n",
+            (unsigned long long)va, text);
+    abort();
+}
+
 /* ---- default HLE handler: override with a strong symbol in the runner ---- */
 __attribute__((weak))
 int hle_invoke(CPU *c, uint32_t idx) {
@@ -85,6 +131,13 @@ static int hle_index(uint64_t t, uint32_t *idx_out) {
     return 0;
 }
 
+static void unmodelled_import(uint32_t idx, const char *kind) {
+    fprintf(stderr, "cpu64: %s-import unmodelled: %s!%s (HLE slot %u)\n",
+            kind, recomp_imports[idx].dll, recomp_imports[idx].name, idx);
+    fflush(stderr);
+    abort();
+}
+
 static void bad_target(CPU *c, uint64_t target, const char *kind) {
     fprintf(stderr, "cpu64: %s to unmapped guest VA %#llx (guest RIP %#llx)\n",
             kind, (unsigned long long)target, (unsigned long long)c->rip);
@@ -97,7 +150,7 @@ void dispatch(CPU *c, uint64_t target) {
     uint32_t idx;
     if (hle_index(target, &idx)) {
         if (!hle_invoke(c, idx))
-            bad_target(c, target, "call-import");
+            unmodelled_import(idx, "call");
         /* The generated `call` already pushed the return address. A real
          * callee would pop it on `ret`; so do we, closing the guest stack. */
         c->rsp += 8;
@@ -111,11 +164,16 @@ void dispatch(CPU *c, uint64_t target) {
 void dispatch_jmp(CPU *c, uint64_t target) {
     uint32_t idx;
     if (hle_index(target, &idx)) {
-        /* Tail call: no return address was pushed for this jump. The handler
-         * owns the transfer; a returning import must pop the caller's return
-         * address itself. ExitProcess (the common case here) never returns. */
+        /* A guest `jmp [__imp_X]` is usually MSVC's one-line import thunk:
+         * some caller did `call thunk`, so the thunk's return address is on
+         * the guest stack. The real import ends in `ret` and consumes it.
+         * Emulate that ret here for every handler that returns; ExitProcess
+         * never does, so it is unaffected. Not popping used to shift the
+         * guest stack by 8 on each import and silently trash callee-saved
+         * registers on the next call. */
         if (!hle_invoke(c, idx))
-            bad_target(c, target, "jmp-import");
+            unmodelled_import(idx, "jmp");
+        c->rsp += 8;
         return;
     }
     const recomp_entry_t *e = find_entry(target);
@@ -232,6 +290,9 @@ int recomp64_load_image(const char *path, CPU *c, uint64_t *entry_out) {
     memset(c, 0, sizeof(*c));
     c->rsp = ret_slot;
     c->rip = GVA(image_base + entry_rva);
+#if !defined(__x86_64__) && !defined(_MSC_VER)
+    cpu64_set_peb_image_base(GVA(image_base));  /* simulated PEB, see above */
+#endif
 
     /* The generated code reads IAT slots through GVA(); write the sentinels to
      * the same addresses, so an indirect call through any of them lands in the

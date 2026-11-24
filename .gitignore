@@ -142,6 +142,7 @@ gui/build/
 
 # Command Code agent state (taste, session scratch); not part of the project.
 .commandcode/
+.opencode/
 
 # Generated autorecomp project trees (multi-GB, regenerable; never commit).
 # Covers the default `projects/<game>` layout at any directory depth and the
