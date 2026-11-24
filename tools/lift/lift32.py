@@ -708,6 +708,10 @@ class Lifter:
                 'jb':  "0",               'jae': "1",                 # CF=0: jb never, jae always
                 'jg':  f"TEST_G({ops})",  'jle': f"TEST_LE({ops})",
                 'jge': f"TEST_NS({ops})", 'jl':  f"TEST_S({ops})",
+                # Logic clears OF. CMP_O/CMP_NO compute the overflow of a
+                # subtraction, which is NOT the question after `test a, b`
+                # (a - b can overflow while the test's OF is 0).
+                'jo':  "0",               'jno': "1",
             }
             if jform in test_only:
                 return test_only[jform]
@@ -750,6 +754,10 @@ class Lifter:
                 return f"BT_CF({ops})"
             if cmp_macro == 'CMP_AE':
                 return f"(!BT_CF({ops}))"
+            # BT leaves OF undefined; keep the deterministic answer the old
+            # constant macro gave instead of deriving a subtraction's overflow.
+            if jform in ('jo', 'jno'):
+                return '0' if jform == 'jo' else '1'
             return f"/* bt */ {cmp_macro}({ops})"
         else:
             return f"/* flag from {setter} */ {cmp_macro}({ops})"

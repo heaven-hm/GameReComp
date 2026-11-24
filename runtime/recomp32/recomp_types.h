@@ -357,9 +357,20 @@ static inline uint16_t _pop16(uint32_t *sp) {
 #define CMP_GE(a, b)   ((int32_t)(a) >= (int32_t)(b))       /* signed >= */
 #define CMP_S(a, b)    ((((uint32_t)(a) - (uint32_t)(b)) >> 31) != 0)  /* sign flag */
 #define CMP_NS(a, b)   ((((uint32_t)(a) - (uint32_t)(b)) >> 31) == 0)
-#define CMP_O(a, b)    0  /* TODO: overflow detection */
-#define CMP_NO(a, b)   1
-#define CMP_P(a, b)    0  /* TODO: parity */
+/* OF of the SUBTRACTION cmp/sub/dec perform: the carry into bit 31 differs
+ * from the carry out of it when a and b have different signs and the result's
+ * sign differs from a's. This is the same derivation recomp_cond() and
+ * recomp_eflags() use for FK_CMP/FK_DEC. A left-aligned narrow operand puts its
+ * own sign bit at 31, so the expression works at 8, 16 and 32 bits unchanged.
+ *
+ * These used to be the constants 0/1, so a `cmp; jo` or `sub; setno` read a
+ * fixed answer -- checked arithmetic and saturation code never took the
+ * overflow arm. Logic instructions clear OF and must not use these macros;
+ * lift32's _make_condition() emits 0/1 for them explicitly. */
+#define CMP_O(a, b)    ((((uint32_t)(a) ^ (uint32_t)(b)) & \
+                         ((uint32_t)(a) ^ ((uint32_t)(a) - (uint32_t)(b)))) >> 31)
+#define CMP_NO(a, b)   (!CMP_O(a, b))
+#define CMP_P(a, b)    0  /* TODO: parity (static jp/jnp use RECOMP_PF instead) */
 #define CMP_NP(a, b)   1
 
 /* Test-based conditions (from test a, b) */
