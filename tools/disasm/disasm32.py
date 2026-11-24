@@ -1489,6 +1489,8 @@ def close_dispatch_targets(read_va, functions, code_start, code_end,
                 code = read_va(addr, size)
             except Exception:
                 continue
+            if not code:
+                continue
             end = addr + size
             for ins in md.disasm(code, addr):
                 if ins.mnemonic.split()[-1] not in BRANCH:

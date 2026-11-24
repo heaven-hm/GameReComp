@@ -1,0 +1,3 @@
+tetris-jp-p8         exit=TIMEOUT frames=3 15.3s
+tetris-ch-p8         exit=TIMEOUT frames=3 15.0s
+summary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/summary.json

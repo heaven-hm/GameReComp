@@ -1,0 +1,27 @@
+{
+  "original": {
+    "command": [
+      "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+      "C:\\recomp-oracle\\arith-calc.exe"
+    ],
+    "script_sha256": "f87f097139286c6effa3556a602fa1e0ce4324882b61de74daa392fdb632d801",
+    "status": "BLOCKED",
+    "reason": "PermissionDeniedError: unable to access process with pid 90899 from the current user account"
+  },
+  "native": {
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p6-native/arith-calc/build/arith_calc"
+    ],
+    "script_sha256": "f87f097139286c6effa3556a602fa1e0ce4324882b61de74daa392fdb632d801",
+    "status": "BLOCKED",
+    "reason": "PermissionDeniedError: oops, frida-helper appears to have crashed. It may have been killed by the system while trying to access a hardened process. If this is the case, try setting these boot arguments: `sudo nvram boot-arg"
+  },
+  "status": "BLOCKED",
+  "reason": "original: PermissionDeniedError: unable to access process with pid 90899 from the current user account; native: PermissionDeniedError: oops, frida-helper appears to have crashed. It may have been killed by the system while trying to access a hardened process. If this is the case, try setting these boot arguments: `sudo nvram boot-arg",
+  "stdin_bytes": 0,
+  "hooks": [
+    "ExitProcess",
+    "WriteFile"
+  ],
+  "note": "Frida trace evidence only; not gameplay equivalence"
+}

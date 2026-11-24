@@ -1,0 +1,4012 @@
+{
+  "schema": 1,
+  "count": 500,
+  "summary": {
+    "SUPPORTED_NOT_TESTED": 490,
+    "NATIVE_FRAMES_PROOF": 4,
+    "NATIVE_PASS_PROCESS": 6
+  },
+  "note": "Static Windows analysis for all 500; macOS statuses from measured evidence only; Linux BLOCKED (container stalled). No row claims gameplay equivalence.",
+  "rows": [
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Cpp/DataDemo/igi2.exe",
+      "name": "igi2.exe",
+      "sha256": "4e4dd1858676aa07a755f2811189c41c442e1e673bcdad6fa7fc983dea23db98",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Cpp/c-plus-library-upstreams/stb/tests/oversample/oversample.exe",
+      "name": "oversample.exe",
+      "sha256": "8bbe984fe2e820a0f813f4281c39a7f040c9b6b1aeba1441f521040a2434f5ae",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Cpp/igi2-hm.exe",
+      "name": "igi2-hm.exe",
+      "sha256": "2ae67e6ac3c32d2b75e26f887b3a4bddd3dec029549743953c5a88719a505006",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Cpp/igi2.exe",
+      "name": "igi2.exe",
+      "sha256": "4e4dd1858676aa07a755f2811189c41c442e1e673bcdad6fa7fc983dea23db98",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Cpp/stb/tests/oversample/oversample.exe",
+      "name": "oversample.exe",
+      "sha256": "8bbe984fe2e820a0f813f4281c39a7f040c9b6b1aeba1441f521040a2434f5ae",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/GameReComp/.revng-in/Doukutsu.exe",
+      "name": "Doukutsu.exe",
+      "sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_FRAMES_PROOF",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/GameReComp/highlevel/doukutsu/.revng-project/Doukutsu.exe",
+      "name": "Doukutsu.exe",
+      "sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_FRAMES_PROOF",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/GameReComp/tests/fixtures/pe32-minimal.exe",
+      "name": "pe32-minimal.exe",
+      "sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Lua/mario-ai-neat/.venv-ppo/lib/python3.13/site-packages/pip/_vendor/distlib/t32.exe",
+      "name": "t32.exe",
+      "sha256": "6b4195e640a85ac32eb6f9628822a622057df1e459df7c17a12f97aeabc9415b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Lua/mario-ai-neat/.venv-ppo/lib/python3.13/site-packages/pip/_vendor/distlib/w32.exe",
+      "name": "w32.exe",
+      "sha256": "47872cc77f8e18cf642f868f23340a468e537e64521d9a3a416c8b84384d064b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Lua/mario-ai-neat/.venv-ppo/lib/python3.13/site-packages/setuptools/cli-32.exe",
+      "name": "cli-32.exe",
+      "sha256": "32acc1bc543116cbe2cff10cb867772df2f254ff2634c870aef0b46c4b696fdb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Lua/mario-ai-neat/.venv-ppo/lib/python3.13/site-packages/setuptools/cli.exe",
+      "name": "cli.exe",
+      "sha256": "32acc1bc543116cbe2cff10cb867772df2f254ff2634c870aef0b46c4b696fdb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Lua/mario-ai-neat/.venv-ppo/lib/python3.13/site-packages/setuptools/gui-32.exe",
+      "name": "gui-32.exe",
+      "sha256": "85dae1e95d77845f2cb59bcac3d4afe74bbe4c91a9bcc5bf4a71cd43104dbe7c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Lua/mario-ai-neat/.venv-ppo/lib/python3.13/site-packages/setuptools/gui.exe",
+      "name": "gui.exe",
+      "sha256": "85dae1e95d77845f2cb59bcac3d4afe74bbe4c91a9bcc5bf4a71cd43104dbe7c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/PrimeGen_Output/prime-gen_x86.exe",
+      "name": "prime-gen_x86.exe",
+      "sha256": "b6790d578a6a105e7e4f215ce15cd83216f987831bf66c0e122f974e6f18012c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/Bard-Interpreter/.conda/lib/python3.8/site-packages/pip/_vendor/distlib/t32.exe",
+      "name": "t32.exe",
+      "sha256": "6b4195e640a85ac32eb6f9628822a622057df1e459df7c17a12f97aeabc9415b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/Bard-Interpreter/.conda/lib/python3.8/site-packages/pip/_vendor/distlib/w32.exe",
+      "name": "w32.exe",
+      "sha256": "47872cc77f8e18cf642f868f23340a468e537e64521d9a3a416c8b84384d064b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/Bard-Interpreter/.conda/lib/python3.8/site-packages/setuptools/cli-32.exe",
+      "name": "cli-32.exe",
+      "sha256": "32acc1bc543116cbe2cff10cb867772df2f254ff2634c870aef0b46c4b696fdb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/Bard-Interpreter/.conda/lib/python3.8/site-packages/setuptools/cli.exe",
+      "name": "cli.exe",
+      "sha256": "32acc1bc543116cbe2cff10cb867772df2f254ff2634c870aef0b46c4b696fdb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/Bard-Interpreter/.conda/lib/python3.8/site-packages/setuptools/gui-32.exe",
+      "name": "gui-32.exe",
+      "sha256": "85dae1e95d77845f2cb59bcac3d4afe74bbe4c91a9bcc5bf4a71cd43104dbe7c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/Bard-Interpreter/.conda/lib/python3.8/site-packages/setuptools/gui.exe",
+      "name": "gui.exe",
+      "sha256": "85dae1e95d77845f2cb59bcac3d4afe74bbe4c91a9bcc5bf4a71cd43104dbe7c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/IGI-QVM-HexEditor/igivenv/lib/python3.12/site-packages/pip/_vendor/distlib/t32.exe",
+      "name": "t32.exe",
+      "sha256": "6b4195e640a85ac32eb6f9628822a622057df1e459df7c17a12f97aeabc9415b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/IGI-QVM-HexEditor/igivenv/lib/python3.12/site-packages/pip/_vendor/distlib/w32.exe",
+      "name": "w32.exe",
+      "sha256": "47872cc77f8e18cf642f868f23340a468e537e64521d9a3a416c8b84384d064b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/env/lib/python3.9/site-packages/pip/_vendor/distlib/t32.exe",
+      "name": "t32.exe",
+      "sha256": "6b4195e640a85ac32eb6f9628822a622057df1e459df7c17a12f97aeabc9415b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/env/lib/python3.9/site-packages/pip/_vendor/distlib/w32.exe",
+      "name": "w32.exe",
+      "sha256": "47872cc77f8e18cf642f868f23340a468e537e64521d9a3a416c8b84384d064b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/env/lib/python3.9/site-packages/setuptools/cli-32.exe",
+      "name": "cli-32.exe",
+      "sha256": "75f12ea2f30d9c0d872dade345f30f562e6d93847b6a509ba53beec6d0b2c346",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/env/lib/python3.9/site-packages/setuptools/cli.exe",
+      "name": "cli.exe",
+      "sha256": "75f12ea2f30d9c0d872dade345f30f562e6d93847b6a509ba53beec6d0b2c346",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/env/lib/python3.9/site-packages/setuptools/gui-32.exe",
+      "name": "gui-32.exe",
+      "sha256": "5c1af46c7300e87a73dacf6cf41ce397e3f05df6bd9c7e227b4ac59f85769160",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/Python/env/lib/python3.9/site-packages/setuptools/gui.exe",
+      "name": "gui.exe",
+      "sha256": "5c1af46c7300e87a73dacf6cf41ce397e3f05df6bd9c7e227b4ac59f85769160",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/open-igi/tools/igi-probe/bin/igi-inject.exe",
+      "name": "igi-inject.exe",
+      "sha256": "77625746c77cc4c02556be425de252c509bb6e313acaaf48c712247f50a69927",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/open-igi/tools/igi-probe/bin/igi-probe-tail.exe",
+      "name": "igi-probe-tail.exe",
+      "sha256": "924210a0960ca8fb8c1fdebdaed3af3c2dd572bfd9b9b3be887032b803a3999b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/quake-3-qvm-studio/build-win/bin/tools/win32/lcc.exe",
+      "name": "lcc.exe",
+      "sha256": "fc9daab57340c8578e050d838722e7f5afb871af44bc0f5d28ff62d1d375780b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/quake-3-qvm-studio/build-win/bin/tools/win32/q3asm.exe",
+      "name": "q3asm.exe",
+      "sha256": "2ce0c355d2c8d9552257676f5f30aab2491efa872689d8803fe1f004ff72e713",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/quake-3-qvm-studio/build-win/bin/tools/win32/q3cpp.exe",
+      "name": "q3cpp.exe",
+      "sha256": "1daa2b4a559f791831c4c745d3c7f412dd5257597cafbda76549c62c19a5f33a",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/quake-3-qvm-studio/build-win/bin/tools/win32/q3rcc.exe",
+      "name": "q3rcc.exe",
+      "sha256": "ba6b3d528d5fe825ecbfe679edabb15326e1d23806c80801d6b9c376e3e62e77",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/third_party/unblob/tests/integration/archive/msi/__output__/7z2501.msi.padded_extract/16-1563664.msi_extract/_7z.exe",
+      "name": "_7z.exe",
+      "sha256": "b1e06a424f2e7e3b9a5bf676665bd14bc39785fbc48cfdcc54ab63c574de0b01",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/third_party/unblob/tests/integration/archive/msi/__output__/7z2501.msi.padded_extract/16-1563664.msi_extract/_7zFM.exe",
+      "name": "_7zFM.exe",
+      "sha256": "395b95198554c24395b172b9e9de3c590b53b617d788840b1150df2c7f7b864f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/third_party/unblob/tests/integration/archive/msi/__output__/7z2501.msi.padded_extract/16-1563664.msi_extract/_7zG.exe",
+      "name": "_7zG.exe",
+      "sha256": "02ff39847dc55c4af036bcf0826ee053836e0c1af15aaa12ec922de922e6da0b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/third_party/unblob/tests/integration/archive/msi/__output__/7z2501.msi_extract/_7z.exe",
+      "name": "_7z.exe",
+      "sha256": "b1e06a424f2e7e3b9a5bf676665bd14bc39785fbc48cfdcc54ab63c574de0b01",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/third_party/unblob/tests/integration/archive/msi/__output__/7z2501.msi_extract/_7zFM.exe",
+      "name": "_7zFM.exe",
+      "sha256": "395b95198554c24395b172b9e9de3c590b53b617d788840b1150df2c7f7b864f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/re-agent/third_party/unblob/tests/integration/archive/msi/__output__/7z2501.msi_extract/_7zG.exe",
+      "name": "_7zG.exe",
+      "sha256": "02ff39847dc55c4af036bcf0826ee053836e0c1af15aaa12ec922de922e6da0b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/reveng-web-gui/uploads/Tetris.exe",
+      "name": "Tetris.exe",
+      "sha256": "f7ccf8fc2f57020c50f1d66de772dc50e2d0e47f5bd819d4a6ddde795c3c959f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/reveng-web-gui/uploads/TicTacToe.exe",
+      "name": "TicTacToe.exe",
+      "sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/reveng-web-gui/uploads/igi.exe",
+      "name": "igi.exe",
+      "sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/revng-workspace/igi.exe",
+      "name": "igi.exe",
+      "sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Documents/Code/test_prime_gen/prime-gen_x86.exe",
+      "name": "prime-gen_x86.exe",
+      "sha256": "b6790d578a6a105e7e4f215ce15cd83216f987831bf66c0e122f974e6f18012c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Cheat_softs/Game_Mods_Trainers/IGI/IGI_AimBot.exe",
+      "name": "IGI_AimBot.exe",
+      "sha256": "baea7e9cc29147c5823ad792361f409e7b959ba66b2294a0d6520ad99c5a9275",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Cheat_softs/Game_Mods_Trainers/IGI/Project I.G.I +5 Pro Trainer.exe",
+      "name": "Project I.G.I +5 Pro Trainer.exe",
+      "sha256": "2dce3925ebfebc4f05fbba7a128e225345e8b7e038e8e71d5a59063599aa8e4b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Cheat_softs/NES_GameGenie/NES_GameGenieDecoder.exe",
+      "name": "NES_GameGenieDecoder.exe",
+      "sha256": "095fdb3150f005438761afd9c68ee65441e4a6d25a668bcfd59b44ec39d534f5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Cheat_softs/NES_GameGenie/NES_GameGenieEncoder.exe",
+      "name": "NES_GameGenieEncoder.exe",
+      "sha256": "cf0686e4f9225403a27892a2c9202c6ce30abf6a2cf45792632e0090e99144dd",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Cheat_softs/NES_GameGenie/NES_GameGenieMaserListGenerator.exe",
+      "name": "NES_GameGenieMaserListGenerator.exe",
+      "sha256": "2f1bc67a11bf30785adb33f7f689822109ed61cd67dcf8f5e0356002a5e2a8e5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/IGI/IGI_AimBot.exe",
+      "name": "IGI_AimBot.exe",
+      "sha256": "baea7e9cc29147c5823ad792361f409e7b959ba66b2294a0d6520ad99c5a9275",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/Game_Mods_Trainers/IGI/Project I.G.I +5 Pro Trainer.exe",
+      "name": "Project I.G.I +5 Pro Trainer.exe",
+      "sha256": "2dce3925ebfebc4f05fbba7a128e225345e8b7e038e8e71d5a59063599aa8e4b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/NES_GameGenie/NES_GameGenieDecoder.exe",
+      "name": "NES_GameGenieDecoder.exe",
+      "sha256": "095fdb3150f005438761afd9c68ee65441e4a6d25a668bcfd59b44ec39d534f5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/NES_GameGenie/NES_GameGenieEncoder.exe",
+      "name": "NES_GameGenieEncoder.exe",
+      "sha256": "cf0686e4f9225403a27892a2c9202c6ce30abf6a2cf45792632e0090e99144dd",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Cheat_softs/NES_GameGenie/NES_GameGenieMaserListGenerator.exe",
+      "name": "NES_GameGenieMaserListGenerator.exe",
+      "sha256": "2f1bc67a11bf30785adb33f7f689822109ed61cd67dcf8f5e0356002a5e2a8e5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-Injector.exe",
+      "name": "IGI-Injector.exe",
+      "sha256": "81e6789212bf81f3bd4fd196aca5d1fa88fd92fc08b1f6d5c8713558728b7866",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-Keypress.exe",
+      "name": "IGI-Keypress.exe",
+      "sha256": "3b1803a1eb79b42b601ac2b9543777b2dff9bc09947add1bb0c2fc0c7f8f09cc",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI-MenuManager-External.exe",
+      "name": "IGI-MenuManager-External.exe",
+      "sha256": "0036433b855f1e78eb187ef998a27c014f6d489495cabda650a08c0b70621fb0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI1-Injector.exe",
+      "name": "IGI1-Injector.exe",
+      "sha256": "c9ecf17cb6d2c112ad630d1f3a0e80430963edc7062f3373dbb0191461fd3eb0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/IGI1-Keypress.exe",
+      "name": "IGI1-Keypress.exe",
+      "sha256": "c39bff36ac24a26abf803bedd75b9f62faee15f67176a43a9254186a57fd0e85",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/Project-IGI.exe",
+      "name": "Project-IGI.exe",
+      "sha256": "3f460b89495b5b9112447e453332258950d106874738f3efb2aa6d617eb5b26b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi.exe",
+      "name": "igi.exe",
+      "sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi1ed.exe",
+      "name": "igi1ed.exe",
+      "sha256": "37c947cb137efdad6c0168fe91238c38a3e6b07b70b01ba902a38e3e14239e8a",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/IGI/igi_mcp.exe",
+      "name": "igi_mcp.exe",
+      "sha256": "fdb74a3513a8a7856fdc90c7b4bf5713911fd8b5bd91b3e9125d7e556de12bde",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/IGIEditor.exe",
+      "name": "IGIEditor.exe",
+      "sha256": "883761d194f57999f85b30cf41ecc17cc519d132547ab4079a4c8f5ff7d9cf96",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/bin/IGI-Injector-GT.exe",
+      "name": "IGI-Injector-GT.exe",
+      "sha256": "03ee3f3fd20f2e8d1298f164bb8345ce1b450f48abea34b030a0062e32559470",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RMR9P2N.0/bin/IGI-Injector.exe",
+      "name": "IGI-Injector.exe",
+      "sha256": "a845f88e0882d74d14858fd477d495a84b766a5f6ce2853884939108e0f87459",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/$RECYCLE.BIN/$RV8AKVW.exe",
+      "name": "$RV8AKVW.exe",
+      "sha256": "3f460b89495b5b9112447e453332258950d106874738f3efb2aa6d617eb5b26b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/Resource_Convertor/gconv.exe",
+      "name": "gconv.exe",
+      "sha256": "5616139f4f94e7299b0703954d6a3eeda36fdda5cb17e19fa32163ba6b326c78",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/MemoryDataMap.exe",
+      "name": "MemoryDataMap.exe",
+      "sha256": "640ece4ea71ff17dbd7a09d49c2c918f6198362b5eae60e5c5b81dbdc64c4fac",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/hBitTest.exe",
+      "name": "hBitTest.exe",
+      "sha256": "f363446ee5e1d49ba73ba252ad4005aa3ed9126bf2d50fba22634f92809c656f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/include/gitHub_C.zip (Unzipped Files)/gitHub_C/MemoryDataMap.exe",
+      "name": "MemoryDataMap.exe",
+      "sha256": "640ece4ea71ff17dbd7a09d49c2c918f6198362b5eae60e5c5b81dbdc64c4fac",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/include/gitHub_C.zip (Unzipped Files)/gitHub_C/hBitTest.exe",
+      "name": "hBitTest.exe",
+      "sha256": "f363446ee5e1d49ba73ba252ad4005aa3ed9126bf2d50fba22634f92809c656f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/include/gitHub_C.zip (Unzipped Files)/gitHub_C/test.exe",
+      "name": "test.exe",
+      "sha256": "862c2999333f763877bc69317f3a8eee59a2eb9d2653a7f95c1919e12ebf2ac3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/gitHub_C/test.exe",
+      "name": "test.exe",
+      "sha256": "a6cbded24d5cf5d5a0ae1df8227184ca18800c45315bb09c719a3b02fc8fe137",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/igi2.exe",
+      "name": "igi2.exe",
+      "sha256": "2ae67e6ac3c32d2b75e26f887b3a4bddd3dec029549743953c5a88719a505006",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/igi2_sp_demo2/igi2.exe",
+      "name": "igi2.exe",
+      "sha256": "4e4dd1858676aa07a755f2811189c41c442e1e673bcdad6fa7fc983dea23db98",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Other/npp.8.6.Installer.x64.exe",
+      "name": "npp.8.6.Installer.x64.exe",
+      "sha256": "92b94f5df86bf73ccdce652e4e8b5d3085e16da2ae7fc9feeac6a6dcc01c4490",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/PDBs/Dedicated Server 1.2/igi2.exe",
+      "name": "igi2.exe",
+      "sha256": "2f3f21e53b8e435e568c7883405ae932d56c5a9135685510ad0d85ef7347091d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/PDBs/Unknown/LaunchIGI.exe",
+      "name": "LaunchIGI.exe",
+      "sha256": "4e1c996795d7700e79cece7d1285fa92dc460b384cde666c7f3ab20ab486445c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Programs/npp.8.6.5.Installer.x64.exe",
+      "name": "npp.8.6.5.Installer.x64.exe",
+      "sha256": "eedf45e0803ce36c4b745e54fc7a7136d9b364c2a795e646548a4350cf88a366",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/Programs/processhacker-2.39-setup.exe",
+      "name": "processhacker-2.39-setup.exe",
+      "sha256": "28042dd4a92a0033b8f1d419b9e989c5b8e32d1d2d881f5c8251d58ce35b9063",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/SIDE_BY_SIDE_EVIDENCE/windows/cube.exe",
+      "name": "cube.exe",
+      "sha256": "7844757c04eea2fcee04a7029e0ed6e4893d471c44c0bef81d00d009f15e9814",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/SIDE_BY_SIDE_EVIDENCE/windows/dxIka.exe",
+      "name": "dxIka.exe",
+      "sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/SIDE_BY_SIDE_EVIDENCE/windows/igi.exe",
+      "name": "igi.exe",
+      "sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe",
+      "name": "DoConfig.exe",
+      "sha256": "03f3c73a36920e8148a7d683f2f9ef0e5d6a14f32ab6ec59446919228012324f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
+      "name": "Doukutsu.exe",
+      "sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_FRAMES_PROOF",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/OrgView.exe",
+      "name": "OrgView.exe",
+      "sha256": "07bbca123dcb5ea5a32437ec87d291016de8894c07a27830f713cc8b9cecbf9f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/generally/GeneRally.exe",
+      "name": "GeneRally.exe",
+      "sha256": "868175b2cc2461ee0fe4d7b599eabfd94581d6dd54ea75a47f89f41617e82391",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/generally/TrackEditor.exe",
+      "name": "TrackEditor.exe",
+      "sha256": "ced9e54e6578a0e10fae997dcf23889cba323c9df926bafe1a455aa014876410",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/gunroar/gr.exe",
+      "name": "gr.exe",
+      "sha256": "6ea800ee918547ca1953a24bebdcd07c29cef4ada617d7321a7dc3701e825636",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/herocore/herocore gm5.exe",
+      "name": "herocore gm5.exe",
+      "sha256": "be411b8b64cf821470e17e1dc913410b14f1eaab46187c5ab57c8da03d09a8ce",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/herocore/herocore gm7.exe",
+      "name": "herocore gm7.exe",
+      "sha256": "9146fc64eb6704cf99ed5eb1728312a9571a6c472a300415c9261d32fcbd62ec",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/ikachan/dxIka.exe",
+      "name": "dxIka.exe",
+      "sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/noiz2sa/noiz2sa.exe",
+      "name": "noiz2sa.exe",
+      "sha256": "389af5a46ee800419e1596c0fae8114ecfedc650f3658907eed4371264ccd3a5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/parsec47/p47.exe",
+      "name": "p47.exe",
+      "sha256": "41b2f77d2d7ac96821a85a38be3ee7f0f95b4e5096588e38f0c9092e224e520b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/rrootage/rr.exe",
+      "name": "rr.exe",
+      "sha256": "f3d81d7025738cde59e26b5f2af082e5c43ee75937dbc00aa8f5326fcabe5def",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/torus_trooper/tt.exe",
+      "name": "tt.exe",
+      "sha256": "b3a93b12e110e885d5ccc5546722dbee8864e69d1b9cf111c31e43b1012ce1cb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/tumiki_fighters/tf.exe",
+      "name": "tf.exe",
+      "sha256": "8e77d496d636431384fe49577450fa5b7ddf1211b2521d09de73174500305ce1",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/warning_forever/wf.exe",
+      "name": "wf.exe",
+      "sha256": "5eb8095ed202f27a6edb8d27768947aa9c4e3687f4b8771e6ae58e023002eb3c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/luhn/luhn.exe",
+      "name": "luhn.exe",
+      "sha256": "61069ebfe79053477e3859075d0a9c800d60d755a795a28ad069efc1d851b304",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/tetris/Tetris.exe",
+      "name": "Tetris.exe",
+      "sha256": "f7ccf8fc2f57020c50f1d66de772dc50e2d0e47f5bd819d4a6ddde795c3c959f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/tictactoe/TicTacToe.exe",
+      "name": "TicTacToe.exe",
+      "sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/blackbox.exe",
+      "name": "blackbox.exe",
+      "sha256": "7773fa08db2ab5a620a4ef4391a5f0fbd1af73474589128c6d0ef46f1c0b2d6e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/bridges.exe",
+      "name": "bridges.exe",
+      "sha256": "c1b131626cba992678505fdd3b46b050cad615ca2656b4b406f6fb0246983a0e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/busybox-w32.exe",
+      "name": "busybox-w32.exe",
+      "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/cube.exe",
+      "name": "cube.exe",
+      "sha256": "7844757c04eea2fcee04a7029e0ed6e4893d471c44c0bef81d00d009f15e9814",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/dominosa.exe",
+      "name": "dominosa.exe",
+      "sha256": "e4008df987c586467985f59a7547eb1ddb813ec2d7156caf7a6603ff16380397",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/dominosasolver.exe",
+      "name": "dominosasolver.exe",
+      "sha256": "3fd3ab4f6ead97d2c10b39669c2d878e454075cafbfde41ad6e2884cd9886638",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteen.exe",
+      "name": "fifteen.exe",
+      "sha256": "8d15d67687b8c97ed6d75fa25751b40e3d611812b321dddb79ba5b254c99319d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe",
+      "name": "fifteensolver.exe",
+      "sha256": "47b443772e36be8a8cf8c45fe80951a466264f370fa28a4851ea57b5c1f17d95",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/filling.exe",
+      "name": "filling.exe",
+      "sha256": "2aaee7c8243de7db98edc15a9155f7f7dcdd98b4e155113d41293f1c637faf13",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fillingsolver.exe",
+      "name": "fillingsolver.exe",
+      "sha256": "10429ad8f98bf6577f11cc0bbee59ff9f92fa9de32401667607b9f579477efff",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/flip.exe",
+      "name": "flip.exe",
+      "sha256": "12ce401c2a12538113edff5d89ac4823c43e889d75f1f25d9f9191ffcd667f2d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/flood.exe",
+      "name": "flood.exe",
+      "sha256": "af8257662e810595d3df52763a0cdc188c89a83590a641b573b792492666bb69",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fuzzpuzz.exe",
+      "name": "fuzzpuzz.exe",
+      "sha256": "39e01400d2554def359c08b016255c8c2d99264b65a274f2bff08576aaca7bf0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxies.exe",
+      "name": "galaxies.exe",
+      "sha256": "640c6e1f6c1198d06b2c631f73cdb6c2f01dca834fdc40f6068493484dff123b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxieseditor.exe",
+      "name": "galaxieseditor.exe",
+      "sha256": "a88c632ddb4be6b16e827a5c154294f935051bdcf42bf542023eae7269ade278",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiespicture.exe",
+      "name": "galaxiespicture.exe",
+      "sha256": "36d0ec0bfb7158d9af612d10e4a4d58bfcc6787e957d3c0cd60d1b154f1afec7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiessolver.exe",
+      "name": "galaxiessolver.exe",
+      "sha256": "830447211f443524c0ac228c3550631a36b2becf4def1a74c7f4c7d1b830faea",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/grapheditor.exe",
+      "name": "grapheditor.exe",
+      "sha256": "b6bf5a41790fed7ee9307b9440d4493ec99d0027afdd36ab3a0c57158012a641",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/guess.exe",
+      "name": "guess.exe",
+      "sha256": "8e7016c181c26edb90f80c88b520b129fec4c37a0db876c8d1d3018a4d53afe2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/inertia.exe",
+      "name": "inertia.exe",
+      "sha256": "aa07b60a412a29e9242a2dd1fe9c549ffdb7854c453c80a946f47db6bf607f42",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/keen.exe",
+      "name": "keen.exe",
+      "sha256": "912de2c925e0a7a4d63d7b8bd867babf94813f14d853c512f69581f6662fe5d3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/keensolver.exe",
+      "name": "keensolver.exe",
+      "sha256": "6e36aaa7bd453da42a71bdf6570cf840a12e8c506076503c71bc648f939196f4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/lightup.exe",
+      "name": "lightup.exe",
+      "sha256": "7300461da8df8946b51cdc537a82bfa86ca69d64bac6fbad493fdf88d83c973f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/lightupsolver.exe",
+      "name": "lightupsolver.exe",
+      "sha256": "083c74e0fc0af452010be6c21ee05e254ceff48735144f332a1a166b33efa0a5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/loopy.exe",
+      "name": "loopy.exe",
+      "sha256": "3a361d69dba873861638d1be01017e17a90530c4fe14195e1e0e41e390bee527",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/loopysolver.exe",
+      "name": "loopysolver.exe",
+      "sha256": "8872226363df5d0efbb1b5b83baa20bb211047ceaadf2a67abacc4a8be37cfb6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/magnets.exe",
+      "name": "magnets.exe",
+      "sha256": "10b951e0447036efcbe456eed12042077c6789acec99c9ddbd94cf71b6631e76",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/magnetssolver.exe",
+      "name": "magnetssolver.exe",
+      "sha256": "a0836637d41727cf7dc58eda163f9fbcdb45f3eb0f5c19a43d32d582ac3ba6ec",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/map.exe",
+      "name": "map.exe",
+      "sha256": "5c7fe4e711ea0fff40be617df1c5f4ea7ee4ab6e12985eeaaa2be024382abae6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/mapsolver.exe",
+      "name": "mapsolver.exe",
+      "sha256": "d3fc9b2ad1fb332ef7af45956f540d1e9c8cece5bd7fa54038e7194e6ca1a390",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/mineobfusc.exe",
+      "name": "mineobfusc.exe",
+      "sha256": "5d12f00abd0fc8cd3a7114b099763450aaf24b2a8f764437ac04b4dfdff4038b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/mines.exe",
+      "name": "mines.exe",
+      "sha256": "5c955baaa154bfec9eac34c93946f0de415774ee2f47594fa024c9b32a146284",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/mosaic.exe",
+      "name": "mosaic.exe",
+      "sha256": "cbadf209e334d6d50f6f52ccfa6c9d880bcb3eef29f557b81682250d597741c6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/netgame.exe",
+      "name": "netgame.exe",
+      "sha256": "0610d6b2de0a42f947d87d7f1b3b1fce51527514e1ac44ef5283425092500e42",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/netslide.exe",
+      "name": "netslide.exe",
+      "sha256": "f4c6bda12359b57da15b199437bc1e0327c7d9944331316913b84f6fc3b71e66",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/nullgame.exe",
+      "name": "nullgame.exe",
+      "sha256": "1cb900f0bd58979182b34a5ac66204d66e3091bb160a5fdd3a1cc64f1026be6c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pageant-w32.exe",
+      "name": "pageant-w32.exe",
+      "sha256": "16818a55ab56ce5dc080da7d3655c8dca6539384801ec96c30744839a1ce6d96",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/palisade.exe",
+      "name": "palisade.exe",
+      "sha256": "7d6d268edca598ad24b7d6ce3614bf353ce9e4e61cf5ed65d5a489916b9f034a",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pattern.exe",
+      "name": "pattern.exe",
+      "sha256": "8bbcea84712028d93a9ff1f8a1e839fbe8ff6a83daa0412049a65616fce30feb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/patternpicture.exe",
+      "name": "patternpicture.exe",
+      "sha256": "e3678cbe2f0fc76bbb41adc5f3b098675b3325400d05c0a95b6be3daef02d215",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/patternsolver.exe",
+      "name": "patternsolver.exe",
+      "sha256": "0aa0bacc9e5b561d83afc6b278e4937e55eb0c620f23ad15dfcc940ddcc5d02f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pearl.exe",
+      "name": "pearl.exe",
+      "sha256": "f000ad535b97d1f2c553f86a5411e80ad78b071b6796d3d254e0e65dc2c9daa4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pearlbench.exe",
+      "name": "pearlbench.exe",
+      "sha256": "974b918cde4797ae6e57a30d52fb5135077d1c93ff91ffda3084d3b00ccc7515",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pearlsolver.exe",
+      "name": "pearlsolver.exe",
+      "sha256": "4e8e93ced2be64f7768f656f9369310f95f2d8d0a06cedcf9d0694ad7aeebf06",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pegs.exe",
+      "name": "pegs.exe",
+      "sha256": "8d02d0990d395aed25c8593106b3ad7a03d87b72abc822099ea777dcded5794b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pq.exe",
+      "name": "pq.exe",
+      "sha256": "fca7602ed8212bcdafa96d5f35c619142c54396ac54e659c156b967edaeba17c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/psftp-w32.exe",
+      "name": "psftp-w32.exe",
+      "sha256": "e6e1b943afb5e7657dd121a991590d689a8ee273beec419602e52506e342a681",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/putty-w32.exe",
+      "name": "putty-w32.exe",
+      "sha256": "4c70267ca03a00ea761ec358498b990a7221decb36eace9b7dbe6a751be0fb3b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/puzzles.exe",
+      "name": "puzzles.exe",
+      "sha256": "9029726aa330ac90e10aa1d5b7b7766aadb2427334b284230d90243a697d83a1",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/range.exe",
+      "name": "range.exe",
+      "sha256": "2871092abc5ce22bca6ece723a72ce3e6aa3ed003c9a1b9997eb3163bede3be1",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/rect.exe",
+      "name": "rect.exe",
+      "sha256": "594da8d3528208fe35746a050d1b55fdc269e05f64b91f61a3f52d6d615f6834",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/samegame.exe",
+      "name": "samegame.exe",
+      "sha256": "6510b8a2bbdfa9c1778ae2b8850fb719b4722a21934460b47fb947354f6b455b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/signpost.exe",
+      "name": "signpost.exe",
+      "sha256": "ca41fa82b30c80617239638298dfff0f2fc9bb845546544332dfcfecae4b7f9e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/signpostsolver.exe",
+      "name": "signpostsolver.exe",
+      "sha256": "ff2b675c451f2863233f6dd181f822e7901407b4084140afdeeeecd7891fa038",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/singles.exe",
+      "name": "singles.exe",
+      "sha256": "e4233d3288152b4719025e30796ebf9ca49b5c250a1c092d6dc242c34e46dc7d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/singlessolver.exe",
+      "name": "singlessolver.exe",
+      "sha256": "365e9e8e3c2223499ea9409865846d3a4f0461ae4e05002a1cd06b4c2c6749e7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/sixteen.exe",
+      "name": "sixteen.exe",
+      "sha256": "639b4081ddf63837a34a368cfb2e86e309db097f52a616a744055da783bba56d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/slant.exe",
+      "name": "slant.exe",
+      "sha256": "b1c4f4f76f4a42a60f00c3a3f70fd4846754dbb81c9e2fe2bc462af59517baff",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/slantsolver.exe",
+      "name": "slantsolver.exe",
+      "sha256": "28841175ab7fa9bb5716892396e06c4d3c207c4c3eaee465b0c99a6acc223a44",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/solo.exe",
+      "name": "solo.exe",
+      "sha256": "e12ca48a03ee1ad5f50e34f0bcf4df6edeb2da55a39ac151577d5168d67fec73",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/solosolver.exe",
+      "name": "solosolver.exe",
+      "sha256": "9f8362981fb31885250147a9f72551f9b9b153eb8b9fd4f03bbd5304d09795e8",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tents.exe",
+      "name": "tents.exe",
+      "sha256": "b287a1d93f802f1f5563bc57108e29f8ccec47b56873ee196b1fbd80c402cb04",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tentssolver.exe",
+      "name": "tentssolver.exe",
+      "sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/towers.exe",
+      "name": "towers.exe",
+      "sha256": "04bbf383f8af16467027e4975df6b436a89c1a7d10b0f250cbab2494adbb225b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/towerssolver.exe",
+      "name": "towerssolver.exe",
+      "sha256": "5d4b560daa972a968c8156cbcf3d896c76edf5e91d0394b46f160dc810960b10",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tracks.exe",
+      "name": "tracks.exe",
+      "sha256": "6328dcbf47632f7203d1f0e894562d23c239748058c49f554f50bb49ae1f0dc3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/trackssolver.exe",
+      "name": "trackssolver.exe",
+      "sha256": "4d8eb5178bf0f5cd84f816e585765aa41d02768efd92cad15b393bbd1aa173bd",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/twiddle.exe",
+      "name": "twiddle.exe",
+      "sha256": "638b18a4207efed771b7ce0bdd988a4919b478f9330f306b97208cb3ec9158a2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/undead.exe",
+      "name": "undead.exe",
+      "sha256": "f26a3c47e2a0edf3eb3222761362986c94b8fbed5cb65b531494358bfe051ea3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unequal.exe",
+      "name": "unequal.exe",
+      "sha256": "a541eba61576bfb74c03fff7107b03c5bc7738475c47a1e9b96d8e3755d82827",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unequalsolver.exe",
+      "name": "unequalsolver.exe",
+      "sha256": "9d00fc91a1e90b6bb8e7856f28f61c2da00647b77a42806dfbf5ccb5c93dec15",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unruly.exe",
+      "name": "unruly.exe",
+      "sha256": "d73130ae7129d8ec0654e8aa1d25ef9f80cc6cc5169c7ec7ff0a35ba3e697207",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unrulysolver.exe",
+      "name": "unrulysolver.exe",
+      "sha256": "6d1cd7e7cc732b84086e30dd8a280132216804b69f33c075c51881bfffa0d0ed",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/untangle.exe",
+      "name": "untangle.exe",
+      "sha256": "18588ab2d5d0d1859c6611dd021c557540e6fcd8d2292e04cc5d645f895b81c6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+      "name": "arith-calc.exe",
+      "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_PASS_PROCESS",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/base64.exe",
+      "name": "base64.exe",
+      "sha256": "d805661c60b0b99eab94ad0359ece9b91e7a79fecccc630e92ffdf217c48f879",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_PASS_PROCESS",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/busybox.exe",
+      "name": "busybox.exe",
+      "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_PASS_PROCESS",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/pageant.exe",
+      "name": "pageant.exe",
+      "sha256": "16818a55ab56ce5dc080da7d3655c8dca6539384801ec96c30744839a1ce6d96",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/prime-gen.exe",
+      "name": "prime-gen.exe",
+      "sha256": "b6790d578a6a105e7e4f215ce15cd83216f987831bf66c0e122f974e6f18012c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/psftp.exe",
+      "name": "psftp.exe",
+      "sha256": "e6e1b943afb5e7657dd121a991590d689a8ee273beec419602e52506e342a681",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/putty.exe",
+      "name": "putty.exe",
+      "sha256": "4c70267ca03a00ea761ec358498b990a7221decb36eace9b7dbe6a751be0fb3b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/blackbox.exe",
+      "name": "blackbox.exe",
+      "sha256": "7773fa08db2ab5a620a4ef4391a5f0fbd1af73474589128c6d0ef46f1c0b2d6e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/bridges.exe",
+      "name": "bridges.exe",
+      "sha256": "c1b131626cba992678505fdd3b46b050cad615ca2656b4b406f6fb0246983a0e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/cube.exe",
+      "name": "cube.exe",
+      "sha256": "7844757c04eea2fcee04a7029e0ed6e4893d471c44c0bef81d00d009f15e9814",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/dominosa.exe",
+      "name": "dominosa.exe",
+      "sha256": "e4008df987c586467985f59a7547eb1ddb813ec2d7156caf7a6603ff16380397",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/dominosasolver.exe",
+      "name": "dominosasolver.exe",
+      "sha256": "3fd3ab4f6ead97d2c10b39669c2d878e454075cafbfde41ad6e2884cd9886638",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/fifteen.exe",
+      "name": "fifteen.exe",
+      "sha256": "8d15d67687b8c97ed6d75fa25751b40e3d611812b321dddb79ba5b254c99319d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/fifteensolver.exe",
+      "name": "fifteensolver.exe",
+      "sha256": "47b443772e36be8a8cf8c45fe80951a466264f370fa28a4851ea57b5c1f17d95",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/filling.exe",
+      "name": "filling.exe",
+      "sha256": "2aaee7c8243de7db98edc15a9155f7f7dcdd98b4e155113d41293f1c637faf13",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/fillingsolver.exe",
+      "name": "fillingsolver.exe",
+      "sha256": "10429ad8f98bf6577f11cc0bbee59ff9f92fa9de32401667607b9f579477efff",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/flip.exe",
+      "name": "flip.exe",
+      "sha256": "12ce401c2a12538113edff5d89ac4823c43e889d75f1f25d9f9191ffcd667f2d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/flood.exe",
+      "name": "flood.exe",
+      "sha256": "af8257662e810595d3df52763a0cdc188c89a83590a641b573b792492666bb69",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/fuzzpuzz.exe",
+      "name": "fuzzpuzz.exe",
+      "sha256": "39e01400d2554def359c08b016255c8c2d99264b65a274f2bff08576aaca7bf0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/galaxies.exe",
+      "name": "galaxies.exe",
+      "sha256": "640c6e1f6c1198d06b2c631f73cdb6c2f01dca834fdc40f6068493484dff123b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/galaxieseditor.exe",
+      "name": "galaxieseditor.exe",
+      "sha256": "a88c632ddb4be6b16e827a5c154294f935051bdcf42bf542023eae7269ade278",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/galaxiespicture.exe",
+      "name": "galaxiespicture.exe",
+      "sha256": "36d0ec0bfb7158d9af612d10e4a4d58bfcc6787e957d3c0cd60d1b154f1afec7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/galaxiessolver.exe",
+      "name": "galaxiessolver.exe",
+      "sha256": "830447211f443524c0ac228c3550631a36b2becf4def1a74c7f4c7d1b830faea",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/game2048.exe",
+      "name": "game2048.exe",
+      "sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_PASS_PROCESS",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/grapheditor.exe",
+      "name": "grapheditor.exe",
+      "sha256": "b6bf5a41790fed7ee9307b9440d4493ec99d0027afdd36ab3a0c57158012a641",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/guess.exe",
+      "name": "guess.exe",
+      "sha256": "8e7016c181c26edb90f80c88b520b129fec4c37a0db876c8d1d3018a4d53afe2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/guess_game_x86.exe",
+      "name": "guess_game_x86.exe",
+      "sha256": "7c0cb00a04dc1f0dee2152a52ba23d86120022eaa6e58f826a648eaa3edf6459",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/hangman_x86.exe",
+      "name": "hangman_x86.exe",
+      "sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_PASS_PROCESS",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/inertia.exe",
+      "name": "inertia.exe",
+      "sha256": "aa07b60a412a29e9242a2dd1fe9c549ffdb7854c453c80a946f47db6bf607f42",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/keen.exe",
+      "name": "keen.exe",
+      "sha256": "912de2c925e0a7a4d63d7b8bd867babf94813f14d853c512f69581f6662fe5d3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/keensolver.exe",
+      "name": "keensolver.exe",
+      "sha256": "6e36aaa7bd453da42a71bdf6570cf840a12e8c506076503c71bc648f939196f4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/lightup.exe",
+      "name": "lightup.exe",
+      "sha256": "7300461da8df8946b51cdc537a82bfa86ca69d64bac6fbad493fdf88d83c973f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/lightupsolver.exe",
+      "name": "lightupsolver.exe",
+      "sha256": "083c74e0fc0af452010be6c21ee05e254ceff48735144f332a1a166b33efa0a5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/loopy.exe",
+      "name": "loopy.exe",
+      "sha256": "3a361d69dba873861638d1be01017e17a90530c4fe14195e1e0e41e390bee527",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/loopysolver.exe",
+      "name": "loopysolver.exe",
+      "sha256": "8872226363df5d0efbb1b5b83baa20bb211047ceaadf2a67abacc4a8be37cfb6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/magnets.exe",
+      "name": "magnets.exe",
+      "sha256": "10b951e0447036efcbe456eed12042077c6789acec99c9ddbd94cf71b6631e76",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/magnetssolver.exe",
+      "name": "magnetssolver.exe",
+      "sha256": "a0836637d41727cf7dc58eda163f9fbcdb45f3eb0f5c19a43d32d582ac3ba6ec",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/map.exe",
+      "name": "map.exe",
+      "sha256": "5c7fe4e711ea0fff40be617df1c5f4ea7ee4ab6e12985eeaaa2be024382abae6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/mapsolver.exe",
+      "name": "mapsolver.exe",
+      "sha256": "d3fc9b2ad1fb332ef7af45956f540d1e9c8cece5bd7fa54038e7194e6ca1a390",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/mineobfusc.exe",
+      "name": "mineobfusc.exe",
+      "sha256": "5d12f00abd0fc8cd3a7114b099763450aaf24b2a8f764437ac04b4dfdff4038b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/mines.exe",
+      "name": "mines.exe",
+      "sha256": "5c955baaa154bfec9eac34c93946f0de415774ee2f47594fa024c9b32a146284",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/mosaic.exe",
+      "name": "mosaic.exe",
+      "sha256": "cbadf209e334d6d50f6f52ccfa6c9d880bcb3eef29f557b81682250d597741c6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/netgame.exe",
+      "name": "netgame.exe",
+      "sha256": "0610d6b2de0a42f947d87d7f1b3b1fce51527514e1ac44ef5283425092500e42",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/netslide.exe",
+      "name": "netslide.exe",
+      "sha256": "f4c6bda12359b57da15b199437bc1e0327c7d9944331316913b84f6fc3b71e66",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/nullgame.exe",
+      "name": "nullgame.exe",
+      "sha256": "1cb900f0bd58979182b34a5ac66204d66e3091bb160a5fdd3a1cc64f1026be6c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/palisade.exe",
+      "name": "palisade.exe",
+      "sha256": "7d6d268edca598ad24b7d6ce3614bf353ce9e4e61cf5ed65d5a489916b9f034a",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/pattern.exe",
+      "name": "pattern.exe",
+      "sha256": "8bbcea84712028d93a9ff1f8a1e839fbe8ff6a83daa0412049a65616fce30feb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/patternpicture.exe",
+      "name": "patternpicture.exe",
+      "sha256": "e3678cbe2f0fc76bbb41adc5f3b098675b3325400d05c0a95b6be3daef02d215",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/patternsolver.exe",
+      "name": "patternsolver.exe",
+      "sha256": "0aa0bacc9e5b561d83afc6b278e4937e55eb0c620f23ad15dfcc940ddcc5d02f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/pearl.exe",
+      "name": "pearl.exe",
+      "sha256": "f000ad535b97d1f2c553f86a5411e80ad78b071b6796d3d254e0e65dc2c9daa4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/pearlbench.exe",
+      "name": "pearlbench.exe",
+      "sha256": "974b918cde4797ae6e57a30d52fb5135077d1c93ff91ffda3084d3b00ccc7515",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/pearlsolver.exe",
+      "name": "pearlsolver.exe",
+      "sha256": "4e8e93ced2be64f7768f656f9369310f95f2d8d0a06cedcf9d0694ad7aeebf06",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/pegs.exe",
+      "name": "pegs.exe",
+      "sha256": "8d02d0990d395aed25c8593106b3ad7a03d87b72abc822099ea777dcded5794b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/progress-quest.exe",
+      "name": "progress-quest.exe",
+      "sha256": "fca7602ed8212bcdafa96d5f35c619142c54396ac54e659c156b967edaeba17c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/puzzles.exe",
+      "name": "puzzles.exe",
+      "sha256": "9029726aa330ac90e10aa1d5b7b7766aadb2427334b284230d90243a697d83a1",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/range.exe",
+      "name": "range.exe",
+      "sha256": "2871092abc5ce22bca6ece723a72ce3e6aa3ed003c9a1b9997eb3163bede3be1",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/rect.exe",
+      "name": "rect.exe",
+      "sha256": "594da8d3528208fe35746a050d1b55fdc269e05f64b91f61a3f52d6d615f6834",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/samegame.exe",
+      "name": "samegame.exe",
+      "sha256": "6510b8a2bbdfa9c1778ae2b8850fb719b4722a21934460b47fb947354f6b455b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/signpost.exe",
+      "name": "signpost.exe",
+      "sha256": "ca41fa82b30c80617239638298dfff0f2fc9bb845546544332dfcfecae4b7f9e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/signpostsolver.exe",
+      "name": "signpostsolver.exe",
+      "sha256": "ff2b675c451f2863233f6dd181f822e7901407b4084140afdeeeecd7891fa038",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/singles.exe",
+      "name": "singles.exe",
+      "sha256": "e4233d3288152b4719025e30796ebf9ca49b5c250a1c092d6dc242c34e46dc7d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/singlessolver.exe",
+      "name": "singlessolver.exe",
+      "sha256": "365e9e8e3c2223499ea9409865846d3a4f0461ae4e05002a1cd06b4c2c6749e7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/sixteen.exe",
+      "name": "sixteen.exe",
+      "sha256": "639b4081ddf63837a34a368cfb2e86e309db097f52a616a744055da783bba56d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/slant.exe",
+      "name": "slant.exe",
+      "sha256": "b1c4f4f76f4a42a60f00c3a3f70fd4846754dbb81c9e2fe2bc462af59517baff",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/slantsolver.exe",
+      "name": "slantsolver.exe",
+      "sha256": "28841175ab7fa9bb5716892396e06c4d3c207c4c3eaee465b0c99a6acc223a44",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/snake.exe",
+      "name": "snake.exe",
+      "sha256": "2bc4bcea3e18edb9ba1c64161c7656e2822e361b196553c6b5183a5d53fc7ee4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/solo.exe",
+      "name": "solo.exe",
+      "sha256": "e12ca48a03ee1ad5f50e34f0bcf4df6edeb2da55a39ac151577d5168d67fec73",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/solosolver.exe",
+      "name": "solosolver.exe",
+      "sha256": "9f8362981fb31885250147a9f72551f9b9b153eb8b9fd4f03bbd5304d09795e8",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tents.exe",
+      "name": "tents.exe",
+      "sha256": "b287a1d93f802f1f5563bc57108e29f8ccec47b56873ee196b1fbd80c402cb04",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tentssolver.exe",
+      "name": "tentssolver.exe",
+      "sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tetris-classic.exe",
+      "name": "tetris-classic.exe",
+      "sha256": "f7ccf8fc2f57020c50f1d66de772dc50e2d0e47f5bd819d4a6ddde795c3c959f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tetris.exe",
+      "name": "tetris.exe",
+      "sha256": "b4085b3c2ad509997f0988185ef9fc9f4d9192860648a657f129d94e51a6ef7d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tictactoe-net.exe",
+      "name": "tictactoe-net.exe",
+      "sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tictactoe.exe",
+      "name": "tictactoe.exe",
+      "sha256": "f3e562679f04a722650cd2099e6fc690e5ed748a2328c18c4dc7a424e235dcb9",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_PASS_PROCESS",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/towers.exe",
+      "name": "towers.exe",
+      "sha256": "04bbf383f8af16467027e4975df6b436a89c1a7d10b0f250cbab2494adbb225b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/towerssolver.exe",
+      "name": "towerssolver.exe",
+      "sha256": "5d4b560daa972a968c8156cbcf3d896c76edf5e91d0394b46f160dc810960b10",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tracks.exe",
+      "name": "tracks.exe",
+      "sha256": "6328dcbf47632f7203d1f0e894562d23c239748058c49f554f50bb49ae1f0dc3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/trackssolver.exe",
+      "name": "trackssolver.exe",
+      "sha256": "4d8eb5178bf0f5cd84f816e585765aa41d02768efd92cad15b393bbd1aa173bd",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/twiddle.exe",
+      "name": "twiddle.exe",
+      "sha256": "638b18a4207efed771b7ce0bdd988a4919b478f9330f306b97208cb3ec9158a2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/undead.exe",
+      "name": "undead.exe",
+      "sha256": "f26a3c47e2a0edf3eb3222761362986c94b8fbed5cb65b531494358bfe051ea3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/unequal.exe",
+      "name": "unequal.exe",
+      "sha256": "a541eba61576bfb74c03fff7107b03c5bc7738475c47a1e9b96d8e3755d82827",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/unequalsolver.exe",
+      "name": "unequalsolver.exe",
+      "sha256": "9d00fc91a1e90b6bb8e7856f28f61c2da00647b77a42806dfbf5ccb5c93dec15",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/unruly.exe",
+      "name": "unruly.exe",
+      "sha256": "d73130ae7129d8ec0654e8aa1d25ef9f80cc6cc5169c7ec7ff0a35ba3e697207",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/unrulysolver.exe",
+      "name": "unrulysolver.exe",
+      "sha256": "6d1cd7e7cc732b84086e30dd8a280132216804b69f33c075c51881bfffa0d0ed",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/untangle.exe",
+      "name": "untangle.exe",
+      "sha256": "18588ab2d5d0d1859c6611dd021c557540e6fcd8d2292e04cc5d645f895b81c6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/recomp-new-tests/tetris-win-32-en.exe",
+      "name": "tetris-win-32-en.exe",
+      "sha256": "024dccd5e227ac4bfcf698e948b1682c4a42ddadde87ec5f18193ee16ca77b8d",
+      "windows": "STATIC_OK",
+      "macos": "NATIVE_FRAMES_PROOF",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/tools/IGI1Editor_v0.8.5.1/IGIEditor.exe",
+      "name": "IGIEditor.exe",
+      "sha256": "e7a1d102ba824b1932ee6a9278b6d2e9ee2424ce8666102eea3bb564f2de605e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/tools/IGI1Editor_v0.8.5.1/bin/IGI-Injector-GT.exe",
+      "name": "IGI-Injector-GT.exe",
+      "sha256": "03ee3f3fd20f2e8d1298f164bb8345ce1b450f48abea34b030a0062e32559470",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/tools/IGI1Editor_v0.8.5.1/bin/IGI-Injector.exe",
+      "name": "IGI-Injector.exe",
+      "sha256": "a845f88e0882d74d14858fd477d495a84b766a5f6ce2853884939108e0f87459",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/tools/gconv.exe",
+      "name": "gconv.exe",
+      "sha256": "5616139f4f94e7299b0703954d6a3eeda36fdda5cb17e19fa32163ba6b326c78",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/ShimRun.exe",
+      "name": "ShimRun.exe",
+      "sha256": "fd36a195396184abe7d67317a1df32cc4c20248baf38f555bbe1698a63f427bd",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/TMLoader-latest/TMLoader.exe",
+      "name": "TMLoader.exe",
+      "sha256": "0cf4c92ad1cb2dc7b92f95b2ec63d9058fd930c200632aaa2aab3a5a3a65e2c3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/arp.exe",
+      "name": "arp.exe",
+      "sha256": "384c56eb094987068acd722ec64bb9363c8309e37c611bd560d53e7ca0800a84",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/aspnet_regiis.exe",
+      "name": "aspnet_regiis.exe",
+      "sha256": "ce269120cb9ebc65c4c070257c310c2a516163d7d05521451642172ccde9e0a6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/attrib.exe",
+      "name": "attrib.exe",
+      "sha256": "50eb89a82ef7a8c7cb75d7068d824b269af4f0bfbc2c0ed81b79ab29e98cb837",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/cabarc.exe",
+      "name": "cabarc.exe",
+      "sha256": "1c79868718914dd62e303c629128addb6cecfa684a8c8de5295bf1558e8ce39d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/cacls.exe",
+      "name": "cacls.exe",
+      "sha256": "7057ba8ce968e544e3f459d486109dc4e5cc39648b4dda9d45a2320198ebeb49",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/certutil.exe",
+      "name": "certutil.exe",
+      "sha256": "2cfbf5e52511c744a68ef9afd2bd24e0169df0d93355ea23346659ceb354bb32",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/clock.exe",
+      "name": "clock.exe",
+      "sha256": "aff185f193ecca6d69f2c2b22e6cd8c901189154ef2135ac423d34e7738e2c51",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/cmd.exe",
+      "name": "cmd.exe",
+      "sha256": "e4a1cdb2df0f359e0e339c4c72068840de5a2c8ad3f24076fd5aa69265e5f4ca",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/control.exe",
+      "name": "control.exe",
+      "sha256": "f966a1e0d56a8a58f909421aa44ffaa5e5efe909a1fc654fa48b4636db9e328d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/cscript.exe",
+      "name": "cscript.exe",
+      "sha256": "9e942ba110857e57aa4d426425e7cb9a717187acce958076227c64f3d7abbc9b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/dism.exe",
+      "name": "dism.exe",
+      "sha256": "6af9a2ea9e20588e7b091c6d336744bfcf6bd5aa0609f1c4e5a167d4f325470b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/dllhost.exe",
+      "name": "dllhost.exe",
+      "sha256": "503976ccd809dc3005ab1e5035aa0195fd17f4aeb94cc09a6f6efea23858549c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/dplaysvr.exe",
+      "name": "dplaysvr.exe",
+      "sha256": "4d0ee04af7c3057de20750e189b6c8fcf0d56d1f3b5c94cbee3cb5d88a802a57",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/dpnsvr.exe",
+      "name": "dpnsvr.exe",
+      "sha256": "40816ce4eb1d1f387a527c4db51b30d9e30d87c8a3b869dbdd59dbe78feb6630",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/dpvsetup.exe",
+      "name": "dpvsetup.exe",
+      "sha256": "3d7846913e5d3a0e0a4eec9ed39db2aeff096186a218b4d3d35baaabd272bae3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/dxdiag.exe",
+      "name": "dxdiag.exe",
+      "sha256": "440d7b3aad8327878f75d339fb402d9ec41e04cd99f2e8a5b4e46dc2e4602401",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/eject.exe",
+      "name": "eject.exe",
+      "sha256": "f2cea8c769b228aea17c643aa01dde69386b439b7e0ced07152ade7fb434eaef",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/expand.exe",
+      "name": "expand.exe",
+      "sha256": "2c043a056ea683c0e0b7cbd8f5b84a4693f6d195f44e3e68f103ff27ddf848f3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/explorer.exe",
+      "name": "explorer.exe",
+      "sha256": "8f84b92dde4778e5b8526fa5606ec36accaac74b7128c4bd7e98ae182d677c13",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/extrac32.exe",
+      "name": "extrac32.exe",
+      "sha256": "350f0666c36949f90e5d81a4ed05f540e748443230edb9cf3273cb3d9a238014",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/fc.exe",
+      "name": "fc.exe",
+      "sha256": "23c9b2490e06a84b9911097e4a996ddfca5541201377a5c5c1c84a7000d06293",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/find.exe",
+      "name": "find.exe",
+      "sha256": "8db750d699a108eadba3e2930c2913312864af0e0dfb1b3d7258147ee0cb8f85",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/findstr.exe",
+      "name": "findstr.exe",
+      "sha256": "9de3a3c29d5aac61cec889a68bbb3d890b068c0418debbe0cfc90c078bc1d9a9",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/fsutil.exe",
+      "name": "fsutil.exe",
+      "sha256": "863340eae21d626685aad1ffe18f5e5d0981c1e83bd6ee4e0ade88c50e41500d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/hh.exe",
+      "name": "hh.exe",
+      "sha256": "25f9c5bdd830406952904a6c078520f58d0a24e6fdb2f2cecac416a78c60d901",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/hostname.exe",
+      "name": "hostname.exe",
+      "sha256": "528cd091da7e9dd6639d3239df5827a7d699e399be6c9c1041b48af6538748f9",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/icacls.exe",
+      "name": "icacls.exe",
+      "sha256": "887074f927e2c027b445517c99923960b93a1157f7c1cff58abf2ec1cc6fc286",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/icinfo.exe",
+      "name": "icinfo.exe",
+      "sha256": "f82dbd8206c441520b9a08ceae00ceab9d5e87bc19df1250d39b1012154c613b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/iexplore.exe",
+      "name": "iexplore.exe",
+      "sha256": "38508855f2c7ab02ace10336df98888b034911b38955679d854b368747df2900",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/ipconfig.exe",
+      "name": "ipconfig.exe",
+      "sha256": "e41d3bbe413aa438722232325f0a19c3475b9f655c9008e6ed9bfaf16689083e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/klist.exe",
+      "name": "klist.exe",
+      "sha256": "95b5e15d1d471e3b905a92a705567704538189ccfeccc3e3aac1df8b5ca3f9cb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/lodctr.exe",
+      "name": "lodctr.exe",
+      "sha256": "c546c94cbfd0937a65dabc99cd623e8d5c8bd1b86b35a18175dce56c6a37e715",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/makecab.exe",
+      "name": "makecab.exe",
+      "sha256": "cf5045721f87dc730cd6dc53fe26ac45ef047db2a428a9da86998da992fd390e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/mofcomp.exe",
+      "name": "mofcomp.exe",
+      "sha256": "16750b12b1bb5ccc8825f43485c28aee357be91016cdeb100a20b496ee540a34",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/mshta.exe",
+      "name": "mshta.exe",
+      "sha256": "62296136200d019def8ba19bd2bcdd054d8418429fac352630c07103b2803455",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/msidb.exe",
+      "name": "msidb.exe",
+      "sha256": "1daab06a7672243a664ba6bc241386b57e0e4d61fe7393676241fdf1a1ce28ff",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/msiexec.exe",
+      "name": "msiexec.exe",
+      "sha256": "f9572889f97db65355f164687a0f51323024d2a685a0f47dc7d213c887f4eadc",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/msinfo32.exe",
+      "name": "msinfo32.exe",
+      "sha256": "670e8eb58de911caf621c145fb3d0be2abb96099a6fb92e473d8f64fc8c19e9d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/net.exe",
+      "name": "net.exe",
+      "sha256": "e002278faaf7c50cd04080cd9a8f6c97939f7d9213a62d68ec787b68a7a02f2c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/netsh.exe",
+      "name": "netsh.exe",
+      "sha256": "dce8af71fb79ce03eecd821ec6bbdddf772c520ffad6bbf6aed962e30011f036",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/netstat.exe",
+      "name": "netstat.exe",
+      "sha256": "5a90f8fb37e223901ccaf596efb3d8aa778d3a482b9f4d9ef99c3f0326d16f1f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/ngen.exe",
+      "name": "ngen.exe",
+      "sha256": "9a765525c3642ab3f64b551dfab219e4f95fae709fc46372adb003ac98d62997",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/notepad.exe",
+      "name": "notepad.exe",
+      "sha256": "47a3fc483ff84afbfde307c383661b74778d293381f8e9322ae7a26f4d5ef8f3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/ntoskrnl.exe",
+      "name": "ntoskrnl.exe",
+      "sha256": "585c166885150713bc5f0bf6a3a29fc35635c95746b91d985a608ffb036e3811",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/odbcad32.exe",
+      "name": "odbcad32.exe",
+      "sha256": "6de3815593d14be57eb462530e96678d9b5bf9cf4a2b3aa0c70c3f45e4d1ff98",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/oleview.exe",
+      "name": "oleview.exe",
+      "sha256": "54f650e954559a0cbd90e22e9e07d06945052d826e4de4a67c1cb5cf793c8249",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/ping.exe",
+      "name": "ping.exe",
+      "sha256": "6925db14098e3ff449bf8792bc9b4ca614b673aa6a50f6cb823885c6ba83076b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/pnputil.exe",
+      "name": "pnputil.exe",
+      "sha256": "5378950035f8891a7349813b3b903f4a21c21dea8ebc9045e6b1d0bae04d2535",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/powershell.exe",
+      "name": "powershell.exe",
+      "sha256": "15d90ea5be0cae71a5ba8861b2297735f5aab534e7095720ff6ac7762e5719bb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/presentationfontcache.exe",
+      "name": "presentationfontcache.exe",
+      "sha256": "15f27fc6eeeae83e043fb812e47ab0d7626d58d59eb2484885e58bc868f2c62f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/progman.exe",
+      "name": "progman.exe",
+      "sha256": "4049e66617dc2316d7dfbe94458e0abf918b476f3e15e6c805e2fe817fbdbe00",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/reg.exe",
+      "name": "reg.exe",
+      "sha256": "ed314e8597f582d9abb0c252903d93c3465b0d4ab96e38b3684a6d6ebfd73d02",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/regasm.exe",
+      "name": "regasm.exe",
+      "sha256": "28f258101b598d1588de8cf6407e1c736a653ead2e8367030a136902f6636c35",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/regedit.exe",
+      "name": "regedit.exe",
+      "sha256": "d68985930de3db7665e29fc0acd225463a236f21967bb1d90f605c8714227838",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/regini.exe",
+      "name": "regini.exe",
+      "sha256": "d9ac02a22b0b1bc19e5a2d08dc07c135692a366fc5afd45da9fbfda31c1e3e6f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/regsvcs.exe",
+      "name": "regsvcs.exe",
+      "sha256": "f59c602e10bcf0dfe1c7f4cc2ca33ee9de9b218524bb18936e2aaca028637af6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/regsvr32.exe",
+      "name": "regsvr32.exe",
+      "sha256": "e74fd0d6b19dec999dfaccff4ce0ead8c0d5abec2aab48cd26350a033f3caf0b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/robocopy.exe",
+      "name": "robocopy.exe",
+      "sha256": "909a7ea16b3a50bcc885d694838b3bdd1e0fd3e24e1395d31fef8723af1f03c3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/runas.exe",
+      "name": "runas.exe",
+      "sha256": "1e95b872f3a7d24e0398db7f3a47e8bc486bab554941fc601644636a14106d26",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/rundll32.exe",
+      "name": "rundll32.exe",
+      "sha256": "ba3dda05f2ce74d5d8ebd3df98f8d734159061098227c2e46b7b9650f481756b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/sc.exe",
+      "name": "sc.exe",
+      "sha256": "ac1f5df5bf09c9f8aa6b56f8b154cd044c752d8eb4a675c1639c7d2b1281f33f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/schtasks.exe",
+      "name": "schtasks.exe",
+      "sha256": "3a129c8989b84d493e509e4d3d4e41f7a7757cd3c5e2d5c99d2ad7f0bafe235d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/sdbinst.exe",
+      "name": "sdbinst.exe",
+      "sha256": "ba3fa3d75aa8f79118dbb0cd1805bffd5644097c8c4d9ef20de35ee79b724cbd",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/secedit.exe",
+      "name": "secedit.exe",
+      "sha256": "2fd6e6c4d6fb1149f92ae426920942cb1391a7d23f5dab68859f6f1c64acc493",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/servicemodelreg.exe",
+      "name": "servicemodelreg.exe",
+      "sha256": "d56166ef23bbb4967a9724bf891083068bbe974fdfc1768f22abc84bd6724d2e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/setx.exe",
+      "name": "setx.exe",
+      "sha256": "10860abce79d564ff22e6de1ab766b7e55bc9695dc9a3bec88faea4792a64e73",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/shutdown.exe",
+      "name": "shutdown.exe",
+      "sha256": "e65234daed2932e98faf79ee3f842e7f3cf82ccbdc9a59b5225a3bfa6e0465a0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/sort.exe",
+      "name": "sort.exe",
+      "sha256": "11af65bf165763a3aebb1db3c9bcbd8925b45a787be9bb92dbf197bc22fa7d0b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/start.exe",
+      "name": "start.exe",
+      "sha256": "fedbf2b1631a5a5bf6671d301f500f47f9ac744c2502089237c913b32e11788c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/subst.exe",
+      "name": "subst.exe",
+      "sha256": "1de5d0566a6de435d61a23b93a521ac1ba0949861dd04c963483ff9fe450d711",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/svchost.exe",
+      "name": "svchost.exe",
+      "sha256": "25dd17186bdfa519fd8f1e05b91421ae9f63d7d4d0d2bcf1b59efac8f120fab8",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/systeminfo.exe",
+      "name": "systeminfo.exe",
+      "sha256": "450d457d21620d4472b49a6cbf8a4b14dae3f56a8bc1d7d8cf3ba37e5a14691f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/taskkill.exe",
+      "name": "taskkill.exe",
+      "sha256": "9f22473e59f0b8611cbe18ac7a359e4133a80bfc099f08d9e252c18dc809b210",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/tasklist.exe",
+      "name": "tasklist.exe",
+      "sha256": "1a3870479880672462d74bdaf68229f927c6272a99195929a4d3acbe45405402",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/taskmgr.exe",
+      "name": "taskmgr.exe",
+      "sha256": "11911dd319fa5e2ddae392eb032266f1748d4d4dc911a12db5f54a741a7e6422",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/timeout.exe",
+      "name": "timeout.exe",
+      "sha256": "962ff930be30277a05656f2399ec943a1df3f637d3fe413bf00007e05ca31472",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/uninstaller.exe",
+      "name": "uninstaller.exe",
+      "sha256": "849179dfbb9cf73636d25290f187241576e9f3d09d829801b4b5187dbb6bb7a9",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/unlodctr.exe",
+      "name": "unlodctr.exe",
+      "sha256": "8bd826612ea4a109381fb5c922069e998b4134d83d84099c8415110e2560f9c8",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/view.exe",
+      "name": "view.exe",
+      "sha256": "98f6d0503b4c0c345ff1017c7ca5dbf7d13230bdc36c5a6238ccd279395cd508",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/wevtutil.exe",
+      "name": "wevtutil.exe",
+      "sha256": "cfbed128deca75ddc3c61a48c5b30e1183439cb2eaadb1e03049e980f5568b74",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/where.exe",
+      "name": "where.exe",
+      "sha256": "a716864276d922ab9bf3d0d43d26395d212d08ebdec02e8c8416f5a7cf226e92",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/whoami.exe",
+      "name": "whoami.exe",
+      "sha256": "0eb543a2e1da12053f6dff05b91f6de59b8004564bf9c0016c5d25f5f036afa2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winebrowser.exe",
+      "name": "winebrowser.exe",
+      "sha256": "56caed23938e1fe7fcea6a00173e9c70faa23f95905432d1d76cc908140b06c0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winecfg.exe",
+      "name": "winecfg.exe",
+      "sha256": "5e3d6c55dba000cfd05c8d4aa93ef47495be3dd1003bef894f6cbb1f6572358e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/wineconsole.exe",
+      "name": "wineconsole.exe",
+      "sha256": "b44ca7858302ad1e8dddfc6d40472700e15bbbedc96cc4a32262fe1a739ff542",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winedbg.exe",
+      "name": "winedbg.exe",
+      "sha256": "3a2636130b9a2130be4f1b2942a92b623df3a7849d2fcf3e1a7f8a4c198a6d93",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winedevice.exe",
+      "name": "winedevice.exe",
+      "sha256": "15a0569715178379f13da9b14b38ad19fa9332b8112d8f40283ed3ed92fabdb7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winefile.exe",
+      "name": "winefile.exe",
+      "sha256": "137da79b8c6a91f69367932213ff95fd5d7ab89c58c308fe1a8cab8b016e6bf7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winemine.exe",
+      "name": "winemine.exe",
+      "sha256": "4a0c17a4efc341256ed06bbd3cbcbed405f82aad93de2d0aee75ad254e4a087d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winemsibuilder.exe",
+      "name": "winemsibuilder.exe",
+      "sha256": "9a8a8d3f20329faae73dfa02be67599f5f3540454ebe0f7b279cab46d69e9d33",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winepath.exe",
+      "name": "winepath.exe",
+      "sha256": "aa742310d48d3dd49ab66dbcfc9228bee1f1a6d052725266efb686f8e2fa000c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winevdm.exe",
+      "name": "winevdm.exe",
+      "sha256": "4255dec5f7bbfcd714da566ec59d2b7ca84c00182243190ae9883ac1a8834bb1",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winhlp32.exe",
+      "name": "winhlp32.exe",
+      "sha256": "93577a622d9554bbda835abbbbf299e2be5bef50c96f1cc5ed857ec6faae6585",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winmgmt.exe",
+      "name": "winmgmt.exe",
+      "sha256": "e71ca6cca6e3cdb0d420ee830343db054970f8bbb483a6bd88b6e8a8529c40ab",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/winver.exe",
+      "name": "winver.exe",
+      "sha256": "34f527412dd3a54ca7210e9867c92a6f805c5691c629608640d0ba40829e03a9",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/wmic.exe",
+      "name": "wmic.exe",
+      "sha256": "caf17f894dd5e4a6d3670096b412b340d7d7773c05f86c44f174bbe559a654e2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/wmplayer.exe",
+      "name": "wmplayer.exe",
+      "sha256": "808018b84c831a21bc74ada32cc96f41fb2a94bb2aaaf859d2b93c8d91aa4ba3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/wordpad.exe",
+      "name": "wordpad.exe",
+      "sha256": "2cff271b5164f562b71ab173a091f5ae38e910194b9349c40f3ed7295c96c5db",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/write.exe",
+      "name": "write.exe",
+      "sha256": "718f40b09e065bd364f51a2d0814ba4bafde1332d3b58e273ca377a9410a4923",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/wscript.exe",
+      "name": "wscript.exe",
+      "sha256": "0d340ef063e1838f845dc3936691e1a99c3cb989b2c813158b55f5aaba12da3b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/wusa.exe",
+      "name": "wusa.exe",
+      "sha256": "09cd23ab292db79dff0e39716391fbe68d1a01635b57a96693b8793f88f954a5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Downloads/trackmania-macos/runtime/lib/wine/i386-windows/xcopy.exe",
+      "name": "xcopy.exe",
+      "sha256": "d8774ddeddc6bf556d0c97552761eb081f4eebaa5e24923821e8c9f68dcafbf7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/Program Files (x86)/Internet Explorer/iexplore.exe",
+      "name": "iexplore.exe",
+      "sha256": "6e5a8630a1bb450704f5015f937d7ded7755788f7eb010f04183e23989260352",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/Program Files (x86)/Windows Media Player/wmplayer.exe",
+      "name": "wmplayer.exe",
+      "sha256": "b9781623e3a3b980afa72f0ab07cf31fae74f8a00e7e05a7f5136a65ba5f8054",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/Program Files (x86)/Windows NT/Accessories/wordpad.exe",
+      "name": "wordpad.exe",
+      "sha256": "825b6f5fddc0d1d7ce291b0d0d93a1ae5e40ac3bcb96c1638b4e174eb5fabb53",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/command/start.exe",
+      "name": "start.exe",
+      "sha256": "e3470802aeaa5ccc24bcadbf26072a5196235e71e150e7e7a30b92c9755b7b09",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/WindowsPowerShell/v1.0/powershell.exe",
+      "name": "powershell.exe",
+      "sha256": "7e8d7191d41ca599be93fda9831ed46d29da7dd6448f1749734c3752d85257aa",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/arp.exe",
+      "name": "arp.exe",
+      "sha256": "daac115c5fd01e119ebb2873579c51f03c58f64f50907c100b483c302afc86f1",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/attrib.exe",
+      "name": "attrib.exe",
+      "sha256": "74d1b60878349166a96a741fd26ed84f15b934a324220214b4575683e513d5be",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/cabarc.exe",
+      "name": "cabarc.exe",
+      "sha256": "6675d2d9f56599e3978b5e65e0774e0be8c14d5e87bf7a089d629830ea07c959",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/cacls.exe",
+      "name": "cacls.exe",
+      "sha256": "73f142c6c5939bb075a670922156702a3429b879a7708b015ea48596f252000c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/certutil.exe",
+      "name": "certutil.exe",
+      "sha256": "34535905117665dbe623da2c96edb0e97b0169abc69414331ab4ae29f12f46f7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/clock.exe",
+      "name": "clock.exe",
+      "sha256": "c15d1b3016c7bf1a6415e06ac5d8e9cd92347ac1dfc8bcf27329d4fb16a03d2d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/cmd.exe",
+      "name": "cmd.exe",
+      "sha256": "8c6b2beac46134f7d1f9abd7e4a5b2ef49be1a7362db8aa18553e9149ee326d3",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/control.exe",
+      "name": "control.exe",
+      "sha256": "73b8a53a4c768d5f9fbb916b9f5d06605d1dfedc3e69c10dadf5d09d8c709ce0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/cscript.exe",
+      "name": "cscript.exe",
+      "sha256": "9584f266331bc30ac7ecd7e1378e1c531a1ee17befa9192031b97bcf25f3ce64",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/ddhelp.exe",
+      "name": "ddhelp.exe",
+      "sha256": "cbae5b921774d73c6fbcb5a9fcc54156783f360a69db802382ee8cc1585b9fe4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/dism.exe",
+      "name": "dism.exe",
+      "sha256": "ac8e43716bc7b3b8d40bf1199bace506f14c346e42ac8114848c6214aa142cb5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/dllhost.exe",
+      "name": "dllhost.exe",
+      "sha256": "d58161e4cdd23d69ed53f293654d22368a6bf384f1c910761bacc45a6c1f87d0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/dosx.exe",
+      "name": "dosx.exe",
+      "sha256": "cbae5b921774d73c6fbcb5a9fcc54156783f360a69db802382ee8cc1585b9fe4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/dplaysvr.exe",
+      "name": "dplaysvr.exe",
+      "sha256": "26c2bc5c898dc1afa59b5caddfcd12d244a1c391f929d3a03c2c697ad7dec6b0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/dpnsvr.exe",
+      "name": "dpnsvr.exe",
+      "sha256": "8da1e86f67b0029cb6f7cea7387f683e1e307303535c3ff7b3cc4f4fa7f1c01a",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/dpvsetup.exe",
+      "name": "dpvsetup.exe",
+      "sha256": "ae3d710f42921ae3514268f7bc31f97cdf5b93d15227017d3d3e8032efb00610",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/dxdiag.exe",
+      "name": "dxdiag.exe",
+      "sha256": "a8c35b1793b317ecce3acbcdf57e316a4d0f79ab0d1465384dc36acb14d31888",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/eject.exe",
+      "name": "eject.exe",
+      "sha256": "5b7669280693f32105359c5d8e522583ca97e658b40d3da78a80373442aa02eb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/expand.exe",
+      "name": "expand.exe",
+      "sha256": "22b10a6540b697a2e156d46b3d7161ccf5d9d6d228d19de35e98f50238fd6c4e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/explorer.exe",
+      "name": "explorer.exe",
+      "sha256": "cfa8ee97c24683519cfda3c3ee4bd4ebaece40f59d3eca12927f85ebb34ded16",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/extrac32.exe",
+      "name": "extrac32.exe",
+      "sha256": "e5ae90ca901738edbba6428072a3b8e2d112629ae11fa6fb54fec4fa6cc1134d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/fc.exe",
+      "name": "fc.exe",
+      "sha256": "766a814ff7d922ed6015cbbd435634e8b616c9a5a73e55b04e73dc5254b5ec44",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/find.exe",
+      "name": "find.exe",
+      "sha256": "5b29ad173b8d58dab1935444217e99f7b6419f537a4ec7e91bbc89d587454375",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/findstr.exe",
+      "name": "findstr.exe",
+      "sha256": "c041bbd99544b28a6fcb7d51cc18a4e4a931ef80675e9688f718424007c2ae84",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/fsutil.exe",
+      "name": "fsutil.exe",
+      "sha256": "fddde1118204e1f4150f7020343f842ceea4c536dd86c63d33a0192b80e5abc7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/hh.exe",
+      "name": "hh.exe",
+      "sha256": "13731ab4d0992a5de544f4159e7ac555c2c7967dc4d1046a40fb9d7b623208de",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/hostname.exe",
+      "name": "hostname.exe",
+      "sha256": "23de232a88cdb813f43cfc712ffd566d8ce1bd3f624feccf8a1269604b22a3ae",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/icacls.exe",
+      "name": "icacls.exe",
+      "sha256": "e4b7c1068af1d745c07dd2b5d1af28a1f40302d2f582fbd3f20cdb413923c328",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/icinfo.exe",
+      "name": "icinfo.exe",
+      "sha256": "198afdec4c5896a9796a4b8738e3a7328d533e7cf6f8708bc5ddbd3df15121be",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/iexplore.exe",
+      "name": "iexplore.exe",
+      "sha256": "6e5a8630a1bb450704f5015f937d7ded7755788f7eb010f04183e23989260352",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/ipconfig.exe",
+      "name": "ipconfig.exe",
+      "sha256": "0b605ab2471546244fed0cf63d8f3f83a2d8e9196cf8c7a0a981af0eb7bfbe4c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/klist.exe",
+      "name": "klist.exe",
+      "sha256": "27aff5c51e0c086beda1aaf87511a883ef77364cabca125e0ec58d7663e7d465",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/lodctr.exe",
+      "name": "lodctr.exe",
+      "sha256": "c6f412f1965f7bb9b3204ba848d653b43f2ab24e12d6314a87a7792dae3deeae",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/makecab.exe",
+      "name": "makecab.exe",
+      "sha256": "75d80a9539c7fd5729a9fdf6bdf699dfc93dc41cfc1270c7ce0d8374a49f7241",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/mshta.exe",
+      "name": "mshta.exe",
+      "sha256": "a6928a8b537857281b5a4fc7fd27671864bd37be07906be9c370116b13a65c87",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/msidb.exe",
+      "name": "msidb.exe",
+      "sha256": "acc49dba3257761b73bd43cbec993d3c19b20085bbf33a2348f980dd4f507a4a",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/msiexec.exe",
+      "name": "msiexec.exe",
+      "sha256": "f4f6e665a3e30f500b5014ae875a2c2fc85d2d3971baa4e3aecbbd4917664949",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/msinfo32.exe",
+      "name": "msinfo32.exe",
+      "sha256": "e02cb4e2bbe8ac7583a90a22bdc1e8aec78d4baa316ad1ea044a0a772d219f78",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/net.exe",
+      "name": "net.exe",
+      "sha256": "ad19560801952c8faee3d61c36ad292f47d9636468d364102061d2769d988158",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/netsh.exe",
+      "name": "netsh.exe",
+      "sha256": "346d50474c12d36dd65ad5ea46d090a362db2cf1da315cce501fe45b64999fa2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/netstat.exe",
+      "name": "netstat.exe",
+      "sha256": "f45bea37b2666ffd346c54870301a4244eb752d3812cd791ddacbedf803fcc9e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/notepad.exe",
+      "name": "notepad.exe",
+      "sha256": "da389c9c11e2446f63d2efb597f0c742c840066cdf63df758a85362618157de2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/ntoskrnl.exe",
+      "name": "ntoskrnl.exe",
+      "sha256": "0c3880a7ff41290664333086e84efb8f51618796eb666be09d8108c51cd1d2db",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/odbcad32.exe",
+      "name": "odbcad32.exe",
+      "sha256": "54762fe2400c674e00242bce778b7b048a3f91e00125780482c373dac077a73e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/oleview.exe",
+      "name": "oleview.exe",
+      "sha256": "aa196f1d8b907357e750eb957da08b77fd131c6372a5629beba34018628fc93a",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/ping.exe",
+      "name": "ping.exe",
+      "sha256": "6b5119c5e1b685d31d426249710c5ac6a581b8d741f3241595ef3b6774404ea1",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/pnputil.exe",
+      "name": "pnputil.exe",
+      "sha256": "7285a8baadc14ca98aa298b08cf93b78c8a5484c72ea4f223f8ff1a51bf1886f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/progman.exe",
+      "name": "progman.exe",
+      "sha256": "b9469fc4fd6b024eae9a2e3f7271666e9504a6cfb866565b5ce304a3b342ebe6",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/reg.exe",
+      "name": "reg.exe",
+      "sha256": "f244133ceb7c3ce7e8f1c72626f482648e7271e80fc25447aa0697b06affc4df",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/regedit.exe",
+      "name": "regedit.exe",
+      "sha256": "20342a30ed7cd7faa583aad922f52bbc39620518bf3b3554c7365c4ca5678a74",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/regini.exe",
+      "name": "regini.exe",
+      "sha256": "b0bdf90210e09df8358bb4ca2347b7713bd24e731f50ecef6a22d1185ea1fcb0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/regsvr32.exe",
+      "name": "regsvr32.exe",
+      "sha256": "aac9ac7cc71bff236353318984632cdbed254f6405f2a8000c371407188e2387",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/robocopy.exe",
+      "name": "robocopy.exe",
+      "sha256": "9684587f069235cacaa187ca06f8905ef1e6f38a0ae99fbae1d36d8d17676cfb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/runas.exe",
+      "name": "runas.exe",
+      "sha256": "fea7e7d3f85a7b71c4e13049c808b305a3fee52c975773f63fd80c08ea3c5efb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/rundll32.exe",
+      "name": "rundll32.exe",
+      "sha256": "4be7472b9c520be21f95f85047d8a614bdfb707681feccac376d59e0b4cc660d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/sc.exe",
+      "name": "sc.exe",
+      "sha256": "3d8c69437424d5a931900a98641729b4454fda51748556d988ac5b4829d33cd7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/schtasks.exe",
+      "name": "schtasks.exe",
+      "sha256": "9b1b96b52bc207c4ae991946d70fa1ba9057786e6f771bb71d3f5888db49d9c0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/sdbinst.exe",
+      "name": "sdbinst.exe",
+      "sha256": "7efa70fd00633643b3583bf9816e53b6d39a1910f0be2503d2581633f29c0f2e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/secedit.exe",
+      "name": "secedit.exe",
+      "sha256": "afdede5e74bcbbb2173371199be765c5ada2114c709ceeb8ddd76b578b92c847",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/setx.exe",
+      "name": "setx.exe",
+      "sha256": "975d5b5687b9742b50ba08cede573a1b4cf15fc8b30d55bd0886610e6fb7fa0a",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/shutdown.exe",
+      "name": "shutdown.exe",
+      "sha256": "f5ee748e9fc5d864df3c3fd1e88a09f28ec4559298d77c14040e13f46b5907b2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/sort.exe",
+      "name": "sort.exe",
+      "sha256": "d91d25209d358f9c5fafe7f13800fcb5820180659a25a9fb3b8b3dd193f87178",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/start.exe",
+      "name": "start.exe",
+      "sha256": "e3470802aeaa5ccc24bcadbf26072a5196235e71e150e7e7a30b92c9755b7b09",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/subst.exe",
+      "name": "subst.exe",
+      "sha256": "69ad8f0e3ad2b038a573076920e8e565b127b0b527cae18118468463191612ec",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/svchost.exe",
+      "name": "svchost.exe",
+      "sha256": "caf6dced14f832291b7f11bedf5c4208195983dca2368c2bba2bd4c838b75875",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/systeminfo.exe",
+      "name": "systeminfo.exe",
+      "sha256": "112442fa4d6395cbdd7cd2dd2f625b10a054639197622a2afc29133251d49972",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/taskkill.exe",
+      "name": "taskkill.exe",
+      "sha256": "1c626d621dbf5b00d16625d289121e4ba2acfee2af41b4b802159b7655cd64db",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/tasklist.exe",
+      "name": "tasklist.exe",
+      "sha256": "792e3ef2edc03d95b2517aefcd5d141aa4153b61b3f7a1f892d04059208cafa8",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/taskmgr.exe",
+      "name": "taskmgr.exe",
+      "sha256": "900bf1379c095c0afcb7ba87e5997a5b8cef386ea335973bbdd70d0e89bd746e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/timeout.exe",
+      "name": "timeout.exe",
+      "sha256": "303279e8fb4f4aade5239481b44cd1c872608ee325ffbeb0b2c9ab4c5947933c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/uninstaller.exe",
+      "name": "uninstaller.exe",
+      "sha256": "058d6a6919e9295c92b9ced6e4ba0cd76ff60250fd524a6e547ea1b5ff23caa9",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/unlodctr.exe",
+      "name": "unlodctr.exe",
+      "sha256": "bdb5cd88e89dba322f35b12f5a00c40c2dc5952c79969ca6c50bd967c360050d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/view.exe",
+      "name": "view.exe",
+      "sha256": "ed446310fe7f99958a918d765e2e2b7d2f0229f6f1fb42e8af3caee46f985eed",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/wbem/mofcomp.exe",
+      "name": "mofcomp.exe",
+      "sha256": "8fdba5dd7732203258e365bc3ccfae855b8a55cf370d0ebf4f68e1c78ac678cc",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/wbem/wmic.exe",
+      "name": "wmic.exe",
+      "sha256": "d41ddca81fad0633188aca0e3d8a6e62962725d263327c1a65ca2c3c9c17580d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/wevtutil.exe",
+      "name": "wevtutil.exe",
+      "sha256": "c9220d3e86a7b591607ba3c96cef0a61854d19d54b08aef892f8f6d354fdeabf",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/where.exe",
+      "name": "where.exe",
+      "sha256": "b22254c2b53e1e2641a518cc191882f4f8354b1e85a51e9b3d20fa1e958508dc",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/whoami.exe",
+      "name": "whoami.exe",
+      "sha256": "2f9557dbae692c691a1ce77f679d79b3d529485c428af9388a51a5cb450a46cf",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winebrowser.exe",
+      "name": "winebrowser.exe",
+      "sha256": "595ba089ecbefc66ee33f782deb3e809c7aa6c2c6ffa46e52e1fa028f6207a3d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winecfg.exe",
+      "name": "winecfg.exe",
+      "sha256": "9870b86645a6434066432fb77a21e3caaf9477d94af0cc62ec68a56aafe3cb75",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/wineconsole.exe",
+      "name": "wineconsole.exe",
+      "sha256": "7d18c292fced9ddce0016f07e8462fed5ee50f75a03984606f834a5ef9f5ee37",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winedbg.exe",
+      "name": "winedbg.exe",
+      "sha256": "44a904291339f3910d7e15f174f7f3b53dc3c015707736962d72d3d4b527fa5b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winedevice.exe",
+      "name": "winedevice.exe",
+      "sha256": "4281b3aec7a96b55d29d42c01fcabe2a26355d1a715b6c12cd2a0fa6d05eea4e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winefile.exe",
+      "name": "winefile.exe",
+      "sha256": "8b853cc061ca4c6a76f5f3ceaa16c707ad65c82bf0edd1cc86692d25fac4748c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winemine.exe",
+      "name": "winemine.exe",
+      "sha256": "0ecf65ffd37786a0b75523a68993c53f8dea80608f5f333b6303523e8d845b62",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winemsibuilder.exe",
+      "name": "winemsibuilder.exe",
+      "sha256": "bb0a49ce31cd44c89383b2431dd7884812f1ffcb46c3add8c719deaad8f1f6aa",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winepath.exe",
+      "name": "winepath.exe",
+      "sha256": "1e3c748c0d6d6e0bee518127c475056c78c3994edc62ead2ade5a913fd5af441",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winevdm.exe",
+      "name": "winevdm.exe",
+      "sha256": "0aa779e2b79ffe035b1710e0bf027fdf144c570c4727fbd3b6cd7dac71ed0901",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winhlp32.exe",
+      "name": "winhlp32.exe",
+      "sha256": "e2b49a57e9eda85932dfd25e87dea705e45efbb93e87f1e0691d188c6485355b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winmgmt.exe",
+      "name": "winmgmt.exe",
+      "sha256": "d6110bc41eb3856cdce745103d48e75ad85130846495d88e5cb5d050f8b06d05",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/winver.exe",
+      "name": "winver.exe",
+      "sha256": "2962104c7005ad21e570f7a35b82a904be21b256309bc6b7a81684f57a317c75",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/write.exe",
+      "name": "write.exe",
+      "sha256": "9ee04261f208bffb7f601f8589e90318ab9ff3e589289ce615367a6cede87e0d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/wscript.exe",
+      "name": "wscript.exe",
+      "sha256": "21bd9e620e114676a2a0387a40e2b4675e106dc6ea1e65ff1366f24a8a342f0e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/wusa.exe",
+      "name": "wusa.exe",
+      "sha256": "df7f7aeec554e0cacd6234df0d5af8d4ffd7d944af3bcfca9d9e29b525eceef5",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/syswow64/xcopy.exe",
+      "name": "xcopy.exe",
+      "sha256": "2d178ab2977d86a8b6e8dd5e6f74151d88a536919175ce0e0c0df4e2a17ae752",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tm-original/prefix/drive_c/windows/winhlp32.exe",
+      "name": "winhlp32.exe",
+      "sha256": "e2b49a57e9eda85932dfd25e87dea705e45efbb93e87f1e0691d188c6485355b",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/Internet Explorer/iexplore.exe",
+      "name": "iexplore.exe",
+      "sha256": "0ab55ddc03a6847a3b16bb6f0e8fc3515d27f35517aa4db4ca121062e2c2e741",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/TmNationsESWC/TmNationsESWCLauncher.exe",
+      "name": "TmNationsESWCLauncher.exe",
+      "sha256": "4f22317a3b7bb4a6fd73a69dcca067e646f636ea21633584dbb05086a18ca773",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/TmNationsESWC/unins000.exe",
+      "name": "unins000.exe",
+      "sha256": "7dabe791210b513b474603a0818d3de5557ada98ec60ee57f05454fd055186da",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/Windows Media Player/wmplayer.exe",
+      "name": "wmplayer.exe",
+      "sha256": "fdad12a72ad60d032e7392bd3c9a64dd02cf6f68e4de35127ceb3eef15c9f70f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/Program Files (x86)/Windows NT/Accessories/wordpad.exe",
+      "name": "wordpad.exe",
+      "sha256": "587c0ab0e93b7c66b335f5b99f2388ccb4fec14d3faff9e7fd1d4813d39d390d",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/command/start.exe",
+      "name": "start.exe",
+      "sha256": "61148b3fff71897cac4f20308e471efe4adcd9b36b334e7dd599567c9f8035fc",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/WindowsPowerShell/v1.0/powershell.exe",
+      "name": "powershell.exe",
+      "sha256": "1650c02a491b39924bf6d967f4bdc112182d74ebd0b5acb708c8e881d3be4f48",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/arp.exe",
+      "name": "arp.exe",
+      "sha256": "dac4fee5c047b6dbf582fdb4e7501179553d092838f86110c0cd601e97e71dfb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/attrib.exe",
+      "name": "attrib.exe",
+      "sha256": "d12e106efa90284160d811ab1bad250043934bdca5e201efaf1dadcf34740634",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/cabarc.exe",
+      "name": "cabarc.exe",
+      "sha256": "079da393c5632ae8cae599f23af513ff948e4a869362848ce02392d97370f37f",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/cacls.exe",
+      "name": "cacls.exe",
+      "sha256": "56d8390e3317d0b9c9b97afc37f3bd08f5d3e79ff07e299c0c72abdf5a3ebaf0",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/certutil.exe",
+      "name": "certutil.exe",
+      "sha256": "efcfe54a7315264aac5c7d5e1dc2cf2c73886b5e9ce00725cb7665e9ae802bc7",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/clock.exe",
+      "name": "clock.exe",
+      "sha256": "2c1f014e281608bbd5a6135dcaebd124d04b2f2bb719ae6bb44943051d1d853e",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/cmd.exe",
+      "name": "cmd.exe",
+      "sha256": "963d4a7fc3d922a9b521c0904e4aeb240ea91057d185c177672971fd2c7eec48",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/control.exe",
+      "name": "control.exe",
+      "sha256": "867cfe36a25ff83115d2cb7bee80eb6e1828b26ec6859a5aab2e7c7e1d148b85",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/cscript.exe",
+      "name": "cscript.exe",
+      "sha256": "4ea26e2966d4757f9584c2f2b01d763b47f77171be3e6e86d4e5c75217207034",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/ddhelp.exe",
+      "name": "ddhelp.exe",
+      "sha256": "cbae5b921774d73c6fbcb5a9fcc54156783f360a69db802382ee8cc1585b9fe4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/dism.exe",
+      "name": "dism.exe",
+      "sha256": "1f1d37d4851146024a2c6093c4f9a7090b860305576aa12b043d9b4200ebcede",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/dllhost.exe",
+      "name": "dllhost.exe",
+      "sha256": "f795eefbc0dc34e60162356bbbee9090a780742685e0e3d828bb36c41114d884",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/dosx.exe",
+      "name": "dosx.exe",
+      "sha256": "cbae5b921774d73c6fbcb5a9fcc54156783f360a69db802382ee8cc1585b9fe4",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/dplaysvr.exe",
+      "name": "dplaysvr.exe",
+      "sha256": "a4ad2d8c409887877811ea4e0be547c4f1b94ff6ddfd8db3c9b3f225287437bb",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/dpnsvr.exe",
+      "name": "dpnsvr.exe",
+      "sha256": "c4de7e8fced28f5e2beec3cc9af013f962d7e9ae802f7e6d352941cb35794df2",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/dpvsetup.exe",
+      "name": "dpvsetup.exe",
+      "sha256": "1f88815d4db91cbd332d292b90d23702cb5b432243d8a0dc555a9cd772fb8bac",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/dxdiag.exe",
+      "name": "dxdiag.exe",
+      "sha256": "61ecd3b8ac4014f3386d9926b304bf3773ebc8e5c042535d186385bc7d77cf1c",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/eject.exe",
+      "name": "eject.exe",
+      "sha256": "4a6fd8cd193a59c9330ea2d306db43c053550d1942941cc9e1984450197317e9",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/expand.exe",
+      "name": "expand.exe",
+      "sha256": "7f6155ec9e4914122fe57f2903c5837e7aa3cac9da6796e265696d1d18a0d7ea",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    },
+    {
+      "path": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmn-eswc/prefix/drive_c/windows/syswow64/explorer.exe",
+      "name": "explorer.exe",
+      "sha256": "bfc38fde0df11631a9787eec3acd56a60cfb59c7949d98ebe5923833af325681",
+      "windows": "STATIC_OK",
+      "macos": "SUPPORTED_NOT_TESTED",
+      "linux": "BLOCKED_NO_COMPLETED_BUILD"
+    }
+  ]
+}

@@ -7,7 +7,16 @@
 # has the tools; the rest is documented in its header.
 #
 #   sh verify.sh            # everything that can run on this machine
-#   sh verify.sh --fast     # skip the parts that need a game corpus
+#   sh verify.sh --fast     # skip only the parts that need a game corpus (never the gates)
+#   sh verify.sh --differential  # accepted for compatibility; the gates always run
+#
+# The fail-closed differential gate and the multilifter selector are part of the
+# shared gate (issue #25). They run in EVERY mode -- default, --fast and
+# --differential -- with an explicit PASS/FAIL line, so they cannot be skipped
+# silently. They are self-contained (synthetic PE, no corpus/SDL2), so --fast
+# trims only corpus-dependent checks, each reported as an explicit SKIP with its
+# reason. --differential is kept as a no-op alias so older CI invocations keep
+# working. See docs/DIFF_GATE.md and docs/MULTILIFTER.md.
 #
 # Exit 0 only when every check passed. A skipped check is reported as skipped with
 # its reason and does NOT fail the run -- a machine without SDL2 or Cargo is not a broken
@@ -16,7 +25,17 @@ set -u
 cd "$(dirname "$0")" || exit 1
 
 FAST=0
-[ "${1:-}" = "--fast" ] && FAST=1
+DIFFERENTIAL=0
+for arg in "$@"; do
+    case "$arg" in
+        --fast) FAST=1 ;;
+        --differential) DIFFERENTIAL=1 ;;
+        *)
+            printf 'unknown option: %s\nusage: sh verify.sh [--fast] [--differential]\n' "$arg" >&2
+            exit 2
+            ;;
+    esac
+done
 
 fail=0
 ran=0
@@ -40,6 +59,32 @@ if python3 tests/fixtures/make_pe32_fixture.py --check > /tmp/verify-fixture.log
     ok "synthetic PE32 fixture reproducible"
 else
     bad "synthetic PE32 fixture reproducible" "$(tail -2 /tmp/verify-fixture.log | tr '\n' ' ')"
+fi
+
+# ------------------------------------------- differential gate + multilifter
+# Shared gate, issue #25: these checks run in every mode and always report a
+# PASS/FAIL line, so a broken comparator or a selector that promotes a broken
+# body cannot pass by being silently omitted. The gate is self-contained, so
+# --fast does not skip it. --differential is accepted as a compatibility alias
+# only; it no longer gates these checks.
+head1 "differential gate + multilifter selector"
+
+if [ "$DIFFERENTIAL" = 1 ]; then
+    say "note: --differential is a compatibility alias; the gates below always run"
+fi
+
+if python3 tests/diff/differential_gate.py --quiet --json /tmp/verify-diff-gate.json \
+     > /tmp/verify-diff-gate.log 2>&1; then
+    ok "differential gate (flags + memory)" "$(tail -1 /tmp/verify-diff-gate.log)"
+else
+    bad "differential gate (flags + memory)" "$(tail -3 /tmp/verify-diff-gate.log | tr '\n' ' ')"
+fi
+
+if python3 -m pytest tests/diff/ tests/test_multilifter.py -q \
+     > /tmp/verify-multilifter.log 2>&1; then
+    ok "multilifter selector + gate assertions" "$(tail -1 /tmp/verify-multilifter.log)"
+else
+    bad "multilifter selector + gate assertions" "$(tail -3 /tmp/verify-multilifter.log | tr '\n' ' ')"
 fi
 
 # --------------------------------------------------------------- runtime
@@ -69,11 +114,15 @@ fi
 # ------------------------------------------------------------------- gui
 head1 "gui"
 if [ -x gui/build/gamerecomp ]; then
-    if QT_QPA_PLATFORM=offscreen gui/build/gamerecomp --selftest projects/cavestory-doukutsu --repo "$PWD" \
-         > /tmp/verify-gui.log 2>&1; then
-        ok "gui reads a real project headlessly" "$(grep '^functions:' /tmp/verify-gui.log)"
+    if [ -d projects/cavestory-doukutsu ]; then
+        if QT_QPA_PLATFORM=offscreen gui/build/gamerecomp --selftest projects/cavestory-doukutsu --repo "$PWD" \
+             > /tmp/verify-gui.log 2>&1; then
+            ok "gui reads a real project headlessly" "$(grep '^functions:' /tmp/verify-gui.log)"
+        else
+            bad "gui reads a real project headlessly" "$(head -2 /tmp/verify-gui.log | tr '\n' ' ')"
+        fi
     else
-        bad "gui reads a real project headlessly" "$(head -2 /tmp/verify-gui.log | tr '\n' ' ')"
+        skip "gui reads a real project headlessly" "projects/cavestory-doukutsu not generated"
     fi
     if QT_QPA_PLATFORM=offscreen gui/build/gamerecomp --selftest-pe tests/fixtures/pe32-minimal.exe \
          > /tmp/verify-gui-pe.log 2>&1; then

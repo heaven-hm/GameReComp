@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "results": [
+    {
+      "project": "reports/oracle-sweep/busybox-project",
+      "name": "busybox",
+      "image": "alpine:latest",
+      "resources": {
+        "generated_source_bytes": 190147067,
+        "binary_bytes": 44976072,
+        "project_disk_bytes": 314755672,
+        "peak_rss_bytes": 1570586624,
+        "stage_seconds_total": 197.13
+      },
+      "build_started": true,
+      "build_rc": 125,
+      "build_log": "docker: Error response from daemon: create reports/linux-matrix/staging/busybox: \"reports/linux-matrix/staging/busybox\" includes invalid characters for a local volume name, only \"[a-zA-Z0-9][a-zA-Z0-9_.-]\" are allowed. If you intended to pass a host directory, use absolute path\n\nRun 'docker run --help' for more information\n",
+      "run_rc": "NOT_RUN",
+      "seconds": 0.1
+    }
+  ],
+  "disk_guard": {
+    "scratch": "reports/linux-matrix",
+    "min_free_bytes": 2147483648,
+    "blocked_inputs": []
+  }
+}

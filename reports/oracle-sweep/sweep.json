@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "rows": [
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/busybox.exe",
+      "name": "busybox",
+      "original": {
+        "exit_code": 0,
+        "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
+        "stdout_bytes": 2018
+      },
+      "pipeline": {
+        "score": 100,
+        "verification": "scenario-pass"
+      },
+      "acceptance": {
+        "PASS": 1,
+        "PARTIAL": 0,
+        "BUILD ONLY": 0,
+        "FAIL": 0,
+        "BLOCKED": 0
+      },
+      "status": "PASS"
+    }
+  ]
+}
