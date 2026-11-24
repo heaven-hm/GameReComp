@@ -30,6 +30,8 @@ for _sub in ("pe", "disasm", "lift"):
         sys.path.insert(0, _p)
 
 from pe_analyze import analyze_pe, build_iat_map  # noqa: E402
+from cli_metadata import (detect_file as detect_cli,  # noqa: E402
+                          MANAGED as CLI_UNSUPPORTED, MALFORMED as CLI_MALFORMED)
 from translator import (MAX_UNIT_BYTES, discover_functions,  # noqa: E402
                         generate_recomp_files, make_read_va)
 
@@ -293,6 +295,24 @@ class Pipeline:
                 f"{info.pe_type} is not supported by the PE32 backend yet "
                 f"(machine {info.machine}); fail-closed instead of guessing",
                 {"pe_type": info.pe_type, "machine": info.machine})
+        # A managed assembly has a PE32 stub but its program is IL, not the x86
+        # bytes this lifter reads. Detect the COR20/metadata layout explicitly
+        # and refuse it with a named status rather than lifting the stub and
+        # reporting a misleading "build".
+        cli = detect_cli(self.pe_path)
+        if cli.status in (CLI_UNSUPPORTED, CLI_MALFORMED) or cli.is_managed:
+            self._write_json("reports/cli_detection.json", cli.as_json())
+            cor = cli.cor20
+            raise StageFailure(
+                "managed .NET/CLI assembly: IL recompilation is not implemented "
+                "(UNSUPPORTED_NOT_TESTED); refusing to lift IL as x86 code",
+                {"status": CLI_UNSUPPORTED if cli.is_managed else cli.status,
+                 "sha256": cli.sha256,
+                 "clr": (f"{cor.major_runtime_version}.{cor.minor_runtime_version}"
+                         if cor else None),
+                 "streams": ([s.name for s in cor.metadata.streams]
+                             if cor else []),
+                 "reason": cli.reason})
         self.info = info
         self.pe_data = self.pe_path.read_bytes()
         self.iat_map = build_iat_map(info)
