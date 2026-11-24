@@ -79,6 +79,14 @@ class BuildJobsTests(unittest.TestCase):
 
 
 class MemoryJobsTests(unittest.TestCase):
+    def setUp(self):
+        # Disk-focused tests hold the memory probe ample; do the converse here
+        # so a nearly full host volume cannot reduce the requested jobs and
+        # mask the memory policy under test.
+        patcher = _with_free(100 << 30)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_ample_memory_keeps_requested_jobs(self):
         with _with_memory(64 << 30):
             self.assertEqual(effective_build_jobs(8, 500 << 20), 8)
