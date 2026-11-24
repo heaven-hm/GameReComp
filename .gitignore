@@ -143,3 +143,6 @@ gui/build/
 
 # generated sweep projects (regenerable build artifacts)
 reports/oracle-sweep/*-project/
+
+# generated sweep projects (any depth)
+**/*-project/

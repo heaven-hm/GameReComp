@@ -54,6 +54,14 @@ acceptance **PASS 1 / FAIL 0**.
 | `base64.exe` | `d805661c60b0` | exit 0, 6/6 output needles | `proofs/base64-oracle.json`, `proofs/base64-oracle-pass.json` |
 | `arith-calc.exe` | `9b59ee613acc` | `fib(20)=6765`, `gcd=21`, `popcount=16`, `rotl=878082066` | `proofs/arith-calc-oracle.json`, `proofs/arith-calc-oracle-pass.json` |
 | `busybox.exe` | `7bfee5309653` | exit 0, output reproduced by automated sweep | `proofs/sweep.json`, `proofs/busybox-oracle-pass.json` |
+| `tictactoe.exe` | `b4a8d779c50c` | deterministic menu output reproduced | `proofs/batch1-tictactoe-acceptance.json` |
+| `game2048.exe` | see sweep | deterministic output reproduced | `proofs/batch1-game2048-acceptance.json` |
+| `hangman_x86.exe` | see sweep | deterministic output reproduced | `proofs/batch1-hangman_x86-acceptance.json` |
+
+Batch results also include a **FAIL** (`snake.exe`: stdout mismatch) and a
+**BLOCKED** row (`guess_game_x86.exe`: original hangs under Wine without
+input) — both recorded in `reports/oracle-sweep/batch1/sweep.json` and not
+counted as passes.
 
 Wine is an independent execution of the original binary but **not retail
 Windows**, and process-level matching is **not gameplay equivalence**. See
