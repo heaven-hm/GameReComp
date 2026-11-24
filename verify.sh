@@ -7,12 +7,16 @@
 # has the tools; the rest is documented in its header.
 #
 #   sh verify.sh            # everything that can run on this machine
-#   sh verify.sh --fast     # skip the parts that need a game corpus
-#   sh verify.sh --differential  # also run the opt-in flag/memory differential gate
+#   sh verify.sh --fast     # skip only the parts that need a game corpus (never the gates)
+#   sh verify.sh --differential  # accepted for compatibility; the gates always run
 #
-# The differential gate is opt-in because it drives the synthetic PE through
-# Unicorn and mutates the comparison to prove it is non-vacuous (docs/DIFF_GATE.md).
-# Its assertions also run unattended as part of `pytest tests/`.
+# The fail-closed differential gate and the multilifter selector are part of the
+# shared gate (issue #25). They run in EVERY mode -- default, --fast and
+# --differential -- with an explicit PASS/FAIL line, so they cannot be skipped
+# silently. They are self-contained (synthetic PE, no corpus/SDL2), so --fast
+# trims only corpus-dependent checks, each reported as an explicit SKIP with its
+# reason. --differential is kept as a no-op alias so older CI invocations keep
+# working. See docs/DIFF_GATE.md and docs/MULTILIFTER.md.
 #
 # Exit 0 only when every check passed. A skipped check is reported as skipped with
 # its reason and does NOT fail the run -- a machine without SDL2 or Cargo is not a broken
@@ -57,17 +61,30 @@ else
     bad "synthetic PE32 fixture reproducible" "$(tail -2 /tmp/verify-fixture.log | tr '\n' ' ')"
 fi
 
-# ------------------------------------------------------------ differential
-# Opt-in: the flag/memory gate deliberately breaks the comparison to prove it
-# can fail. Skipped by default so the fast CI gate stays corpus- and SDL-free.
+# ------------------------------------------- differential gate + multilifter
+# Shared gate, issue #25: these checks run in every mode and always report a
+# PASS/FAIL line, so a broken comparator or a selector that promotes a broken
+# body cannot pass by being silently omitted. The gate is self-contained, so
+# --fast does not skip it. --differential is accepted as a compatibility alias
+# only; it no longer gates these checks.
+head1 "differential gate + multilifter selector"
+
 if [ "$DIFFERENTIAL" = 1 ]; then
-    head1 "differential"
-    if python3 tests/diff/differential_gate.py --quiet --json /tmp/verify-diff-gate.json \
-         > /tmp/verify-diff-gate.log 2>&1; then
-        ok "differential gate (flags + memory)" "$(tail -1 /tmp/verify-diff-gate.log)"
-    else
-        bad "differential gate (flags + memory)" "$(tail -3 /tmp/verify-diff-gate.log | tr '\n' ' ')"
-    fi
+    say "note: --differential is a compatibility alias; the gates below always run"
+fi
+
+if python3 tests/diff/differential_gate.py --quiet --json /tmp/verify-diff-gate.json \
+     > /tmp/verify-diff-gate.log 2>&1; then
+    ok "differential gate (flags + memory)" "$(tail -1 /tmp/verify-diff-gate.log)"
+else
+    bad "differential gate (flags + memory)" "$(tail -3 /tmp/verify-diff-gate.log | tr '\n' ' ')"
+fi
+
+if python3 -m pytest tests/diff/ tests/test_multilifter.py -q \
+     > /tmp/verify-multilifter.log 2>&1; then
+    ok "multilifter selector + gate assertions" "$(tail -1 /tmp/verify-multilifter.log)"
+else
+    bad "multilifter selector + gate assertions" "$(tail -3 /tmp/verify-multilifter.log | tr '\n' ' ')"
 fi
 
 # --------------------------------------------------------------- runtime
