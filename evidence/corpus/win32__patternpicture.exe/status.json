@@ -1,0 +1,16 @@
+{
+  "slug": "win32__patternpicture.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/patternpicture.exe",
+  "sha256": "e3678cbe2f0fc76bbb41adc5f3b098675b3325400d05c0a95b6be3daef02d215",
+  "size": 190488,
+  "is_game": true,
+  "started": 1795505181.378945,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternpicture.exe/bin_patternpicture",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternpicture.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternpicture.exe/report.json",
+  "seconds": 24.1
+}

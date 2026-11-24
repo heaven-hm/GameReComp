@@ -1,0 +1,55 @@
+{
+  "game": "win32__patternpicture.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternpicture.exe/bin_patternpicture",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/patternpicture.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__patternpicture.exe",
+  "native": {
+    "game": "win32__patternpicture.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternpicture.exe/bin_patternpicture",
+    "binary_sha256": "ff091ce6ef2425d30b31fcb1eb3760c02cce07b42bf9d8e797e26bddb869e400",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternpicture.exe/bin_patternpicture"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__patternpicture.exe/screenshots"
+    },
+    "exit_code": 1,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__patternpicture.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x2C000\n[pe] static TLS: template 0x0040F000..0x0040F004 (+0 zero), index 0\n[pe] bound 64 imports, 0 unresolved\n[host] C:\\patternpicture.exe booted: entry 0x00401460, 0 unresolved imports\nfatal error: allocation too large\n",
+    "seconds": 0.4,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__patternpicture.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win32__patternpicture.exe exit=      1 frames=0 0.4s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 1,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__patternpicture.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run patternpicture.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__patternpicture.exe/highball.log",
+    "bytes": 302,
+    "seconds": 0.1,
+    "tail": "Launching patternpicture.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T072833Z-Games-patternpicture.exe.log\n\n0128:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
+  }
+}

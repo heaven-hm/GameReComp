@@ -1,0 +1,55 @@
+{
+  "game": "games__tumiki_fighters__tf.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__tumiki_fighters__tf.exe/bin_tf",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/games/tumiki_fighters/tf.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/games/tumiki_fighters",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__tumiki_fighters__tf.exe",
+  "native": {
+    "game": "games__tumiki_fighters__tf.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__tumiki_fighters__tf.exe/bin_tf",
+    "binary_sha256": "beef6917ce88f06f33a8e57da6bb35868f5350b635c5b9e996b9b0c6c4027d69",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/games/tumiki_fighters",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__tumiki_fighters__tf.exe/bin_tf"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__tumiki_fighters__tf.exe/screenshots"
+    },
+    "exit_code": 3,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__tumiki_fighters__tf.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x3D000\n[pe] <embedded image> mapped at 0x7EFB0000, span 0x48000\n[pe] bound 58 imports, 0 unresolved\n[module] GetProcAddress(tf.exe, ___CPPdebugHook): not answered\n[module] GetProcAddress(tf.exe, ___CPPdebugHook): not answered\n[module] GetProcAddress(kernel32.dll, Borland32): not answered\n[pe] companion bulletml.dll mapped at 0x7EFB0000 (25 exports)\n[pe] bound 145 imports, 0 unresolved\n[host] C:\\tf.exe booted: entry 0x004187D0, 0 unresolved imports\n[win32hle] RaiseException(0xE0440001) from guest 0x00412125: guest exceptions are not handled\n",
+    "seconds": 6.4,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__tumiki_fighters__tf.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "games__tumiki_fighters__tf.exe exit=      3 frames=0 6.4s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 3,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__tumiki_fighters__tf.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run tf.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/games/tumiki_fighters",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__tumiki_fighters__tf.exe/highball.log",
+    "bytes": 12109,
+    "seconds": 7.2,
+    "tail": "GOOGLE_display_timing v1\n\tVK_IMG_format_pvrtc v1\n\tVK_INTEL_shader_integer_functions2 v1\n\tVK_MVK_macos_surface v3\n\tVK_MVK_moltenvk v37\n\tVK_NV_fragment_shader_barycentric v1\n[mvk-info] GPU device:\n\tmodel: Apple M2\n\ttype: Integrated\n\tvendorID: 0x106b\n\tdeviceID: 0x1b020208\n\tpipelineCacheUUID: DB660224-1B02-0208-0000-000100000000\n\tGPU memory available: 5461 MB\n\tGPU memory used: 0 MB\n\tMetal Shading Language 4.0\n\tsupports the following GPU Features:\n\t\tGPU Family Metal 4\n\t\tGPU Family Apple 8\n\t\tGPU Family Mac 1\n\t\tGPU Family Mac 2\n\t\tRead-Write Texture Tier 2\n[mvk-info] Created VkInstance for Vulkan version 1.1.357, as requested by app, with the following 5 Vulkan extensions enabled:\n\tVK_KHR_external_memory_capabilities v1\n\tVK_KHR_external_semaphore_capabilities v1\n\tVK_KHR_get_physical_device_properties2 v2\n\tVK_KHR_surface v25\n\tVK_EXT_headless_surface v1\n[mvk-info] Destroyed VkPhysicalDevice for GPU Apple M2 with 0 MB of GPU memory still allocated.\n[mvk-info] Destroying VkInstance for Vulkan version 1.1.357 with 5 Vulkan extensions enabled.\n00fc:err:winediag:wined3d_cs_create Enabling CS commands serialization.\n00fc:err:d3d_sync:wined3d_cs_create Forcing serialization of all command streams.\n"
+  }
+}

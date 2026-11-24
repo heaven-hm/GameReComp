@@ -1,0 +1,50 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x1400180d8, delta 0, imports 191\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BUILD-ONLY",
+  "copied": [
+    "evidence/corpus/win64__magnets.exe/status.json",
+    "evidence/corpus/win64__magnets.exe/report.json",
+    "evidence/corpus/win64__magnets.exe/build.log"
+  ],
+  "exit": null,
+  "frame_proof_ok": false,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__magnets.exe/bin_magnets",
+    "sha256": "965bf8b004710c9c5ca23fc9a39849492d1c0814e263f4b5c9588faf84fae356",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "B1 built binary; no run log (B2 did not test it)",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": false,
+  "screenshots": [],
+  "slug": "win64__magnets.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "5f1af615d12b71fa637bf16aaccde94f0e3aae91904579ba517692b819f89e1e",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/magnets.exe",
+  "source_rejected": false
+}

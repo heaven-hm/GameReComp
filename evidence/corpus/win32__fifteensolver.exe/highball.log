@@ -1,0 +1,4 @@
+Launching fifteensolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...
+exit=1 after 0s — log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T072830Z-Games-fifteensolver.exe.log
+
+00c4:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync

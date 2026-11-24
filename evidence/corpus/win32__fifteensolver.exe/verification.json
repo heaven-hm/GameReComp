@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fifteensolver.exe/bin_fifteensolver",
+    "sha256": "7ad27b554ffe878e52d21a2b0a560c72bde493594a295812aebd780342a90a73",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win32__fifteensolver.exe/status.json",
+    "evidence/corpus/win32__fifteensolver.exe/report.json",
+    "evidence/corpus/win32__fifteensolver.exe/build.log",
+    "evidence/corpus/win32__fifteensolver.exe/frame-proof.json",
+    "evidence/corpus/win32__fifteensolver.exe/summary.json",
+    "evidence/corpus/win32__fifteensolver.exe/run.log",
+    "evidence/corpus/win32__fifteensolver.exe/highball.log",
+    "evidence/corpus/win32__fifteensolver.exe/native-frames.html"
+  ],
+  "exit": 1,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fifteensolver.exe/bin_fifteensolver",
+    "sha256": "7ad27b554ffe878e52d21a2b0a560c72bde493594a295812aebd780342a90a73",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__fifteensolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "47b443772e36be8a8cf8c45fe80951a466264f370fa28a4851ea57b5c1f17d95",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe",
+  "source_rejected": false
+}

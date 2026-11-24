@@ -1,0 +1,16 @@
+{
+  "slug": "win32__fillingsolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fillingsolver.exe",
+  "sha256": "10429ad8f98bf6577f11cc0bbee59ff9f92fa9de32401667607b9f579477efff",
+  "size": 190525,
+  "is_game": true,
+  "started": 1795505205.4676359,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fillingsolver.exe/bin_fillingsolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fillingsolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fillingsolver.exe/report.json",
+  "seconds": 24.7
+}

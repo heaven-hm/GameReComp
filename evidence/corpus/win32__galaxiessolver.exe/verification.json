@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/bin_galaxiessolver",
+    "sha256": "8f68350d349d9191cd1283969f3a4e9833214ff956ca2336b5546d9020f2f680",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win32__galaxiessolver.exe/status.json",
+    "evidence/corpus/win32__galaxiessolver.exe/report.json",
+    "evidence/corpus/win32__galaxiessolver.exe/build.log",
+    "evidence/corpus/win32__galaxiessolver.exe/frame-proof.json",
+    "evidence/corpus/win32__galaxiessolver.exe/summary.json",
+    "evidence/corpus/win32__galaxiessolver.exe/run.log",
+    "evidence/corpus/win32__galaxiessolver.exe/highball.log",
+    "evidence/corpus/win32__galaxiessolver.exe/native-frames.html"
+  ],
+  "exit": "TIMEOUT",
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/bin_galaxiessolver",
+    "sha256": "8f68350d349d9191cd1283969f3a4e9833214ff956ca2336b5546d9020f2f680",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__galaxiessolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "830447211f443524c0ac228c3550631a36b2becf4def1a74c7f4c7d1b830faea",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiessolver.exe",
+  "source_rejected": false
+}

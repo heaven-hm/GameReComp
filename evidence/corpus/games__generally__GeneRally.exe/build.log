@@ -1,0 +1,8 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/games/generally/GeneRally.exe
+arch=pe32_i386 sha256=868175b2cc2461ee0fe4d7b599eabfd94581d6dd54ea75a47f89f41617e82391
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/games/generally/GeneRally.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__GeneRally.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/games/generally --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+
+[LAUNCH ERROR: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli']

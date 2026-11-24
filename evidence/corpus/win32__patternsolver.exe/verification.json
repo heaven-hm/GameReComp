@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/bin_patternsolver",
+    "sha256": "4133ed29c3e5593e80f497fd5f58674f4323fd397b6569defded7d5b84da10eb",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win32__patternsolver.exe/status.json",
+    "evidence/corpus/win32__patternsolver.exe/report.json",
+    "evidence/corpus/win32__patternsolver.exe/build.log",
+    "evidence/corpus/win32__patternsolver.exe/frame-proof.json",
+    "evidence/corpus/win32__patternsolver.exe/summary.json",
+    "evidence/corpus/win32__patternsolver.exe/run.log",
+    "evidence/corpus/win32__patternsolver.exe/highball.log",
+    "evidence/corpus/win32__patternsolver.exe/native-frames.html"
+  ],
+  "exit": 1,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/bin_patternsolver",
+    "sha256": "4133ed29c3e5593e80f497fd5f58674f4323fd397b6569defded7d5b84da10eb",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__patternsolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "0aa0bacc9e5b561d83afc6b278e4937e55eb0c620f23ad15dfcc940ddcc5d02f",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/patternsolver.exe",
+  "source_rejected": false
+}

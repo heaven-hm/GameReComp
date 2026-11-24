@@ -1,0 +1,16 @@
+{
+  "slug": "games__cavestory__Doukutsu.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/Doukutsu.exe",
+  "sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+  "size": 1478656,
+  "is_game": true,
+  "started": 1795505784.7558222,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__Doukutsu.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

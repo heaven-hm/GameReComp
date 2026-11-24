@@ -1,0 +1,57 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140001440, delta 0, imports 47\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__game2048.exe/game2048",
+    "sha256": "074d8c2f5ca8a07214b0592f43dacfa6c2e9a35e86256191e6e2497f81e2de19",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": true,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/windows__x64__games__game2048.exe/status.json",
+    "evidence/corpus/windows__x64__games__game2048.exe/report.json",
+    "evidence/corpus/windows__x64__games__game2048.exe/build.log",
+    "evidence/corpus/windows__x64__games__game2048.exe/frame-proof.json",
+    "evidence/corpus/windows__x64__games__game2048.exe/summary.json",
+    "evidence/corpus/windows__x64__games__game2048.exe/run.log",
+    "evidence/corpus/windows__x64__games__game2048.exe/highball.log",
+    "evidence/corpus/windows__x64__games__game2048.exe/native-frames.html"
+  ],
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__game2048.exe/bin_game2048",
+    "sha256": "074d8c2f5ca8a07214b0592f43dacfa6c2e9a35e86256191e6e2497f81e2de19",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "B2 tested a different binary than B1 produced",
+  "rejects": [
+    "B2 tested a different binary than B1 produced"
+  ],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "windows__x64__games__game2048.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "6882192760f4b47c2d79b3739ad9a4cf40bef59c00e383c47160156ca84d81eb",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/game2048.exe",
+  "source_rejected": false
+}

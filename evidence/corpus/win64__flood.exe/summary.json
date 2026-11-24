@@ -1,0 +1,55 @@
+{
+  "game": "win64__flood.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/bin_flood",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/flood.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win64",
+  "arch": "PE32+ x64",
+  "match_reason": "path partial match",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__flood.exe",
+  "native": {
+    "game": "win64__flood.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/bin_flood",
+    "binary_sha256": "4692164b0da0e5ad711dd7d052538911a7d521a1cdc18ba81207afebd9298045",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win64",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/bin_flood"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__flood.exe/screenshots"
+    },
+    "exit_code": 2,
+    "stdout_tail": "usage: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/bin_flood <pe32plus.exe>\n",
+    "seconds": 0.1,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__flood.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win64__flood.exe     exit=      2 frames=0 0.1s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 2,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__flood.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run flood.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win64",
+    "exit": 124,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__flood.exe/highball.log",
+    "bytes": 11165,
+    "seconds": 21.7,
+    "tail": "ize_control v2\n\tVK_EXT_surface_maintenance1 v1\n\tVK_EXT_swapchain_colorspace v5\n\tVK_EXT_swapchain_maintenance1 v1\n\tVK_EXT_texel_buffer_alignment v1\n\tVK_EXT_texture_compression_astc_hdr v1\n\tVK_EXT_tooling_info v1\n\tVK_EXT_vertex_attribute_divisor v3\n\tVK_AMD_gpu_shader_half_float v2\n\tVK_AMD_negative_viewport_height v1\n\tVK_AMD_shader_image_load_store_lod v1\n\tVK_AMD_shader_trinary_minmax v1\n\tVK_GOOGLE_display_timing v1\n\tVK_IMG_format_pvrtc v1\n\tVK_INTEL_shader_integer_functions2 v1\n\tVK_MVK_macos_surface v3\n\tVK_MVK_moltenvk v37\n\tVK_NV_fragment_shader_barycentric v1\n[mvk-info] GPU device:\n\tmodel: Apple M2\n\ttype: Integrated\n\tvendorID: 0x106b\n\tdeviceID: 0x1b020208\n\tpipelineCacheUUID: DB660224-1B02-0208-0000-000100000000\n\tGPU memory available: 5461 MB\n\tGPU memory used: 0 MB\n\tMetal Shading Language 4.0\n\tsupports the following GPU Features:\n\t\tGPU Family Metal 4\n\t\tGPU Family Apple 8\n\t\tGPU Family Mac 1\n\t\tGPU Family Mac 2\n\t\tRead-Write Texture Tier 2\n[mvk-info] Created VkInstance for Vulkan version 1.0.357, as requested by app, with the following 3 Vulkan extensions enabled:\n\tVK_KHR_external_memory_capabilities v1\n\tVK_KHR_external_semaphore_capabilities v1\n\tVK_KHR_get_physical_device_properties2 v2\n"
+  }
+}

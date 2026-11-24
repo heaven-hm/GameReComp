@@ -1,0 +1,9 @@
+Launching mapsolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...
+exit=1 after 6s — log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T073842Z-Games-mapsolver.exe.log
+
+msync: bootstrapped mach port on wine-12ba06b9-msync.
+msync: up and running.
+002c:err:wineboot:process_run_key Error running cmd L"C:\\windows\\system32\\winemenubuilder.exe -a -r" (126).
+0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L"C:\\windows\\system32\\drivers\\idmwfp.sys") not found
+0074:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\IDMWFP": c0000142
+usage: Z:\Users\haseeb-mir\Downloads\recomp-apps\win32\mapsolver.exe [-g | -v] <game_id>

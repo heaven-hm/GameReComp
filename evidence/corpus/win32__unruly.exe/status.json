@@ -1,0 +1,16 @@
+{
+  "slug": "win32__unruly.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unruly.exe",
+  "sha256": "d73130ae7129d8ec0654e8aa1d25ef9f80cc6cc5169c7ec7ff0a35ba3e697207",
+  "size": 310789,
+  "is_game": true,
+  "started": 1795505784.5828228,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unruly.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

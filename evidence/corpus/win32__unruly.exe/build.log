@@ -1,0 +1,8 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win32/unruly.exe
+arch=pe32_i386 sha256=d73130ae7129d8ec0654e8aa1d25ef9f80cc6cc5169c7ec7ff0a35ba3e697207
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/win32/unruly.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unruly.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/win32 --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+
+[LAUNCH ERROR: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli']

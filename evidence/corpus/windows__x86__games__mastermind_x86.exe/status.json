@@ -1,0 +1,16 @@
+{
+  "slug": "windows__x86__games__mastermind_x86.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/mastermind_x86.exe",
+  "sha256": "dc637c1e19616b2b856b7c194e0459fa8c54a3d88c9b8ceacd2e22fc898e38a9",
+  "size": 11372995,
+  "is_game": true,
+  "started": 1795505784.778673,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__mastermind_x86.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

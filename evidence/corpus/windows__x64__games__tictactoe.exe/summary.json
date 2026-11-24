@@ -1,0 +1,55 @@
+{
+  "game": "windows__x64__games__tictactoe.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/tictactoe",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tictactoe.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+  "arch": "PE32+ x64",
+  "match_reason": "path partial match",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tictactoe.exe",
+  "native": {
+    "game": "windows__x64__games__tictactoe.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/tictactoe",
+    "binary_sha256": "976a0d9f6678c134d4919292c5ce2a624851726985d55aa29446560b836b47d7",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/tictactoe"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tictactoe.exe/screenshots"
+    },
+    "exit_code": 2,
+    "stdout_tail": "usage: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/tictactoe <pe32plus.exe>\n",
+    "seconds": 0.0,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tictactoe.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "windows__x64__games__tictactoe.exe exit=      2 frames=0 0.0s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 2,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tictactoe.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run tictactoe.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+    "exit": 0,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tictactoe.exe/highball.log",
+    "bytes": 805,
+    "seconds": 6.0,
+    "tail": "=== Tic-Tac-Toe AI (You: X, AI: O) ===\n\n 1 | 2 | 3 \n---|---|---\n 4 | 5 | 6 \n---|---|---\n 7 | 8 | 9 \n\nEnter move (1-9): Game ended in a Draw!\nLaunching tictactoe.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=0 after 2s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T074244Z-Games-tictactoe.exe.log\n\nmsync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n002c:err:wineboot:process_run_key Error running cmd L\"C:\\\\windows\\\\system32\\\\winemenubuilder.exe -a -r\" (126).\n0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L\"C:\\\\windows\\\\system32\\\\drivers\\\\idmwfp.sys\") not found\n0074:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\IDMWFP\": c0000142\n"
+  }
+}

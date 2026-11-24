@@ -1,0 +1,55 @@
+{
+  "game": "win32__keensolver.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keensolver.exe/bin_keensolver",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/keensolver.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__keensolver.exe",
+  "native": {
+    "game": "win32__keensolver.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keensolver.exe/bin_keensolver",
+    "binary_sha256": "5df41186755c7dfee19d9bca22dabf8a9e1a87f70991108012167a923ba5e11d",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keensolver.exe/bin_keensolver"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__keensolver.exe/screenshots"
+    },
+    "exit_code": 1,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__keensolver.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x34000\n[pe] static TLS: template 0x00417000..0x00417004 (+0 zero), index 0\n[pe] bound 61 imports, 0 unresolved\n[host] C:\\keensolver.exe booted: entry 0x00401460, 0 unresolved imports\nusage: C:\\keensolver.exe [-g | -v] <game_id>\n",
+    "seconds": 0.7,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__keensolver.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win32__keensolver.exe exit=      1 frames=0 0.7s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 1,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__keensolver.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run keensolver.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__keensolver.exe/highball.log",
+    "bytes": 756,
+    "seconds": 8.8,
+    "tail": "Launching keensolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 5s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T073826Z-Games-keensolver.exe.log\n\nmsync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n002c:err:wineboot:process_run_key Error running cmd L\"C:\\\\windows\\\\system32\\\\winemenubuilder.exe -a -r\" (126).\n0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L\"C:\\\\windows\\\\system32\\\\drivers\\\\idmwfp.sys\") not found\n0074:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\IDMWFP\": c0000142\nusage: Z:\\Users\\haseeb-mir\\Downloads\\recomp-apps\\win32\\keensolver.exe [-g | -v] <game_id>\n"
+  }
+}

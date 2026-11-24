@@ -1,0 +1,16 @@
+{
+  "slug": "windows__x86__games__tictactoe.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tictactoe.exe",
+  "sha256": "f3e562679f04a722650cd2099e6fc690e5ed748a2328c18c4dc7a424e235dcb9",
+  "size": 135893,
+  "is_game": true,
+  "started": 1795505108.28083,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__tictactoe.exe/bin_tictactoe",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__tictactoe.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__tictactoe.exe/report.json",
+  "seconds": 7.3
+}

@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__signpostsolver.exe/bin_signpostsolver",
+    "sha256": "2293a859ccbce69e92cde71349d9da4071066d371323dbc12e51f657a00d953f",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BUILD-ONLY",
+  "copied": [
+    "evidence/corpus/win32__signpostsolver.exe/status.json",
+    "evidence/corpus/win32__signpostsolver.exe/report.json",
+    "evidence/corpus/win32__signpostsolver.exe/build.log",
+    "evidence/corpus/win32__signpostsolver.exe/frame-proof.json",
+    "evidence/corpus/win32__signpostsolver.exe/summary.json",
+    "evidence/corpus/win32__signpostsolver.exe/run.log",
+    "evidence/corpus/win32__signpostsolver.exe/highball.log",
+    "evidence/corpus/win32__signpostsolver.exe/native-frames.html"
+  ],
+  "exit": 0,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__signpostsolver.exe/bin_signpostsolver",
+    "sha256": "2293a859ccbce69e92cde71349d9da4071066d371323dbc12e51f657a00d953f",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched and exited 0, but zero proven non-blank frames",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__signpostsolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "ff2b675c451f2863233f6dd181f822e7901407b4084140afdeeeecd7891fa038",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/signpostsolver.exe",
+  "source_rejected": false
+}

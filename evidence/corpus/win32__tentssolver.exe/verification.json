@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/bin_tentssolver",
+    "sha256": "c1682d2e7b3b0ca33abf77bc40de020b29fc5e4d2e0a31e24c40dce4d3e172d3",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win32__tentssolver.exe/status.json",
+    "evidence/corpus/win32__tentssolver.exe/report.json",
+    "evidence/corpus/win32__tentssolver.exe/build.log",
+    "evidence/corpus/win32__tentssolver.exe/frame-proof.json",
+    "evidence/corpus/win32__tentssolver.exe/summary.json",
+    "evidence/corpus/win32__tentssolver.exe/run.log",
+    "evidence/corpus/win32__tentssolver.exe/highball.log",
+    "evidence/corpus/win32__tentssolver.exe/native-frames.html"
+  ],
+  "exit": 1,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/bin_tentssolver",
+    "sha256": "c1682d2e7b3b0ca33abf77bc40de020b29fc5e4d2e0a31e24c40dce4d3e172d3",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__tentssolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tentssolver.exe",
+  "source_rejected": false
+}

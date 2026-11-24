@@ -1,0 +1,51 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "timeout after 900s",
+  "b1_status": "BLOCKED",
+  "b2_native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BLOCKED",
+  "copied": [
+    "evidence/corpus/SIDE_BY_SIDE_EVIDENCE__windows__TmNationsESWC.exe/status.json",
+    "evidence/corpus/SIDE_BY_SIDE_EVIDENCE__windows__TmNationsESWC.exe/build.log",
+    "evidence/corpus/SIDE_BY_SIDE_EVIDENCE__windows__TmNationsESWC.exe/summary.json",
+    "evidence/corpus/SIDE_BY_SIDE_EVIDENCE__windows__TmNationsESWC.exe/run.log"
+  ],
+  "exit": null,
+  "frame_proof_ok": false,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "nonblank_verified": 0,
+  "rationale": "B1 could not produce a native binary; see build.log",
+  "rejects": [],
+  "report_ok": false,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "SIDE_BY_SIDE_EVIDENCE__windows__TmNationsESWC.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "822def6627f020035ef0819cf9f85493e952a2efb450d23770b330311ad8109d",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/SIDE_BY_SIDE_EVIDENCE/windows/TmNationsESWC.exe",
+  "source_rejected": false
+}

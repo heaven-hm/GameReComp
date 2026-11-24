@@ -1,0 +1,16 @@
+{
+  "slug": "windows__x64__games__hangman_x64.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/hangman_x64.exe",
+  "sha256": "0addeb5ae85e793156e11cf387e20bb424a4df275641c71555ababd64d41a4d0",
+  "size": 154160,
+  "is_game": true,
+  "started": 1795505800.616701,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140001440, delta 0, imports 49\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/bin_hangman_x64",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/report.json",
+  "seconds": 1.9
+}

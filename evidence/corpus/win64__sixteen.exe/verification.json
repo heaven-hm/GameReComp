@@ -1,0 +1,57 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140014738, delta 0, imports 191\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__sixteen.exe/sixteen",
+    "sha256": "d62f3cae4b31e35d96c3f8fb3fdb682565539246d0e69b9662b7cd96e310ca86",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": true,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win64__sixteen.exe/status.json",
+    "evidence/corpus/win64__sixteen.exe/report.json",
+    "evidence/corpus/win64__sixteen.exe/build.log",
+    "evidence/corpus/win64__sixteen.exe/frame-proof.json",
+    "evidence/corpus/win64__sixteen.exe/summary.json",
+    "evidence/corpus/win64__sixteen.exe/run.log",
+    "evidence/corpus/win64__sixteen.exe/highball.log",
+    "evidence/corpus/win64__sixteen.exe/native-frames.html"
+  ],
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__sixteen.exe/bin_sixteen",
+    "sha256": "d62f3cae4b31e35d96c3f8fb3fdb682565539246d0e69b9662b7cd96e310ca86",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "B2 tested a different binary than B1 produced",
+  "rejects": [
+    "B2 tested a different binary than B1 produced"
+  ],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win64__sixteen.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "ba2907cb000b81b42b9a466167622aad512512e7ecaa1d24c192dcfdb4317aaf",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/sixteen.exe",
+  "source_rejected": false
+}

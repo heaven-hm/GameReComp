@@ -1,0 +1,50 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140017e54, delta 0, imports 193\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BUILD-ONLY",
+  "copied": [
+    "evidence/corpus/win64__pattern.exe/status.json",
+    "evidence/corpus/win64__pattern.exe/report.json",
+    "evidence/corpus/win64__pattern.exe/build.log"
+  ],
+  "exit": null,
+  "frame_proof_ok": false,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__pattern.exe/bin_pattern",
+    "sha256": "a38489409960700ae2b637258713ae786e6e44b97c434af9669b85cd549d5c50",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "B1 built binary; no run log (B2 did not test it)",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": false,
+  "screenshots": [],
+  "slug": "win64__pattern.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "ed5a1bd768d4f05d6c3a5d4f82b6ffa166996b401838895b94dfe154fe8adbf3",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/pattern.exe",
+  "source_rejected": false
+}

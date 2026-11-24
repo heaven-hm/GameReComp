@@ -1,0 +1,16 @@
+{
+  "slug": "win32__solosolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/solosolver.exe",
+  "sha256": "9f8362981fb31885250147a9f72551f9b9b153eb8b9fd4f03bbd5304d09795e8",
+  "size": 236460,
+  "is_game": true,
+  "started": 1795505705.584685,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__solosolver.exe/bin_solosolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__solosolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__solosolver.exe/report.json",
+  "seconds": 78.9
+}

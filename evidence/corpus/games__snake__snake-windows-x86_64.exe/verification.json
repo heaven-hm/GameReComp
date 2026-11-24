@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x1400075e0, delta 0, imports 152\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__snake__snake-windows-x86_64.exe/bin_snake-windows-x86_64",
+    "sha256": "dde5be031d016e93be2ff42295f32deaf5fdf4261d265cfabc5927cc33631d00",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/games__snake__snake-windows-x86_64.exe/status.json",
+    "evidence/corpus/games__snake__snake-windows-x86_64.exe/report.json",
+    "evidence/corpus/games__snake__snake-windows-x86_64.exe/build.log",
+    "evidence/corpus/games__snake__snake-windows-x86_64.exe/frame-proof.json",
+    "evidence/corpus/games__snake__snake-windows-x86_64.exe/summary.json",
+    "evidence/corpus/games__snake__snake-windows-x86_64.exe/run.log",
+    "evidence/corpus/games__snake__snake-windows-x86_64.exe/highball.log",
+    "evidence/corpus/games__snake__snake-windows-x86_64.exe/native-frames.html"
+  ],
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__snake__snake-windows-x86_64.exe/bin_snake-windows-x86_64",
+    "sha256": "dde5be031d016e93be2ff42295f32deaf5fdf4261d265cfabc5927cc33631d00",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "games__snake__snake-windows-x86_64.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "207d311be674c17be31131df095534003e0120b1a00a6569b697e00ae0c2d373",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/games/snake/snake-windows-x86_64.exe",
+  "source_rejected": false
+}

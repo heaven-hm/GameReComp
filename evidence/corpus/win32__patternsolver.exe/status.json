@@ -1,0 +1,16 @@
+{
+  "slug": "win32__patternsolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/patternsolver.exe",
+  "sha256": "0aa0bacc9e5b561d83afc6b278e4937e55eb0c620f23ad15dfcc940ddcc5d02f",
+  "size": 191139,
+  "is_game": true,
+  "started": 1795505230.146563,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/bin_patternsolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/report.json",
+  "seconds": 23.0
+}

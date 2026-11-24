@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140001440, delta 0, imports 46\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tetris.exe/bin_tetris",
+    "sha256": "169d2b4dfbd9439e954d912f30b444ea60cc3394ac2940083b0046616a585636",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/windows__x64__games__tetris.exe/status.json",
+    "evidence/corpus/windows__x64__games__tetris.exe/report.json",
+    "evidence/corpus/windows__x64__games__tetris.exe/build.log",
+    "evidence/corpus/windows__x64__games__tetris.exe/frame-proof.json",
+    "evidence/corpus/windows__x64__games__tetris.exe/summary.json",
+    "evidence/corpus/windows__x64__games__tetris.exe/run.log",
+    "evidence/corpus/windows__x64__games__tetris.exe/highball.log",
+    "evidence/corpus/windows__x64__games__tetris.exe/native-frames.html"
+  ],
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tetris.exe/bin_tetris",
+    "sha256": "169d2b4dfbd9439e954d912f30b444ea60cc3394ac2940083b0046616a585636",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "windows__x64__games__tetris.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "d210fa37f717b03fb06839ac6de2067694b48ac305753ea8aefbb7c81e4d1b61",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tetris.exe",
+  "source_rejected": false
+}

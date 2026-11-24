@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__magnetssolver.exe/bin_magnetssolver",
+    "sha256": "ca3ef4581586abb608e329f19a9e78472baa5b048f2b8b85829fe9f39cc117e2",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BUILD-ONLY",
+  "copied": [
+    "evidence/corpus/win32__magnetssolver.exe/status.json",
+    "evidence/corpus/win32__magnetssolver.exe/report.json",
+    "evidence/corpus/win32__magnetssolver.exe/build.log",
+    "evidence/corpus/win32__magnetssolver.exe/frame-proof.json",
+    "evidence/corpus/win32__magnetssolver.exe/summary.json",
+    "evidence/corpus/win32__magnetssolver.exe/run.log",
+    "evidence/corpus/win32__magnetssolver.exe/highball.log",
+    "evidence/corpus/win32__magnetssolver.exe/native-frames.html"
+  ],
+  "exit": 0,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__magnetssolver.exe/bin_magnetssolver",
+    "sha256": "ca3ef4581586abb608e329f19a9e78472baa5b048f2b8b85829fe9f39cc117e2",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched and exited 0, but zero proven non-blank frames",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__magnetssolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "a0836637d41727cf7dc58eda163f9fbcdb45f3eb0f5c19a43d32d582ac3ba6ec",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/magnetssolver.exe",
+  "source_rejected": false
+}

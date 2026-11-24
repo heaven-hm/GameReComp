@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/bin_Tetris",
+    "sha256": "dcddf3cde91dd2f3ece0ebeeb1eb3ca125d32a824663614e4e707bc03a6214b7",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/tetris__Tetris.exe/status.json",
+    "evidence/corpus/tetris__Tetris.exe/report.json",
+    "evidence/corpus/tetris__Tetris.exe/build.log",
+    "evidence/corpus/tetris__Tetris.exe/frame-proof.json",
+    "evidence/corpus/tetris__Tetris.exe/summary.json",
+    "evidence/corpus/tetris__Tetris.exe/run.log",
+    "evidence/corpus/tetris__Tetris.exe/highball.log",
+    "evidence/corpus/tetris__Tetris.exe/native-frames.html"
+  ],
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/bin_Tetris",
+    "sha256": "dcddf3cde91dd2f3ece0ebeeb1eb3ca125d32a824663614e4e707bc03a6214b7",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "tetris__Tetris.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "f7ccf8fc2f57020c50f1d66de772dc50e2d0e47f5bd819d4a6ddde795c3c959f",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/tetris/Tetris.exe",
+  "source_rejected": false
+}

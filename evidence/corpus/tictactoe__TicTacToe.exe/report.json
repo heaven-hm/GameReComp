@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:24:16Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/tictactoe/TicTacToe.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tictactoe__TicTacToe.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.04,
+      "status": "ok",
+      "message": "i386 PE32, 1 imports, entry 0x0040FE96",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/tictactoe/TicTacToe.exe",
+        "size": 59392,
+        "sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402",
+        "md5": "da76de0b060b31a5a6815ae47c39ec5e",
+        "sha1": "ffd32abce271ef0ef6f550bad9f72a738e1133b5",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows GUI",
+        "image_base": "0x00400000",
+        "entry_point": "0x0040FE96",
+        "linker_version": "48.00",
+        "code_range": [
+          "0x00402000",
+          "0x00410000"
+        ],
+        "import_dlls": [
+          "mscoree.dll"
+        ],
+        "import_count": 1,
+        "iat_entries": 1
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 0.21,
+      "status": "ok",
+      "message": "8 functions, 2742 instructions",
+      "data": {
+        "count": 8,
+        "instructions": 2742
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.02,
+      "status": "ok",
+      "message": "2 source files, 625848 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 625848,
+        "lift_errors": 0,
+        "seconds": 0.0
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.03,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tictactoe__TicTacToe.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tictactoe__TicTacToe.exe/project",
+        "name": "TicTacToe",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 8,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 3.26,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tictactoe__TicTacToe.exe/project/build/TicTacToe (954072 bytes, 3.3s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tictactoe__TicTacToe.exe/project/build/TicTacToe",
+        "sha256": "f56f973eeb41fde88d6ab725c96d91d181bbee2dbc09980e8c30e2804cbcd411",
+        "seconds": 3.3,
+        "source_bytes": 2042129,
+        "build_timeout_seconds": 609.7376298904419,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}

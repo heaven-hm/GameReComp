@@ -1,0 +1,50 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140001440, delta 0, imports 47\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BUILD-ONLY",
+  "copied": [
+    "evidence/corpus/windows__x64__games__guess_game_x64.exe/status.json",
+    "evidence/corpus/windows__x64__games__guess_game_x64.exe/report.json",
+    "evidence/corpus/windows__x64__games__guess_game_x64.exe/build.log"
+  ],
+  "exit": null,
+  "frame_proof_ok": false,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__guess_game_x64.exe/bin_guess_game_x64",
+    "sha256": "6ece0c6f1cbe4510e20d58d732bc1fb688af3e733d2f52182adeee4b9e86c85d",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "B1 built binary; no run log (B2 did not test it)",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": false,
+  "screenshots": [],
+  "slug": "windows__x64__games__guess_game_x64.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "7863f61a93b15a9ac7b525ad22a1d9cf96c6d5332fd8c2e73e8bcc0dbbd04d96",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/guess_game_x64.exe",
+  "source_rejected": false
+}

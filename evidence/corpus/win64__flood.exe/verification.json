@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x1400143c8, delta 0, imports 191\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/bin_flood",
+    "sha256": "4692164b0da0e5ad711dd7d052538911a7d521a1cdc18ba81207afebd9298045",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win64__flood.exe/status.json",
+    "evidence/corpus/win64__flood.exe/report.json",
+    "evidence/corpus/win64__flood.exe/build.log",
+    "evidence/corpus/win64__flood.exe/frame-proof.json",
+    "evidence/corpus/win64__flood.exe/summary.json",
+    "evidence/corpus/win64__flood.exe/run.log",
+    "evidence/corpus/win64__flood.exe/highball.log",
+    "evidence/corpus/win64__flood.exe/native-frames.html"
+  ],
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/bin_flood",
+    "sha256": "4692164b0da0e5ad711dd7d052538911a7d521a1cdc18ba81207afebd9298045",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win64__flood.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "f36da8c35b48d3f156bb1cfca08480e5d45fb17411e140443d50e9b32bc5283f",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/flood.exe",
+  "source_rejected": false
+}

@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiespicture.exe/bin_galaxiespicture",
+    "sha256": "cfac68ad2b41ea23246c5f3ab6fc93330ffc4eb3dbfff1453419593fb79fbb9b",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win32__galaxiespicture.exe/status.json",
+    "evidence/corpus/win32__galaxiespicture.exe/report.json",
+    "evidence/corpus/win32__galaxiespicture.exe/build.log",
+    "evidence/corpus/win32__galaxiespicture.exe/frame-proof.json",
+    "evidence/corpus/win32__galaxiespicture.exe/summary.json",
+    "evidence/corpus/win32__galaxiespicture.exe/run.log",
+    "evidence/corpus/win32__galaxiespicture.exe/highball.log",
+    "evidence/corpus/win32__galaxiespicture.exe/native-frames.html"
+  ],
+  "exit": 1,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiespicture.exe/bin_galaxiespicture",
+    "sha256": "cfac68ad2b41ea23246c5f3ab6fc93330ffc4eb3dbfff1453419593fb79fbb9b",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__galaxiespicture.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "36d0ec0bfb7158d9af612d10e4a4d58bfcc6787e957d3c0cd60d1b154f1afec7",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiespicture.exe",
+  "source_rejected": false
+}

@@ -1,0 +1,16 @@
+{
+  "slug": "win32__signpostsolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/signpostsolver.exe",
+  "sha256": "ff2b675c451f2863233f6dd181f822e7901407b4084140afdeeeecd7891fa038",
+  "size": 203213,
+  "is_game": true,
+  "started": 1795505353.473866,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__signpostsolver.exe/bin_signpostsolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__signpostsolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__signpostsolver.exe/report.json",
+  "seconds": 20.1
+}

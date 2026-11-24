@@ -1,0 +1,102 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/bin_TrackEditor",
+    "sha256": "3a23036d0d9ddadbf725830c76fb1edd73ecf6815818559509c003bafd508ae4",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "PARTIAL",
+  "copied": [
+    "evidence/corpus/games__generally__TrackEditor.exe/status.json",
+    "evidence/corpus/games__generally__TrackEditor.exe/report.json",
+    "evidence/corpus/games__generally__TrackEditor.exe/build.log",
+    "evidence/corpus/games__generally__TrackEditor.exe/frame-proof.json",
+    "evidence/corpus/games__generally__TrackEditor.exe/summary.json",
+    "evidence/corpus/games__generally__TrackEditor.exe/run.log",
+    "evidence/corpus/games__generally__TrackEditor.exe/highball.log",
+    "evidence/corpus/games__generally__TrackEditor.exe/native-frames.html"
+  ],
+  "exit": "TIMEOUT",
+  "frame_proof_ok": true,
+  "frames": [
+    {
+      "actual_blank": true,
+      "actual_distinct_colours": 1,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0000.png",
+      "actual_sha256": "e5e07a6042ead6e62ab3ed5a9f20467b3b6d63979b6cc1052b880d9f42d7b92e",
+      "blank_match": true,
+      "claimed_blank": true,
+      "claimed_distinct_colours": 1,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0000.bmp",
+      "claimed_sha256": "4a054497c844bd10c9729033e8f344af46fd38c3ea7a2c936a07d313c00aec49",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    },
+    {
+      "actual_blank": false,
+      "actual_distinct_colours": 8,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0001.png",
+      "actual_sha256": "bb6286164c4373e1155f9d19bb7b9eb2179c47ff54f79d37f2585144e11ea7ff",
+      "blank_match": true,
+      "claimed_blank": false,
+      "claimed_distinct_colours": 2,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0001.bmp",
+      "claimed_sha256": "f75f3e90df06aa13b78cf4b52a092f300405d29a7a49e5de805069a45748781c",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    },
+    {
+      "actual_blank": false,
+      "actual_distinct_colours": 8,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0002.png",
+      "actual_sha256": "bb6286164c4373e1155f9d19bb7b9eb2179c47ff54f79d37f2585144e11ea7ff",
+      "blank_match": true,
+      "claimed_blank": false,
+      "claimed_distinct_colours": 2,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0002.bmp",
+      "claimed_sha256": "f75f3e90df06aa13b78cf4b52a092f300405d29a7a49e5de805069a45748781c",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    }
+  ],
+  "frames_claimed": 3,
+  "frames_verified": 3,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/bin_TrackEditor",
+    "sha256": "3a23036d0d9ddadbf725830c76fb1edd73ecf6815818559509c003bafd508ae4",
+    "valid": true
+  },
+  "nonblank_verified": 2,
+  "rationale": "2 independently verified non-blank frame(s); launch exit=TIMEOUT, no Windows oracle",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [
+    "evidence/corpus/games__generally__TrackEditor.exe/frame-0000.png",
+    "evidence/corpus/games__generally__TrackEditor.exe/frame-0001.png",
+    "evidence/corpus/games__generally__TrackEditor.exe/frame-0002.png"
+  ],
+  "slug": "games__generally__TrackEditor.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "ced9e54e6578a0e10fae997dcf23889cba323c9df926bafe1a455aa014876410",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/games/generally/TrackEditor.exe",
+  "source_rejected": false
+}

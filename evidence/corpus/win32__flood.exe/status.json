@@ -1,0 +1,16 @@
+{
+  "slug": "win32__flood.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/flood.exe",
+  "sha256": "af8257662e810595d3df52763a0cdc188c89a83590a641b573b792492666bb69",
+  "size": 303869,
+  "is_game": true,
+  "started": 1795505784.558796,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__flood.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

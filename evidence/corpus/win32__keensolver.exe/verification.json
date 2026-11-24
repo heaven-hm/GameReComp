@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keensolver.exe/bin_keensolver",
+    "sha256": "5df41186755c7dfee19d9bca22dabf8a9e1a87f70991108012167a923ba5e11d",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win32__keensolver.exe/status.json",
+    "evidence/corpus/win32__keensolver.exe/report.json",
+    "evidence/corpus/win32__keensolver.exe/build.log",
+    "evidence/corpus/win32__keensolver.exe/frame-proof.json",
+    "evidence/corpus/win32__keensolver.exe/summary.json",
+    "evidence/corpus/win32__keensolver.exe/run.log",
+    "evidence/corpus/win32__keensolver.exe/highball.log",
+    "evidence/corpus/win32__keensolver.exe/native-frames.html"
+  ],
+  "exit": 1,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keensolver.exe/bin_keensolver",
+    "sha256": "5df41186755c7dfee19d9bca22dabf8a9e1a87f70991108012167a923ba5e11d",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__keensolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "6e36aaa7bd453da42a71bdf6570cf840a12e8c506076503c71bc648f939196f4",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/keensolver.exe",
+  "source_rejected": false
+}

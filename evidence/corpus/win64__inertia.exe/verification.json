@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x1400163b8, delta 0, imports 194\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__inertia.exe/bin_inertia",
+    "sha256": "64a38688db04e4c7b23fb1ccd5390f650f93f6705082f54230c6a0abf04e4613",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win64__inertia.exe/status.json",
+    "evidence/corpus/win64__inertia.exe/report.json",
+    "evidence/corpus/win64__inertia.exe/build.log",
+    "evidence/corpus/win64__inertia.exe/frame-proof.json",
+    "evidence/corpus/win64__inertia.exe/summary.json",
+    "evidence/corpus/win64__inertia.exe/run.log",
+    "evidence/corpus/win64__inertia.exe/highball.log",
+    "evidence/corpus/win64__inertia.exe/native-frames.html"
+  ],
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__inertia.exe/bin_inertia",
+    "sha256": "64a38688db04e4c7b23fb1ccd5390f650f93f6705082f54230c6a0abf04e4613",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win64__inertia.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "d6be7da53515b94624bbcda175838253bbf8590762c7a6574c4c7d80ad367793",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/inertia.exe",
+  "source_rejected": false
+}

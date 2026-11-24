@@ -1,0 +1,9 @@
+{
+  "game": "games__rrootage__rr.exe",
+  "status": "BLOCKED",
+  "reason": "no native binary found in build dir yet",
+  "native_binary": null,
+  "exit": null,
+  "frames": 0,
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__rrootage__rr.exe"
+}

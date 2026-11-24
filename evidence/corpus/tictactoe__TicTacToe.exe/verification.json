@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tictactoe__TicTacToe.exe/bin_TicTacToe",
+    "sha256": "f56f973eeb41fde88d6ab725c96d91d181bbee2dbc09980e8c30e2804cbcd411",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/tictactoe__TicTacToe.exe/status.json",
+    "evidence/corpus/tictactoe__TicTacToe.exe/report.json",
+    "evidence/corpus/tictactoe__TicTacToe.exe/build.log",
+    "evidence/corpus/tictactoe__TicTacToe.exe/frame-proof.json",
+    "evidence/corpus/tictactoe__TicTacToe.exe/summary.json",
+    "evidence/corpus/tictactoe__TicTacToe.exe/run.log",
+    "evidence/corpus/tictactoe__TicTacToe.exe/highball.log",
+    "evidence/corpus/tictactoe__TicTacToe.exe/native-frames.html"
+  ],
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tictactoe__TicTacToe.exe/bin_TicTacToe",
+    "sha256": "f56f973eeb41fde88d6ab725c96d91d181bbee2dbc09980e8c30e2804cbcd411",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "tictactoe__TicTacToe.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/tictactoe/TicTacToe.exe",
+  "source_rejected": false
+}

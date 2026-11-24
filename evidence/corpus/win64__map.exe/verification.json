@@ -1,0 +1,50 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140018a74, delta 0, imports 191\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BUILD-ONLY",
+  "copied": [
+    "evidence/corpus/win64__map.exe/status.json",
+    "evidence/corpus/win64__map.exe/report.json",
+    "evidence/corpus/win64__map.exe/build.log"
+  ],
+  "exit": null,
+  "frame_proof_ok": false,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__map.exe/bin_map",
+    "sha256": "8f8886256c6140fda828b71a0ddfa29e71d2d42ae233d3f9b96a86f24a173e8c",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "B1 built binary; no run log (B2 did not test it)",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": false,
+  "screenshots": [],
+  "slug": "win64__map.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "5f5df70b283843ee5dc022c32a2ad7013be37b36547755e9b4ef34ababa04cb5",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/map.exe",
+  "source_rejected": false
+}

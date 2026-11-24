@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/bin_singlessolver",
+    "sha256": "b8375bcc02ed977d7e432d828ad57e42e2e18e5ec8c8219785a60c277ae53957",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win32__singlessolver.exe/status.json",
+    "evidence/corpus/win32__singlessolver.exe/report.json",
+    "evidence/corpus/win32__singlessolver.exe/build.log",
+    "evidence/corpus/win32__singlessolver.exe/frame-proof.json",
+    "evidence/corpus/win32__singlessolver.exe/summary.json",
+    "evidence/corpus/win32__singlessolver.exe/run.log",
+    "evidence/corpus/win32__singlessolver.exe/highball.log",
+    "evidence/corpus/win32__singlessolver.exe/native-frames.html"
+  ],
+  "exit": 1,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/bin_singlessolver",
+    "sha256": "b8375bcc02ed977d7e432d828ad57e42e2e18e5ec8c8219785a60c277ae53957",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__singlessolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "365e9e8e3c2223499ea9409865846d3a4f0461ae4e05002a1cd06b4c2c6749e7",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/singlessolver.exe",
+  "source_rejected": false
+}

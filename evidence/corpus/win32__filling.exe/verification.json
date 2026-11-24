@@ -1,0 +1,51 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "timeout after 900s",
+  "b1_status": "BLOCKED",
+  "b2_native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BLOCKED",
+  "copied": [
+    "evidence/corpus/win32__filling.exe/status.json",
+    "evidence/corpus/win32__filling.exe/build.log",
+    "evidence/corpus/win32__filling.exe/summary.json",
+    "evidence/corpus/win32__filling.exe/run.log"
+  ],
+  "exit": null,
+  "frame_proof_ok": false,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "nonblank_verified": 0,
+  "rationale": "B1 could not produce a native binary; see build.log",
+  "rejects": [],
+  "report_ok": false,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__filling.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "2aaee7c8243de7db98edc15a9155f7f7dcdd98b4e155113d41293f1c637faf13",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/filling.exe",
+  "source_rejected": false
+}

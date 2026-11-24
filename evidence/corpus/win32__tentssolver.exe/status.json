@@ -1,0 +1,16 @@
+{
+  "slug": "win32__tentssolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tentssolver.exe",
+  "sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581",
+  "size": 200829,
+  "is_game": true,
+  "started": 1795505304.6267898,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/bin_tentssolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/report.json",
+  "seconds": 48.8
+}

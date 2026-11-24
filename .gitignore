@@ -140,3 +140,8 @@ gui/build/
 
 # Command Code agent state (taste, session scratch); not part of the project.
 .commandcode/
+
+# Verified corpus evidence is intentionally committed (dir names may end in .exe).
+!evidence/
+!evidence/corpus/
+!evidence/corpus/**

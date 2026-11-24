@@ -1,0 +1,6 @@
+Launching Tetris.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...
+exit=53 after 0s — log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T073437Z-Games-Tetris.exe.log
+
+0158:err:module:import_dll Library libgcc_s_dw2-1.dll (which is needed by L"Z:\\Users\\haseeb-mir\\Downloads\\recomp-apps\\tetris\\Tetris.exe") not found
+0158:err:module:import_dll Library libstdc++-6.dll (which is needed by L"Z:\\Users\\haseeb-mir\\Downloads\\recomp-apps\\tetris\\Tetris.exe") not found
+0158:err:module:loader_init Importing dlls for L"Z:\\Users\\haseeb-mir\\Downloads\\recomp-apps\\tetris\\Tetris.exe" failed, status c0000135

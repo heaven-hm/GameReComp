@@ -1,0 +1,16 @@
+{
+  "slug": "windows__x86__games__guess_game_x86.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/guess_game_x86.exe",
+  "sha256": "7c0cb00a04dc1f0dee2152a52ba23d86120022eaa6e58f826a648eaa3edf6459",
+  "size": 137388,
+  "is_game": true,
+  "started": 1795505130.39001,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/bin_guess_game_x86",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/report.json",
+  "seconds": 8.0
+}

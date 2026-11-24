@@ -1,0 +1,16 @@
+{
+  "slug": "games__rrootage__rr.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/rrootage/rr.exe",
+  "sha256": "f3d81d7025738cde59e26b5f2af082e5c43ee75937dbc00aa8f5326fcabe5def",
+  "size": 826270,
+  "is_game": true,
+  "started": 1795505784.750991,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__rrootage__rr.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

@@ -1,0 +1,55 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/bin_unrulysolver",
+    "sha256": "70c13e19f40f790bb076abc537c59667b2b01b7ec4e049ed11516bbcb7df3382",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BUILD-ONLY",
+  "copied": [
+    "evidence/corpus/win32__unrulysolver.exe/status.json",
+    "evidence/corpus/win32__unrulysolver.exe/report.json",
+    "evidence/corpus/win32__unrulysolver.exe/build.log",
+    "evidence/corpus/win32__unrulysolver.exe/frame-proof.json",
+    "evidence/corpus/win32__unrulysolver.exe/summary.json",
+    "evidence/corpus/win32__unrulysolver.exe/run.log",
+    "evidence/corpus/win32__unrulysolver.exe/highball.log",
+    "evidence/corpus/win32__unrulysolver.exe/native-frames.html"
+  ],
+  "exit": 0,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/bin_unrulysolver",
+    "sha256": "70c13e19f40f790bb076abc537c59667b2b01b7ec4e049ed11516bbcb7df3382",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched and exited 0, but zero proven non-blank frames",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__unrulysolver.exe",
+  "snapshot": "2026-11-24T13:16:19",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "6d1cd7e7cc732b84086e30dd8a280132216804b69f33c075c51881bfffa0d0ed",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unrulysolver.exe",
+  "source_rejected": false
+}

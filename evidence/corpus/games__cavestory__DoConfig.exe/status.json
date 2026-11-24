@@ -1,0 +1,16 @@
+{
+  "slug": "games__cavestory__DoConfig.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe",
+  "sha256": "03f3c73a36920e8148a7d683f2f9ef0e5d6a14f32ab6ec59446919228012324f",
+  "size": 98304,
+  "is_game": true,
+  "started": 1795505056.704588,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/bin_DoConfig",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/report.json",
+  "seconds": 14.0
+}
