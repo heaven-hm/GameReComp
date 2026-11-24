@@ -26,6 +26,13 @@ class OracleTests(unittest.TestCase):
                                "wine": "wine", "stdout": "", "stderr": ""})
         self.assertNotIn("exit_code", doc)
 
+    def test_wine_bottle_path_is_normalised(self):
+        doc = oracle_from_run({"exit_code": 0, "sha256": "d" * 64,
+                               "wine": "wine", "stdout": "",
+                               "stderr": "usage: C:\\recomp-oracle\\keen.exe [-g | -v] <id>\n"})
+        self.assertEqual(doc["stderr_contains"],
+                         ["usage: keen.exe [-g | -v] <id>"])
+
     def test_empty_lines_are_never_needles(self):
         doc = oracle_from_run({"exit_code": 1, "sha256": "c" * 64,
                                "wine": "wine", "stdout": "\n  \n\x1b[0m\n",

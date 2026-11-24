@@ -91,6 +91,12 @@ def oracle_from_run(run: dict, stdout_lines: int = 6,
             if drop_wine_noise and WINE_NOISE.search(line):
                 continue
             clean = ANSI.sub("", line).strip()
+            # The original runs from C:\recomp-oracle in the Wine bottle; a
+            # native binary prints no such path. Normalise it away so the
+            # oracle cannot require a Wine-only string (keensolver's usage
+            # line was rejected for exactly this reason).
+            clean = clean.replace("C:\\recomp-oracle\\", "").replace(
+                "C:/recomp-oracle/", "")
             if clean and clean not in out:
                 out.append(clean[:200])
             if len(out) >= limit:
