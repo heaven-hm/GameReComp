@@ -9,6 +9,17 @@
  * and push PCM through dsound.c's SDL audio mixer stream path.
  * The MIDI-in/out family reports zero devices and documented errors: no
  * pretend MIDI handle, no fabricated capabilities, no second audio backend.
+ * * sndPlaySound, MCI; no mixer and no recording device.
+ *
+ * Timing is on libc/the virtual clock. waveOut is a real device: it feeds the
+ * guest's PCM into dsound.c's SDL2 audio mixer stream (the one device, no
+ * second mixer) and completes a WAVEHDR only once the audio clock has consumed
+ * its frames. The four APIs a waveOut game plausibly imports but this shim did
+ * not answer -- waveOutPause, waveOutRestart, waveOutGetPosition and
+ * waveOutBreakLoop -- are implemented against that device, not as no-ops.
+ * Joystick stays absent and MCI stays stubbed (out of scope here).
+ *
+ * sndPlaySoundA/W use the same dsound.c stream path, decoding RIFF/WAVE first.
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -20,15 +31,21 @@
 #include <string.h>
 #include "win32hle.h"
 
-#define MMSYSERR_NOERROR  0u
-#define MMSYSERR_ERROR    1u
-#define MMSYSERR_BADDEVICEID  2u
-#define MMSYSERR_INVALHANDLE  5u
+/* MMSYSERR_* and the wave constants from Wine-10.0 include/mmsystem.h. */
+#define MMSYSERR_NOERROR    0u
+#define MMSYSERR_ERROR      1u
+#define MMSYSERR_BADDEVICEID 2u
+#define MMSYSERR_ALLOCATED  4u
+#define MMSYSERR_INVALHANDLE 5u
+#define MMSYSERR_NODRIVER   6u
+#define MMSYSERR_NOMEM      7u
 #define MMSYSERR_NOTSUPPORTED 8u
+#define MMSYSERR_INVALFLAG  10u
+#define MMSYSERR_INVALPARAM 11u
 #define JOYERR_UNPLUGGED  167u
-#define WHDR_DONE         0x00000001u
-#define WHDR_INQUEUE      0x00000010u
 #define MCIERR_UNSUPPORTED_FUNCTION 274u
+#define WAVERR_STILLPLAYING (32u + 1u)
+#define WAVERR_UNPREPARED   (32u + 2u)
 
 /* --- multimedia timer --- */
 /* Through the clock (clock.c), like every other time-returning shim: this is
@@ -107,32 +124,384 @@ static void m_joyGetDevCapsA(void)  { RET(JOYERR_UNPLUGGED, 3); }
 static void m_joyGetPos(void)       { RET(JOYERR_UNPLUGGED, 2); }
 static void m_joyGetPosEx(void)     { RET(JOYERR_UNPLUGGED, 2); }
 
-/* --- waveOut: a silent device that retires every buffer at once ---
- * waveOutOpen succeeds with a fake handle; waveOutWrite marks the WAVEHDR done
- * and not-in-queue, so a mixer that waits for buffers to drain keeps going. */
+/* --- waveOut: real PCM into the SDL2 mixer dsound.c already owns ---
+ *
+ * waveOutOpen takes a dsound.c host stream at the guest's PCM format;
+ * waveOutWrite converts the WAVEHDR's samples to interleaved s16 and pushes
+ * them into it. A host thread watches the stream's queue, marks a buffer DONE
+ * and delivers its WOM_DONE only after the audio clock has consumed its
+ * frames. No second SDL device and no duplicate mixer: the samples are the
+ * same frames bink.c and sndPlaySound push through hle_audio_stream_*.
+ *
+ * `pushed` is cumulative frames sent to the stream, `played` cumulative frames
+ * the mixer has consumed (pushed - queued). Each queued buffer records the
+ * stream frame where its first pass began, so completion and GetPosition are
+ * in audio time, not wall time. A buffer with WHDR_BEGINLOOP|ENDLOOP is re-pushed
+ * while its dwLoops remain; waveOutBreakLoop stops that (Wine waveform.c's
+ * loop_counter = 0), which is a real change in what is heard.
+ */
+#define WHDR_DONE       0x00000001u
+#define WHDR_PREPARED   0x00000002u
+#define WHDR_BEGINLOOP  0x00000004u
+#define WHDR_ENDLOOP    0x00000008u
+#define WHDR_INQUEUE    0x00000010u
+#define CALLBACK_TYPEMASK 0x00070000u
+#define CALLBACK_WINDOW 0x00010000u
+#define CALLBACK_FUNCTION 0x00030000u
+#define CALLBACK_EVENT  0x00050000u
+/* Wine-10.0 mmsystem.h: WOM_DONE == MM_WOM_DONE == 0x03BD (not 0x3D5). */
+#define WOM_DONE        0x000003BDu
+#define MM_WOM_DONE     0x000003BDu
+#define TIME_SAMPLES    0x0002u
+#define TIME_BYTES      0x0004u
+#define WAVE_FORMAT_PCM 1u
+#define MMTIME_SIZE     12u              /* UINT wType + 8-byte union on x86 */
+#define MAX_WAVEOUT 8
+#define MAX_WO_BUFS 128
+#define WO_MAX_FRAMES (1u << 16)         /* the ring is 2^17; leave headroom */
+
+typedef struct {
+    uint32_t hdr, data, frames, start;   /* WAVEHDR VA, PCM VA, frames/pass, first-pass offset */
+    int passes, loops, looping;
+} wo_buf_t;
+typedef struct {
+    int used, stream, rate, channels, bits, block;
+    volatile int paused, closing, break_loop;
+    uint32_t callback, instance, flags, volume;
+    uint64_t pushed, played;             /* frames sent / consumed by the mixer */
+    wo_buf_t bufs[MAX_WO_BUFS];
+    int head, nbufs;
+    pthread_t thread;
+} waveout_t;
+static waveout_t g_wo[MAX_WAVEOUT];
+static pthread_mutex_t g_wo_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static uint32_t wo_handle(const waveout_t *w) {
+    return 0x5A5E0000u | (uint32_t)(int)(w - g_wo) + 1u;
+}
+static waveout_t *wo_of(uint32_t h) {
+    if ((h & 0xFFFF0000u) != 0x5A5E0000u) return NULL;
+    uint32_t i = (h & 0xFFFFu) - 1u;
+    return i < MAX_WAVEOUT && g_wo[i].used ? &g_wo[i] : NULL;
+}
+/* Windows keeps a stereo DWORD volume; the host stream has one scalar gain. */
+static float wo_gain(const waveout_t *w) {
+    if (w->volume == 0xFFFFFFFFu) return 1.0f;
+    uint32_t l = w->volume & 0xFFFFu, r = w->volume >> 16;
+    return (float)(((uint64_t)l + r) / 2u) / 65535.0f;
+}
+static void wo_fire(uint32_t h, uint32_t cb, uint32_t inst, uint32_t flags, uint32_t hdr) {
+    if (!cb) return;
+    if ((flags & CALLBACK_TYPEMASK) == CALLBACK_FUNCTION) {
+        uint32_t a[5] = { h, WOM_DONE, inst, hdr, 0 };     /* WAVECALLBACK stdcall */
+        hle_call_guest(cb, 5, a);                         /* takes the machine itself */
+    } else if ((flags & CALLBACK_TYPEMASK) == CALLBACK_EVENT) {
+        mach_enter(); hle_set_event(cb); mach_leave();
+    } else if ((flags & CALLBACK_TYPEMASK) == CALLBACK_WINDOW) {
+        mach_enter(); hle_post_message(cb, MM_WOM_DONE, h, hdr); mach_leave();
+    }
+}
+/* Called with g_wo_lock held: the queue is in stream frames, as is `pushed`. */
+static void wo_update_played(waveout_t *w) {
+    int q = hle_audio_stream_queued(w->stream);
+    if (q < 0) q = 0;
+    /* pushed == queued means nothing has played yet, not everything has.
+     * Getting this boundary wrong completes a buffer the instant it is written. */
+    w->played = w->pushed >= (uint64_t)q ? w->pushed - (uint64_t)q : 0;
+}
+/* Convert one pass of guest PCM (8/16-bit, mono/stereo) to host s16 stereo. */
+static int wo_push(waveout_t *w, uint32_t data, uint32_t frames) {
+    if (!data || !frames || frames > WO_MAX_FRAMES) return -1;
+    int16_t *pcm = (int16_t *)malloc((size_t)frames * 2u * sizeof(int16_t));
+    if (!pcm) return -1;
+    const uint8_t *src = (const uint8_t *)hle_ptr(data);
+    for (uint32_t f = 0; f < frames; f++) {
+        int16_t l, r;
+        if (w->bits == 8) {
+            int a = (int)src[(size_t)f * (size_t)w->block] - 128;
+            int b = w->channels > 1 ? (int)src[(size_t)f * (size_t)w->block + 1] - 128 : a;
+            l = (int16_t)(a << 8); r = (int16_t)(b << 8);
+        } else {
+            int16_t a, b;
+            memcpy(&a, src + (size_t)f * (size_t)w->block, 2);
+            memcpy(&b, src + (size_t)f * (size_t)w->block + (w->channels > 1 ? 2u : 0u), 2);
+            l = a; r = b;
+        }
+        pcm[2 * (size_t)f] = l; pcm[2 * (size_t)f + 1] = r;
+    }
+    hle_audio_stream_push(w->stream, pcm, (int)frames);
+    free(pcm);
+    return 0;
+}
+
+/* Complete buffers the mixer has played. A loop is re-pushed at the tail of
+ * the stream one pass at a time, so break_loop takes effect at the next pass
+ * boundary rather than leaving pre-queued repeats audible. */
+static void *wo_complete(void *arg) {
+    waveout_t *w = (waveout_t *)arg;
+    uint32_t h = wo_handle(w);
+    while (!w->closing) {
+        uint32_t hdrs[16], cb = 0, inst = 0, flags = 0;
+        int n = 0;
+        pthread_mutex_lock(&g_wo_lock);
+        wo_update_played(w);
+        uint64_t played = w->played;
+        if (!w->paused) {
+            while (w->head < w->nbufs && n < 16) {
+                wo_buf_t *b = &w->bufs[w->head];
+                uint64_t end = (uint64_t)b->start + (uint64_t)b->frames * (uint64_t)b->passes;
+                if (played < end) break;
+                if (b->looping && b->loops > 0 && !w->break_loop && w->head == w->nbufs - 1) {
+                    if (wo_push(w, b->data, b->frames) == 0) {
+                        w->pushed += b->frames;
+                        b->passes++; b->loops--;
+                        continue;
+                    }
+                    b->loops = 0;                         /* no stream room: stop looping */
+                }
+                MEM32(b->hdr + 16) = (MEM32(b->hdr + 16) | WHDR_DONE) & ~WHDR_INQUEUE;
+                hdrs[n++] = b->hdr;
+                w->head++;
+            }
+            if (w->head >= w->nbufs) w->head = w->nbufs = 0;
+        }
+        cb = w->callback; inst = w->instance; flags = w->flags;
+        pthread_mutex_unlock(&g_wo_lock);
+        for (int i = 0; i < n; i++) wo_fire(h, cb, inst, flags, hdrs[i]);
+        usleep(1000);
+    }
+    return NULL;
+}
+
+/* Return every outstanding buffer. Used by Reset and by a Close that follows
+ * one; the callbacks fire after the lock is dropped (they take the machine). */
+static void wo_finish_all(waveout_t *w, int callbacks) {
+    uint32_t hdrs[MAX_WO_BUFS], cb, inst, flags;
+    int n = 0;
+    pthread_mutex_lock(&g_wo_lock);
+    for (int i = w->head; i < w->nbufs; i++) {
+        MEM32(w->bufs[i].hdr + 16) = (MEM32(w->bufs[i].hdr + 16) | WHDR_DONE) & ~WHDR_INQUEUE;
+        hdrs[n++] = w->bufs[i].hdr;
+    }
+    w->head = w->nbufs = 0;
+    w->break_loop = 0;
+    cb = w->callback; inst = w->instance; flags = w->flags;
+    pthread_mutex_unlock(&g_wo_lock);
+    if (callbacks)
+        for (int i = 0; i < n; i++) wo_fire(wo_handle(w), cb, inst, flags, hdrs[i]);
+}
+
 static void m_waveOutOpen(void) {              /* (&hwo, devID, &fmt, cb, inst, flags) */
-    uint32_t ph = A32(0);
-    if (ph) MEM32(ph) = 0x5A5E0001u;           /* a nonzero HWAVEOUT */
+    uint32_t ph = A32(0), dev = A32(1), fmt = A32(2), cb = A32(3), inst = A32(4), flags = A32(5);
+    if (ph) MEM32(ph) = 0;
+    if (dev != 0 && dev != 0xFFFFFFFFu) RET(MMSYSERR_BADDEVICEID, 6);   /* WAVE_MAPPER */
+    if (!fmt) RET(MMSYSERR_INVALPARAM, 6);
+    uint32_t cbt = flags & CALLBACK_TYPEMASK;
+    if (cbt && cbt != CALLBACK_FUNCTION && cbt != CALLBACK_EVENT && cbt != CALLBACK_WINDOW)
+        RET(MMSYSERR_INVALFLAG, 6);
+    int tag = MEM16(fmt), ch = MEM16(fmt + 2), rate = (int)MEM32(fmt + 4);
+    int bits = MEM16(fmt + 14), align = MEM16(fmt + 12);
+    if (tag != WAVE_FORMAT_PCM || (ch != 1 && ch != 2) || (bits != 8 && bits != 16) ||
+        rate < 1000 || rate > 192000 || align != ch * bits / 8)
+        RET(MMSYSERR_NOTSUPPORTED, 6);
+
+    int stream = hle_audio_stream_open(rate, ch);
+    if (stream < 0) RET(MMSYSERR_NODRIVER, 6);
+    int slot = -1;
+    pthread_mutex_lock(&g_wo_lock);
+    for (int i = 0; i < MAX_WAVEOUT; i++) if (!g_wo[i].used) { slot = i; break; }
+    pthread_mutex_unlock(&g_wo_lock);
+    if (slot < 0) { hle_audio_stream_close(stream); RET(MMSYSERR_NODRIVER, 6); }
+    waveout_t *w = &g_wo[slot];
+    memset(w, 0, sizeof *w);                    /* no thread can see it yet */
+    w->used = 1; w->stream = stream; w->rate = rate; w->channels = ch;
+    w->bits = bits; w->block = align;
+    w->callback = cb; w->instance = inst; w->flags = flags; w->volume = 0xFFFFFFFFu;
+    if (pthread_create(&w->thread, NULL, wo_complete, w) != 0) {
+        memset(w, 0, sizeof *w);
+        hle_audio_stream_close(stream);
+        RET(MMSYSERR_ERROR, 6);
+    }
+    if (ph) MEM32(ph) = wo_handle(w);
     RET(MMSYSERR_NOERROR, 6);
 }
+
 static void m_waveOutWrite(void) {             /* (hwo, lpWaveHdr, cbwh) */
+    waveout_t *w = wo_of(A32(0));
     uint32_t wh = A32(1);
-    if (wh) { MEM32(wh + 16) = (MEM32(wh + 16) | WHDR_DONE) & ~WHDR_INQUEUE; }
+    if (!w || !wh) RET(MMSYSERR_INVALHANDLE, 3);
+    uint32_t fl = MEM32(wh + 16);
+    if (!MEM32(wh) || !(fl & WHDR_PREPARED)) RET(WAVERR_UNPREPARED, 3);
+    if (fl & WHDR_INQUEUE) RET(WAVERR_STILLPLAYING, 3);
+    uint32_t frames = MEM32(wh + 4) / (uint32_t)w->block;
+    if (!frames || frames > WO_MAX_FRAMES) RET(MMSYSERR_INVALPARAM, 3);
+
+    pthread_mutex_lock(&g_wo_lock);
+    wo_update_played(w);
+    if (w->nbufs >= MAX_WO_BUFS || w->pushed - w->played + frames > WO_MAX_FRAMES) {
+        pthread_mutex_unlock(&g_wo_lock);
+        RET(MMSYSERR_NODRIVER, 3);              /* never let the ring truncate a buffer */
+    }
+    wo_buf_t *b = &w->bufs[w->nbufs];
+    memset(b, 0, sizeof *b);
+    b->hdr = wh; b->data = MEM32(wh); b->frames = frames; b->start = (uint32_t)w->pushed;
+    b->passes = 1;
+    b->looping = (fl & (WHDR_BEGINLOOP | WHDR_ENDLOOP)) == (WHDR_BEGINLOOP | WHDR_ENDLOOP);
+    b->loops = (int)MEM32(wh + 20);             /* dwLoops: repeats after the first pass */
+    w->break_loop = 0;                          /* a fresh write may loop again */
+    if (wo_push(w, b->data, frames) != 0) {
+        pthread_mutex_unlock(&g_wo_lock);
+        RET(MMSYSERR_NODRIVER, 3);
+    }
+    w->pushed += frames;
+    w->nbufs++;
+    MEM32(wh + 16) = (fl | WHDR_INQUEUE) & ~WHDR_DONE;
+    pthread_mutex_unlock(&g_wo_lock);
     RET(MMSYSERR_NOERROR, 3);
 }
-static void m_waveOutPrepareHeader(void)   { uint32_t wh=A32(1); if(wh) MEM32(wh+16)|=0x00000002u/*WHDR_PREPARED*/; RET(MMSYSERR_NOERROR, 3); }
-static void m_waveOutUnprepareHeader(void) { uint32_t wh=A32(1); if(wh) MEM32(wh+16)&=~0x00000002u; RET(MMSYSERR_NOERROR, 3); }
-static void m_waveOutReset(void)       { RET(MMSYSERR_NOERROR, 1); }
-static void m_waveOutClose(void)       { RET(MMSYSERR_NOERROR, 1); }
-static void m_waveOutGetNumDevs(void)  { RET(1, 0); }          /* one (silent) device */
-static void m_waveOutGetDevCapsA(void) { RET(MMSYSERR_NOERROR, 3); }
 
-/* The device's own volume, the id behind a handle: the one device, at full
- * volume (a caller's level is its own business: dsound.c mixes at the level
- * a buffer asks for). */
-static void m_waveOutSetVolume(void)  { RET(MMSYSERR_NOERROR, 2); }
-static void m_waveOutGetVolume(void)  { if (A32(1)) MEM32(A32(1)) = 0xFFFFFFFFu; RET(MMSYSERR_NOERROR, 2); }
-static void m_waveOutGetID(void)      { if (A32(1)) MEM32(A32(1)) = 0; RET(MMSYSERR_NOERROR, 2); }
+static void m_waveOutPrepareHeader(void) {
+    waveout_t *w = wo_of(A32(0));
+    uint32_t wh = A32(1);
+    if (!w) RET(MMSYSERR_INVALHANDLE, 3);
+    if (!wh || A32(2) < 32) RET(MMSYSERR_INVALPARAM, 3);
+    MEM32(wh + 16) = (MEM32(wh + 16) | WHDR_PREPARED) & ~(WHDR_DONE | WHDR_INQUEUE);
+    RET(MMSYSERR_NOERROR, 3);
+}
+static void m_waveOutUnprepareHeader(void) {
+    waveout_t *w = wo_of(A32(0));
+    uint32_t wh = A32(1);
+    if (!w) RET(MMSYSERR_INVALHANDLE, 3);
+    if (!wh || A32(2) < 32) RET(MMSYSERR_INVALPARAM, 3);
+    pthread_mutex_lock(&g_wo_lock);
+    for (int i = 0; i < w->nbufs; i++)
+        if (w->bufs[i].hdr == wh) { pthread_mutex_unlock(&g_wo_lock); RET(WAVERR_STILLPLAYING, 3); }
+    MEM32(wh + 16) &= ~(WHDR_PREPARED | WHDR_DONE);
+    pthread_mutex_unlock(&g_wo_lock);
+    RET(MMSYSERR_NOERROR, 3);
+}
+
+/* Pause/Restart are real: pause mutes the stream and freezes WAVEHDR
+ * completion; restart restores gain and lets the completion thread catch up.
+ * Frames the mixer drains while paused are accounted for on restart, not
+ * reported as a completion during the pause. */
+static void m_waveOutPause(void) {
+    waveout_t *w = wo_of(A32(0));
+    if (!w) RET(MMSYSERR_INVALHANDLE, 1);
+    if (!w->paused) { w->paused = 1; hle_audio_stream_gain(w->stream, 0.0f); }
+    RET(MMSYSERR_NOERROR, 1);
+}
+static void m_waveOutRestart(void) {
+    waveout_t *w = wo_of(A32(0));
+    if (!w) RET(MMSYSERR_INVALHANDLE, 1);
+    if (w->paused) { w->paused = 0; hle_audio_stream_gain(w->stream, wo_gain(w)); }
+    RET(MMSYSERR_NOERROR, 1);
+}
+static void m_waveOutBreakLoop(void) {
+    waveout_t *w = wo_of(A32(0));
+    if (!w) RET(MMSYSERR_INVALHANDLE, 1);
+    w->break_loop = 1;
+    RET(MMSYSERR_NOERROR, 1);
+}
+
+static void m_waveOutReset(void) {
+    waveout_t *w = wo_of(A32(0));
+    if (!w) RET(MMSYSERR_INVALHANDLE, 1);
+    wo_finish_all(w, 1);
+    /* Reopen the stream so the ring contains no samples from the stopped run;
+     * GetPosition then starts from zero, as a Windows reset does. */
+    pthread_mutex_lock(&g_wo_lock);
+    hle_audio_stream_close(w->stream);
+    w->stream = hle_audio_stream_open(w->rate, w->channels);
+    w->pushed = w->played = 0;
+    w->paused = 0;
+    if (w->stream >= 0) hle_audio_stream_gain(w->stream, wo_gain(w));
+    pthread_mutex_unlock(&g_wo_lock);
+    RET(w->stream >= 0 ? MMSYSERR_NOERROR : MMSYSERR_NODRIVER, 1);
+}
+static void m_waveOutClose(void) {
+    waveout_t *w = wo_of(A32(0));
+    if (!w) RET(MMSYSERR_INVALHANDLE, 1);
+    pthread_mutex_lock(&g_wo_lock);
+    int busy = w->nbufs > 0;
+    pthread_mutex_unlock(&g_wo_lock);
+    if (busy) RET(WAVERR_STILLPLAYING, 1);
+    wo_finish_all(w, 0);
+    w->closing = 1;
+    if (!pthread_equal(w->thread, pthread_self())) {
+        /* The completion thread may be inside a guest callback waiting for the
+         * machine this shim holds. Give the machine up while joining. */
+        hle_block_begin();
+        pthread_join(w->thread, NULL);
+        hle_block_end();
+    }
+    pthread_mutex_lock(&g_wo_lock);
+    if (w->stream >= 0) hle_audio_stream_close(w->stream);
+    memset(w, 0, sizeof *w);
+    pthread_mutex_unlock(&g_wo_lock);
+    RET(MMSYSERR_NOERROR, 1);
+}
+static void m_waveOutGetNumDevs(void)  { RET(1, 0); }          /* one device */
+static void m_waveOutGetDevCapsA(void) {
+    uint32_t c = A32(1);
+    /* WAVEOUTCAPSA: wMid 0, wPid 2, vDriverVersion 4, szPname 8..39,
+     * dwFormats 40, wChannels 44, wReserved1 46, dwSupport 48 (52 bytes). */
+    if (c && A32(2) >= 52) {
+        memset(hle_ptr(c), 0, 52);
+        MEM16(c + 0) = 1;                                     /* MM_MICROSOFT */
+        MEM16(c + 2) = 1;                                     /* wPid */
+        MEM32(c + 4) = 0x00010000u;                           /* vDriverVersion 1.0 */
+        snprintf((char *)hle_ptr(c + 8), 32, "SDL2 waveOut");
+        MEM32(c + 40) = 0x00000F00u;                          /* 8/16-bit, 1/2 ch at 44.1 kHz */
+        MEM16(c + 44) = 2;                                    /* wChannels */
+        MEM32(c + 48) = 0x0004u;                              /* WAVECAPS_VOLUME */
+    }
+    RET(MMSYSERR_NOERROR, 3);
+}
+
+/* Position in audio time. Wine's WINMM_FramesToMMTime answers TIME_SAMPLES in
+ * frames and coerces every other request to TIME_BYTES; MMTIME is 12 bytes on
+ * x86 (UINT + 8-byte union). */
+static void m_waveOutGetPosition(void) {
+    waveout_t *w = wo_of(A32(0));
+    uint32_t t = A32(1), size = A32(2);
+    if (!w) RET(MMSYSERR_INVALHANDLE, 3);
+    if (!t || !size) RET(MMSYSERR_INVALPARAM, 3);
+    if (size < MMTIME_SIZE) RET(MMSYSERR_ERROR, 3);
+    pthread_mutex_lock(&g_wo_lock);
+    wo_update_played(w);
+    uint64_t played = w->played;
+    uint32_t bytes_per_sec = (uint32_t)(w->block * w->rate);
+    pthread_mutex_unlock(&g_wo_lock);
+    if (MEM32(t) == TIME_SAMPLES) {
+        MEM32(t) = TIME_SAMPLES;
+        MEM32(t + 4) = (uint32_t)played;
+    } else {
+        MEM32(t) = TIME_BYTES;
+        MEM32(t + 4) = (uint32_t)(played * bytes_per_sec / (uint32_t)w->rate);
+    }
+    MEM32(t + 8) = 0;
+    RET(MMSYSERR_NOERROR, 3);
+}
+static void m_waveOutSetVolume(void) {
+    waveout_t *w = wo_of(A32(0));
+    if (!w) RET(MMSYSERR_INVALHANDLE, 2);
+    w->volume = A32(1);
+    if (!w->paused) hle_audio_stream_gain(w->stream, wo_gain(w));
+    RET(MMSYSERR_NOERROR, 2);
+}
+static void m_waveOutGetVolume(void) {
+    waveout_t *w = wo_of(A32(0));
+    if (!w) RET(MMSYSERR_INVALHANDLE, 2);
+    if (A32(1)) MEM32(A32(1)) = w->volume;
+    RET(MMSYSERR_NOERROR, 2);
+}
+static void m_waveOutGetID(void) {
+    waveout_t *w = wo_of(A32(0));
+    if (!w) RET(MMSYSERR_INVALHANDLE, 2);
+    if (A32(1)) MEM32(A32(1)) = (uint32_t)(int)(w - g_wo);
+    RET(MMSYSERR_NOERROR, 2);
+}
 
 /* --- no mixer, no recording device ---
  * What Windows answers on a PC without either: no devices, an open of device
@@ -431,11 +800,7 @@ static void m_mmioStringToFOURCCA(void) {
 #define PS_OK_FLAGS (SND_ASYNC | SND_NODEFAULT | SND_MEMORY | SND_LOOP | \
                      SND_NOSTOP | SND_NOWAIT | SND_PURGE | SND_FILENAME)
 
-#define MMSYSERR_ALLOCATED     4u
-#define MMSYSERR_NODRIVER      6u
-#define MMSYSERR_NOMEM         7u
-#define MMSYSERR_INVALFLAG    10u
-#define MMSYSERR_INVALPARAM   11u
+/* MMSYSERR_* used by ps_play are defined with the rest at the top of this file. */
 
 enum { PS_MAX_VOICES = 4, PS_CHUNK = 2048, PS_HIGH_WATER = 32768, PS_SPIN_MAX = 30000,
        PS_MAX_WAV = 64 * 1024 * 1024 };
@@ -717,6 +1082,10 @@ const win32hle_shim win32hle_winmm[] = {
     { "waveOutWrite",           m_waveOutWrite },
     { "waveOutPrepareHeader",   m_waveOutPrepareHeader },
     { "waveOutUnprepareHeader", m_waveOutUnprepareHeader },
+    { "waveOutPause",           m_waveOutPause },
+    { "waveOutRestart",         m_waveOutRestart },
+    { "waveOutBreakLoop",       m_waveOutBreakLoop },
+    { "waveOutGetPosition",     m_waveOutGetPosition },
     { "waveOutReset",           m_waveOutReset },
     { "waveOutClose",           m_waveOutClose },
     { "waveOutGetNumDevs",      m_waveOutGetNumDevs },
