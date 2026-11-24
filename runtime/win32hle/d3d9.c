@@ -19,8 +19,18 @@
 #define D3DERR_INVALIDCALL     0x8876086Cu
 #define D3DERR_NOTAVAILABLE    0x8876086Au
 #define D3D_SDK_VERSION        32u
+#define D3DENUM_WHQL_LEVEL     0x2u
 #define D3DFMT_R5G6B5          23u
 #define D3DFMT_X8R8G8B8        22u
+
+/* D3DADAPTER_IDENTIFIER9 is 512+512+32 bytes of fixed char arrays, a
+ * LARGE_INTEGER, four DWORDs, a 16-byte GUID and a final WHQL DWORD = 1100
+ * bytes. All offsets are fixed by the public ABI, so a frontend can fill it
+ * without a rasteriser. */
+#define D3D9_ADAPTER_ID_SIZE   1100u
+#define D3D9_ADAPTER_DRIVER    0u
+#define D3D9_ADAPTER_DESC      512u
+#define D3D9_ADAPTER_NAME      1024u
 
 /* GUID bytes in REFIID on-disk order (first three fields little endian). */
 static const uint8_t d3d9_iid_unknown[16] = {
@@ -135,6 +145,29 @@ static void d3d9_d3d_get_display_mode(void) {
     RET(D3D_OK, 3);
 }
 
+/* GetAdapterIdentifier(UINT Adapter, DWORD Flags, D3DADAPTER_IDENTIFIER9 *p)
+ * is a pure descriptive query: unlike caps or resource creation it needs no
+ * rasteriser, so answering D3DERR_NOTAVAILABLE (the old d3d9_na4 slot) made
+ * real DX9 titles abort during startup before they ever reached CreateDevice.
+ * Fill the identifier from the frontend's own shared-display identity: the
+ * physical-device and WHQL fields stay zero/honest. Flags may be 0 or
+ * D3DENUM_WHQL_LEVEL; the D3D9 purge is ret + this + three args = 5 words. */
+static void d3d9_d3d_get_adapter_identifier(void) {
+    static const char driver[] = "win32hle";
+    static const char description[] = "GameReComp D3D9 frontend (shared presenter, no rasteriser)";
+    static const char device_name[] = "d3d9";
+    uint32_t out = A32(3);
+    if (!out) RET(E_POINTER, 4);
+    if (A32(1) != 0 || (A32(2) & ~D3DENUM_WHQL_LEVEL)) RET(D3DERR_INVALIDCALL, 4);
+    uint8_t *p = hle_ptr(out);
+    if (!p) RET(E_POINTER, 4);
+    memset(p, 0, D3D9_ADAPTER_ID_SIZE);
+    memcpy(p + D3D9_ADAPTER_DRIVER, driver, sizeof driver);
+    memcpy(p + D3D9_ADAPTER_DESC, description, sizeof description);
+    memcpy(p + D3D9_ADAPTER_NAME, device_name, sizeof device_name);
+    RET(D3D_OK, 4);
+}
+
 /* A device object exists so guests can inspect IDirect3DDevice9's vtable and
  * reference counting, but it owns no rasteriser: all 116 non-IUnknown entries
  * answer D3DERR_NOTAVAILABLE with their real stdcall purge count. */
@@ -160,7 +193,7 @@ static void d3d9_d3d_create_device(void) {
     X("D3D9::Object::Release", d3d9_d3d_release, 1) \
     X("D3D9::Object::RegisterSoftwareDevice", d3d9_na2, 2) \
     X("D3D9::Object::GetAdapterCount", d3d9_d3d_get_adapter_count, 1) \
-    X("D3D9::Object::GetAdapterIdentifier", d3d9_na4, 4) \
+    X("D3D9::Object::GetAdapterIdentifier", d3d9_d3d_get_adapter_identifier, 4) \
     X("D3D9::Object::GetAdapterModeCount", d3d9_d3d_get_mode_count, 3) \
     X("D3D9::Object::EnumAdapterModes", d3d9_d3d_enum_modes, 5) \
     X("D3D9::Object::GetAdapterDisplayMode", d3d9_d3d_get_display_mode, 3) \
