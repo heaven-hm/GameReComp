@@ -38,6 +38,13 @@ def find_wine() -> str | None:
     return shutil.which("wine")
 
 
+def find_bottle() -> Path:
+    """Wine prefix to use. An isolated prefix avoids a shared wineserver whose
+    WINEMSYNC mode disagrees with the client (a real cause of spurious exit 1)."""
+    override = os.environ.get("RECOMP_WINE_BOTTLE")
+    return Path(override) if override else DEFAULT_BOTTLE
+
+
 def run_original(wine: str, bottle: Path, exe: Path, args: list[str],
                  timeout: int, env=None, stdin_data: bytes | None = None) -> dict:
     """Copy the exe into the Wine bottle and run it by a Windows-style path."""

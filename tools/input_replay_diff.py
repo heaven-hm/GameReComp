@@ -62,7 +62,7 @@ def diff_one(original: Path, binary: Path, stdin_data: bytes,
         return {"status": "BLOCKED", "reason": "no Wine/Highball engine found"}
     if not original.is_file() or not binary.is_file():
         return {"status": "BLOCKED", "reason": "missing original or native binary"}
-    orig = wine_oracle.run_original(wine, wine_oracle.DEFAULT_BOTTLE, original,
+    orig = wine_oracle.run_original(wine, wine_oracle.find_bottle(), original,
                                     args, timeout, stdin_data=stdin_data)
     nat = run_native(binary, args, stdin_data, cwd, timeout)
     o, n = normalise(orig["stdout"]), normalise(nat["stdout"])
