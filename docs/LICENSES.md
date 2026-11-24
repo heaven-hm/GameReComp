@@ -9,8 +9,12 @@ that notice is preserved in `LICENSES/GameReComp-prior-MIT.txt`.
 `NOTICE` is the authoritative inventory of third-party code vendored into this
 repository, with the upstream project, version and licence text location for
 each entry. At the time of writing it lists the PKWARE DCL explode port in
-`tools/assets/is3extract.py` (zlib, `LICENSES/blast-zlib.txt`). New vendored
-code must be added there, not only here.
+`tools/assets/is3extract.py` (zlib, `LICENSES/blast-zlib.txt`), the adapted
+DirectMusic COM façade from igi-recomp, and the PE API-surface audit ported
+from arm64-recompiler (`LICENSES/arm64-recompiler-MIT.txt`). New vendored
+code must be added there, not only here. Exact upstream commit pins and reuse
+decisions are consolidated in
+[`UPSTREAM_PROVENANCE_CONSOLIDATED.md`](UPSTREAM_PROVENANCE_CONSOLIDATED.md).
 
 ## Runtime dependencies of generated projects
 
