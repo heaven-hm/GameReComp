@@ -167,10 +167,19 @@ static struct { uint8_t clsid[16]; uint32_t unk, cookie; } g_guest_class[MAX_GUE
 static uint32_t g_next_cookie = 0x100;
 static const uint8_t IID_IClassFactory[16] = { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                                0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 };
+/* Call a slot on a COM interface the *guest* handed us (the class object from
+ * CoRegisterClassObject, or the IClassFactory its QI returned). A guest object
+ * keeps its vtable VA in dword 0 and each vtable slot holds the guest VA of the
+ * lifted method, so reaching a method needs two reads: first the vtable, then
+ * the slot. Reading MEM32(obj + 4*slot) instead names an object *field* (the
+ * refcount at +4, host state at +8) as the function, which either dies with
+ * "no lifted function" or calls the wrong method. IClassFactory slots follow
+ * the public COM ABI: 0 QueryInterface, 1 AddRef, 2 Release, 3 CreateInstance,
+ * 4 LockServer (also recorded in tools/lift/name_lift.py's COM_SLOTS). */
 static uint32_t vcall(uint32_t obj, int slot, int nargs, const uint32_t *args) {
     uint32_t a[8] = { obj };
     for (int i = 0; i < nargs; i++) a[1 + i] = args[i];
-    return hle_call_guest(MEM32(obj + 4u * (uint32_t)slot), nargs + 1, a);
+    return hle_call_guest(MEM32(MEM32(obj) + 4u * (uint32_t)slot), nargs + 1, a);
 }
 
 static void dm_QueryInterface(void) {
