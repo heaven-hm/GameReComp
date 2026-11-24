@@ -39,7 +39,7 @@ def find_wine() -> str | None:
 
 
 def run_original(wine: str, bottle: Path, exe: Path, args: list[str],
-                 timeout: int, env=None) -> dict:
+                 timeout: int, env=None, stdin_data: bytes | None = None) -> dict:
     """Copy the exe into the Wine bottle and run it by a Windows-style path."""
     if not exe.is_file():
         raise ValueError(f"original executable not found: {exe}")
@@ -60,12 +60,14 @@ def run_original(wine: str, bottle: Path, exe: Path, args: list[str],
     # with a timeout can therefore block forever after wine itself was killed.
     # Use Popen + communicate and always drain/kill the process group.
     proc = subprocess.Popen(cmd, cwd=str(bottle / "drive_c"), env=run_env,
-                            stdin=subprocess.DEVNULL,
+                            stdin=(subprocess.PIPE if stdin_data is not None
+                                   else subprocess.DEVNULL),
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             text=True, encoding="utf-8", errors="replace",
                             start_new_session=True)
+    payload = None if stdin_data is None else stdin_data.decode("utf-8", "replace")
     try:
-        out, err = proc.communicate(timeout=timeout)
+        out, err = proc.communicate(input=payload, timeout=timeout)
         rc = proc.returncode
     except subprocess.TimeoutExpired:
         try:
