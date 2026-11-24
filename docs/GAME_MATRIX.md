@@ -8,7 +8,7 @@ Every game this product knows about, in one table: the locally supplied corpus t
 
 **Port details** are read from each project's own `reports/report.json`: functions recovered, generated C, the rebuilt binary, imports the runtime bound, and the low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed high-level source.
 
-Updated 2026-11-24T01:58:11Z by `python -m tools.gamesdb --matrix`.
+Updated 2026-11-24T01:59:38Z by `python -m tools.gamesdb --matrix`.
 
 **Running native macOS arm64 ports:** **96 / 123** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**96** with `0` unresolved imports).
 
@@ -125,8 +125,8 @@ Updated 2026-11-24T01:58:11Z by `python -m tools.gamesdb --matrix`.
 | solosolver | Windows | i386 (PE32) | 911 fns recovered; 8 units / 55.7 MiB C; binary solosolver 8130 KiB; 60 imports bound [macOS arm64 (native)]; low-level 911/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
 | tents | Windows | i386 (PE32) | 1108 fns recovered; 5 units / 30.9 MiB C; binary tents 5380 KiB; 189 imports bound [macOS arm64 (native)]; low-level 1108/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | tentssolver | Windows | i386 (PE32) | 701 fns recovered; 5 units / 25.9 MiB C; binary tentssolver 3829 KiB; 59 imports bound [macOS arm64 (native)]; low-level 701/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
-| tetris | Windows | i386 (PE32) | 767 fns recovered; 2 units / 4.8 MiB C; binary Tetris 2156 KiB [macOS arm64 (native)]; 57 imports bound, 42 unresolved; low-level 767/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| tetris | Windows | i386 (PE32) | 215 fns recovered; 2 units / 1.3 MiB C; binary tetris 1293 KiB; 45 imports bound [macOS arm64 (native)]; low-level 215/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
+| tetris | Windows | i386 (PE32) | 767 fns recovered; 2 units / 4.8 MiB C; binary Tetris 2156 KiB [macOS arm64 (native)]; 57 imports bound, 42 unresolved; low-level 767/ high-level verified 0 | 2/2 non-blank frames | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
+| tetris | Windows | i386 (PE32) | 215 fns recovered; 2 units / 1.3 MiB C; binary tetris 1293 KiB; 45 imports bound [macOS arm64 (native)]; low-level 215/ high-level verified 0 | 2/2 non-blank frames | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | tictactoe | Windows | i386 (PE32) | 216 fns recovered; 2 units / 1.3 MiB C; binary tictactoe 1293 KiB; 43 imports bound [macOS arm64 (native)]; low-level 216/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | towers | Windows | i386 (PE32) | 1219 fns recovered; 4 units / 21.5 MiB C; binary towers 4724 KiB; 189 imports bound [macOS arm64 (native)]; low-level 1219/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | towerssolver | Windows | i386 (PE32) | 833 fns recovered; 4 units / 16.9 MiB C; binary towerssolver 3222 KiB; 60 imports bound [macOS arm64 (native)]; low-level 833/ high-level verified 0 | - | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
