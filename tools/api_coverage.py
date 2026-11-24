@@ -21,6 +21,13 @@ reported separately so the "missing API" headline number is not misleading.
 Use ``--markdown docs/WIN32_API_COVERAGE.md`` to (re)generate the human-readable
 report directly from the same JSON, so the documented numbers cannot drift from
 the auditor output.
+
+The auditor is fail-closed: a Win32 *system* DLL import that is unresolved and
+not already in :data:`KNOWN_UNRESOLVED_CRITICAL` is "new" and makes the CLI exit
+non-zero.  Every DLL family is reported explicitly with ``not implemented``
+entries; game-owned families are marked ``deferred`` instead of being folded
+into a blanket coverage percentage that would hide them.  No percentage is
+reported at all.
 """
 from __future__ import annotations
 
@@ -78,6 +85,36 @@ SYSTEM_DLLS = frozenset({
     "setupapi.dll", "shell32.dll", "shlwapi.dll", "unicows.dll", "user32.dll",
     "userenv.dll", "version.dll", "wininet.dll", "winmm.dll", "winspool.drv",
     "uxtheme.dll", "ws2_32.dll", "wsock32.dll",
+})
+
+SCHEMA_VERSION = "1.2.0"
+
+# An unresolved import from a Win32 system DLL is "critical": those DLLs are the
+# surface this project claims to shim.  Game-owned DLL imports are not Win32
+# APIs and are therefore reported as explicitly deferred families, never as
+# critical blockers and never as part of a headline percentage.
+CRITICAL_KIND = "system"
+DEFERRED_KINDS = frozenset({"game-owned"})
+
+# Unresolved critical imports already known/tracked from the last corpus audit
+# (docs/WIN32_API_COVERAGE.md, 13 system imports).  Only *new* unresolved
+# critical imports trip the fail-closed gate; a known one stays visible in the
+# per-family ``not implemented`` list and in ``missing_by_api``.  Kept in this
+# file so the tool stays self-contained and deterministic.
+KNOWN_UNRESOLVED_CRITICAL = frozenset({
+    ("comctl32.dll", "ImageList_Replace"),
+    ("msvcrt.dll", "__mb_cur_max"),
+    ("msvcrt.dll", "_ctype"),
+    ("msvcrt.dll", "_fmode"),
+    ("msvcrt.dll", "_iob"),
+    ("msvcrt.dll", "_pctype"),
+    ("ole32.dll", "CreateBindCtx"),
+    ("ole32.dll", "CreateILockBytesOnHGlobal"),
+    ("ole32.dll", "OleGetIconOfClass"),
+    ("ole32.dll", "StgCreateDocfileOnILockBytes"),
+    ("opengl32.dll", "glTexCoord2i"),
+    ("opengl32.dll", "glTexSubImage2D"),
+    ("opengl32.dll", "glVertex2i"),
 })
 
 # APIs first registered in the most recent integration checkpoint recorded in
@@ -172,6 +209,27 @@ def dll_kind(dll: str) -> str:
     return "system" if dll.lower() in SYSTEM_DLLS else "game-owned"
 
 
+def family_of(dll: str) -> str:
+    """DLL-scoped API family name (always lower-case, like PE import names)."""
+    return dll.lower()
+
+
+def unresolved_critical(report: dict, baseline=KNOWN_UNRESOLVED_CRITICAL) -> list[dict]:
+    """Missing critical imports that are *new* relative to ``baseline``.
+
+    The baseline is an iterable of ``(dll, name)`` tuples.  Only unresolved
+    system-DLL imports are critical; game-owned families are deferred, never
+    gate-failing.  Ordering is deterministic (most files first, then dll/name),
+    so the CLI's fail-closed verdict cannot depend on hash iteration order.
+    """
+    known = {tuple(pair) for pair in baseline}
+    rows = [
+        row for row in report["missing_by_api"]
+        if (row["dll"], row["name"]) not in known
+    ]
+    return sorted(rows, key=lambda row: (-row["files"], row["dll"], row["name"]))
+
+
 def pe_imports(path: Path) -> dict:
     """Return {dll_lower: [names]} for one PE file; ordinals are '#N'."""
     try:
@@ -209,7 +267,9 @@ def build_report(corpus: Path, shims: set[str]) -> dict:
     all_game_missing = Counter()       # game-owned DLLs, separate blocker list
     all_ordinal = Counter()
     all_game_ordinal = Counter()
+    all_unresolved = Counter()         # every unresolved import, incl. ordinals
     dlls_by_kind = {"system": set(), "game-owned": set()}
+    dll_names: dict[str, set[str]] = {}  # all import names seen per DLL family
     for path in sorted(corpus.rglob("*.exe")):
         try:
             data = path.read_bytes()
@@ -224,9 +284,11 @@ def build_report(corpus: Path, shims: set[str]) -> dict:
         for dll, names in imports.items():
             kind = dll_kind(dll)
             dlls_by_kind[kind].add(dll)
+            dll_names.setdefault(dll, set()).update(names)
             for name in names:
                 if _implemented(name, dll, raw, covered):
                     continue
+                all_unresolved[(dll, name)] += 1
                 if name.startswith("#"):
                     (game_ordinals if kind == "game-owned" else ordinals).setdefault(dll, []).append(name)
                     (all_game_ordinal if kind == "game-owned" else all_ordinal)[dll] += 1
@@ -242,8 +304,40 @@ def build_report(corpus: Path, shims: set[str]) -> dict:
             "ordinals": ordinals,             # system DLLs
             "game_owned_ordinals": game_ordinals,
         }
-    return {
-        "schema_version": "1.1.0",
+    # Per-family, explicit "not implemented" entries.  A count alone hides
+    # which API in a deferred family was skipped, so every unresolved import is
+    # materialised as its own row with an explicit status.
+    status_order = {"not_implemented": 0, "deferred": 1, "implemented": 2}
+    families: list[dict] = []
+    for dll in sorted(dll_names):
+        kind = dll_kind(dll)
+        missing_names = {name for (entry_dll, name) in all_unresolved if entry_dll == dll}
+        status = (
+            "not_implemented" if missing_names and kind == CRITICAL_KIND else
+            "deferred" if missing_names and kind in DEFERRED_KINDS else
+            "implemented"
+        )
+        not_implemented = [
+            {"dll": dll, "name": name, "files": count, "status": "not_implemented"}
+            for (entry_dll, name), count in all_unresolved.items()
+            if entry_dll == dll
+        ]
+        not_implemented.sort(key=lambda row: (-row["files"], row["name"]))
+        families.append({
+            "family": family_of(dll),
+            "kind": kind,
+            "critical": kind == CRITICAL_KIND,
+            "status": status,
+            "implemented_count": len(dll_names[dll] - missing_names),
+            "not_implemented_count": len(missing_names),
+            "not_implemented": not_implemented,
+        })
+    families.sort(key=lambda f: (status_order[f["status"]],
+                                 -f["not_implemented_count"], f["family"]))
+    deferred_families = [f["family"] for f in families if f["status"] == "deferred"]
+
+    report = {
+        "schema_version": SCHEMA_VERSION,
         "tool": "python3 -m tools.api_coverage",
         "what": "PE32 import-name coverage against registered win32hle shim names",
         "is_not": "proof that a function behaves correctly; registration only proves a name is present",
@@ -254,6 +348,12 @@ def build_report(corpus: Path, shims: set[str]) -> dict:
             "separately from Win32 system DLL imports."
         ),
         "summary_scope": "headline counts cover Win32 system DLLs only; game-owned counts are separate",
+        "family_rule": (
+            "Each DLL family lists every unresolved import explicitly with "
+            "status 'not implemented'. System families are critical; game-owned "
+            "families are deferred. No aggregate coverage percentage is reported, "
+            "so deferred families cannot be hidden by a blanket number."
+        ),
         "registered_shim_count": len(raw),
         "registered_import_name_count": len(covered),
         "dll_classification": {
@@ -280,8 +380,19 @@ def build_report(corpus: Path, shims: set[str]) -> dict:
             {"dll": dll, "name": name, "files": count}
             for (dll, name), count in all_game_missing.most_common()
         ],
+        "families": families,
+        "deferred_families": deferred_families,
         "inputs": inputs,
     }
+    new_critical = unresolved_critical(report)
+    report["gate"] = {
+        "mode": "fail-closed",
+        "critical_kind": CRITICAL_KIND,
+        "known_unresolved_baseline_count": len(KNOWN_UNRESOLVED_CRITICAL),
+        "new_unresolved_critical": new_critical,
+        "fail_closed": bool(new_critical),
+    }
+    return report
 
 
 def _sorted_pairs(rows: list[dict]) -> list[tuple[str, str, int]]:
@@ -298,8 +409,11 @@ def render_markdown(report: dict, *, corpus=None, out=None, generated_at=None) -
     Every number below is taken from ``report``; nothing is estimated.  The
     renderer deliberately states that the audit is registration-only and that
     the missing counts remain non-zero, so it cannot produce a completion or
-    100%-coverage claim.  The additive "recently registered shims" section is
-    sourced from :data:`RECENTLY_REGISTERED_SHIMS` and carries the same caveat.
+    full-coverage claim.  Per-family ``not implemented`` entries and the
+    fail-closed gate are rendered explicitly; no aggregate percentage is
+    emitted that could hide a deferred family.  The additive "recently
+    registered shims" section is sourced from
+    :data:`RECENTLY_REGISTERED_SHIMS` and carries the same caveat.
     """
     s = report["summary"]
     corpus = str(corpus) if corpus else "(RECOMP_CORPUS)"
@@ -309,6 +423,9 @@ def render_markdown(report: dict, *, corpus=None, out=None, generated_at=None) -
     game_missing = _sorted_pairs(report["game_owned_missing_by_api"])
     system_dlls = report["dll_classification"]["system"]
     game_dlls = report["dll_classification"]["game_owned"]
+    families = report.get("families", [])
+    deferred = report.get("deferred_families", [])
+    gate = report.get("gate", {})
 
     L: list[str] = []
     L.append("# Win32 API coverage (auditor output)")
@@ -353,6 +470,50 @@ def render_markdown(report: dict, *, corpus=None, out=None, generated_at=None) -
     L.append("")
     L.append(f"**What this is not:** {report['is_not']}.")
     L.append("")
+    L.append("## Per-family implementation status (explicit)")
+    L.append("")
+    L.append("**No aggregate coverage percentage is reported.** A blanket "
+             "percentage would hide deferred families, so every family below "
+             "lists its exact `not implemented` imports. A `deferred` family is "
+             "explicitly out of scope (game-owned DLLs are not Win32 APIs); it "
+             "is never folded into a headline number.")
+    L.append("")
+    L.append("| Family | Kind | Status | Implemented imports | "
+             "Not implemented (explicit) |")
+    L.append("|---|---|---|---|---|")
+    for fam in families:
+        names = ", ".join(f"`{row['name']}`" for row in fam["not_implemented"]) or "(none)"
+        L.append(f"| `{fam['family']}` | {fam['kind']} | {fam['status']} | "
+                 f"{fam['implemented_count']} | {names} |")
+    L.append("")
+    if deferred:
+        L.append("Deferred families (explicit, never hidden by a percentage): "
+                 + ", ".join(f"`{d}`" for d in deferred) + ".")
+        L.append("")
+    if report.get("family_rule"):
+        L.append(f"**Family rule:** {report['family_rule']}")
+        L.append("")
+    L.append("## Fail-closed gate")
+    L.append("")
+    L.append(f"- Mode: `{gate.get('mode', 'fail-open')}`")
+    L.append(f"- Critical kind: {gate.get('critical_kind', CRITICAL_KIND)} DLL imports")
+    L.append(f"- Known unresolved baseline entries: "
+             f"{gate.get('known_unresolved_baseline_count', 0)}")
+    L.append(f"- New unresolved critical imports: "
+             f"{len(gate.get('new_unresolved_critical', []))} "
+             "(non-zero means the auditor CLI exits 1)")
+    L.append("")
+    new_rows = gate.get("new_unresolved_critical", [])
+    if new_rows:
+        L.append("| DLL | API | Files |")
+        L.append("|---|---|---|")
+        for row in new_rows:
+            L.append(f"| `{row['dll']}` | `{row['name']}` | {row['files']} |")
+        L.append("")
+    else:
+        L.append("No new unresolved critical imports: the gate passes. Known "
+                 "baseline gaps are still listed above as `not implemented`.")
+        L.append("")
     recent = recently_registered_names()
     L.append(f"## Recently registered shims ({len(recent)}, last checkpoint)")
     L.append("")
@@ -404,7 +565,7 @@ def render_markdown(report: dict, *, corpus=None, out=None, generated_at=None) -
     L.append("```")
     L.append("")
     L.append("Registration proves only that a name is present. This report "
-             "makes no completion, gameplay, rendering, audio or 100%-coverage "
+             "makes no completion, gameplay, rendering, audio or full-coverage "
              "claim.")
     L.append("")
     return "\n".join(L)
@@ -436,6 +597,18 @@ def main(argv=None) -> int:
           f"{s['ordinal_imports']} system ordinal imports -> {args.out}")
     if args.markdown:
         print(f"markdown coverage doc -> {args.markdown}")
+    gate = report["gate"]
+    new_critical = gate["new_unresolved_critical"]
+    print(f"gate: {gate['mode']} ({gate['critical_kind']} DLL imports), "
+          f"{len(new_critical)} new unresolved critical import(s)")
+    if new_critical:
+        # Write the report/markdown evidence first, then fail closed. A new
+        # system-DLL gap must break the caller instead of being averaged away.
+        for row in new_critical:
+            print(f"FAIL-CLOSED: new unresolved critical import "
+                  f"{row['dll']}!{row['name']} ({row['files']} file(s))",
+                  file=sys.stderr)
+        return 1
     return 0
 
 

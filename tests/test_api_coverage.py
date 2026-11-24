@@ -1,9 +1,12 @@
 """Tests for the machine-readable API coverage auditor."""
+import io
 import json
+import re
 import shutil
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from unittest import mock
 
@@ -11,17 +14,22 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from tools.api_coverage import (  # noqa: E402
+    CRITICAL_KIND,
+    KNOWN_UNRESOLVED_CRITICAL,
     RECENTLY_REGISTERED_SHIMS,
+    SCHEMA_VERSION,
     SYSTEM_DLLS,
     build_report,
     dll_kind,
     import_name,
+    main,
     pe_imports,
     recently_registered_names,
     registered_shims,
     render_markdown,
     shim_import_names,
     strip_comments,
+    unresolved_critical,
 )
 
 
@@ -207,7 +215,7 @@ class ApiCoverageTest(unittest.TestCase):
             with mock.patch("tools.api_coverage.pe_imports", return_value=imports):
                 report = build_report(d, shims)
 
-        self.assertEqual(report["schema_version"], "1.1.0")
+        self.assertEqual(report["schema_version"], SCHEMA_VERSION)
         self.assertEqual(report["summary"]["distinct_missing_api"], 1)
         self.assertEqual(report["summary"]["game_owned_missing_api"], 2)
         self.assertEqual(report["summary"]["all_missing_api"], 3)
@@ -315,6 +323,218 @@ class ApiCoverageTest(unittest.TestCase):
             self.assertIn(f"`{name}`", doc)
         self.assertIn("Registration only proves a name is present", doc)
         self.assertIn("not extra coverage", doc)
+
+
+class ApiCoverageFailClosedTest(unittest.TestCase):
+    """Synthetic shim tables + import lists (no game assets, no live corpus).
+
+    These tests pin the two regression properties for issue #14: a *new*
+    unresolved system-DLL import is reported and fails closed, and deferred
+    families are listed explicitly instead of being hidden by a percentage.
+    """
+
+    def _shim_table_report(self, shim_text, imports):
+        """Build a report from one synthetic C shim table and synthetic imports."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            shim_dir = d / "shims"
+            shim_dir.mkdir()
+            (shim_dir / "synthetic.c").write_text(shim_text)
+            corpus = d / "corpus"
+            corpus.mkdir()
+            (corpus / "fixture.exe").write_bytes(b"MZ")  # hash input only
+            shims = registered_shims(shim_dir)
+            with mock.patch("tools.api_coverage.pe_imports", return_value=imports):
+                report = build_report(corpus, shims)
+        return report, shims
+
+    def test_new_missing_critical_api_is_reported_and_fails_closed(self):
+        report, _ = self._shim_table_report(
+            '''
+            { "ExitProcess", exit_process },
+            SHIM2(12, "WSAStartup", wsa_startup),
+            ''',
+            {
+                "kernel32.dll": ["ExitProcess", "BrandNewApi"],
+                "wsock32.dll": ["#12"],  # covered by SHIM2, not a new gap
+            },
+        )
+
+        pairs = {(r["dll"], r["name"]) for r in report["missing_by_api"]}
+        self.assertIn(("kernel32.dll", "BrandNewApi"), pairs)
+        self.assertNotIn(("kernel32.dll", "ExitProcess"), pairs)
+
+        kernel = next(f for f in report["families"] if f["family"] == "kernel32.dll")
+        self.assertEqual(kernel["status"], "not_implemented")
+        self.assertTrue(kernel["critical"])
+        self.assertEqual(
+            [(r["name"], r["status"], r["files"]) for r in kernel["not_implemented"]],
+            [("BrandNewApi", "not_implemented", 1)],
+        )
+
+        gate = report["gate"]
+        self.assertEqual(gate["mode"], "fail-closed")
+        self.assertEqual(gate["critical_kind"], CRITICAL_KIND)
+        self.assertEqual(
+            [(r["dll"], r["name"]) for r in gate["new_unresolved_critical"]],
+            [("kernel32.dll", "BrandNewApi")],
+        )
+        self.assertTrue(gate["fail_closed"])
+        self.assertEqual(
+            [(r["dll"], r["name"]) for r in unresolved_critical(report)],
+            [("kernel32.dll", "BrandNewApi")],
+        )
+
+    def test_registering_the_new_api_clears_the_gate(self):
+        report, shims = self._shim_table_report(
+            '''
+            { "ExitProcess", exit_process },
+            { "BrandNewApi", brand_new },
+            ''',
+            {"kernel32.dll": ["ExitProcess", "BrandNewApi"]},
+        )
+        self.assertIn("BrandNewApi", shims)
+        self.assertEqual(report["missing_by_api"], [])
+        self.assertEqual(report["gate"]["new_unresolved_critical"], [])
+        self.assertFalse(report["gate"]["fail_closed"])
+        kernel = next(f for f in report["families"] if f["family"] == "kernel32.dll")
+        self.assertEqual(kernel["status"], "implemented")
+        self.assertEqual(kernel["not_implemented"], [])
+
+    def test_known_baseline_gap_is_visible_but_does_not_fail_closed(self):
+        dll, name = "comctl32.dll", "ImageList_Replace"
+        self.assertIn((dll, name), KNOWN_UNRESOLVED_CRITICAL)
+        report, _ = self._shim_table_report(
+            '{ "ExitProcess", exit_process },',
+            {"kernel32.dll": ["ExitProcess"], dll: [name]},
+        )
+        self.assertEqual(report["summary"]["distinct_missing_api"], 1)
+        self.assertIn((dll, name),
+                      {(r["dll"], r["name"]) for r in report["missing_by_api"]})
+        self.assertEqual(report["gate"]["new_unresolved_critical"], [])
+        self.assertFalse(report["gate"]["fail_closed"])
+        self.assertEqual(unresolved_critical(report), [])
+
+    def test_unresolved_critical_accepts_a_custom_baseline(self):
+        report, _ = self._shim_table_report(
+            '{ "ExitProcess", exit_process },',
+            {"kernel32.dll": ["FirstNew", "SecondNew"]},
+        )
+        self.assertEqual(len(unresolved_critical(report, baseline=set())), 2)
+        only_second = unresolved_critical(
+            report, baseline={("kernel32.dll", "FirstNew")})
+        self.assertEqual([r["name"] for r in only_second], ["SecondNew"])
+
+    def test_report_families_and_gate_are_deterministic(self):
+        shim_text = '{ "A", a },\n{ "B", b },'
+        imports = {
+            "kernel32.dll": ["A", "ZNew"],
+            "user32.dll": ["B", "YNew"],
+            "sdl2.dll": ["SDL_CreateWindow"],
+        }
+        first, _ = self._shim_table_report(shim_text, imports)
+        second, _ = self._shim_table_report(shim_text, imports)
+        # 'inputs' carries the temporary corpus path, which differs by design;
+        # the audit result itself must be byte-for-byte identical.
+        def verdict(report):
+            return json.dumps({k: v for k, v in report.items() if k != "inputs"},
+                              sort_keys=True)
+        self.assertEqual(verdict(first), verdict(second))
+        self.assertEqual(first["families"], second["families"])
+        self.assertEqual(first["gate"], second["gate"])
+
+    def test_deferred_family_is_explicit_and_no_percentage_hides_it(self):
+        report, _ = self._shim_table_report(
+            '{ "ExitProcess", exit_process },',
+            {
+                "kernel32.dll": ["ExitProcess", "BrandNewApi"],
+                "sdl2.dll": ["SDL_CreateWindow", "SDL_DestroyWindow"],
+            },
+        )
+        self.assertIn("sdl2.dll", report["deferred_families"])
+        game = next(f for f in report["families"] if f["family"] == "sdl2.dll")
+        self.assertEqual(game["status"], "deferred")
+        self.assertFalse(game["critical"])
+        self.assertEqual([r["name"] for r in game["not_implemented"]],
+                         ["SDL_CreateWindow", "SDL_DestroyWindow"])
+        self.assertTrue(all(r["status"] == "not_implemented"
+                            for r in game["not_implemented"]))
+
+        doc = render_markdown(report, corpus="/fake/games",
+                              generated_at="2026-01-01T00:00:00Z")
+        self.assertIn("## Per-family implementation status (explicit)", doc)
+        self.assertIn("| `sdl2.dll` | game-owned | deferred |", doc)
+        self.assertIn("`SDL_CreateWindow`", doc)
+        self.assertIn("`SDL_DestroyWindow`", doc)
+        self.assertIn("not implemented", doc)
+        self.assertIn("No aggregate coverage percentage is reported", doc)
+        self.assertIn("Deferred families (explicit", doc)
+        # No blanket percentage anywhere: it could otherwise make the deferred
+        # family look covered and hide its explicit "not implemented" entries.
+        self.assertIsNone(re.search(r"\d+\s*%", doc))
+
+    def test_render_markdown_shows_new_critical_imports_in_gate(self):
+        report, _ = self._shim_table_report(
+            '{ "ExitProcess", exit_process },',
+            {"kernel32.dll": ["ExitProcess", "BrandNewApi"]},
+        )
+        doc = render_markdown(report, generated_at="2026-01-01T00:00:00Z")
+        self.assertIn("## Fail-closed gate", doc)
+        self.assertIn("New unresolved critical imports: 1", doc)
+        self.assertIn("| `kernel32.dll` | `BrandNewApi` | 1 |", doc)
+
+    def test_main_fails_closed_but_still_writes_report_and_markdown(self):
+        shim_text = '{ "ExitProcess", exit_process },'
+        imports = {"kernel32.dll": ["ExitProcess", "BrandNewApi"]}
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            shim_dir = d / "shims"
+            shim_dir.mkdir()
+            (shim_dir / "synthetic.c").write_text(shim_text)
+            corpus = d / "corpus"
+            corpus.mkdir()
+            (corpus / "fixture.exe").write_bytes(b"MZ")
+            shims = registered_shims(shim_dir)
+            out = d / "report.json"
+            md = d / "coverage.md"
+            stderr = io.StringIO()
+            with mock.patch("tools.api_coverage.registered_shims", return_value=shims), \
+                    mock.patch("tools.api_coverage.pe_imports", return_value=imports), \
+                    redirect_stderr(stderr):
+                rc = main(["--corpus", str(corpus), "--out", str(out),
+                           "--markdown", str(md)])
+            self.assertEqual(rc, 1)
+            self.assertIn("FAIL-CLOSED", stderr.getvalue())
+            self.assertIn("BrandNewApi", stderr.getvalue())
+            self.assertTrue(out.is_file())
+            self.assertTrue(md.is_file())
+            written = json.loads(out.read_text())
+            self.assertTrue(written["gate"]["fail_closed"])
+            self.assertIn("`BrandNewApi`", md.read_text())
+
+    def test_main_passes_when_only_known_baseline_gaps_remain(self):
+        dll, name = "comctl32.dll", "ImageList_Replace"
+        shim_text = '{ "ExitProcess", exit_process },'
+        imports = {"kernel32.dll": ["ExitProcess"], dll: [name]}
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            shim_dir = d / "shims"
+            shim_dir.mkdir()
+            (shim_dir / "synthetic.c").write_text(shim_text)
+            corpus = d / "corpus"
+            corpus.mkdir()
+            (corpus / "fixture.exe").write_bytes(b"MZ")
+            shims = registered_shims(shim_dir)
+            out = d / "report.json"
+            stderr = io.StringIO()
+            with mock.patch("tools.api_coverage.registered_shims", return_value=shims), \
+                    mock.patch("tools.api_coverage.pe_imports", return_value=imports), \
+                    redirect_stderr(stderr):
+                rc = main(["--corpus", str(corpus), "--out", str(out)])
+            self.assertEqual(rc, 0)
+            self.assertNotIn("FAIL-CLOSED", stderr.getvalue())
+            written = json.loads(out.read_text())
+            self.assertFalse(written["gate"]["fail_closed"])
 
 
 if __name__ == "__main__":
