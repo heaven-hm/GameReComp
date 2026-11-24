@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "note": "PNG files are lossless conversions of real runtime BMP captures; no synthetic images",
+  "conversions": [
+    {
+      "game": "tetris-jp-p8",
+      "source_bmp": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0001.bmp",
+      "source_bmp_sha256": "337dc530ce189824bf2bd68a9d53731dd84c23937b506d3fea0f63a4250bb799",
+      "committed_png": "evidence/p8-new-games/screenshots/tetris-jp-p8-frame-0001.png",
+      "committed_png_sha256": "02209c5d8f7508182aff44aeed6e34e6109c7578f2714700bba3ca5b09327215",
+      "size_bytes": 1324
+    },
+    {
+      "game": "tetris-jp-p8",
+      "source_bmp": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0002.bmp",
+      "source_bmp_sha256": "337dc530ce189824bf2bd68a9d53731dd84c23937b506d3fea0f63a4250bb799",
+      "committed_png": "evidence/p8-new-games/screenshots/tetris-jp-p8-frame-0002.png",
+      "committed_png_sha256": "02209c5d8f7508182aff44aeed6e34e6109c7578f2714700bba3ca5b09327215",
+      "size_bytes": 1324
+    },
+    {
+      "game": "tetris-ch-p8",
+      "source_bmp": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-ch-p8/screenshots/frame-0001.bmp",
+      "source_bmp_sha256": "5b94c01b33aac7d33fe045bdb093a500f77e4a2feae3800989879042e99e0a45",
+      "committed_png": "evidence/p8-new-games/screenshots/tetris-ch-p8-frame-0001.png",
+      "committed_png_sha256": "67b22ee136c366a48caaa5aa66233fc669a77b92a8c812e4075f015ad2e324c3",
+      "size_bytes": 1194
+    },
+    {
+      "game": "tetris-ch-p8",
+      "source_bmp": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-ch-p8/screenshots/frame-0002.bmp",
+      "source_bmp_sha256": "5b94c01b33aac7d33fe045bdb093a500f77e4a2feae3800989879042e99e0a45",
+      "committed_png": "evidence/p8-new-games/screenshots/tetris-ch-p8-frame-0002.png",
+      "committed_png_sha256": "67b22ee136c366a48caaa5aa66233fc669a77b92a8c812e4075f015ad2e324c3",
+      "size_bytes": 1194
+    }
+  ]
+}

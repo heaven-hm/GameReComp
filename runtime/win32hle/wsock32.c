@@ -48,6 +48,8 @@
 #define WSAEADDRINUSE    10048u
 #define WSAECONNRESET    10054u
 #define WSAEFAULT        10014u
+#define WSAENOTCONN      10057u
+#define WSAESHUTDOWN     10058u
 #define WSAEOPNOTSUPP    10045u
 #define WSA_NOT_ENOUGH_MEMORY 10008u
 #define WSAHOST_NOT_FOUND 11001u
@@ -82,6 +84,8 @@ static uint32_t wsa_errno(int e) {
     case EFAULT:      return WSAEFAULT;
     case EBADF: case ENOTSOCK: return WSAENOTSOCK;
     case ECONNRESET: case ECONNREFUSED: return WSAECONNRESET;
+    case ENOTCONN:    return WSAENOTCONN;
+    case EPIPE:       return WSAESHUTDOWN;   /* send after shutdown(SD_SEND) */
     case EAFNOSUPPORT: return WSAEAFNOSUPPORT;
     default: return 10000u + (uint32_t)e;
     }
@@ -143,6 +147,34 @@ static void ipx_to_guest(const struct sockaddr_in *h, uint8_t *g, int self) {
     memcpy(g + 12, &h->sin_port, 2);
 }
 
+/* ---- server-side address outputs: one bounded guest write for all three of
+ * accept(), getsockname() and getpeername(). Winsock writes the address only
+ * into the buffer the guest declared through *namelen, and if that buffer is
+ * too small it writes nothing, returns SOCKET_ERROR/WSAEFAULT and reports the
+ * length it needs. Writing 16 bytes unconditionally scribbled over the guest's
+ * neighbours whenever a game passed a 14-byte IPX buffer or a short buffer.
+ * `self` selects our node for getsockname and the peer's for accept/peername.
+ * A NULL address is allowed (the caller only wants the length); a NULL length
+ * means there is nowhere to report it. */
+static int put_guest_addr(int fd, const struct sockaddr_in *h, int self,
+                          uint32_t addr_va, uint32_t len_va) {
+    int ipx = is_ipx(fd);
+    uint32_t need = ipx ? 14u : 16u;                     /* guest sockaddr_ipx / sockaddr_in */
+    uint8_t g[16];
+    if (ipx) ipx_to_guest(h, g, self); else to_guest(h, g);
+    if (len_va) {
+        uint32_t have = MEM32(len_va);
+        if (have < need) {
+            MEM32(len_va) = need;
+            g_wsa_error = WSAEFAULT;
+            return -1;
+        }
+    }
+    if (addr_va) memcpy(hle_ptr(addr_va), g, need);
+    if (len_va) MEM32(len_va) = need;
+    return 0;
+}
+
 static void w_WSAStartup(void) {                         /* (version, &WSADATA) */
     uint8_t *d = (uint8_t *)APTR(1);
     if (d) {
@@ -195,11 +227,20 @@ static void w_closesocket(void) {
     }
     RET(0, 1);
 }
-static void w_bind(void) {                               /* (s, addr, len) */
-    struct sockaddr_in a;
+/* bind(s, name, namelen) -> int, 3 stdcall words.
+ * Errors: WSAENOTSOCK (bad s), WSAEFAULT (name NULL or namelen too short to
+ * hold the family's sockaddr), then the host errno mapped by wsa_errno --
+ * notably WSAEADDRINUSE and WSAEINVAL for a socket already bound. */
+static void w_bind(void) {
+    uint32_t addr_va = A32(1), namelen = A32(2);
     int fd = fd_of(A32(0));
-    if (is_ipx(fd)) ipx_to_host((const uint8_t *)APTR(1), &a, 1);   /* any address, the socket's port */
-    else to_host((const uint8_t *)APTR(1), &a);
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); }
+    int ipx = is_ipx(fd);
+    uint32_t need = ipx ? 14u : 16u;                     /* do not read past what the guest gave us */
+    if (!addr_va || namelen < need) { g_wsa_error = WSAEFAULT; RET(SOCKET_ERROR, 3); }
+    struct sockaddr_in a;
+    if (ipx) ipx_to_host((const uint8_t *)hle_ptr(addr_va), &a, 1); /* any address, the socket's port */
+    else to_host((const uint8_t *)hle_ptr(addr_va), &a);
     if (bind(fd, (struct sockaddr *)&a, sizeof a) != 0) FAIL(3);
     RET(0, 3);
 }
@@ -209,7 +250,19 @@ static void w_connect(void) {
     if (connect(fd_of(A32(0)), (struct sockaddr *)&a, sizeof a) != 0) FAIL(3);
     RET(0, 3);
 }
-static void w_listen(void) { if (listen(fd_of(A32(0)), (int)A32(1)) != 0) FAIL(2); RET(0, 2); }
+/* listen(s, backlog) -> int, 2 stdcall words.
+ * Errors: WSAENOTSOCK (bad s), then host errno (WSAEINVAL when the socket is
+ * unbound). Winsock's SOMAXCONN is 0x7FFFFFFF; the host kernel caps the queue
+ * far below that and some reject a huge backlog outright, so clamp before the
+ * host call instead of turning a legal Winsock request into an error. */
+static void w_listen(void) {
+    int fd = fd_of(A32(0));
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 2); }
+    int backlog = (int)A32(1);
+    if (backlog > 128) backlog = 128;                    /* Linux/macOS kernel cap */
+    if (listen(fd, backlog) != 0) FAIL(2);
+    RET(0, 2);
+}
 static int nettrace(void) { static int on = -1; if (on < 0) on = getenv("HLE_NETTRACE") != NULL; return on; }
 static void w_sendto(void) {                             /* (s, buf, len, flags, to, tolen) */
     struct sockaddr_in a;
@@ -416,13 +469,17 @@ static void w_WSAIoctl(void) {
     RET(SOCKET_ERROR, 9);
 }
 
+/* getsockname(s, name, namelen) -> int, 3 stdcall words.
+ * Errors: WSAENOTSOCK (bad s), WSAEFAULT (name too small; needed length is
+ * written through namelen), then host errno. The address is our own endpoint,
+ * so an IPX socket reports our own node. */
 static void w_getsockname(void) {
+    int fd = fd_of(A32(0));
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); }
     struct sockaddr_in a;
     socklen_t l = sizeof a;
-    if (getsockname(fd_of(A32(0)), (struct sockaddr *)&a, &l) != 0) FAIL(3);
-    int ipx = is_ipx(fd_of(A32(0)));
-    if (ipx) ipx_to_guest(&a, (uint8_t *)APTR(1), 1); else to_guest(&a, (uint8_t *)APTR(1));
-    if (A32(2)) MEM32(A32(2)) = ipx ? 14 : 16;
+    if (getsockname(fd, (struct sockaddr *)&a, &l) != 0) FAIL(3);
+    if (put_guest_addr(fd, &a, 1, A32(1), A32(2)) != 0) RET(SOCKET_ERROR, 3);
     RET(0, 3);
 }
 
@@ -578,9 +635,17 @@ static void w_EnumProtocolsA(void) {
 static int win_af_to_host(int af) { return af == 23 ? AF_INET6 : af; }
 static int host_af_to_win(int af) { return af == AF_INET6 ? 23 : af; }
 
+/* accept(s, addr, addrlen) -> SOCKET, 3 stdcall words.
+ * Errors: WSAENOTSOCK (bad s), WSAEFAULT (addr given without addrlen, or a
+ * too-small address buffer -- the connection is closed rather than handed to
+ * the guest without a way to report its peer), WSAEWOULDBLOCK on a nonblocking
+ * listener with no pending connection, then host errno. The accepted socket
+ * inherits the listener's IPX identity and blocking mode, as Winsock's does. */
 static void w_accept(void) {
+    uint32_t addr_va = A32(1), len_va = A32(2);
     int fd = fd_of(A32(0));
-    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(INVALID_SOCKET, 3); return; }
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(INVALID_SOCKET, 3); }
+    if (addr_va && !len_va) { g_wsa_error = WSAEFAULT; RET(INVALID_SOCKET, 3); }
     struct sockaddr_in sa;
     socklen_t sal = sizeof sa;
     int nfd;
@@ -591,32 +656,43 @@ static void w_accept(void) {
         if (socket_nonblocking(fd)) break;
         recv_yield();
     }
-    if (nfd < 0) { g_wsa_error = wsa_errno(errno); RET(INVALID_SOCKET, 3); return; }
-    if (nfd >= 0x10000) { close(nfd); g_wsa_error = 10024u; RET(INVALID_SOCKET, 3); return; }
-    if (APTR(1) && A32(2) && MEM32(A32(2)) >= 16) {
-        to_guest(&sa, (uint8_t *)APTR(1));
-        MEM32(A32(2)) = 16;
+    if (nfd < 0) { g_wsa_error = wsa_errno(errno); RET(INVALID_SOCKET, 3); }
+    if (nfd >= 0x10000) { close(nfd); g_wsa_error = 10024u; RET(INVALID_SOCKET, 3); }
+    if (is_ipx(fd)) g_ipx[nfd >> 3] |= (uint8_t)(1 << (nfd & 7));
+    else g_ipx[nfd >> 3] &= (uint8_t)~(1 << (nfd & 7));
+    if (socket_nonblocking(fd)) {                       /* inherit O_NONBLOCK */
+        int fl = fcntl(nfd, F_GETFL);
+        if (fl >= 0) fcntl(nfd, F_SETFL, fl | O_NONBLOCK);
+    }
+    if (put_guest_addr(fd, &sa, 0, addr_va, len_va) != 0) {
+        close(nfd);
+        RET(INVALID_SOCKET, 3);
     }
     RET(SOCK_BASE + (uint32_t)nfd, 3);
 }
 
+/* shutdown(s, how) -> int, 2 stdcall words. how is SD_RECEIVE/SEND/BOTH (0/1/2).
+ * Errors: WSAENOTSOCK (bad s), WSAEINVAL (how out of range), WSAENOTCONN
+ * (socket not connected), then host errno. */
 static void w_shutdown(void) {
     int fd = fd_of(A32(0));
-    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 2); return; }
-    if (shutdown(fd, (int)A32(1)) != 0) FAIL(2);
+    uint32_t how = A32(1);
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 2); }
+    if (how > 2u) { g_wsa_error = WSAEINVAL; RET(SOCKET_ERROR, 2); }
+    if (shutdown(fd, (int)how) != 0) FAIL(2);
     RET(0, 2);
 }
 
+/* getpeername(s, name, namelen) -> int, 3 stdcall words.
+ * Errors: WSAENOTSOCK (bad s), WSAEFAULT (name too small; needed length is
+ * written through namelen), WSAENOTCONN (no peer), then host errno. */
 static void w_getpeername(void) {
     int fd = fd_of(A32(0));
-    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); return; }
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 3); }
     struct sockaddr_in sa;
     socklen_t l = sizeof sa;
     if (getpeername(fd, (struct sockaddr *)&sa, &l) != 0) FAIL(3);
-    if (APTR(1) && A32(2) && MEM32(A32(2)) >= 16) {
-        to_guest(&sa, (uint8_t *)APTR(1));
-        MEM32(A32(2)) = 16;
-    }
+    if (put_guest_addr(fd, &sa, 0, A32(1), A32(2)) != 0) RET(SOCKET_ERROR, 3);
     RET(0, 3);
 }
 

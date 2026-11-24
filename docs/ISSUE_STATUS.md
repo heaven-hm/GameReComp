@@ -209,11 +209,38 @@ The shim-semantics selftests and `docs/NEW_GAME_DOWNLOADS.md` update required by
 the acceptance criteria are not yet complete, and Chocolate Doom frame evidence
 needs an oracle WAD. Status: **PARTIAL**; OPEN.
 
+## Closure gate (machine-checked)
+
+Closure is not a judgement call. The authoritative, machine-readable gate is
+the `<!-- BEGIN CLOSURE GATE -->` JSON block in
+`docs/ISSUE_WORK_LEDGER.md`, enforced by `tests/test_issue_closure_gate.py`.
+An issue may be marked `complete: true` **only if** all three hold:
+
+1. its dedicated evidence file exists (`evidence/issues/issue-NN.json`);
+2. every acceptance criterion in the gate is `met: true`; and
+3. each met criterion cites an evidence artifact that exists.
+
+Every criterion is currently `met: false` and no `evidence/issues/` file
+exists, because the committed evidence never meets the project's 100%
+acceptance rule. CLI process-level oracles (`base64`, `arith-calc` in
+`docs/WINE_ORACLE_EVIDENCE.md`) are explicitly not gameplay oracles and do not
+satisfy any game-acceptance criterion. A build, a unit test, a boot or a single
+frame is never a closure event.
+
 ## Why nothing was closed
 
-Closing any of these issues now would require claiming one of: a Windows
-oracle comparison, gameplay equivalence, a legally supplied proprietary game,
-a working Linux runner, or full PE32+/Win16/D3D11 support. None of those
-exists here. Every issue therefore stays OPEN with the evidence above, and
-this document is the single place to re-check the exact commands and results
-before a future closure decision.
+Closing any of these issues now would require claiming one of: a retail-Windows
+gameplay oracle comparison, gameplay equivalence, a legally supplied
+proprietary game, a working Linux runner, or full PE32+/Win16/D3D11 support.
+None of those exists here. Every issue therefore stays OPEN with the evidence
+above, and this document is the single place to re-check the exact commands
+and results before a future closure decision.
+
+**Live-state caveat (not a closure by this work):** the live GitHub state at
+audit time reported 27 issues OPEN and **#11 CLOSED** (closed by the repository
+owner on `2026-11-24` with commit `0e0e5de`, which only adds a read-only
+DirectInput device-property selftest). That commit does not meet #11's
+acceptance criteria — joystick/FFB, DirectInput8, XInput, Raw Input/HID and an
+original-Windows input replay remain absent — so the gate records #11 as
+`complete: false`. No issue was closed as part of this gate work; the
+discrepancy should be corrected by reopening #11.

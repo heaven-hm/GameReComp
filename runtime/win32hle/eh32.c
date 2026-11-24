@@ -60,6 +60,43 @@ static int plausible_stack_record(uint32_t record) {
     return lo < hi && record >= lo && record <= hi - 16u;
 }
 
+/* The FS:[0] registration chain is guest-controlled.  Both EH dispatchers
+ * walked it with no bound in their inner unwind loops, and their outer walks
+ * stopped at EH_MAX_CHAIN; a cyclic chain therefore either spun or was
+ * mislabelled "no matching catch handler".  Walk with Floyd's tortoise/hare:
+ * reach `stop` (EH_END_CHAIN for the outer walk, the catch-owning record for
+ * the inner unwind), or report a malformed/cyclic chain with a named reason
+ * before any guest state is committed. */
+static int fs_chain_to(uint32_t head, uint32_t stop, const char **why) {
+    uint32_t tortoise = head, hare = head;
+    for (;;) {
+        if (tortoise == stop) return 1;
+        if (!plausible_stack_record(tortoise)) {
+            if (why) *why = "malformed registration record in FS chain";
+            return 0;
+        }
+        tortoise = MEM32(tortoise);
+
+        if (hare == stop) return 1;
+        if (!plausible_stack_record(hare)) {
+            if (why) *why = "malformed registration record in FS chain";
+            return 0;
+        }
+        hare = MEM32(hare);
+        if (hare == stop) return 1;
+        if (!plausible_stack_record(hare)) {
+            if (why) *why = "malformed registration record in FS chain";
+            return 0;
+        }
+        hare = MEM32(hare);
+
+        if (tortoise == hare) {
+            if (why) *why = "cyclic FS registration chain";
+            return 0;
+        }
+    }
+}
+
 static uint32_t read_u32_unaligned(uint32_t va) {
     uint32_t value;
     memcpy(&value, hle_ptr(va), sizeof value);
@@ -135,8 +172,12 @@ static int bind_catch_object(uint32_t handler, uint32_t catchable, uint32_t obje
     return 1;
 }
 
-static int dispatch_cxx(uint32_t object, uint32_t info) {
+static int dispatch_cxx(uint32_t object, uint32_t info, const char **why) {
     uint32_t top = MEM32(g_fs_base);
+    *why = NULL;
+    /* Reject a cyclic or malformed chain up front: without this the walk ran
+     * to EH_MAX_CHAIN and then reported the misleading "no matching catch". */
+    if (!fs_chain_to(top, EH_END_CHAIN, why)) return 0;
     uint32_t record = top;
     for (unsigned walked = 0; record != EH_END_CHAIN && walked < EH_MAX_CHAIN; walked++) {
         if (!plausible_stack_record(record)) return 0;
@@ -157,17 +198,34 @@ static int dispatch_cxx(uint32_t object, uint32_t info) {
                 uint32_t type = MEM32(handler + 4u);
                 uint32_t ct = type ? catchable_type(info, type) : 0;
                 if (type && !ct) continue;
+                uint32_t ebp = record + 12u;
+                /* Validate the catch frame's ESP hand-off before any guest
+                 * write or unwind.  The catch is resumed with the ESP saved at
+                 * [ebp-16]; an out-of-range value would run guest code with a
+                 * corrupt stack pointer and bind locals from outside the guest
+                 * stack (the issue #27 failure signature).  The DMD path already
+                 * checks its DHandlerTable espoffset the same way. */
+                uint32_t stack_lo = MEM32(g_fs_base + 8u);
+                uint32_t stack_hi = MEM32(g_fs_base + 4u);
+                if (stack_lo >= stack_hi || ebp - 16u < stack_lo || ebp > stack_hi) {
+                    *why = "C++ catch frame EBP is outside the guest stack";
+                    return 0;
+                }
+                uint32_t catch_esp = MEM32(ebp - 16u);
+                if (catch_esp < stack_lo || catch_esp > stack_hi - 16u) {
+                    *why = "C++ catch ESP is outside the guest stack (malformed catch frame)";
+                    return 0;
+                }
+                if (!fs_chain_to(top, record, why)) return 0;
                 /* Unwind C++ registrations above this handler. */
                 for (uint32_t above = top; above != record; above = MEM32(above)) {
-                    if (!plausible_stack_record(above)) return 0;
                     uint32_t above_fi = cxx_funcinfo(MEM32(above + 4u));
                     if (above_fi && !unwind_to(above, above_fi, -1)) return 0;
                 }
                 if (!unwind_to(record, fi, low)) return 0;
+                if (!bind_catch_object(handler, ct, object, ebp)) return 0;
                 MEM32(g_fs_base) = record;
                 MEM32(record + 8u) = (uint32_t)(high + 1);
-                uint32_t ebp = record + 12u;
-                if (!bind_catch_object(handler, ct, object, ebp)) return 0;
                 uint32_t saved_object = g_throw_object, saved_info = g_throw_info;
                 g_throw_object = object; g_throw_info = info;
                 uint32_t resume = call_funclet(MEM32(handler + 12u), ebp);
@@ -175,7 +233,7 @@ static int dispatch_cxx(uint32_t object, uint32_t info) {
                 for (recomp_ehframe_t *frame = g_eh_frames; frame; frame = frame->prev) {
                     if (frame->entry_esp != ebp + 4u) continue;
                     g_ebp = ebp;
-                    g_esp = MEM32(ebp - 16u);
+                    g_esp = catch_esp;
                     g_eax = resume;
                     recomp_eh_resume(frame, resume);
                 }
@@ -189,7 +247,11 @@ static int dispatch_cxx(uint32_t object, uint32_t info) {
 
 int hle_eh_cxx_throw(uint32_t object, uint32_t throw_info) {
     if (!throw_info || !g_fs_base) return 0;
-    return dispatch_cxx(object, throw_info);
+    const char *why = NULL;
+    int dispatched = dispatch_cxx(object, throw_info, &why);
+    if (!dispatched && why)
+        fprintf(stderr, "[win32hle] C++ throw refused: %s\n", why);
+    return dispatched;
 }
 
 /* Digital Mars D structured exception tables (DMD 1.x): handler stub is
@@ -326,6 +388,9 @@ int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
     uint32_t obj_ci = dmd_exc_classinfo(exc_obj, &obj_why);
     if (!obj_ci) { if (reason) *reason = obj_why; return 0; }
     uint32_t top = MEM32(g_fs_base), record = top;
+    /* Refuse a cyclic or malformed chain with a named reason instead of
+     * walking EH_MAX_CHAIN nodes and reporting "no matching catch handler". */
+    if (!fs_chain_to(top, EH_END_CHAIN, reason)) return 0;
     for (unsigned walked = 0; record != EH_END_CHAIN && walked < EH_MAX_CHAIN; walked++) {
         if (!plausible_stack_record(record)) { if (reason) *reason = "malformed registration record"; return 0; }
         uint32_t tbl = dmd_table(MEM32(record + 4u));
@@ -358,6 +423,7 @@ int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
                             if (reason) *reason = "catch continuation is not a lifted guest function";
                             return 0;
                         }
+                        if (!fs_chain_to(top, record, reason)) return 0;
                         for (uint32_t above = top; above != record; above = MEM32(above)) {
                             if (!plausible_stack_record(above)) { if (reason) *reason = "malformed outer registration record"; return 0; }
                             uint32_t atbl = dmd_table(MEM32(above + 4u));

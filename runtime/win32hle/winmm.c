@@ -14,7 +14,9 @@
  *     (mciSendCommandA) remains unsupported.
  * No mixer, no recording device and no MIDI device: those report zero devices
  * and documented errors rather than a pretend handle or fabricated
- * capabilities. Joystick stays absent (the game takes its keyboard/mouse path).
+ * capabilities. The waveIn record path writes no WAVEHDR and returns no
+ * captured samples. Joystick stays absent (the game takes its keyboard/mouse
+ * path).
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -500,15 +502,64 @@ static void m_waveOutGetID(void) {
 }
 
 /* --- no mixer, no recording device ---
- * What Windows answers on a PC without either: no devices, an open of device
- * 0 refused as a bad id, and anything given a handle told it is not one. A
- * program that sets its card's levels through the mixer, or enumerates
- * inputs for a record page, carries on without them. */
-static void m_none0(void)       { RET(0, 0); }                        /* mixerGetNumDevs, waveInGetNumDevs */
+ * What Windows answers on a PC without either: no devices, an open refused,
+ * and anything given a handle told it is not one. A program that sets its
+ * card's levels through the mixer, or enumerates inputs for a record page,
+ * carries on without them. No capture is fabricated: the record path writes
+ * no WAVEHDR (not even dwBytesRecorded) and no MMTIME, and opens no audio
+ * stream of its own -- playback stays with waveOut/sndPlaySound in dsound.c.
+ *
+ * waveIn answers with the real Win32 stdcall arity for each entry point,
+ * including the two caps names that were still absent (A and W):
+ *   - GetNumDevs -> 0;
+ *   - GetDevCapsA/W -> MMSYSERR_BADDEVICEID; at most the real WAVEINCAPS
+ *     structure is zeroed, bounded by the caller's cb (no invented caps);
+ *   - Open -> MMSYSERR_NODRIVER for WAVE_MAPPER (no driver at all),
+ *     MMSYSERR_BADDEVICEID for an explicit id; *phwi is always zeroed;
+ *   - every handle-taking call -> MMSYSERR_INVALHANDLE, since without a
+ *     device no valid record handle can exist.
+ * The one-shot diagnostic belongs to the MIDI family only: a game that
+ * checks GetNumDevs and carries on stays quiet here as it does there. */
+#define WAVE_MAPPER        0xFFFFFFFFu
+#define WAVEIN_CAPS_A_SIZE 48u      /* sizeof(WAVEINCAPSA) on x86: 2+2+4+32+4+2+2 */
+#define WAVEIN_CAPS_W_SIZE 80u      /* sizeof(WAVEINCAPSW) on x86: 2+2+4+64+4+2+2 */
+
+static void m_none0(void)       { RET(0, 0); }                        /* mixerGetNumDevs */
 static void m_mixerOpen(void)   { if (A32(0)) MEM32(A32(0)) = 0; RET(MMSYSERR_BADDEVICEID, 5); }
-static void m_waveInOpen(void)  { if (A32(0)) MEM32(A32(0)) = 0; RET(MMSYSERR_BADDEVICEID, 6); }
-static void m_badhandle1(void)  { RET(MMSYSERR_INVALHANDLE, 1); }     /* (h) */
-static void m_badhandle3(void)  { RET(MMSYSERR_INVALHANDLE, 3); }     /* (h, struct, size or flags) */
+static void m_badhandle1(void)  { RET(MMSYSERR_INVALHANDLE, 1); }     /* mixerClose (h) */
+static void m_badhandle3(void)  { RET(MMSYSERR_INVALHANDLE, 3); }     /* mixer* (h, struct, size) */
+
+/* Bound every guest write by both the caller's cb and the real struct size,
+ * so a short cb cannot be overrun and a large one cannot make us invent
+ * fields past WAVEINCAPS. */
+static void wavein_zero_caps(uint32_t caps, uint32_t cb, uint32_t real_size) {
+    uint32_t n;
+    if (!caps) return;
+    n = cb < real_size ? cb : real_size;
+    if (n) memset(hle_ptr(caps), 0, n);
+}
+static void m_waveInGetNumDevs(void)    { RET(0, 0); }
+static void m_waveInGetDevCapsA(void) {           /* (hwi, LPWAVEINCAPSA, cb) */
+    wavein_zero_caps(A32(1), A32(2), WAVEIN_CAPS_A_SIZE);
+    RET(MMSYSERR_BADDEVICEID, 3);
+}
+static void m_waveInGetDevCapsW(void) {           /* (hwi, LPWAVEINCAPSW, cb) */
+    wavein_zero_caps(A32(1), A32(2), WAVEIN_CAPS_W_SIZE);
+    RET(MMSYSERR_BADDEVICEID, 3);
+}
+static void m_waveInOpen(void) {                  /* (phwi, dev, fmt, cb, inst, flags) */
+    uint32_t dev = A32(1);
+    if (A32(0)) MEM32(A32(0)) = 0;                /* a failed open leaves no handle */
+    RET(dev == WAVE_MAPPER ? MMSYSERR_NODRIVER : MMSYSERR_BADDEVICEID, 6);
+}
+static void m_waveInClose(void)           { RET(MMSYSERR_INVALHANDLE, 1); }
+static void m_waveInStart(void)           { RET(MMSYSERR_INVALHANDLE, 1); }
+static void m_waveInStop(void)            { RET(MMSYSERR_INVALHANDLE, 1); }
+static void m_waveInReset(void)           { RET(MMSYSERR_INVALHANDLE, 1); }
+static void m_waveInPrepareHeader(void)   { RET(MMSYSERR_INVALHANDLE, 3); }
+static void m_waveInUnprepareHeader(void) { RET(MMSYSERR_INVALHANDLE, 3); }
+static void m_waveInAddBuffer(void)       { RET(MMSYSERR_INVALHANDLE, 3); }
+static void m_waveInGetPosition(void)     { RET(MMSYSERR_INVALHANDLE, 3); }
 
 /* --- mixer caps: no device, so no capabilities to report --- */
 static void m_mixerGetDevCapsA(void)   { RET(MMSYSERR_BADDEVICEID, 3); }
@@ -1509,16 +1560,18 @@ const win32hle_shim win32hle_winmm[] = {
     { "mixerGetLineControlsA",  m_badhandle3 },
     { "mixerGetControlDetailsA", m_badhandle3 },
     { "mixerSetControlDetails", m_badhandle3 },
-    { "waveInGetNumDevs",       m_none0 },
+    { "waveInGetNumDevs",       m_waveInGetNumDevs },
+    { "waveInGetDevCapsA",      m_waveInGetDevCapsA },
+    { "waveInGetDevCapsW",      m_waveInGetDevCapsW },
     { "waveInOpen",             m_waveInOpen },
-    { "waveInClose",            m_badhandle1 },
-    { "waveInReset",            m_badhandle1 },
-    { "waveInStart",            m_badhandle1 },
-    { "waveInStop",             m_badhandle1 },
-    { "waveInPrepareHeader",    m_badhandle3 },
-    { "waveInUnprepareHeader",  m_badhandle3 },
-    { "waveInAddBuffer",        m_badhandle3 },
-    { "waveInGetPosition",      m_badhandle3 },
+    { "waveInClose",            m_waveInClose },
+    { "waveInReset",            m_waveInReset },
+    { "waveInStart",            m_waveInStart },
+    { "waveInStop",             m_waveInStop },
+    { "waveInPrepareHeader",    m_waveInPrepareHeader },
+    { "waveInUnprepareHeader",  m_waveInUnprepareHeader },
+    { "waveInAddBuffer",        m_waveInAddBuffer },
+    { "waveInGetPosition",      m_waveInGetPosition },
     { "midiOutGetNumDevs",      m_midiOutGetNumDevs },
     { "midiInGetNumDevs",       m_midiInGetNumDevs },
     { "midiOutGetDevCapsA",     m_midiOutGetDevCapsA },

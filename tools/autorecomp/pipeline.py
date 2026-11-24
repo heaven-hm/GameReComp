@@ -170,6 +170,85 @@ def default_build_timeout(source_bytes):
                BUILD_TIMEOUT_BASE + BUILD_TIMEOUT_PER_MB * (source_bytes / (1 << 20)))
 
 
+# Memory guard, alongside the disk guard above. Each parallel compiler holds one
+# generated translation unit (plus its -O2 working set) in RAM; a 273 MB unit can
+# peak well over a GiB. `--parallel = cpu_count` therefore OOMs on hosts with less
+# RAM than cores. Measure *available* RAM (not total) and cap jobs by it. Like the
+# disk policy this is deliberately conservative: with ample RAM the requested
+# jobs are returned unchanged, so normal builds are not slowed down. A missing
+# measurement is never treated as zero RAM -- it simply applies no memory cap.
+BUILD_MEM_PER_JOB = 1 << 30           # ~1 GiB budget per concurrent compiler job
+BUILD_MEM_FLOOR = 1 << 30             # keep 1 GiB for the OS/linker; below it, 1 job
+
+
+def available_memory_bytes():
+    """Best-effort *available* (free + reclaimable) RAM in bytes, or None.
+
+    Portable across the two hosts GameReComp builds on, and dependent only on
+    the stdlib so importing this module never needs a third-party package:
+
+    * Linux: /proc/meminfo ``MemAvailable`` -- the kernel's own estimate of RAM
+      usable without swapping, so it already accounts for reclaimable cache.
+    * macOS: ``vm_stat`` free + inactive pages times the VM page size. ``vm_stat``
+      is the userland equivalent of the vm_statistics64 mach API; parsing it is
+      the portable way to get this number without ctypes.
+    * Fallback: ``sysconf(SC_AVPHYS_PAGES)`` (unsupported on macOS, hence last)
+      or ``SC_PHYS_PAGES`` when nothing more precise is available.
+
+    Any failure returns None. Kept as its own function so tests monkeypatch the
+    measurement while the policy in ``effective_build_jobs`` stays pure.
+    """
+    # Linux: MemAvailable is authoritative and avoids spawning a subprocess.
+    try:
+        with open("/proc/meminfo", "r") as fh:
+            for line in fh:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) * 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    # macOS: `vm_stat` reports free + inactive pages (both reclaimable).
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.run(["vm_stat"], capture_output=True, text=True,
+                                 timeout=5, check=False).stdout
+            page_size = int(os.sysconf("SC_PAGE_SIZE"))
+            pages = 0
+            for line in out.splitlines():
+                if "Pages free:" in line or "Pages inactive:" in line:
+                    value = line.split(":", 1)[1].strip().split(".", 1)[0]
+                    pages += int(value.replace(",", ""))
+            if pages > 0:
+                return pages * page_size
+        except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+            pass
+    # Portable last resort: physical pages when an available figure is absent.
+    for name in ("SC_AVPHYS_PAGES", "SC_PHYS_PAGES"):
+        try:
+            pages = int(os.sysconf(name))
+            page_size = int(os.sysconf("SC_PAGE_SIZE"))
+            if pages > 0 and page_size > 0:
+                return pages * page_size
+        except (ValueError, OSError, AttributeError):
+            continue
+    return None
+
+
+def memory_limited_jobs(requested_jobs, available_bytes):
+    """Cap parallel compile jobs by measured available RAM (pure policy).
+
+    ``available_bytes`` of None means "could not measure" and never reduces the
+    count. Below ``BUILD_MEM_FLOOR`` even one compiler is unsafe, so the single
+    job is the explicit refusal to run a memory-hungry parallel build.
+    """
+    jobs = max(1, int(requested_jobs or 1))
+    if jobs == 1 or available_bytes is None:
+        return jobs
+    usable = int(available_bytes) - BUILD_MEM_FLOOR
+    if usable <= 0:
+        return 1
+    return max(1, min(jobs, usable // BUILD_MEM_PER_JOB))
+
+
 # Issue #26: a parallel compile of a multi-hundred-MiB generated tree writes one
 # object per concurrent job. On a nearly full volume that fills the disk mid-build
 # and leaves a half-written tree, which looks like a compiler error. Keep a safety
@@ -180,29 +259,40 @@ BUILD_FREE_MARGIN = 1 << 30          # 1 GiB left for the linker, OS and other a
 BUILD_MIN_FREE = 256 << 20           # below this, even one job is risky
 
 
-def effective_build_jobs(requested_jobs, source_bytes, path=None):
+def effective_build_jobs(requested_jobs, source_bytes, path=None,
+                         available_bytes=None):
     """Return a safe --parallel value for `source_bytes` of generated C.
 
-    Pure policy: statvfs is consulted once and the result is deterministic for a
-    given (requested, source_bytes, free) triple, which makes it unit-testable.
-    Falls back to `requested_jobs` when the filesystem cannot report free space.
+    Pure policy: statvfs is consulted once (and available RAM measured once) and
+    the result is deterministic for a given (requested, source_bytes, free disk,
+    available RAM) tuple, which makes it unit-testable. ``available_bytes`` lets
+    callers/tests supply a measurement explicitly; None means measure it. The
+    tighter of the disk and memory caps wins. A filesystem or memory measurement
+    failure leaves that particular cap unapplied rather than guessing.
     """
     jobs = max(1, int(requested_jobs or 1))
     if jobs == 1:
         return 1
+    # Disk cap.
+    disk_jobs = jobs
     try:
         st = os.statvfs(str(path) if path is not None else ".")
         free = st.f_bavail * st.f_frsize
     except (OSError, AttributeError):
-        return jobs
-    source_bytes = max(0, int(source_bytes or 0))
-    # Each job holds roughly one unit's source in an object plus temp files; use a
-    # 2x factor and a floor so tiny fixtures still get a meaningful estimate.
-    per_job = max(source_bytes // jobs, 8 << 20) * 2
-    usable = free - BUILD_FREE_MARGIN
-    if usable <= BUILD_MIN_FREE:
-        return 1
-    return max(1, min(jobs, usable // per_job))
+        free = None
+    if free is not None:
+        source_bytes = max(0, int(source_bytes or 0))
+        # Each job holds roughly one unit's source in an object plus temp files;
+        # use a 2x factor and a floor so tiny fixtures still get a meaningful
+        # estimate.
+        per_job = max(source_bytes // jobs, 8 << 20) * 2
+        usable = free - BUILD_FREE_MARGIN
+        disk_jobs = (1 if usable <= BUILD_MIN_FREE
+                     else max(1, min(jobs, usable // per_job)))
+    # Memory cap.
+    if available_bytes is None:
+        available_bytes = available_memory_bytes()
+    return max(1, min(disk_jobs, memory_limited_jobs(jobs, available_bytes)))
 
 
 # The host cmake path gets incremental rebuilds from make/ninja. The wasm32
@@ -1058,7 +1148,8 @@ class Pipeline:
             log_path.parent.mkdir(parents=True, exist_ok=True)
             with open(log_path, "a") as note:
                 note.write(f"# build parallelism reduced {requested_jobs} -> {jobs} "
-                           f"(low disk for {source_bytes} bytes of generated C)\n")
+                           f"(low disk or available memory for {source_bytes} "
+                           f"bytes of generated C)\n")
         build = [cmake, "--build", str(build_dir), "--parallel", str(jobs)]
 
         adaptive = self.build_timeout is None
