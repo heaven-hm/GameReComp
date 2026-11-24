@@ -1,25 +1,20 @@
 /*
  * winmm.c - win32hle WINMM: multimedia timers, joystick, waveOut audio,
- * sndPlaySound, MCI; no mixer, no recording device and no MIDI device.
- * On libc for timing; waveOut is "accept and retire" (a silent device that
- * completes every buffer immediately, so a game's double-buffered mixer thread
- * keeps cycling without a real sound card); no joystick; MCI stubbed. Real SDL
- * audio can replace the waveOut path later without touching callers.
- * sndPlaySoundA/W, unlike waveOut, already play for real: they decode RIFF/WAVE
- * and push PCM through dsound.c's SDL audio mixer stream path.
- * The MIDI-in/out family reports zero devices and documented errors: no
- * pretend MIDI handle, no fabricated capabilities, no second audio backend.
- * * sndPlaySound, MCI; no mixer and no recording device.
+ * sndPlaySound, a waveaudio MCI command subset, and mmio RIFF access.
  *
- * Timing is on libc/the virtual clock. waveOut is a real device: it feeds the
- * guest's PCM into dsound.c's SDL2 audio mixer stream (the one device, no
- * second mixer) and completes a WAVEHDR only once the audio clock has consumed
- * its frames. The four APIs a waveOut game plausibly imports but this shim did
- * not answer -- waveOutPause, waveOutRestart, waveOutGetPosition and
- * waveOutBreakLoop -- are implemented against that device, not as no-ops.
- * Joystick stays absent and MCI stays stubbed (out of scope here).
- *
- * sndPlaySoundA/W use the same dsound.c stream path, decoding RIFF/WAVE first.
+ * Timing is on libc/the virtual clock. All PCM playback -- waveOut,
+ * sndPlaySound and MCI "play" -- feeds dsound.c's single SDL2 audio mixer
+ * stream. There is one device and one mixer, never a second audio backend.
+ *   - waveOut completes a WAVEHDR only once the audio clock has consumed its
+ *     frames; waveOutPause/Restart/GetPosition/BreakLoop are real state changes.
+ *   - sndPlaySound decodes RIFF/WAVE and returns the Win32 BOOL.
+ *   - mciSendStringA implements a documented subset of waveaudio commands
+ *     (open/close/play/stop/pause/resume/status/seek/set volume) on that same
+ *     stream; mciGetErrorStringA formats the MCI errors. The message form
+ *     (mciSendCommandA) remains unsupported.
+ * No mixer, no recording device and no MIDI device: those report zero devices
+ * and documented errors rather than a pretend handle or fabricated
+ * capabilities. Joystick stays absent (the game takes its keyboard/mouse path).
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -29,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include "win32hle.h"
 
 /* MMSYSERR_* and the wave constants from Wine-10.0 include/mmsystem.h. */
@@ -514,10 +510,7 @@ static void m_waveInOpen(void)  { if (A32(0)) MEM32(A32(0)) = 0; RET(MMSYSERR_BA
 static void m_badhandle1(void)  { RET(MMSYSERR_INVALHANDLE, 1); }     /* (h) */
 static void m_badhandle3(void)  { RET(MMSYSERR_INVALHANDLE, 3); }     /* (h, struct, size or flags) */
 
-/* --- MCI (CD audio / command strings): not available --- */
-static void m_mciSendStringA(void)     { RET(MMSYSERR_ERROR, 4); }
-static void m_mciGetErrorStringA(void) { RET(0, 3); }          /* FALSE: no string */
-static void m_mciSendCommandA(void)    { RET(MCIERR_UNSUPPORTED_FUNCTION, 4); }
+/* --- mixer caps: no device, so no capabilities to report --- */
 static void m_mixerGetDevCapsA(void)   { RET(MMSYSERR_BADDEVICEID, 3); }
 
 /* --- MIDI mapper: no devices, and no pretend device either ---
@@ -1060,6 +1053,422 @@ static void m_sndPlaySoundW(void) {
     hle_scratch_release(mark);
     RET(ps_bool(err), 2);
 }
+
+/* --- MCI: a small, real waveaudio command-string subset ---
+ *
+ * Games drive music with mciSendString("open song.wav type waveaudio alias
+ * music") followed by "play" / "stop" / "status". Answering every command with
+ * MCIERR_UNSUPPORTED_FUNCTION strands those games even though this shim already
+ * owns real PCM playback: sndPlaySound and waveOut push frames into dsound.c's
+ * one SDL mixer stream. This subset loads a RIFF/WAVE with the same ps_decode,
+ * keeps the decoded frames in host memory, and plays them through a dedicated
+ * hle_audio_stream_* stream owned by the device -- the same audio device, not a
+ * second backend. Commands outside the subset get their documented MCI error;
+ * nothing is pretended.
+ *
+ *   open <file> [type waveaudio] [alias <name>]   (returns the device id)
+ *   close|play|stop|pause|resume <device>
+ *   status <device> mode|length|position|volume
+ *   seek <device> to <milliseconds>
+ *   set <device> volume <0..1000>
+ *
+ * A device is named by its alias or decimal id; a file opened without an alias
+ * is named by its path, as on Windows. Guest strings and the return buffer are
+ * bounded: a command longer than MCI_CMD_MAX is MCIERR_PARAM_OVERFLOW, and the
+ * reply is NUL-terminated within cchReturn. mciGetErrorStringA formats MCI
+ * error codes without needing a device; the message form (mciSendCommandA) is
+ * still unsupported.
+ */
+#define MCIERR_NO_ERROR             0u
+#define MCIERR_INVALID_DEVICE_ID    (256u + 1u)
+#define MCIERR_UNRECOGNIZED_KEYWORD (256u + 3u)
+#define MCIERR_UNRECOGNIZED_COMMAND (256u + 5u)
+#define MCIERR_HARDWARE             (256u + 6u)
+#define MCIERR_OUT_OF_MEMORY        (256u + 8u)
+#define MCIERR_PARAM_OVERFLOW       (256u + 12u)
+#define MCIERR_MISSING_STRING_ARG   (256u + 13u)
+#define MCIERR_BAD_INTEGER          (256u + 14u)
+/* MCIERR_UNSUPPORTED_FUNCTION (256u + 18u) is defined with the codes at top. */
+#define MCIERR_FILE_NOT_FOUND       (256u + 19u)
+#define MCIERR_OUTOFRANGE           (256u + 26u)
+#define MCIERR_DUPLICATE_ALIAS      (256u + 33u)
+#define MCIERR_INVALID_FILE         (256u + 40u)
+#define MCI_CMD_MAX     1024u
+#define MCI_DEV_MAX     8
+#define MCI_ALIAS_MAX   32u
+enum { MCI_ST_STOPPED = 0, MCI_ST_PLAYING, MCI_ST_PAUSED };
+
+typedef struct {
+    int used, thread_started, stream;
+    uint32_t id;
+    char alias[MCI_ALIAS_MAX];
+    int16_t *pcm;                       /* host memory, interleaved s16 */
+    uint32_t frames, length_ms, pushed, pos_frames, start_frame;
+    int channels, rate, state;
+    volatile int stop, pause;
+    float volume;
+    pthread_t thread;
+} mci_dev_t;
+static mci_dev_t g_mci[MCI_DEV_MAX];
+static pthread_mutex_t g_mci_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* Copy a guest string into a bounded host buffer. Returns 0 if it is not NUL
+ * terminated inside cap (the caller reports MCIERR_PARAM_OVERFLOW). */
+static int mci_copy_cmd(const char *guest, char *out, size_t cap) {
+    if (!guest || !cap) return 0;
+    for (size_t i = 0; i + 1 < cap; i++) {
+        char c = guest[i];
+        out[i] = c;
+        if (!c) return 1;
+    }
+    out[cap - 1] = 0;
+    return 0;
+}
+static const char *mci_skip(const char *p) {
+    while (*p == ' ' || *p == '\t') p++;
+    return p;
+}
+/* One whitespace- or quote-delimited token, bounded by cap. */
+static const char *mci_word(const char *p, char *out, size_t cap) {
+    size_t n = 0;
+    p = mci_skip(p);
+    if (*p == '"') {
+        for (p++; *p && *p != '"'; p++) if (n + 1 < cap) out[n++] = *p;
+        if (*p == '"') p++;
+    } else {
+        for (; *p && *p != ' ' && *p != '\t'; p++) if (n + 1 < cap) out[n++] = *p;
+    }
+    out[n] = 0;
+    return p;
+}
+/* Bounded, always NUL-terminated reply in the guest's return buffer. */
+static void mci_put(uint32_t dst, uint32_t cb, const char *s) {
+    char *out;
+    size_t n;
+    if (!dst || !cb || !s) return;
+    out = (char *)hle_ptr(dst);
+    if (!out) return;
+    n = strlen(s);
+    if (n >= cb) n = cb - 1;
+    memcpy(out, s, n);
+    out[n] = 0;
+}
+static void mci_put_num(uint32_t dst, uint32_t cb, uint32_t v) {
+    char text[24];
+    snprintf(text, sizeof text, "%u", v);
+    mci_put(dst, cb, text);
+}
+static mci_dev_t *mci_find(const char *name) {
+    char *end;
+    unsigned long id;
+    if (!name || !*name) return NULL;
+    id = strtoul(name, &end, 10);
+    if (!*end && id >= 1 && id <= MCI_DEV_MAX)
+        return g_mci[id - 1].used ? &g_mci[id - 1] : NULL;
+    for (int i = 0; i < MCI_DEV_MAX; i++)
+        if (g_mci[i].used && !strcasecmp(g_mci[i].alias, name)) return &g_mci[i];
+    return NULL;
+}
+/* Decode a guest-named WAV through the sndPlaySound decoder and size bounds. */
+static uint32_t mci_load(const char *guest, int16_t **pcm, uint32_t *frames,
+                         int *channels, int *rate) {
+    char host[1024];
+    FILE *f;
+    long n;
+    uint8_t *buf;
+    uint32_t err;
+    if (!hle_host_path(guest, host, sizeof host) || !(f = fopen(host, "rb"))) {
+        fprintf(stderr, "[winmm] MCI: file not found: %s\n", guest ? guest : "(null)");
+        return MCIERR_FILE_NOT_FOUND;
+    }
+    if (fseek(f, 0, SEEK_END) != 0 || (n = ftell(f)) < 12 || n > PS_MAX_WAV) {
+        fclose(f);
+        return MCIERR_INVALID_FILE;
+    }
+    rewind(f);
+    buf = (uint8_t *)malloc((size_t)n);
+    if (!buf || fread(buf, 1, (size_t)n, f) != (size_t)n) {
+        free(buf); fclose(f);
+        return MCIERR_OUT_OF_MEMORY;
+    }
+    fclose(f);
+    err = ps_decode(buf, (size_t)n, pcm, frames, channels, rate);
+    free(buf);
+    if (err != MMSYSERR_NOERROR) return MCIERR_INVALID_FILE;
+    return MCIERR_NO_ERROR;
+}
+
+/* Frames the mixer has consumed. A stopped device keeps the value captured at
+ * its stop; a live one derives it from frames submitted minus queue depth. */
+static uint32_t mci_position(const mci_dev_t *d) {
+    uint32_t played;
+    int q;
+    if (d->state == MCI_ST_STOPPED) return d->pos_frames;
+    q = d->stream >= 0 ? hle_audio_stream_queued(d->stream) : 0;
+    if (q < 0) q = 0;
+    played = d->pushed >= (uint32_t)q ? d->pushed - (uint32_t)q : 0;
+    return played < d->frames ? played : d->frames;
+}
+/* Stop a device without taking the machine: the feed thread only touches the
+ * audio stream, never lifted code. Join before closing so it cannot write to a
+ * freed stream. */
+static void mci_halt(mci_dev_t *d) {
+    uint32_t q = d->stream >= 0 ? hle_audio_stream_queued(d->stream) : 0;
+    uint32_t played;
+    if (q < 0) q = 0;
+    played = d->pushed >= (uint32_t)q ? d->pushed - (uint32_t)q : 0;
+    d->pos_frames = played < d->frames ? played : d->frames;
+    if (d->stream >= 0) hle_audio_stream_gain(d->stream, 0.0f);
+    d->stop = 1;
+    d->pause = 0;
+    if (d->thread_started && !pthread_equal(d->thread, pthread_self()))
+        pthread_join(d->thread, NULL);
+    if (d->stream >= 0) { hle_audio_stream_close(d->stream); d->stream = -1; }
+    d->thread_started = 0;
+    d->state = MCI_ST_STOPPED;
+}
+
+/* The device's feed thread: same chunking and high-water wait as sndPlaySound,
+ * with pause holding the feed and a stop flag for close/seek/stop. */
+static void *mci_thread(void *arg) {
+    mci_dev_t *d = (mci_dev_t *)arg;
+    uint32_t off = d->start_frame;
+    int stall = 0;
+    while (!d->stop && off < d->frames) {
+        uint32_t n;
+        if (d->pause) { usleep(2000); continue; }
+        if (hle_audio_stream_queued(d->stream) > PS_HIGH_WATER) {
+            if (++stall > PS_SPIN_MAX) break;            /* stuck device: stop, never hang */
+            usleep(2000);
+            continue;
+        }
+        stall = 0;
+        n = d->frames - off;
+        if (n > PS_CHUNK) n = PS_CHUNK;
+        hle_audio_stream_push(d->stream, d->pcm + (size_t)off * (size_t)d->channels, (int)n);
+        off += n;
+        d->pushed = off;
+    }
+    for (int spins = 0; !d->stop && hle_audio_stream_queued(d->stream) > 0 &&
+                        spins < PS_SPIN_MAX; spins++) usleep(1000);
+    if (!d->stop) {
+        pthread_mutex_lock(&g_mci_lock);
+        if (d->used) {
+            d->state = MCI_ST_STOPPED;
+            d->pos_frames = d->frames;
+            /* Release the stream at end of media, or repeated plays would
+             * exhaust dsound.c's four host streams. */
+            if (d->stream >= 0) { hle_audio_stream_close(d->stream); d->stream = -1; }
+        }
+        pthread_mutex_unlock(&g_mci_lock);
+    }
+    return NULL;
+}
+static uint32_t mci_start(mci_dev_t *d, uint32_t from) {
+    int stream;
+    if (d->thread_started) mci_halt(d);
+    stream = hle_audio_stream_open(d->rate, d->channels);
+    if (stream < 0) return MCIERR_HARDWARE;
+    pthread_mutex_lock(&g_mci_lock);
+    d->stream = stream;
+    d->start_frame = from; d->pushed = from; d->pos_frames = from;
+    d->stop = 0; d->pause = 0; d->state = MCI_ST_PLAYING;
+    pthread_mutex_unlock(&g_mci_lock);
+    hle_audio_stream_gain(stream, d->volume);
+    if (pthread_create(&d->thread, NULL, mci_thread, d) != 0) {
+        hle_audio_stream_close(stream);
+        pthread_mutex_lock(&g_mci_lock);
+        d->stream = -1; d->state = MCI_ST_STOPPED;
+        pthread_mutex_unlock(&g_mci_lock);
+        return MCIERR_HARDWARE;
+    }
+    d->thread_started = 1;
+    return MCIERR_NO_ERROR;
+}
+
+static uint32_t mci_send(uint32_t cmd_va, uint32_t ret_va, uint32_t cb, uint32_t hwnd) {
+    char cmd[MCI_CMD_MAX], verb[32], name[512], arg[32];
+    const char *p;
+    mci_dev_t *d;
+    (void)hwnd;                          /* MM_MCINOTIFY needs no window here */
+    if (!mci_copy_cmd((const char *)hle_ptr(cmd_va), cmd, sizeof cmd))
+        return MCIERR_PARAM_OVERFLOW;
+    p = mci_word(cmd, verb, sizeof verb);
+    if (!*verb) return MCIERR_MISSING_STRING_ARG;
+    p = mci_word(p, name, sizeof name);
+    /* An unknown verb is an unknown command even if the device name after it
+     * is not open yet: report the command error, not a misleading device id. */
+    {
+        static const char *const verbs[] = {
+            "open", "close", "play", "stop", "pause", "resume", "status", "seek", "set"
+        };
+        int known = 0;
+        for (unsigned i = 0; i < sizeof verbs / sizeof verbs[0]; i++)
+            if (!strcasecmp(verb, verbs[i])) { known = 1; break; }
+        if (!known) return MCIERR_UNRECOGNIZED_COMMAND;
+    }
+
+    if (!strcasecmp(verb, "open")) {
+        char type[32] = "waveaudio", alias[512] = "";
+        int16_t *pcm = NULL;
+        uint32_t frames = 0;
+        int ch = 0, rate = 0, slot = -1, have_alias = 0, err;
+        if (!*name) return MCIERR_FILE_NOT_FOUND;
+        for (;;) {
+            p = mci_word(p, arg, sizeof arg);
+            if (!*arg) break;
+            if (!strcasecmp(arg, "type")) {
+                p = mci_word(p, type, sizeof type);
+                if (!*type) return MCIERR_MISSING_STRING_ARG;
+            } else if (!strcasecmp(arg, "alias")) {
+                p = mci_word(p, alias, sizeof alias);
+                if (!*alias) return MCIERR_MISSING_STRING_ARG;
+                have_alias = 1;
+            } else return MCIERR_UNRECOGNIZED_KEYWORD;
+        }
+        if (strcasecmp(type, "waveaudio")) return MCIERR_UNSUPPORTED_FUNCTION;
+        if (strlen(alias) >= MCI_ALIAS_MAX) return MCIERR_PARAM_OVERFLOW;
+        if (have_alias && mci_find(alias)) return MCIERR_DUPLICATE_ALIAS;
+        err = mci_load(name, &pcm, &frames, &ch, &rate);
+        if (err) return err;
+        pthread_mutex_lock(&g_mci_lock);
+        for (int i = 0; i < MCI_DEV_MAX; i++) if (!g_mci[i].used) { slot = i; break; }
+        if (slot >= 0) {
+            d = &g_mci[slot];
+            memset(d, 0, sizeof *d);
+            d->used = 1; d->id = (uint32_t)slot + 1; d->stream = -1;
+            d->pcm = pcm; d->frames = frames; d->channels = ch; d->rate = rate;
+            d->length_ms = (uint32_t)((uint64_t)frames * 1000u / (uint32_t)rate);
+            d->state = MCI_ST_STOPPED; d->volume = 1.0f;
+            snprintf(d->alias, sizeof d->alias, "%s", have_alias ? alias : name);
+        }
+        pthread_mutex_unlock(&g_mci_lock);
+        if (slot < 0) { free(pcm); return MCIERR_HARDWARE; }
+        mci_put_num(ret_va, cb, g_mci[slot].id);        /* Windows returns the id */
+        return MCIERR_NO_ERROR;
+    }
+
+    d = mci_find(name);
+    if (!d) return MCIERR_INVALID_DEVICE_ID;
+
+    if (!strcasecmp(verb, "close")) {
+        if (p && *mci_skip(p)) return MCIERR_UNRECOGNIZED_KEYWORD;
+        if (d->thread_started) mci_halt(d);
+        pthread_mutex_lock(&g_mci_lock);
+        free(d->pcm);
+        memset(d, 0, sizeof *d);
+        pthread_mutex_unlock(&g_mci_lock);
+        return MCIERR_NO_ERROR;
+    }
+    if (!strcasecmp(verb, "play")) {
+        if (p && *mci_skip(p)) return MCIERR_UNRECOGNIZED_KEYWORD;
+        return mci_start(d, 0);
+    }
+    if (!strcasecmp(verb, "stop")) {
+        if (p && *mci_skip(p)) return MCIERR_UNRECOGNIZED_KEYWORD;
+        if (d->thread_started) mci_halt(d);
+        return MCIERR_NO_ERROR;
+    }
+    if (!strcasecmp(verb, "pause")) {
+        if (p && *mci_skip(p)) return MCIERR_UNRECOGNIZED_KEYWORD;
+        d->pause = 1;
+        if (d->stream >= 0) hle_audio_stream_gain(d->stream, 0.0f);
+        if (d->state == MCI_ST_PLAYING) d->state = MCI_ST_PAUSED;
+        return MCIERR_NO_ERROR;
+    }
+    if (!strcasecmp(verb, "resume")) {
+        if (p && *mci_skip(p)) return MCIERR_UNRECOGNIZED_KEYWORD;
+        d->pause = 0;
+        if (d->stream >= 0 && d->state == MCI_ST_PAUSED)
+            hle_audio_stream_gain(d->stream, d->volume);
+        if (d->state == MCI_ST_PAUSED) d->state = MCI_ST_PLAYING;
+        return MCIERR_NO_ERROR;
+    }
+    if (!strcasecmp(verb, "status")) {
+        p = mci_word(p, arg, sizeof arg);
+        if (!*arg) return MCIERR_MISSING_STRING_ARG;
+        if (!strcasecmp(arg, "mode")) {
+            mci_put(ret_va, cb, d->state == MCI_ST_PLAYING ? "playing" :
+                               d->state == MCI_ST_PAUSED ? "paused" : "stopped");
+            return MCIERR_NO_ERROR;
+        }
+        if (!strcasecmp(arg, "length")) {
+            mci_put_num(ret_va, cb, d->length_ms);
+            return MCIERR_NO_ERROR;
+        }
+        if (!strcasecmp(arg, "position")) {
+            mci_put_num(ret_va, cb, (uint32_t)((uint64_t)mci_position(d) * 1000u / (uint32_t)d->rate));
+            return MCIERR_NO_ERROR;
+        }
+        if (!strcasecmp(arg, "volume")) {
+            mci_put_num(ret_va, cb, (uint32_t)(d->volume * 1000.0f));
+            return MCIERR_NO_ERROR;
+        }
+        return MCIERR_UNRECOGNIZED_KEYWORD;
+    }
+    if (!strcasecmp(verb, "seek")) {
+        char value[32];
+        char *end;
+        unsigned long ms;
+        uint32_t frame;
+        int was_playing = d->state == MCI_ST_PLAYING || d->state == MCI_ST_PAUSED;
+        p = mci_word(p, arg, sizeof arg);
+        if (strcasecmp(arg, "to")) return MCIERR_UNRECOGNIZED_KEYWORD;
+        p = mci_word(p, value, sizeof value);
+        ms = strtoul(value, &end, 10);
+        if (!*value || *end) return MCIERR_BAD_INTEGER;
+        frame = (uint32_t)((uint64_t)ms * (uint32_t)d->rate / 1000u);
+        if (frame > d->frames) frame = d->frames;
+        if (d->thread_started) mci_halt(d);
+        d->start_frame = frame; d->pushed = frame; d->pos_frames = frame;
+        return was_playing ? mci_start(d, frame) : MCIERR_NO_ERROR;
+    }
+    if (!strcasecmp(verb, "set")) {
+        char value[32];
+        char *end;
+        unsigned long v;
+        p = mci_word(p, arg, sizeof arg);
+        if (strcasecmp(arg, "volume")) return MCIERR_UNRECOGNIZED_KEYWORD;
+        p = mci_word(p, value, sizeof value);
+        v = strtoul(value, &end, 10);
+        if (!*value || *end) return MCIERR_BAD_INTEGER;
+        if (v > 1000) return MCIERR_OUTOFRANGE;
+        d->volume = (float)v / 1000.0f;
+        if (d->stream >= 0 && d->state != MCI_ST_PAUSED)
+            hle_audio_stream_gain(d->stream, d->volume);
+        return MCIERR_NO_ERROR;
+    }
+    return MCIERR_UNRECOGNIZED_COMMAND;
+}
+
+static const char *mci_err_text(uint32_t e) {
+    switch (e) {
+    case MCIERR_NO_ERROR:              return "No error";
+    case MCIERR_INVALID_DEVICE_ID:     return "Invalid device ID";
+    case MCIERR_UNRECOGNIZED_KEYWORD:  return "Unrecognized keyword";
+    case MCIERR_UNRECOGNIZED_COMMAND:  return "Unrecognized command";
+    case MCIERR_HARDWARE:              return "Hardware failure";
+    case MCIERR_OUT_OF_MEMORY:         return "Out of memory";
+    case MCIERR_PARAM_OVERFLOW:        return "Parameter overflow";
+    case MCIERR_MISSING_STRING_ARG:    return "Missing string argument";
+    case MCIERR_BAD_INTEGER:           return "Bad integer";
+    case MCIERR_UNSUPPORTED_FUNCTION:  return "Unsupported function";
+    case MCIERR_FILE_NOT_FOUND:        return "File not found";
+    case MCIERR_OUTOFRANGE:            return "Value out of range";
+    case MCIERR_DUPLICATE_ALIAS:       return "Duplicate alias";
+    case MCIERR_INVALID_FILE:          return "Invalid file";
+    default:                           return "Unknown MCI error";
+    }
+}
+static void m_mciSendStringA(void) {
+    RET(mci_send(A32(0), A32(1), A32(2), A32(3)), 4);
+}
+static void m_mciGetErrorStringA(void) {             /* (MCIERROR, LPSTR, UINT) -> BOOL */
+    uint32_t dst = A32(1), cb = A32(2);
+    mci_put(dst, cb, mci_err_text(A32(0)));
+    RET(dst && cb ? 1u : 0u, 3);
+}
+static void m_mciSendCommandA(void) { RET(MCIERR_UNSUPPORTED_FUNCTION, 4); }
 
 const win32hle_shim win32hle_winmm[] = {
     { "sndPlaySoundA", m_sndPlaySoundA }, { "sndPlaySoundW", m_sndPlaySoundW },
