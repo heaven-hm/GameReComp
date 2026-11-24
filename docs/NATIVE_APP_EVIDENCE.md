@@ -49,9 +49,9 @@ python3 -m tools.frame_proof --summary /tmp/agent2-app-frames/summary.json \
 
 | File | Source | SHA-256 |
 |---|---|---|
-| `docs/screenshots/native/cavestory-native-01.png` | app run, frame 0001 (converted from BMP with `sips`) | `794f41936012a114ac95b9e700ff4345b9ef1e165cdd446dfbc7582d4604345d` |
-| `docs/screenshots/native/cavestory-native-02.png` | app run, frame 0002 | `794f41936012a114ac95b9e700ff4345b9ef1e165cdd446dfbc7582d4604345d` |
-| `docs/screenshots/native/cavestory-binary-01.png` | raw binary run, frame 0001 | `7cc57071e4e81c783631c5b2f4024dd55bf1319d8f4c11f55263750dbe76a9d5` |
+| `../evidence/screenshots/cavestory-native-01.png` | app run, frame 0001 (converted from BMP with `sips`) | `794f41936012a114ac95b9e700ff4345b9ef1e165cdd446dfbc7582d4604345d` |
+| `../evidence/screenshots/cavestory-native-02.png` | app run, frame 0002 | `794f41936012a114ac95b9e700ff4345b9ef1e165cdd446dfbc7582d4604345d` |
+| `../evidence/screenshots/cavestory-binary-01.png` | raw binary run, frame 0001 | `7cc57071e4e81c783631c5b2f4024dd55bf1319d8f4c11f55263750dbe76a9d5` |
 
 The two app frames are byte-identical because the scene did not change between
 captures; that is recorded honestly rather than presented as two different
