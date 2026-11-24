@@ -861,7 +861,9 @@ static int sockaddr_to_host_any(uint32_t va, uint32_t glen, struct sockaddr_stor
     }
     if (fam == 23 && glen >= 28) {
         struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)ss;
-        s6->sin6_len = sizeof *s6;
+#ifdef __APPLE__
+        s6->sin6_len = sizeof *s6;   /* BSD-only field; absent on Linux/glibc */
+#endif
         s6->sin6_family = AF_INET6;
         s6->sin6_port = MEM16(va + 2);
         s6->sin6_flowinfo = MEM32(va + 4);

@@ -1,0 +1,21 @@
+warning: Error disabling address space randomization: Operation not permitted
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+*** buffer overflow detected ***: terminated
+warning: 44	./nptl/pthread_kill.c: No such file or directory
+
+Program received signal SIGABRT, Aborted.
+__pthread_kill_implementation (threadid=263678696329248, signo=signo@entry=6, no_tid=no_tid@entry=0) at ./nptl/pthread_kill.c:44
+#0  __pthread_kill_implementation (threadid=263678696329248, signo=signo@entry=6, no_tid=no_tid@entry=0) at ./nptl/pthread_kill.c:44
+#1  0x0000efd07ad27520 in __pthread_kill_internal (signo=6, threadid=<optimized out>) at ./nptl/pthread_kill.c:78
+#2  0x0000efd07acdcb3c in __GI_raise (sig=sig@entry=6) at ../sysdeps/posix/raise.c:26
+#3  0x0000efd07acc7e00 in __GI_abort () at ./stdlib/abort.c:79
+#4  0x0000efd07ad1aac4 in __libc_message_impl (fmt=fmt@entry=0xefd07ae02c98 "*** %s ***: terminated\n") at ../sysdeps/posix/libc_fatal.c:134
+#5  0x0000efd07ad982a8 in __GI___fortify_fail (msg=msg@entry=0xefd07ae02c48 "buffer overflow detected") at ./debug/fortify_fail.c:24
+#6  0x0000efd07ad97ae4 in __GI___chk_fail () at ./debug/chk_fail.c:28
+#7  0x0000efd07ad99058 in __realpath_chk (buf=<optimized out>, resolved=<optimized out>, resolvedlen=<optimized out>) at ./debug/realpath_chk.c:30
+#8  0x0000ba6f6e95d344 in boot ()
+#9  0x0000ba6f6e95ddd0 in recomp_host_main ()
+#10 0x0000efd07acc84c4 in __libc_start_call_main (main=main@entry=0xba6f6e8e6b00 <main>, argc=argc@entry=2, argv=argv@entry=0xffffdf464488) at ../sysdeps/nptl/libc_start_call_main.h:58
+#11 0x0000efd07acc8598 in __libc_start_main_impl (main=0xba6f6e8e6b00 <main>, argc=2, argv=0xffffdf464488, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=<optimized out>) at ../csu/libc-start.c:360
+#12 0x0000ba6f6e8e6d70 in _start ()
