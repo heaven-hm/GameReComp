@@ -17,11 +17,17 @@
 #include <unistd.h>
 #include <strings.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+/* Source-level Windows console cross-build: the POSIX host facilities this
+ * file uses are provided by win32_port.h/.c (real Win32 implementations). */
+#include "win32_port.h"
+#else
 #ifdef __APPLE__
 #include <ucontext.h>
 #include <mach-o/dyld.h>
 #elif defined(__linux__)
 #include <ucontext.h>
+#endif
 #endif
 #include "win32hle.h"
 #include "pe_loader.h"
@@ -92,7 +98,13 @@ void hle_pe_run_tls_callbacks(const pe_image *img) {
 
 /* A fault in lifted code is a bad guest address, and without a debugger the
  * only useful fact is which function and which address. Report both, then let
- * the default action proceed so the exit status still says what happened. */
+ * the default action proceed so the exit status still says what happened.
+ *
+ * Windows has no sigaction/siginfo_t/ucontext and this console port does not
+ * install a structured exception handler, so there is no equivalent here.
+ * A fault in a Windows build gets the platform's default handling; it is NOT
+ * reported as a recompiler-specific diagnostic. */
+#ifndef _WIN32
 static void fault_report(int sig, siginfo_t *info, void *ctx) {
     char buf[260];
     uintptr_t a = (uintptr_t)info->si_addr;
@@ -124,14 +136,17 @@ static void fault_report(int sig, siginfo_t *info, void *ctx) {
     signal(sig, SIG_DFL);
     raise(sig);
 }
+#endif /* !_WIN32 */
 
 void recomp_host_init(void) {
+#ifndef _WIN32
     struct sigaction sa;
     sa.sa_sigaction = fault_report;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
     sigaction(SIGBUS, &sa, NULL);
     sigaction(SIGSEGV, &sa, NULL);
+#endif
     win32hle_register(win32hle_kernel32);
     win32hle_register(win32hle_kernel32_ext);
     win32hle_register(win32hle_kernel32_crt);
@@ -181,6 +196,20 @@ static uint32_t data_import(const char *name) {
     return hle_msvcrt_data(name);
 }
 
+#ifdef _WIN32
+/* MinGW/PE folds a weak definition in the SAME translation unit to its
+ * initialiser, so the generated strong definitions in recomp_image.c/.S were
+ * being ignored and every Windows build claimed it had no embedded image.
+ * On this target declare them extern: the console cross-build requires an
+ * embedded image (the tool reports a clear FAIL otherwise).  Companion-table
+ * defaults are supplied by win32_port.c for RECOMP_CONSOLE_ONLY builds. */
+extern const recomp_companion_t *const recomp_companion_list;
+extern const uint32_t recomp_companion_count;
+extern const unsigned char recomp_original_image[];
+extern const unsigned long recomp_original_image_size;
+extern const char recomp_original_name[];
+extern const int recomp_has_embedded_image;
+#else
 /* Weak defaults for the generated bundled-DLL table. A project with no
  * companions does not define these; one with them does, and the linker picks
  * the generated definitions. Weak *definitions* rather than declarations,
@@ -198,6 +227,7 @@ __attribute__((weak)) const unsigned char recomp_original_image[1] = { 0 };
 __attribute__((weak)) const unsigned long recomp_original_image_size = 0;
 __attribute__((weak)) const char recomp_original_name[1] = { 0 };
 __attribute__((weak)) const int recomp_has_embedded_image = 0;
+#endif /* _WIN32 */
 
 static int have_embedded_image(void) { return recomp_has_embedded_image; }
 
