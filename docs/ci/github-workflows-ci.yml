@@ -17,6 +17,19 @@
 # A macOS run is never substituted for a Linux result.
 # no Linux PASS is recorded here in advance.
 # Acceptance needs that Linux job green, with stage logs and a native Linux (ELF) binary uploaded as evidence.
+#
+# Hybrid deterministic evidence (job `hybrid-deterministic` below) is separate.
+# It exercises the hybrid verdict gate with fake/mocked adapters and runs the
+# CPU-level Unicorn paired difftest. Neither path attaches Frida, starts Wine or
+# highball, nor runs a Windows game. Its only claims are the deterministic test
+# results; every host-dependent result is spelled out as NOT TESTED:
+#   live_windows_capture:   NOT TESTED (no Windows/Wine/highball run in this workflow)
+#   live_frida_attach:      NOT TESTED (fake adapters only; no live process attach)
+#   wine_original_run:      NOT TESTED (no Wine or highball invocation here)
+#   linux_native_binary:    NOT TESTED (only `linux-end-to-end` may record ELF evidence)
+#   windows_game_compat:    NOT TESTED (no game corpus or gameplay oracle here)
+# No PASS is fabricated for any of those. The job records them as facts on the
+# runner at execution time; a passing self-check is never a live capture claim.
 name: ci
 
 on:
@@ -197,3 +210,65 @@ jobs:
             ${{ runner.temp }}/pe32-minimal/logs/
             ${{ runner.temp }}/pe32-minimal/manifest.json
             ${{ runner.temp }}/linux-host/
+
+  # Deterministic hybrid checks. Fake/mocked adapters exercise the fail-closed
+  # verdict gate; Unicorn executes paired CPU cases against lifted C. Both are
+  # host-independent and need no Frida attach, Wine/highball run or Windows game.
+  # See the NOT TESTED policy in the header; no live Windows capture is claimed.
+  hybrid-deterministic:
+    name: hybrid deterministic self-checks + Unicorn paired difftest
+    runs-on: ${{ matrix.os }}
+    needs: python
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deterministic test deps
+        run: python -m pip install --upgrade pytest unicorn capstone pyyaml pefile
+      # These tests substitute fake engines for Frida/Unicorn/native and assert
+      # the gate stays fail-closed. No --live-frida, no Wine, no --exe, no
+      # proprietary game binary: a PASS here is a gate self-check only.
+      - name: Hybrid pipeline deterministic self-checks (fake adapters)
+        run: |
+          set -eu
+          python3 -m pytest \
+            tests/test_hybrid_diff.py \
+            tests/test_frida_probe.py \
+            tests/test_proof_checker.py \
+            -q
+      # Real Unicorn executes the paired x86/x86-64 cases against lifted C.
+      # This is CPU-level only: no process, no Wine, no Frida, no Windows host.
+      - name: Unicorn paired difftest (CPU-level, no Wine/Frida)
+        run: |
+          set -eu
+          python3 tools/lift/difftest.py -k paired --cases 2
+      # Record facts from the runner, never a predicted or promoted result.
+      - name: Record NOT TESTED scope (no live Windows capture)
+        run: |
+          set -eu
+          : "${RUNNER_TEMP:?RUNNER_TEMP must be set}"
+          SCOPE="$RUNNER_TEMP/hybrid-deterministic-scope.txt"
+          {
+            echo "job: hybrid-deterministic"
+            echo "runner_os: $RUNNER_OS"
+            echo "git_head: $(git rev-parse HEAD)"
+            echo "self_checks: host-independent fake-adapter gate tests (test result comes from pytest)"
+            echo "unicorn_paired_difftest: CPU-level paired cases (test result comes from difftest)"
+            echo "live_windows_capture: NOT TESTED (no Windows/Wine/highball run in this job)"
+            echo "live_frida_attach: NOT TESTED (fake adapters only; no live process attach)"
+            echo "wine_original_run: NOT TESTED (no Wine or highball invocation here)"
+            echo "linux_native_binary: NOT TESTED (only linux-end-to-end may record ELF evidence)"
+            echo "windows_game_compatibility: NOT TESTED (no game corpus or gameplay oracle)"
+            echo "claim: deterministic gate/CPU checks only; no live Windows capture claimed"
+          } | tee "$SCOPE"
+      - name: Upload hybrid deterministic scope record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hybrid-deterministic-scope
+          path: ${{ runner.temp }}/hybrid-deterministic-scope.txt
