@@ -967,6 +967,33 @@ static inline float  sse_maxf(float a, float b) { return a > b ? a : b; }
 static inline double sse_mind(double a, double b) { return a < b ? a : b; }
 static inline double sse_maxd(double a, double b) { return a > b ? a : b; }
 
+/* sqrtss/sqrtps/sqrtsd/sqrtpd: C's sqrt(f) is not the x86 instruction.
+ * For a negative operand hardware returns the *negative* indefinite QNaN
+ * (FFC00000 / FFF8000000000000); libm returns the positive one. A quiet NaN
+ * passes through with sign and payload intact, a signalling NaN is quieted
+ * by setting the top mantissa bit, and sqrt(-0.0) stays -0.0. All four
+ * forms go through here so a game cannot get the host libm's NaN bits.
+ * Bit results confirmed against Unicorn on 2026-11-24. */
+static inline float sse_sqrtf(float v) {
+    uint32_t u = sse_u32(v);
+    if ((u & 0x7F800000u) == 0x7F800000u && (u & 0x007FFFFFu) != 0) {
+        u |= 0x00400000u;                 /* quiet a signalling NaN */
+        return sse_f32(u);
+    }
+    if (v < 0.0f) return sse_f32(0xFFC00000u);
+    return sqrtf(v);
+}
+static inline double sse_sqrtd(double v) {
+    uint64_t u = sse_u64(v);
+    if ((u & 0x7FF0000000000000ull) == 0x7FF0000000000000ull
+        && (u & 0x000FFFFFFFFFFFFFull) != 0) {
+        u |= 0x0008000000000000ull;       /* quiet a signalling NaN */
+        return sse_f64(u);
+    }
+    if (v < 0.0) return sse_f64(0xFFF8000000000000ull);
+    return sqrt(v);
+}
+
 /* comiss/ucomiss/comisd/ucomisd and fcomi: the EFLAGS word, ZF PF CF, with
  * OF SF AF clear. Unordered sets all three. */
 #define SSE_COMI(a, b) ((a) < (b) ? 0x01u : (a) > (b) ? 0x00u : (a) == (b) ? 0x40u : 0x45u)

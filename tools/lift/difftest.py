@@ -833,6 +833,28 @@ def _sse_forms():
             out.append(Case('x87.%s.%s' % (name, tag),
                             bytes.fromhex('d906' 'd94604' + op + 'dd1f' + ('' if pops else 'dd5f08')),
                             mem={SCRATCH: struct.pack('<ff', *data) + bytes(24)}))
+    # sqrt: the x86 indefinite QNaN is NEGATIVE and a NaN keeps its sign and
+    # payload. C's sqrt(f) does neither, so the general ps/sd data above only
+    # caught a single byte. These pin all four forms at both widths, with a
+    # negative, a signalling NaN, a quiet NaN and a negative zero in play.
+    f32_neg = struct.pack('<8f', 1.0, 4.0, 9.0, 16.0,
+                                -2.25, 4.0, 9.0, 16.0)       # xmm1 lane 0 < 0
+    f32_nan = struct.pack('<8I', 0x3F800000, 0x40000000, 0, 0,
+                                0x7F800001, 0xFFC00007, 0, 0)  # sNaN+, qNaN-
+    f32_zero = struct.pack('<8I', 0, 0, 0, 0, 0x80000000, 0, 0, 0)
+    f64_neg = struct.pack('<4d', 1.5, 2.5, -4.0, -9.0)      # xmm1 lanes < 0
+    f64_nan = struct.pack('<4Q', 0x3FF0000000000000, 0,
+                                0x7FF0000000000001, 0xFFF8000000000001)
+    for name, op, data in (('sqrtss.neg', 'f30f51c1', f32_neg),
+                           ('sqrtss.snan', 'f30f51c1', f32_nan),
+                           ('sqrtss.negzero', 'f30f51c1', f32_zero),
+                           ('sqrtps.neg', '0f51c1', f32_neg),
+                           ('sqrtps.nan', '0f51c1', f32_nan),
+                           ('sqrtsd.neg', 'f20f51c1', f64_neg),
+                           ('sqrtpd.neg', '660f51c1', f64_neg),
+                           ('sqrtpd.nan', '660f51c1', f64_nan)):
+        out.append(Case('sse.%s' % name, load + bytes.fromhex(op) + store,
+                        regs={'eax': 0xFFFFFF85}, mem={SCRATCH: data + extra}))
     # bsf/bsr: the index, and ZF with the destination left alone for 0
     for name, op in (('bsf', '0fbcc1'), ('bsr', '0fbdc1')):
         for v in (0x00F0, 0x80000001, 0):

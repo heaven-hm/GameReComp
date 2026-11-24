@@ -34,7 +34,7 @@ CMP_PRED = {'eq': 0, 'lt': 1, 'le': 2, 'unord': 3, 'neq': 4, 'nlt': 5, 'nle': 6,
 
 ARITH = {'add': '({a} + {b})', 'sub': '({a} - {b})', 'mul': '({a} * {b})', 'div': '({a} / {b})',
          'min': 'sse_min{t}({a}, {b})', 'max': 'sse_max{t}({a}, {b})',
-         'sqrt': 'sqrt{f}({b})', 'rcp': '(1.0{F} / {b})', 'rsqrt': '(1.0{F} / sqrt{f}({b}))'}
+         'sqrt': 'sse_sqrt{t}({b})', 'rcp': '(1.0{F} / {b})', 'rsqrt': '(1.0{F} / sse_sqrt{t}({b}))'}
 BITWISE = {'and': '{a} & {b}', 'andn': '~{a} & {b}', 'or': '{a} | {b}', 'xor': '{a} ^ {b}'}
 # psXXx on xmm: (lane kind, lane bits, arithmetic).
 SHIFTS = {'psrlw': ('u16', 16, 0), 'psrld': ('u32', 32, 0), 'psrlq': ('u64', 64, 0),
