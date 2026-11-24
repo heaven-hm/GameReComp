@@ -23,6 +23,7 @@
 
 #define DD_OK                   0u
 #define DDERR_INVALIDPARAMS     0x80070057u
+#define DDERR_INVALIDCAPS       0x88760064u   /* MAKE_DDHRESULT(100) */
 #define DDERR_UNSUPPORTED       0x80004001u
 #define DDERR_NOTFOUND          0x887600FFu
 #define DDERR_NOPALETTEATTACHED 0x8876023Cu
@@ -67,6 +68,18 @@
 #define DDBLT_KEYSRCOVERRIDE   0x00010000u
 #define DDBLTFAST_SRCCOLORKEY  0x00000001u
 #define DDCKEY_SRCBLT          0x00000008u
+/* ddraw.h DDCAPS.dwPalCaps / IDirectDrawPalette::CreatePalette dwFlags.
+ * The presenter reads a PALETTEENTRY as r,g,b,flags, so DDPCAPS_8BITENTRIES
+ * (one byte per entry) is deliberately not served here. */
+#define DDPCAPS_4BIT           0x00000001u
+#define DDPCAPS_8BITENTRIES    0x00000002u
+#define DDPCAPS_8BIT           0x00000004u
+#define DDPCAPS_INITIALIZE     0x00000008u
+#define DDPCAPS_PRIMARYSURFACE 0x00000010u
+#define DDPCAPS_ALLOW256       0x00000040u
+#define DDPCAPS_1BIT           0x00000100u
+#define DDPCAPS_2BIT           0x00000200u
+#define DDPCAPS_ALPHA          0x00000400u
 #define SURF_TAIL              (64u << 10)
 
 /* ---- the display ---- */
@@ -91,7 +104,28 @@ typedef struct surf {
     unsigned diag_locks, diag_nonzero;   /* diagnostics: has this instance ever been written? */
 } surf_t;
 
-typedef struct { uint32_t entries[256]; int refs; } pal_t;   /* PALETTEENTRY: r, g, b, flags */
+/* PALETTEENTRY: r, g, b, flags. flags/nentries are the creation contract: a
+ * 4-bit palette owns 16 entries, not 256, and GetCaps must report what the
+ * guest asked for. */
+typedef struct { uint32_t entries[256]; uint32_t flags; uint32_t nentries; int refs; } pal_t;
+
+/* Palette objects the host actually created. A COM `this` is just a guest
+ * VA; checking this list before dereferencing it makes a bogus or recycled
+ * handle an error instead of a read through an unmapped address. */
+#define MAX_PAL_OBJS 256
+static uint32_t g_pal_objs[MAX_PAL_OBJS];
+static int g_pal_n;
+static void pal_register(uint32_t obj) {
+    if (obj && g_pal_n < MAX_PAL_OBJS) g_pal_objs[g_pal_n++] = obj;
+}
+static void pal_forget(uint32_t obj) {
+    for (int i = 0; i < g_pal_n; i++)
+        if (g_pal_objs[i] == obj) { g_pal_objs[i] = g_pal_objs[--g_pal_n]; return; }
+}
+static int pal_known(uint32_t obj) {
+    for (int i = 0; i < g_pal_n; i++) if (g_pal_objs[i] == obj) return 1;
+    return 0;
+}
 
 static surf_t *g_primary;
 static uint32_t g_vt_dd, g_vt_dd2, g_vt_dd4, g_vt_dd7, g_vt_surf, g_vt_pal, g_vt_clip;
@@ -269,7 +303,7 @@ static uint32_t new_surface(int w, int h, int bpp, uint32_t caps, int primary) {
 }
 static void free_surface(surf_t *s) {
     if (g_primary == s) g_primary = NULL, g_frame_seq++;
-    if (s->palette) { uint32_t p = s->palette; if (--MEM32(p + 4) == 0) { hle_free(P(p)); hle_com_free(p); } }
+    if (s->palette) { uint32_t p = s->palette; if (--MEM32(p + 4) == 0) { pal_forget(p); hle_free(P(p)); hle_com_free(p); } }
     hle_free(s->own_px);
     hle_free(s);
 }
@@ -352,14 +386,6 @@ static void dd_CreateClipper(void) {                     /* (this, flags, &out, 
     if (!o) { MEM32(out) = 0; RET(DDERR_OUTOFMEMORY, 4); }
     MEM32(out) = o;
     RET(DD_OK, 4);
-}
-static void dd_CreatePalette(void) {                     /* (this, flags, entries, &out, outer) */
-    pal_t *p = (pal_t *)hle_alloc(sizeof *p);
-    if (A32(2)) memcpy(p->entries, APTR(2), 256 * 4);
-    uint32_t o = hle_com_new(g_vt_pal, 12);
-    MEM32(o + 8) = hle_va(p);
-    MEM32(A32(3)) = o;
-    RET(DD_OK, 5);
 }
 static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDESC2, &out, outer) */
     uint32_t d = A32(1), out = A32(2);
@@ -554,7 +580,10 @@ static void dd_GetCaps(void) {                           /* (this, &driver, &hel
         MEM32(c + 4) = 0x00000001u | 0x00000040u | 0x00000200u | 0x00400000u | 0x04000000u;   /* 3D, BLT, BLTSTRETCH, COLORKEY, BLTCOLORFILL */
         MEM32(c + 8) = 0x00080000u;                      /* DDCAPS2_WIDESURFACES */
         MEM32(c + 12) = 0x00000200u;                     /* DDCKEYCAPS_SRCBLT */
-        MEM32(c + 24) = 0x00000004u | 0x00000040u;       /* DDPCAPS_8BIT, PRIMARYSURFACE */
+        /* dwPalCaps: the PALETTEENTRY depths CreatePalette really stores.
+         * 0x40 is DDPCAPS_ALLOW256, not PRIMARYSURFACE (an old comment said
+         * otherwise); all four sizes share the presenter's 8-bit entry path. */
+        MEM32(c + 24) = DDPCAPS_1BIT | DDPCAPS_2BIT | DDPCAPS_4BIT | DDPCAPS_8BIT | DDPCAPS_ALLOW256;
         MEM32(c + 60) = 256u << 20, MEM32(c + 64) = 192u << 20;   /* video memory: 256 MB, 192 free */
         if (size >= 108) MEM32(c + 104) = DDSCAPS_PRIMARYSURFACE | DDSCAPS_OFFSCREENPLAIN | DDSCAPS_FLIP | DDSCAPS_SYSTEMMEMORY | DDSCAPS_VIDEOMEMORY;   /* legacy DDSURFACEDESC2 offset, kept for old callers */
         if (size >= 136) MEM32(c + 132) = DD_SURFCAPS_ALL;        /* DDSCAPS in DX3/DX5, ddsOldCaps in DX6/DX7 */
@@ -954,30 +983,110 @@ static void sf_GetPriority(void) { if (A32(1)) MEM32(A32(1)) = 0; RET(DD_OK, 2);
 static void sf_SetLOD(void) { RET(DDERR_UNSUPPORTED, 2); }
 static void sf_GetLOD(void) { RET(0, 1); }
 
-/* ---- IDirectDrawPalette, IDirectDrawClipper ---- */
-static void pl_Release(void) {
-    uint32_t self = A32(0), n = --MEM32(self + 4);
-    if (!n) { hle_free(P(self)); hle_com_free(self); }
-    RET(n, 1);
+/* ---- IDirectDrawPalette, IDirectDrawClipper ----
+ * This is where a guest's PALETTEENTRY array crosses into the presenter.
+ * ddraw.h sizes that array from CreatePalette's dwFlags: copying a fixed 256
+ * entries over-reads a 4-bit palette's 16-entry array. Copy exactly the
+ * declared count, keep the flags for GetCaps, and fail closed on a `this` that
+ * is not one of our palette objects or a range that is not wholly inside it.
+ * No renderer is added: the changed entries are the ones hle_dd_frame hands
+ * screen.c for an 8-bpp primary. */
+#define PAL_DEPTH_BITS (DDPCAPS_1BIT | DDPCAPS_2BIT | DDPCAPS_4BIT | DDPCAPS_8BIT)
+#define PAL_KNOWN_BITS (PAL_DEPTH_BITS | DDPCAPS_8BITENTRIES | DDPCAPS_INITIALIZE | \
+                        DDPCAPS_PRIMARYSURFACE | DDPCAPS_ALLOW256 | DDPCAPS_ALPHA)
+
+static unsigned pal_count(uint32_t flags) {
+    if (flags & DDPCAPS_1BIT) return 2;
+    if (flags & DDPCAPS_2BIT) return 4;
+    if (flags & DDPCAPS_4BIT) return 16;
+    return 256;                                          /* DDPCAPS_8BIT */
 }
-static void pl_GetCaps(void) { if (A32(1)) MEM32(A32(1)) = 0x4u; RET(DD_OK, 2); }   /* DDPCAPS_8BIT */
-static void pl_GetEntries(void) {                        /* (this, flags, start, count, entries) */
-    pal_t *p = P(A32(0));
-    uint32_t start = A32(2), n = A32(3);
-    if (start + n > 256) RET(DDERR_INVALIDPARAMS, 5);
-    memcpy(APTR(4), p->entries + start, n * 4);
+static pal_t *pal_this(uint32_t self) {
+    if (!pal_known(self) || !g_vt_pal || MEM32(self) != g_vt_pal) return NULL;
+    uint32_t state = MEM32(self + 8);
+    return state ? (pal_t *)hle_ptr(state) : NULL;
+}
+static void dd_CreatePalette(void) {                     /* (this, flags, entries, &out, outer) */
+    uint32_t flags = A32(1), out = A32(3), outer = A32(4);
+    if (!out || outer) {
+        if (out) MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 5);
+    }
+    if ((flags & ~PAL_KNOWN_BITS) || (flags & DDPCAPS_8BITENTRIES)) {
+        fprintf(stderr, "[ddraw] CreatePalette(flags=0x%X): DDERR_INVALIDCAPS\n", flags);
+        MEM32(out) = 0;
+        RET(DDERR_INVALIDCAPS, 5);
+    }
+    uint32_t depth = flags & PAL_DEPTH_BITS;
+    if (!depth || (depth & (depth - 1))) {
+        fprintf(stderr, "[ddraw] CreatePalette(flags=0x%X): no single depth -> DDERR_INVALIDPARAMS\n", flags);
+        MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 5);
+    }
+    vtables();
+    unsigned n = pal_count(flags);
+    pal_t *p = (pal_t *)hle_alloc(sizeof *p);              /* zeroed: a NULL initial array is a black palette */
+    uint32_t o;
+    if (!p || !(o = hle_com_new(g_vt_pal, 12))) {
+        fprintf(stderr, "[ddraw] CreatePalette: out of guest memory\n");
+        if (p) hle_free(p);
+        MEM32(out) = 0;
+        RET(DDERR_OUTOFMEMORY, 5);
+    }
+    if (A32(2)) memcpy(p->entries, APTR(2), (size_t)n * 4); /* bounded by dwFlags, never a fixed 1 KB */
+    p->flags = flags, p->nentries = n;
+    pal_register(o);
+    MEM32(o + 8) = hle_va(p);
+    MEM32(out) = o;
+    if (trace()) fprintf(stderr, "[ddraw] CreatePalette(flags=0x%X, %u entries) -> 0x%08X\n", flags, n, o);
     RET(DD_OK, 5);
 }
-static void pl_SetEntries(void) {
-    pal_t *p = P(A32(0));
+static void pl_Release(void) {
+    uint32_t self = A32(0);
+    pal_t *p = pal_this(self);
+    if (!p) RET(DDERR_INVALIDPARAMS, 1);
+    uint32_t n = --MEM32(self + 4);
+    if (!n) { pal_forget(self); hle_free(p); hle_com_free(self); }
+    RET(n, 1);
+}
+static void pl_GetCaps(void) {
+    pal_t *p = pal_this(A32(0));
+    if (!p) RET(DDERR_INVALIDPARAMS, 2);
+    if (A32(1)) MEM32(A32(1)) = p->flags;                  /* what CreatePalette was given */
+    RET(DD_OK, 2);
+}
+static void pl_GetEntries(void) {                        /* (this, flags, start, count, entries) */
+    pal_t *p = pal_this(A32(0));
     uint32_t start = A32(2), n = A32(3);
-    if (start + n > 256) RET(DDERR_INVALIDPARAMS, 5);
-    memcpy(p->entries + start, APTR(4), n * 4);
+    /* A one-byte-per-entry request would need a different array shape; no
+     * palette this host creates uses one, so answer with an error not garbage. */
+    if (!p || (A32(1) & DDPCAPS_8BITENTRIES) || !A32(4) || !n ||
+        start >= p->nentries || n > p->nentries - start) {
+        fprintf(stderr, "[ddraw] GetEntries(this=%08X start=%u count=%u) -> DDERR_INVALIDPARAMS\n", A32(0), start, n);
+        RET(DDERR_INVALIDPARAMS, 5);
+    }
+    memcpy(APTR(4), p->entries + start, (size_t)n * 4);
+    RET(DD_OK, 5);
+}
+static void pl_SetEntries(void) {                        /* (this, flags, start, count, entries) */
+    pal_t *p = pal_this(A32(0));
+    uint32_t start = A32(2), n = A32(3);
+    if (!p || (A32(1) & DDPCAPS_8BITENTRIES) || !A32(4) || !n ||
+        start >= p->nentries || n > p->nentries - start) {
+        fprintf(stderr, "[ddraw] SetEntries(this=%08X start=%u count=%u) -> DDERR_INVALIDPARAMS\n", A32(0), start, n);
+        RET(DDERR_INVALIDPARAMS, 5);
+    }
+    memcpy(p->entries + start, APTR(4), (size_t)n * 4);
+    /* The shared presenter republishes when the frame sequence moves; a
+     * palette change is visible on an 8-bpp primary even with its pixels still. */
     g_frame_seq++;
     if (hle_dd_primary_hook) hle_dd_primary_hook();
     RET(DD_OK, 5);
 }
-static void pl_Initialize(void) { RET(DD_OK, 4); }
+static void pl_Initialize(void) {
+    if (!pal_this(A32(0))) RET(DDERR_INVALIDPARAMS, 4);
+    RET(DD_OK, 4);
+}
 static void cl_Release(void) { uint32_t self = A32(0), n = --MEM32(self + 4); if (!n) hle_com_free(self); RET(n, 1); }
 static void cl_GetClipList(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(DDERR_UNSUPPORTED, 4); }
 static void cl_GetHWnd(void) { MEM32(A32(1)) = MEM32(A32(0) + 8); RET(DD_OK, 2); }
