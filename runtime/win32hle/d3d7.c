@@ -1083,20 +1083,31 @@ static void dev_enum_textures(void) {
     if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,3);
     uint32_t pf=hle_va(hle_alloc(32));
     if(!pf)RET(D3DERR_NOTAVAILABLE,3);
+    /* A real HAL driver enumerates several dozen formats; enumerate the
+     * standard D3D7 surface formats rather than the six we happened to need
+     * first. Titles (IGI) pick the first entry matching their own mask test
+     * and abort with "Invalid texture format" when it is missing. */
     static const uint32_t formats[][8]={
-        {32,0x40,0,16,0xF800,0x07E0,0x001F,0},
-        {32,0x41,0,16,0x7C00,0x03E0,0x001F,0x8000},
-        {32,0x41,0,16,0x0F00,0x00F0,0x000F,0xF000},
-        {32,0x40,0,16,0x7C00,0x03E0,0x001F,0},
-        {32,0x41,0,32,0x00FF0000,0x0000FF00,0x000000FF,0xFF000000},
-        {32,0x40,0,32,0x00FF0000,0x0000FF00,0x000000FF,0},
-        /* 2000-era titles (IGI) look for an 8-bit paletted texture in the
-         * enumeration and abort with "Invalid texture format" if none is
-         * offered. DDPF_PALETTEINDEXED8 is 0x20; a few also accept RGB8. */
-        {32,0x20,0,8,0,0,0,0},
-        {32,0x40,0,8,0x000000E0,0x0000001C,0x00000003,0},
-        {32,0x41,0,16,0xF800,0x07E0,0x001F,0x8000},
-        {32,0x40,0,24,0x00FF0000,0x0000FF00,0x000000FF,0}
+        {32,0x40,0,16,0xF800,0x07E0,0x001F,0},          /* RGB565 */
+        {32,0x41,0,16,0x7C00,0x03E0,0x001F,0x8000},    /* A1RGB555 */
+        {32,0x41,0,16,0x0F00,0x00F0,0x000F,0xF000},    /* ARGB4444 */
+        {32,0x40,0,16,0x7C00,0x03E0,0x001F,0},         /* RGB555 */
+        {32,0x41,0,32,0x00FF0000,0x0000FF00,0x000000FF,0xFF000000}, /* ARGB8888 */
+        {32,0x40,0,32,0x00FF0000,0x0000FF00,0x000000FF,0},         /* XRGB8888 */
+        {32,0x41,0,16,0xF800,0x07E0,0x001F,0x8000},    /* RGB565 + alpha bit */
+        {32,0x40,0,24,0x00FF0000,0x0000FF00,0x000000FF,0},
+        {32,0x20,0,8,0,0,0,0},                         /* DDPF_PALETTEINDEXED8 */
+        {32,0x20,0,4,0,0,0,0},                         /* DDPF_PALETTEINDEXED4 */
+        {32,0x40,0,8,0x000000E0,0x0000001C,0x00000003,0}, /* RGB332 */
+        {32,0x01,0,8,0,0,0,0x000000FF},                /* A8 */
+        {32,0x20000,0,8,0x000000FF,0,0,0},             /* L8 */
+        {32,0x40,0,16,0x0F00,0x00F0,0x000F,0},         /* RGB444 */
+        {32,0x41,0,32,0x000000FF,0x0000FF00,0x00FF0000,0xFF000000}, /* ABGR8888 */
+        {32,0x40,0,32,0x000000FF,0x0000FF00,0x00FF0000,0},         /* XBGR8888 */
+        {32,0x41,0,16,0x001F,0x03E0,0x7C00,0x8000},    /* ARGB555 reversed */
+        {32,0x40,0,16,0x001F,0x03E0,0x7C00,0},         /* BGR555 */
+        {32,0x41,0,16,0x000F,0x00F0,0x0F00,0xF000},    /* ABGR4444 */
+        {32,0x40,0,8,0x0000001C,0x000000E0,0x00000003,0} /* BGR332 */
     };
     unsigned delivered=0;
     for(unsigned i=0;i<sizeof formats/sizeof formats[0];i++) {
