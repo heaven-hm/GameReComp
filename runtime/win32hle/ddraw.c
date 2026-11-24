@@ -824,10 +824,15 @@ static void sf_Lock(void) {                              /* (this, rect, &desc, 
     surf_t *s = S(A32(0));
     uint32_t d = A32(2);
     if (!d) RET(DDERR_INVALIDPARAMS, 5);
+    dd_desc_t sh = desc_shape(d);
     put_desc(d, s);
     if (A32(1)) {
         int l = (int)MEM32(A32(1)), t = (int)MEM32(A32(1) + 4);
-        MEM32(d + 36) = hle_va(s->px + (size_t)t * (size_t)s->pitch + (size_t)l * (size_t)(s->bpp / 8));
+        /* A sub-rect Lock returns lpSurface shifted to (left, top). Write it
+         * at the offset put_desc used: +40 for DDSURFACEDESC2, +36 for the
+         * legacy DDSURFACEDESC. A hard-coded +36 left a DX7 caller reading
+         * the whole-surface pointer and clobbered the field after it. */
+        MEM32(d + sh.surface) = hle_va(s->px + (size_t)t * (size_t)s->pitch + (size_t)l * (size_t)(s->bpp / 8));
     }
     s->locks++;
     s->diag_locks++;
