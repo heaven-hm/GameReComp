@@ -1,0 +1,13 @@
+[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots, at most one every 500 ms
+[pe] <embedded image> mapped at 0x00400000, span 0x1A000
+[pe] static TLS: template 0x00417000..0x00417004 (+0 zero), index 0
+[pe] bound 97 imports (0 delay), 0 unresolved
+[host] C:\tetris-win-32-jp.exe booted: entry 0x004013D0, 0 unresolved imports
+[module] GetProcAddress(7E000000, SetDllDirectoryW): not answered
+[dsound] dummy, 44100 Hz
+[screen] window 1280x925 fullscreen=0 (RECOMP_WINDOW_SIZE/RECOMP_FULLSCREEN)
+[screen] cocoa, renderer metal, scaling sharp (F12), fullscreen F11
+[screenshot] /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0000.bmp (310x418 32 bpp)
+[screen] cursor: the system arrow
+[screenshot] /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0001.bmp (310x418 32 bpp)
+[screenshot] /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0002.bmp (310x418 32 bpp)

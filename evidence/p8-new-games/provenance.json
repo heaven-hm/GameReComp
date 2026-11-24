@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "collected_at_utc": "2026-11-24T06:25:29Z",
+  "agent": "P8",
+  "verification_method": "Each local download was re-downloaded independently from the exact source URL; byte size and SHA-256 matched. file(1) identified every EXE as PE32 Intel 80386. No binary or archive is committed.",
+  "downloads": [
+    {
+      "file": "tetris-win-32-jp.exe",
+      "url": "https://github.com/OUCC/tetris/releases/download/v1.3/tetris-win-32-jp.exe",
+      "size_bytes": 43520,
+      "sha256": "f732c43fb147737a436d382a4e735519dbc13e7811ba304c3f6d500b559de249",
+      "redownload_sha256_match": true,
+      "arch": "PE32 executable (GUI) Intel 80386 (stripped to external PDB), for MS Windows",
+      "local_path_gitignored": "~/Downloads/recomp-new-tests/tetris-win-32-jp.exe",
+      "inner_exe_sha256": null,
+      "license": "OUCC Tetris public release"
+    },
+    {
+      "file": "tetris-win-32-ch.exe",
+      "url": "https://github.com/OUCC/tetris/releases/download/v1.3/tetris-win-32-ch.exe",
+      "size_bytes": 43520,
+      "sha256": "27a64e559d735e383de67fda5658f72a212e92cf2090256f7a9157b22d61b8c4",
+      "redownload_sha256_match": true,
+      "arch": "PE32 executable (GUI) Intel 80386 (stripped to external PDB), for MS Windows",
+      "local_path_gitignored": "~/Downloads/recomp-new-tests/tetris-win-32-ch.exe",
+      "inner_exe_sha256": null,
+      "license": "OUCC Tetris public release"
+    },
+    {
+      "file": "chocolate-heretic-3.1.0-win32.zip",
+      "url": "https://github.com/chocolate-doom/chocolate-doom/releases/download/chocolate-doom-3.1.0/chocolate-heretic-3.1.0-win32.zip",
+      "size_bytes": 8077273,
+      "sha256": "c0e24bec9af1d642cff66dbe6705113f36848a0f945801002ab78b1b0f62af49",
+      "redownload_sha256_match": true,
+      "arch": "ZIP archive; extracted chocolate-heretic.exe is PE32 Intel 80386",
+      "local_path_gitignored": "~/Downloads/recomp-new-tests/choc-heretic-3.1.0-win32.zip (pre-existing shortened name; content matches canonical URL)",
+      "inner_exe_name": "chocolate-heretic.exe",
+      "inner_exe_size_bytes": 960014,
+      "inner_exe_sha256": "18620d715789844d021337783b6de2e086b6243a0faca53fd922c39caeabe639",
+      "license": "GPL (COPYING.html in archive); no Heretic IWAD included"
+    },
+    {
+      "file": "chocolate-hexen-3.1.0-win32.zip",
+      "url": "https://github.com/chocolate-doom/chocolate-doom/releases/download/chocolate-doom-3.1.0/chocolate-hexen-3.1.0-win32.zip",
+      "size_bytes": 8133899,
+      "sha256": "5570a00f9259bf3d88176ee6c0d8182f8e396312d18398457783fbb599ef0c5a",
+      "redownload_sha256_match": true,
+      "arch": "ZIP archive; extracted chocolate-hexen.exe is PE32 Intel 80386",
+      "local_path_gitignored": "~/Downloads/recomp-new-tests/chocolate-hexen-3.1.0-win32.zip (re-fetched after killed download)",
+      "inner_exe_name": "chocolate-hexen.exe",
+      "inner_exe_size_bytes": 1138190,
+      "inner_exe_sha256": "d397847d9da20e4a7e49479cde30a9342b1a23d881370446a23efa147fcc7bb4",
+      "license": "GPL (COPYING.html in archive); no Hexen IWAD included"
+    }
+  ]
+}
