@@ -7,7 +7,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tools import hybrid_diff  # noqa: E402
+from tools import hybrid_diff, wine_oracle  # noqa: E402
 
 
 def env_blocked(reason="no frida"):
@@ -103,12 +103,19 @@ class HybridTests(unittest.TestCase):
         self.assertEqual(rec["status"], "MATCH")
 
     def test_frida_wine_missing_reason_is_specific(self):
-        with mock.patch.object(hybrid_diff.wine_oracle, "find_wine",
-                               return_value=None):
-            rec = hybrid_diff.frida_signal(Path("/tmp/x.exe"), timeout=1)
+        # Neither the Highball CLI nor a raw Wine engine exists. Exercise the
+        # real bounded probe (not a canned record): its BLOCKED reason must say
+        # exactly which engine is missing, and a failed capture must never
+        # carry an invented Frida call trace.
+        with mock.patch.object(wine_oracle, "find_wine", return_value=None), \
+             mock.patch.object(wine_oracle, "find_highball", return_value=None):
+            rec = hybrid_diff.frida_signal(Path("/tmp/x.exe"), timeout=5)
         self.assertEqual(rec["status"], "BLOCKED")
         self.assertIn("wine not found", rec["reason"])
         self.assertIn("Highball", rec["reason"])
+        self.assertEqual(rec["blocked_class"], "environment")
+        self.assertNotIn("calls", rec)
+        self.assertNotIn("counts", rec)
 
     def test_native_absent_is_blocked_not_skip(self):
         exe = Path("/tmp/x.exe")
