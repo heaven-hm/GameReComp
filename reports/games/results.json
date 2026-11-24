@@ -2185,6 +2185,18 @@
       "evidence": "reports/acceptance/arith-calc-oracle-pass.md",
       "project_dir": "/tmp/agent1-arith",
       "notes": "Original PE32 under Wine/CrossOver; deterministic arithmetic results (fib/gcd/popcount/rotl) reproduced by native build. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "busybox-cli-oracle",
+      "filename": "busybox.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
+      "evidence": "reports/oracle-sweep/busybox-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; sweep tool reproduced process observables. Not retail Windows, not gameplay evidence."
     }
   ]
 }
