@@ -206,6 +206,46 @@ static int dmd_isbaseof(uint32_t cls, uint32_t base) {
     return 0;
 }
 
+/* A DMD throw object is the guest's Throwable: obj[0] is its vptr and vptr[0]
+ * is its ClassInfo.  gr.exe's own frame handler reads exactly that chain
+ * before it can match a catch (0x41E048: mov ecx,[eax+0x14];
+ * mov edx,[ecx]; mov ebx,[edx]) -- so does dmd_isbaseof() below.
+ *
+ * When a recompiled guest's class vtables were never constructed, that vptr
+ * is NULL or the ClassInfo chain is broken.  Resuming a catch with such an
+ * object can bind a null vtable into the catch local; the catch block's virtual
+ * call then faults with the issue #27 signature (ICALL: null target from the
+ * catch frame, then SIGBUS in its caller).  Validate the object before any
+ * guest state is committed, and name the exact defect instead of reporting a
+ * misleading "no matching catch handler". */
+static uint32_t dmd_exc_classinfo(uint32_t exc_obj, const char **why) {
+    uint32_t vtbl = exc_obj ? MEM32(exc_obj) : 0u;
+    if (!vtbl) {
+        *why = "DMD throw object has a NULL vtable (object was never constructed)";
+        return 0;
+    }
+    uint32_t ci = MEM32(vtbl);
+    if (!ci) {
+        *why = "DMD throw object's vtable has a NULL ClassInfo";
+        return 0;
+    }
+    if (ci < 0x10000u || !hle_ptr(ci)) {
+        *why = "DMD throw object's ClassInfo is not readable guest memory";
+        return 0;
+    }
+    /* A cyclic base chain is malformed metadata: dmd_isbaseof's 64-step cap
+     * bounds the walk, but the failure must not look like a missing catch. */
+    for (uint32_t p = ci, steps = 0; p && steps < 64u; steps++) {
+        uint32_t next = MEM32(p + 0x28u);
+        if (next == p || next == ci) {
+            *why = "DMD throw object's ClassInfo has a cyclic base chain";
+            return 0;
+        }
+        p = next;
+    }
+    return ci;
+}
+
 static uint32_t dmd_table(uint32_t handler) {
     if (handler < 0x10000u) return 0;
     const uint8_t *p = hle_ptr(handler);
@@ -279,8 +319,12 @@ int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
     if (!g_fs_base) { if (reason) *reason = "no guest TIB/FS base"; return 0; }
     uint32_t exc_obj = MEM32(args_va);
     if (!exc_obj) { if (reason) *reason = "null exception object"; return 0; }
-    uint32_t vtbl = MEM32(exc_obj);
-    uint32_t obj_ci = vtbl ? MEM32(vtbl) : 0u;
+    /* Refuse a throw whose object/vtable/ClassInfo chain is malformed before
+     * touching any guest state.  Otherwise we would bind a null vtable into a
+     * catch local and resume code that faulted with issue #27's signature. */
+    const char *obj_why = "malformed DMD throw object";
+    uint32_t obj_ci = dmd_exc_classinfo(exc_obj, &obj_why);
+    if (!obj_ci) { if (reason) *reason = obj_why; return 0; }
     uint32_t top = MEM32(g_fs_base), record = top;
     for (unsigned walked = 0; record != EH_END_CHAIN && walked < EH_MAX_CHAIN; walked++) {
         if (!plausible_stack_record(record)) { if (reason) *reason = "malformed registration record"; return 0; }
@@ -320,11 +364,26 @@ int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
                             if (atbl && !dmd_local_unwind(above, atbl, -1)) { if (reason) *reason = "outer local unwind failed"; return 0; }
                         }
                         if (!dmd_local_unwind(record, tbl, idx)) { if (reason) *reason = "local unwind failed"; return 0; }
+                        /* The catch block receives EBP=record+12 and
+                         * ESP=EBP-espoffset, exactly as gr.exe's frame handler
+                         * sets them up (0x41E0BD..0x41E0D7).  A bogus
+                         * espoffset would resume guest code with an ESP
+                         * outside the guest stack; its locals (including
+                         * object vptrs) would then read as zero.  Check the
+                         * hand-off before mutating the registration chain. */
+                        uint32_t catch_esp = ebp - MEM32(tbl + 4u);
+                        uint32_t stack_lo = MEM32(g_fs_base + 8u);
+                        uint32_t stack_hi = MEM32(g_fs_base + 4u);
+                        if (!(stack_lo < stack_hi && catch_esp >= stack_lo &&
+                              catch_esp <= stack_hi - 16u)) {
+                            if (reason) *reason = "catch frame ESP is outside the guest stack (bad DHandlerTable espoffset)";
+                            return 0;
+                        }
                         MEM32(g_fs_base) = record;
                         MEM32(record + 8u) = (uint32_t)prev;
                         MEM32(ebp + (uint32_t)bpoff) = exc_obj;
                         g_ebp = ebp;
-                        g_esp = ebp - MEM32(tbl + 4u);
+                        g_esp = catch_esp;
                         if (reason) *reason = exact ? "dispatched to guest catch"
                             : "dispatched to guest catch via inner checkpoint (catch frame tail-call-inlined: no EH landing pad)";
                         recomp_eh_resume(target_frame, catch_va);
