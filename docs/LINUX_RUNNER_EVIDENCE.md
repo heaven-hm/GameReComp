@@ -197,10 +197,41 @@ directory` and `poll.h: No such file or directory` from the POSIX win32hle
 runtime. No PE was produced and no Windows execution is claimed. Full compiler
 output is in `reports/linux/win32-crossbuild.json`.
 
+## x64 (PE32+) to Linux — attempted, BLOCKED
+
+Real x64 PEs under `~/Downloads/recomp-apps/win64` were used; no synthetic
+input. Function-catalog recovery with `tools/disasm/disasm64.py`:
+
+* `imgview64.exe` (12 KiB): **FAIL** —
+  `struct.error: unpack_from requires a buffer of at least 25612 bytes for
+  unpacking 12 bytes at offset 25600 (actual buffer size is 11776)` while
+  reading `.pdata`. No catalog produced.
+* `guess.exe` (158 KiB): OK — base `0x140000000`, 84,022 code bytes,
+  `pdata=185`, 269 functions (36 thunks). `tools/lift/generate64.py` then
+  closed a 321-function catalog over 6 rounds, emitted 4 translation units,
+  `lift_errors=0`, `recomp_todo_sites=4`, `imports=191`.
+
+Compiling those generated units in the aarch64 Linux container (gcc 13.3.0,
+`-I` for `runtime/recomp64_cpu`) is **BLOCKED**, not a PASS:
+
+```text
+/tmp/ccexGam8.s:22984: Error: unknown mnemonic `movq' -- `movq %gs:(x3),x3'
+/tmp/ccexGam8.s:25905: Error: unknown mnemonic `movq' -- `movq %gs:(x0),x0'
+```
+
+The generated x86-64 guest code contains `%gs` segment-prefixed inline assembly
+that an aarch64 assembler cannot encode. A native x86-64 Linux runner would be
+required (`--platform linux/amd64` with an amd64 toolchain image); only arm64
+images are cached locally and pulling another image was outside this bounded
+attempt. No PE32+ Linux build or run is claimed. Logs:
+`reports/linux/x64-*.log`.
+
 ## Status
 
-* Linux **runner**: works — real generated project built in a Linux container
-  and the resulting ELF launched; exact log/hash in the measured summary.
+* Linux **runner**: works — real generated PE32 x86 project built in a Linux
+  container and the resulting ELF launched; exact log/hash in the summary.
+* Linux **x64 runner**: BLOCKED — x86-64 inline asm cannot be assembled on the
+  locally available aarch64 Linux image; no amd64 runner provisioned.
 * Linux **game-level** status remains PARTIAL/NOT TESTED for a Windows oracle:
   no Windows original was executed as a Linux oracle here, and the dual-engine
   evidence is BLOCKED/inconclusive. No Linux PASS row is claimed.

@@ -58,8 +58,11 @@ local Docker/Colima run, not from a workflow definition.
 Architecture follows PCRecomp: PE32 x86 native is the only structurally
 supported class. PE32+ x64, .NET/CLR, Win16/NE, D3D10/11/DXGI, services and
 installers are DEFERRED / UNSUPPORTED on Linux as elsewhere. x64-to-Linux was
-not demonstrated here; see `docs/LINUX_RUNNER_EVIDENCE.md` for the precise
-status of any attempt.
+attempted but is BLOCKED: `guess.exe` catalog/generation succeeded (321
+functions, 0 lift errors), but aarch64 Linux assembly fails on x86-64
+`%gs`-prefixed inline asm (`unknown mnemonic 'movq'`); no amd64 runner image is
+cached locally. See `docs/LINUX_RUNNER_EVIDENCE.md` for the exact commands and
+logs.
 
 ## Status ladder (same vocabulary, kept distinct)
 

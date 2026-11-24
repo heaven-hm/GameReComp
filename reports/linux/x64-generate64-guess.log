@@ -1,0 +1,19 @@
+[*] image base 0x140000000, entry 0x140014da4, 7 sections
+[*] catalog: 269 functions
+[*] imports: 191 IAT slots
+[*] closure round 1: +21 dispatch targets not in the catalog
+[*] closure round 2: +13 dispatch targets not in the catalog
+[*] closure round 3: +12 dispatch targets not in the catalog
+[*] closure round 4: +5 dispatch targets not in the catalog
+[*] closure round 5: +1 dispatch targets not in the catalog
+[*] catalog closed after 6 rounds, 52 entries added (321 total)
+
+[*] === COMPLETE in 0s ===
+[*] image_base           0x140000000
+[*] entry_point          0x140014da4
+[*] size_of_image        155648
+[*] functions            321
+[*] translation_units    4
+[*] lift_errors          0
+[*] recomp_todo_sites    4
+[*] imports              191
