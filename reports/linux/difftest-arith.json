@@ -1,0 +1,31 @@
+{
+ "tool": "tools/lift/difftest.py --project",
+ "what_it_proves": "for each address, the body compared (the project's own, or a GENERATED module file when --source is given) and the ORIGINAL's machine code at that VA agree on the registers, the named flags and the named memory, over the entry states driven",
+ "what_it_does_not_prove": "anything about other entry states, other addresses, or the game as a whole; there is no aggregate verdict",
+ "addresses": [
+  {
+   "address": "0x00401000",
+   "verdict": "original-faulted",
+   "detail": "the ORIGINAL's bytes at 0x00401000 faulted on case 0: Invalid memory fetch (UC_ERR_FETCH_UNMAPPED)",
+   "pe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+   "pe_sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+   "symbol_compared": "sub_00401000"
+  },
+  {
+   "address": "0x004010A0",
+   "verdict": "nothing-compared",
+   "detail": "the original writes guest memory or calls out, but none of the addresses could be named, so the comparison would miss its subject. Refusing to report a pass.",
+   "pe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+   "pe_sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+   "symbol_compared": "sub_004010A0"
+  },
+  {
+   "address": "0x00401131",
+   "verdict": "original-faulted",
+   "detail": "the ORIGINAL's bytes at 0x00401131 faulted on case 1: Invalid memory read (UC_ERR_READ_UNMAPPED)",
+   "pe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+   "pe_sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+   "symbol_compared": "sub_00401131"
+  }
+ ]
+}

@@ -81,7 +81,13 @@ try:
         cmd = [wine, "C:\\recomp-oracle\\" + exe.name]
         runner = "wine-fallback"
     else:
-        raise RuntimeError("neither highball nor a Wine engine is available")
+        # Be specific about what is missing. A caller must be able to tell why
+        # no Frida capture could run, and must never receive a fabricated OK
+        # with an invented call trace.
+        raise RuntimeError(
+            "wine not found: neither the Highball engine nor a Wine runner is "
+            "available (set RECOMP_HIGHBALL or RECOMP_WINE); Frida has no "
+            "Windows process to attach to")
     result["runner"] = runner
     pid = frida.spawn(cmd, env=child_env)
     Path(pid_path).write_text(str(pid))  # let the parent kill it on timeout

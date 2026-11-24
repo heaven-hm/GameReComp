@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/p3-linux/tools/disasm/disasm64.py", line 562, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/p3-linux/tools/disasm/disasm64.py", line 541, in main
+    funcs = d.find_functions(lambda n, q: print('[*] %d functions, %d queued' % (n, q)))
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/p3-linux/tools/disasm/disasm64.py", line 408, in find_functions
+    seeds, names = self.seeds()
+                   ^^^^^^^^^^^^
+  File "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/p3-linux/tools/disasm/disasm64.py", line 239, in seeds
+    primary, self.chunks = pe.pdata()
+                           ^^^^^^^^^^
+  File "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/p3-linux/tools/disasm/disasm64.py", line 113, in pdata
+    begin, end, unwind = struct.unpack_from('<III', self.data, o + 12 * i)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+struct.error: unpack_from requires a buffer of at least 25612 bytes for unpacking 12 bytes at offset 25600 (actual buffer size is 11776)

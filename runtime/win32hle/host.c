@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>                             /* PATH_MAX for realpath() buffers */
 #include <signal.h>
 #include <unistd.h>
 #include <strings.h>
@@ -109,7 +110,18 @@ static void fault_report(int sig, siginfo_t *info, void *ctx) {
         pc -= (uintptr_t)_dyld_get_image_vmaddr_slide(0);   /* link-time address, as nm prints it */
     }
 #elif defined(__linux__)
-    if (ctx) pc = (uintptr_t)((ucontext_t *)ctx)->uc_mcontext.gregs[REG_RIP];
+    if (ctx) {
+        ucontext_t *uc = (ucontext_t *)ctx;
+#if defined(__x86_64__)
+        pc = (uintptr_t)uc->uc_mcontext.gregs[REG_RIP];
+#elif defined(__i386__)
+        pc = (uintptr_t)uc->uc_mcontext.gregs[REG_EIP];
+#elif defined(__aarch64__)
+        pc = (uintptr_t)uc->uc_mcontext.pc;
+#elif defined(__arm__)
+        pc = (uintptr_t)uc->uc_mcontext.arm_pc;
+#endif
+    }
 #endif
     int n;
     if (a >= base && a - base <= 0xFFFFFFFFu)
@@ -423,7 +435,9 @@ static int finish_boot(const char *log_name, const char *guest_name,
 }
 
 static int boot(const char *path, uint32_t (*resolve)(const char *)) {
-    char image[1024];
+    /* glibc's __realpath_chk requires a PATH_MAX-sized output buffer; a shorter
+     * one aborts with "buffer overflow detected" before any guest code runs. */
+    char image[PATH_MAX];
     if (!realpath(path, image)) { fprintf(stderr, "[host] cannot find %s: %s\n", path, strerror(errno)); return -1; }
     enter_image_directory(image);
     if (recomp_pe_map(image, &g_img) != 0) return -1;
@@ -438,7 +452,7 @@ static int boot(const char *path, uint32_t (*resolve)(const char *)) {
  * the original exe did. Companions (a bundled DLL the game ships) are still
  * resolved relative to that directory -- they are the game's files. */
 static int boot_embedded(const char *assets_dir, uint32_t (*resolve)(const char *)) {
-    char dir[1024];
+    char dir[PATH_MAX];                          /* realpath() requires PATH_MAX */
     if (assets_dir && *assets_dir && realpath(assets_dir, dir)) {
         hle_set_drive('C', dir);
         if (chdir(dir) != 0)

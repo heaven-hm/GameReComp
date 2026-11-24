@@ -1,7 +1,3 @@
-Reference copy of the upstream license. No source code from arm64-recompiler
-is incorporated in GameReComp; see docs/X64_MIT_REUSE_REVIEW.md for the
-evaluation. Included so the reuse review and its attribution are self-contained.
-
 MIT License
 
 Copyright (c) 2026 Sahilg93
