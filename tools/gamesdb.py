@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -306,6 +307,10 @@ def _measured_rows(runs, known_hashes):
     for run in runs:
         status = f"{run.get('verification', 'not-run')}: {run.get('status', '')}".strip()
         evidence = run.get("evidence", "")
+        if ((run.get("verification") or "not-run") in EVIDENCE_PASS_STATUSES
+                and not evidence_is_committed(run)):
+            status = f"NO COMMITTED EVIDENCE - {status}"
+            evidence = f"{evidence} (not a committed proof file)"
         if run.get("host"):
             evidence = f"{evidence} (host: {run['host']})"
         rows.append({
@@ -438,13 +443,119 @@ def _port_details(run):
 
 
 def _matrix_table(rows):
-    lines = ["| Name | OS | Arch | Port details | Working status |",
-             "| --- | --- | --- | --- | --- |"]
+    lines = ["| Name | OS | Arch | Port details | Frame proof | Working status |",
+             "| --- | --- | --- | --- | --- | --- |"]
     for row in rows:
         lines.append(
             f"| {_esc(row['game'])} | {_esc(row['os'])} | {_esc(row['arch'])} "
-            f"| {_esc(row['details'])} | {_esc(row['status'])} |")
+            f"| {_esc(row['details'])} | {_esc(row.get('frames', '-'))} "
+            f"| {_esc(row['status'])} |")
     return "\n".join(lines)
+
+
+FRAMES_PATH = REPO_ROOT / "reports" / "frames"
+
+# The fail-closed statuses that claim a process reached its entry point.
+# Such a row must point at a proof file that exists in this repository; a
+# git-ignored projects/** build log is not a committed proof.
+EVIDENCE_PASS_STATUSES = frozenset(
+    ("scenario-pass", "verified-playable-scope", "partial"))
+
+_TRACKED_CACHE = None
+
+
+def _tracked_files(repo_root=REPO_ROOT):
+    """Git-tracked paths in this checkout, cached for the whole render."""
+    global _TRACKED_CACHE
+    if _TRACKED_CACHE is None:
+        try:
+            out = subprocess.run(
+                ["git", "-C", str(repo_root), "ls-files", "-z"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                check=True).stdout
+            _TRACKED_CACHE = {p.decode("utf-8", "replace")
+                              for p in out.split(b"\0") if p}
+        except (OSError, subprocess.CalledProcessError):
+            _TRACKED_CACHE = set()
+    return _TRACKED_CACHE
+
+
+def evidence_path(run, repo_root=REPO_ROOT):
+    """Normalise a run's evidence string to a repo-relative path, or None.
+
+    Older rows append ``(host: ...)`` to the path, and some point at absolute
+    paths on a build machine. Only relative paths inside this repository can
+    be committed proof files.
+    """
+    raw = str(run.get("evidence") or "").strip()
+    if not raw:
+        return None
+    raw = raw.split(" (host:", 1)[0].strip()
+    path = Path(raw)
+    if path.is_absolute():
+        return None
+    try:
+        return path.resolve().relative_to(Path(repo_root).resolve()).as_posix()
+    except (ValueError, OSError):
+        return None
+
+
+def evidence_is_committed(run, repo_root=REPO_ROOT, tracked=None):
+    """True only when evidence names a tracked file that exists in the tree."""
+    rel = evidence_path(run, repo_root)
+    if not rel:
+        return False
+    if tracked is None:
+        tracked = _tracked_files(repo_root)
+    return rel in tracked and (Path(repo_root) / rel).is_file()
+
+
+def audit_evidence(runs, repo_root=REPO_ROOT):
+    """Rows claiming PASS/PARTIAL without a committed proof file."""
+    tracked = _tracked_files(repo_root)
+    return [r for r in runs
+            if (r.get("verification") or "not-run") in EVIDENCE_PASS_STATUSES
+            and not evidence_is_committed(r, repo_root, tracked)]
+
+
+def load_frame_proofs(root=FRAMES_PATH):
+    """Load frame-proof reports produced by tools.frame_proof.
+
+    A row gets frame evidence only from a checked-in proof JSON; a bare
+    screenshot or a prose claim never populates this column.
+    """
+    proofs = []
+    root = Path(root)
+    if not root.is_dir():
+        return proofs
+    for path in sorted(root.rglob("frame-proof.json")):
+        try:
+            doc = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        frames = doc.get("frames", [])
+        nonblank = [f for f in frames if not f.get("blank")]
+        labels = (str(doc.get("filename", "")) + " " +
+                  " ".join(f"{f.get('game', '')} {f.get('path', '')} "
+                           f"{f.get('committed_png', '')}" for f in frames)).lower()
+        proofs.append({
+            "path": str(path.relative_to(REPO_ROOT)),
+            "total": len(frames),
+            "nonblank": len(nonblank),
+            "labels": labels,
+        })
+    return proofs
+
+
+def frame_proof_for(proofs, filename):
+    """Return a short frame-proof cell for one executable, or '-'."""
+    stem = Path(filename or "").stem.lower()
+    for proof in proofs:
+        if stem and stem in proof["labels"]:
+            if proof["nonblank"]:
+                return f"{proof['nonblank']}/{proof['total']} non-blank frames"
+            return f"0/{proof['total']} non-blank (blank frames)"
+    return "-"
 
 
 def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
@@ -452,6 +563,8 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
     every row's working status in plain language."""
     inventory = _load_json(inventory_path, {})
     runs = load_results(results_path)
+    tracked = _tracked_files()
+    proofs = load_frame_proofs()
     corpus = _corpus_rows(inventory) if inventory else []
     known = [r for r in corpus if r["kind"] in ("valid", "pe32plus")]
     invalid = [r for r in corpus if r["kind"] == "invalid"]
@@ -460,10 +573,17 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
     for run in sorted(runs, key=lambda r: (r.get("game", "?"),
                                            r.get("filename", "?"))):
         status = run.get("verification") or "not-run"
+        committed = evidence_is_committed(run, tracked=tracked)
         verdict = STATUS_VERDICT.get(status, status)
         reason = run.get("status") or ""
-        if reason and status in ("launch-failed", "compile-failed", "partial",
-                                 "trace-diverged"):
+        details = _port_details(run)
+        if status in EVIDENCE_PASS_STATUSES and not committed:
+            # Fail closed: a PASS/PARTIAL claim must be backed by a file that
+            # is actually in this repository, not a git-ignored build tree.
+            verdict = "NOT RUN - no committed evidence"
+            details = ("unsupported measurement: evidence path is not a "
+                       "committed proof file; " + details)
+        elif reason and status not in ("scenario-pass", "verified-playable-scope"):
             verdict = f"{verdict} - {reason}"
         game = run.get("game", "?")
         filename = run.get("filename", "?")
@@ -475,9 +595,12 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
             "filename": filename,
             "os": run.get("os", "Windows"),
             "arch": run.get("arch", "?"),
-            "details": _port_details(run),
+            "details": details,
+            "frames": frame_proof_for(proofs, filename),
             "status": verdict,
             "measured": True,
+            "supported": committed,
+            "verification": status,
         })
 
     measured_files = {r["filename"] for r in rows}
@@ -492,6 +615,7 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
             "details": "not run by this pipeline"
                        + (" (PE32+ is fail-closed today)"
                           if row["kind"] == "pe32plus" else ""),
+            "frames": "-",
             "status": "NOT RUN",
             "measured": False,
         })
@@ -503,6 +627,7 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
             "os": row["os"],
             "arch": row["arch"],
             "details": "data file shipped with the game, not an executable",
+            "frames": "-",
             "status": "NOT APPLICABLE",
             "measured": False,
         })
@@ -524,23 +649,39 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
                "that far. `NOT RUN` is exactly that. Upstream rows are claims, "
                "marked `†`, and are never counted as this product's results.")
     out.append("")
+    out.append("**Frame proof** comes only from a checked-in "
+               "`reports/frames/**/frame-proof.json` produced by "
+               "`tools.frame_proof`: it counts frames with real pixel content "
+               "and refuses single-colour buffers. It is render evidence, not "
+               "an oracle — it never promotes a row to `PASS` on its own.")
+    out.append("")
     out.append("**Port details** are read from each project's own "
                "`reports/report.json`: functions recovered, generated C, the "
                "rebuilt binary, imports the runtime bound, and the "
                "low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are "
-               "register-transfer C, not reconstructed high-level source.")
+               "register-transfer C, not reconstructed high-level source. A "
+               "row whose `evidence` points into the git-ignored `projects/` "
+               "tree is shown as NOT RUN, because it has no committed proof.")
     out.append("")
     out.append(f"Updated {_now()} by `python -m tools.gamesdb --matrix`.")
-    running_runs = [r for r in runs if r.get("verification")
-                    in ("partial", "scenario-pass", "verified-playable-scope")]
-    zero_unresolved = [r for r in running_runs
-                       if "unresolved" not in (_port_details(r) or "")]
+    # Count what is actually evidenced. The old headline counted every
+    # 'partial' row as "running natively" even when it exited non-zero, had
+    # hundreds of unresolved imports, or had no committed proof at all.
+    evidenced = [r for r in rows if r.get("measured") and r.get("supported")]
+    running = [r for r in evidenced if r.get("verification")
+               in EVIDENCE_PASS_STATUSES]
+    zero_unresolved = [r for r in running
+                       if "0 unresolved" in ((r.get("details") or "")
+                                             + " " + (r.get("status") or ""))]
     if runs:
         out.append("")
         out.append(
-            f"**Running native macOS arm64 ports:** **{len(running_runs)} / {len(runs)}** "
-            f"measured Windows PE32 applications & games compile and run natively on macOS "
-            f"`arm64` (**{len(zero_unresolved)}** with `0` unresolved imports).")
+            f"**Evidence-backed results:** **{len(evidenced)} / {len(runs)}** "
+            f"recorded rows point at a committed proof file; "
+            f"**{len(running)}** of those carry a PASS/PARTIAL verdict "
+            f"(**{len(zero_unresolved)}** explicitly report `0` unresolved "
+            f"imports). Other rows are NOT RUN / FAIL here even when a local "
+            f"build log exists outside version control.")
     out.append("")
     out.append("## This repository (measured)")
     out.append("")
@@ -567,6 +708,7 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
         "os": os_name,
         "arch": arch,
         "details": f"{era}; upstream README claim",
+        "frames": "-",
         "status": f"{claim}†",
     } for slug, title, era, arch, os_name, claim, _score, filename in upstream]
     out.append(_matrix_table(up_rows))
@@ -749,7 +891,17 @@ def main(argv=None):
     parser.add_argument("--results", default=str(RESULTS_PATH))
     parser.add_argument("--record", action="append", default=[],
                         help="record a completed project directory into results.json")
+    parser.add_argument("--audit", action="store_true",
+                        help="exit non-zero if a PASS/PARTIAL row lacks a "
+                             "committed proof file (no files are rewritten)")
     args = parser.parse_args(argv)
+    if args.audit:
+        bad = audit_evidence(load_results(Path(args.results)))
+        for run in bad:
+            print(f"unsupported {run.get('game')} ({run.get('filename')}): "
+                  f"{run.get('evidence')!r}")
+        print(f"audit: {len(bad)} unsupported PASS/PARTIAL row(s)")
+        return 1 if bad else 0
     for proj in args.record:
         if (Path(proj) / "reports" / "report.json").is_file():
             record_result(proj, results_path=Path(args.results))
