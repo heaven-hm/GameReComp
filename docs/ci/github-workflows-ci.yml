@@ -11,6 +11,12 @@
 #
 # The jobs are identical either way; nothing here is GitHub-specific beyond the
 # YAML shape.
+#
+# Linux evidence comes only from the `linux-end-to-end` job below (Linux runner).
+# On any host without a Linux runner every Linux result is NOT TESTED.
+# A macOS run is never substituted for a Linux result.
+# no Linux PASS is recorded here in advance.
+# Acceptance needs that Linux job green, with stage logs and a native Linux (ELF) binary uploaded as evidence.
 name: ci
 
 on:
@@ -33,7 +39,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install test deps
-        run: python -m pip install --upgrade pytest pefile unicorn capstone
+        run: python -m pip install --upgrade pytest pefile unicorn capstone pyyaml
       # The same script a developer runs, so CI and a local run cannot diverge.
       # --fast skips only the parts that need a game corpus, which CI does not
       # have: proprietary binaries are never committed. The fail-closed
@@ -86,3 +92,108 @@ jobs:
         with:
           name: pe32-minimal-report
           path: ${{ runner.temp }}/pe32-minimal/reports/
+
+  # Explicit Linux-host execution. This is the sole source of Linux results;
+  # without this runner the status is NOT TESTED (see the header comment).
+  linux-end-to-end:
+    name: PE32 -> C -> native Linux binary -> report (Linux host)
+    runs-on: ${{ matrix.os }}
+    needs: python
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pytest pefile unicorn capstone
+          pip install -q pyelftools 2>/dev/null || true
+      - name: SDL2 (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev
+      # Record facts from the runner, never predicted or fabricated results.
+      - name: Record Linux host, toolchain and hashes
+        run: |
+          set -eu
+          : "${RUNNER_TEMP:?RUNNER_TEMP must be set}"
+          mkdir -p "$RUNNER_TEMP/linux-host"
+          ENV_FILE="$RUNNER_TEMP/linux-host/environment.txt"
+          {
+            echo "linux_status: RUNNING (Linux runner only; no macOS substitution)"
+            echo "host_os: $(uname -s)"
+            echo "host_arch: $(uname -m)"
+            echo "host_uname: $(uname -a)"
+            echo "runner_os: $RUNNER_OS"
+            echo "runner_arch: $RUNNER_ARCH"
+            echo "git_head: $(git rev-parse HEAD)"
+            echo "python: $(python3 --version 2>&1)"
+            echo "cc: $(cc --version 2>&1 | head -n 1)"
+            echo "cmake: $(cmake --version 2>&1 | head -n 1)"
+            echo "rustc: $(rustc --version 2>&1)"
+            echo "fixture_sha256: $(sha256sum tests/fixtures/pe32-minimal.exe | cut -d' ' -f1)"
+          } | tee "$ENV_FILE"
+      - name: Full pipeline on the PE32 fixture (Linux host)
+        run: |
+          set -eu
+          ./GameReComp tests/fixtures/pe32-minimal.exe \
+            --project-dir "$RUNNER_TEMP/pe32-minimal" \
+            --input-os windows --input-arch x86 \
+            --target-os host --target-arch host \
+            --timeout 10 --no-table
+      - name: Verify native Linux binary, record its hash and show stage logs
+        run: |
+          set -eu
+          python3 - "$RUNNER_TEMP/pe32-minimal" \
+            "$RUNNER_TEMP/linux-host/native-binary.txt" \
+            tests/fixtures/pe32-minimal.exe <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+
+          project = pathlib.Path(sys.argv[1])
+          out = pathlib.Path(sys.argv[2])
+          fixture = pathlib.Path(sys.argv[3])
+          manifest = json.loads((project / "manifest.json").read_text(encoding="utf-8"))
+          fixture_hash = hashlib.sha256(fixture.read_bytes()).hexdigest()
+          recorded = manifest.get("input_sha256")
+          if recorded != fixture_hash:
+              raise SystemExit(
+                  f"fixture hash mismatch: manifest={recorded} actual={fixture_hash}")
+          binary = pathlib.Path(manifest["binary"]["path"])
+          if not binary.is_absolute():
+              binary = project / binary
+          data = binary.read_bytes()
+          if not data.startswith(b"\x7fELF"):
+              raise SystemExit(f"native binary is not ELF: {binary}")
+          digest = hashlib.sha256(data).hexdigest()
+          out.write_text(
+              f"native_binary: {binary}\n"
+              f"native_format: ELF\n"
+              f"native_sha256: {digest}\n",
+              encoding="utf-8",
+          )
+          print(out.read_text(encoding="utf-8"), end="")
+          PY
+          for log in "$RUNNER_TEMP/pe32-minimal"/logs/*.log; do
+            [ -e "$log" ] || continue
+            echo "===== $log ====="
+            cat "$log"
+          done
+      - name: ELF/Mach-O/.NET refusal tests
+        run: python3 -m pytest tests/test_cli.py::InputFormatRefusal -q
+      - name: Upload Linux evidence (stage logs, reports, host/toolchain/hashes)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-pe32-minimal-evidence
+          path: |
+            ${{ runner.temp }}/pe32-minimal/reports/
+            ${{ runner.temp }}/pe32-minimal/logs/
+            ${{ runner.temp }}/pe32-minimal/manifest.json
+            ${{ runner.temp }}/linux-host/
