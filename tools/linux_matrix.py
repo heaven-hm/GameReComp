@@ -160,9 +160,14 @@ def main(argv=None) -> int:
     if min_free_bytes <= 0:
         print('--min-free-gb must be positive', file=sys.stderr)
         return 2
+    # Docker bind mounts require absolute host paths: a relative --out made
+    # every build fail with "includes invalid characters for a local volume
+    # name" before cmake was even invoked.
+    args.out = args.out.resolve()
+    args.project = [p.resolve() for p in args.project]
     args.out.mkdir(parents=True, exist_ok=True)
 
-    scratch = args.scratch or args.out
+    scratch = (args.scratch or args.out).resolve()
     guard = check_free_disk(scratch, min_free_bytes)
     if not guard['ok']:
         # Fail before scheduling any work: no Linux build has started here.
