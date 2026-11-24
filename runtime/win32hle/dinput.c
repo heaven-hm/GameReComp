@@ -28,8 +28,15 @@
  * for the buffer length, so a game that uses only the first 32 key bytes and
  * one that uses all 256 both get a correctly sized answer.
  *
+ * What is real: the read-only device properties (GetProperty) answer from this
+ * device table and the same SDL state the poll uses -- the buffer size is the
+ * zero events GetDeviceData really has, mouse granularity is the pixel units
+ * GetDeviceState really reports, key scan codes come from the DIK codes the
+ * keyboard state uses, and the instance/product names are the ones EnumDevices
+ * and GetDeviceInfo report. Writes to per-object properties are still hints.
+ *
  * What is absent, and named as such rather than faked:
- *   - Force feedback, effects, and device properties beyond the read-only ones.
+ *   - Force feedback, effects, and writable device properties.
  *   - Joystick devices. DirectInput's joystick path needs the DIDATAFORMAT the
  *     game passes plus per-axis ranges it then reads back through properties;
  *     answering it with a device that never reports an axis would make a game
@@ -125,6 +132,21 @@ enum { DIDEVICEINSTANCE_SIZE = 580, DIDEVICEINSTANCE_DEVTYPE = 36,
 enum { DIK_SIZE = 256, DIMOFS_X = 0, DIMOFS_Y = 4, DIMOFS_Z = 8,
        DIMOFS_BUTTON0 = 12 };
 
+/* DIPROP_* are not real GUIDs. dinput.h's MAKEDIPROP(n) casts the small
+ * integer n to a GUID *pointer*, so a guest passes n (1..26) in rguidProp; it
+ * is never an address and must not be dereferenced. Wine treats any value
+ * under 0x10000 as a DIPROP and quietly ignores anything else. */
+enum { DIPROP_BUFFERSIZE = 1, DIPROP_GRANULARITY = 3,
+       DIPROP_GUIDANDPATH = 12, DIPROP_INSTANCENAME = 13,
+       DIPROP_PRODUCTNAME = 14, DIPROP_JOYSTICKID = 15,
+       DIPROP_SCANCODE = 23, DIPROP_VIDPID = 24 };
+/* DIPROPHEADER, DIPROPDWORD and DIPROPSTRING (header + WCHAR[260]) on x86.
+ * A property is only written when the guest's dwSize covers its whole struct;
+ * a short struct is rejected without touching a single byte past dwSize. */
+enum { DIPROPHEADER_SIZE = 16, DIPROPDWORD_SIZE = 20,
+       DIPROPSTRING_SIZE = 16 + 260 * 2 };
+enum { DIPH_DEVICE = 0, DIPH_BYOFFSET = 1 };
+
 /* GUIDs as the guest passes them: 16 bytes, little-endian first three fields.
  * Only the ones a game asks for matter here. */
 static const uint8_t GUID_SYS_KEYBOARD[16] = {
@@ -161,6 +183,7 @@ typedef struct {
     uint32_t coop;            /* the DISCL_* flags the game set */
     int32_t last_x, last_y;   /* previous absolute sample, for exclusive relative axes */
     int have_last;
+    int wide;                 /* A/W encoding for string properties */
 } din_device;
 
 static din_device g_dev[DIN_MAX_DEVICES];
@@ -233,7 +256,7 @@ static int dev_index(uint32_t obj) {
  * and every method behind it are the same SDL-backed implementation. All the
  * host-side fields are cleared here so a freed slot reused by a later device
  * cannot inherit a previous device's window/handedness/relative-axis origin. */
-static uint32_t make_device(uint32_t guid, uint32_t vt, uint32_t out) {
+static uint32_t make_device(uint32_t guid, uint32_t vt, uint32_t out, int wide) {
     if (!guid || !out) return DIERR_INVALIDPARAM;
     MEM32(out) = 0;
     if (g_ndev >= DIN_MAX_DEVICES) return DIERR_DEVICENOTREG;
@@ -253,6 +276,7 @@ static uint32_t make_device(uint32_t guid, uint32_t vt, uint32_t out) {
     memset(d, 0, sizeof *d);
     d->obj = obj;
     d->kind = kind;
+    d->wide = wide != 0;
     MEM32(out) = obj;
     return DI_OK;
 }
@@ -399,21 +423,79 @@ static void dev_GetDeviceData(void) {
     if (count) MEM32(count) = 0;
     RET(DI_OK, 5);
 }
-static void dev_GetProperty(void) {
-    /* (this, rguidProp, DIPROPHEADER*): only the read-only identity properties
-     * are answered, from what the device is. Anything else is unsupported
-     * rather than a zeroed struct a game would trust. */
-    uint32_t hdr = A32(2);
-    if (!hdr) RET(DIERR_INVALIDPARAM, 3);
-    uint32_t size = MEM32(hdr + 0), type = MEM32(hdr + 12);
-    (void)type;
-    uint32_t after = hdr + 16;                            /* past DIPROPHEADER */
-    int i = dev_index(A32(0));
-    if ((after + 4) <= hdr + size) {
-        MEM32(after) = (type == 1 /* DIPROP_RANGE */) ? 0u
-                       : (i >= 0 && g_dev[i].kind == 2) ? 1u : 0u;
+/* Write a NUL-terminated name into a DIPROPSTRING's WCHAR[MAX_PATH] in the
+ * encoding this device's facade selected. The caller has already checked the
+ * guest's dwSize, so the write stays inside the struct the guest allocated. */
+static void prop_string(uint32_t out, const char *s, int wide) {
+    size_t n = strlen(s);
+    if (wide) {
+        for (size_t k = 0; k < n; k++)
+            MEM16(out + 2u * (uint32_t)k) = (uint16_t)(unsigned char)s[k];
+        MEM16(out + 2u * (uint32_t)n) = 0;
+    } else {
+        memcpy(hle_ptr(out), s, n);
+        MEM8(out + (uint32_t)n) = 0;
     }
-    RET(DI_OK, 3);
+}
+static void dev_GetProperty(void) {
+    /* (this, rguidProp, DIPROPHEADER*). rguidProp is a MAKEDIPROP integer, not
+     * a GUID address: Wine ignores values >= 0x10000 and answers DI_OK without
+     * writing, which a guest passing a real GUID still safely survives.
+     *
+     * Only properties this host can answer truthfully are supported. Every
+     * value below comes from the same device table and SDL state the polling
+     * path uses, and every write is bounded by the guest's dwSize. Unsupported
+     * properties answer DIERR_UNSUPPORTED instead of a plausible-looking zero. */
+    uint32_t prop = A32(1), hdr = A32(2);
+    if (!hdr) RET(DIERR_INVALIDPARAM, 3);
+    if ((prop >> 16) != 0) RET(DI_OK, 3);
+    if (MEM32(hdr) < DIPROPHEADER_SIZE ||
+        MEM32(hdr + 4) != DIPROPHEADER_SIZE) RET(DIERR_INVALIDPARAM, 3);
+    int i = dev_index(A32(0));
+    if (i < 0) RET(DIERR_INVALIDPARAM, 3);
+
+    uint32_t size = MEM32(hdr), how = MEM32(hdr + 12), obj = MEM32(hdr + 8);
+    uint32_t data = hdr + DIPROPHEADER_SIZE;             /* after DIPROPHEADER */
+    switch (prop) {
+    case DIPROP_BUFFERSIZE:
+        if (size != DIPROPDWORD_SIZE || how != DIPH_DEVICE || obj)
+            RET(DIERR_INVALIDPARAM, 3);
+        /* No event queue is allocated: GetDeviceData always reports zero
+         * events, so the buffer size this device really has is zero. */
+        MEM32(data) = 0;
+        RET(DI_OK, 3);
+    case DIPROP_GRANULARITY:
+        if (g_dev[i].kind != 2) RET(DIERR_UNSUPPORTED, 3); /* no keyboard axes */
+        if (size != DIPROPDWORD_SIZE || how != DIPH_BYOFFSET)
+            RET(DIERR_INVALIDPARAM, 3);
+        /* The mouse axes are reported in whole presenter pixels by
+         * GetDeviceState. The wheel (Z) is never reported, so it has no
+         * granularity to claim. */
+        if (obj != DIMOFS_X && obj != DIMOFS_Y) RET(DIERR_UNSUPPORTED, 3);
+        MEM32(data) = 1;
+        RET(DI_OK, 3);
+    case DIPROP_SCANCODE:
+        if (g_dev[i].kind != 1) RET(DIERR_UNSUPPORTED, 3); /* mouse has no keys */
+        if (size != DIPROPDWORD_SIZE || how != DIPH_BYOFFSET ||
+            !obj || obj >= DIK_SIZE) RET(DIERR_INVALIDPARAM, 3);
+        /* DIK_* are set-1 make codes; Windows reports extended keys (the 0x80
+         * bit in the DIK code) as a 0xE0 prefix followed by the base code. */
+        MEM32(data) = (obj & 0x80u) ? ((obj & 0x7fu) << 8) | 0xE0u : obj;
+        if (obj == 0xC5u) MEM32(data) = 0x45;             /* DIK_PAUSE */
+        RET(DI_OK, 3);
+    case DIPROP_INSTANCENAME:
+    case DIPROP_PRODUCTNAME:
+        if (size != DIPROPSTRING_SIZE || how != DIPH_DEVICE || obj)
+            RET(DIERR_INVALIDPARAM, 3);
+        prop_string(data, g_dev[i].kind == 2 ? "Mouse" : "Keyboard", g_dev[i].wide);
+        RET(DI_OK, 3);
+    case DIPROP_JOYSTICKID:
+    case DIPROP_GUIDANDPATH:
+    case DIPROP_VIDPID:
+        RET(DIERR_UNSUPPORTED, 3);  /* no joystick, HID path or VID/PID on this host */
+    default:
+        RET(DIERR_UNSUPPORTED, 3);
+    }
 }
 static void dev_SetProperty(void) {
     RET(DI_OK, 3);                                        /* ranges and dead-zones are hints; polling ignores them */
@@ -508,7 +590,8 @@ static void di_Release(void) {
 }
 static void di_CreateDevice(void) {
     /* (this, rguid, &device, punkOuter) */
-    RET(make_device(A32(1), g_vt_dev, A32(2)), 4);
+    RET(make_device(A32(1), g_vt_dev, A32(2),
+                    (int)MEM32(A32(0) + DI_HOST_UNICODE)), 4);
 }
 static void di_legacy_name(uint32_t inst, uint32_t off, const char *s, int wide) {
     size_t n = strlen(s) + 1;
@@ -587,7 +670,8 @@ static void di_RunControlPanel(void) { RET(DIERR_UNSUPPORTED, 3); }
 static void di_CreateDeviceEx(void) {                     /* (this, rguid, riid, &out, punkOuter) */
     /* DirectInput 7's variant: the interface id names the device layout. This
      * layer serves one layout, so it is the same device CreateDevice makes. */
-    RET(make_device(A32(1), g_vt_dev, A32(3)), 5);
+    RET(make_device(A32(1), g_vt_dev, A32(3),
+                    (int)MEM32(A32(0) + DI_HOST_UNICODE)), 5);
 }
 
 /* ---- IDirectInput8 ----
@@ -637,7 +721,8 @@ static void di8_Release(void) {
 static void di8_CreateDevice(void) {
     /* (this, rguid, &device, punkOuter) */
     if (!MEM32(A32(0) + DI8_HOST_VERSION)) RET(DIERR_NOTINITIALIZED, 4);
-    RET(make_device(A32(1), g_vt_dev8, A32(2)), 4);
+    RET(make_device(A32(1), g_vt_dev8, A32(2),
+                    (int)MEM32(A32(0) + DI8_HOST_UNICODE)), 4);
 }
 static void di8_GetDeviceStatus(void) {
     uint32_t guid = A32(1);
