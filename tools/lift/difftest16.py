@@ -405,17 +405,21 @@ int main(int argc, char **argv)
             for (unsigned i = 0; i < DT_MEM; i++)
                 g_mem[i] = (unsigned char)((i*7+13) & 0xFF);
             TESTS[t](&cpu);
-            unsigned long crc = 0;
+            /* FNV-1a is a 32-bit hash on the Python side. `unsigned long` is
+             * 64-bit on LP64 hosts (macOS/Linux), so using it here made every
+             * single instruction report "memory differs" even though the low
+             * 32 bits agreed. Keep the accumulator explicitly 32-bit. */
+            uint32_t crc = 0;
             for (unsigned i = 0; i < DT_MEM; i += 4) {
-                unsigned long w = *(uint32_t *)(g_mem + i);
-                crc = crc * 16777619ul ^ w;
+                uint32_t w = *(uint32_t *)(g_mem + i);
+                crc = crc * 16777619u ^ w;
             }
-            printf("%u %u %04X %04X %04X %04X %04X %04X %04X %04X %u%u%u%u%u %08lX\n",
+            printf("%u %u %04X %04X %04X %04X %04X %04X %04X %04X %u%u%u%u%u %08X\n",
                    t, v, cpu.ax, cpu.cx, cpu.dx, cpu.bx, cpu.sp, cpu.bp,
                    cpu.si, cpu.di,
                    (cpu.flags>>0)&1, (cpu.flags>>6)&1, (cpu.flags>>7)&1,
                    (cpu.flags>>11)&1, (cpu.flags>>2)&1,
-                   crc);
+                   (unsigned)crc);
         }
     }
     return 0;
