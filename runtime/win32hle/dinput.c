@@ -35,19 +35,33 @@
  * keyboard state uses, and the instance/product names are the ones EnumDevices
  * and GetDeviceInfo report. Writes to per-object properties are still hints.
  *
+ * Joysticks come from the SAME SDL joystick state SDL 1.2's SDL_NumJoysticks /
+ * SDL_JoystickOpen already use; this is not a second input backend. When SDL
+ * enumerates a stick, EnumDevices reports it with a real DIDEVICEINSTANCE
+ * (identity derived from SDL's device GUID, name from SDL), CreateDevice opens
+ * that SDL device and GetDeviceState fills the standard DIJOYSTATE axes/buttons
+ * and a centred POV, bounded by the guest's dwDataSize. When SDL enumerates
+ * NONE, nothing is invented: the joystick is absent from EnumDevices, and
+ * CreateDevice/FindDevice answer DIERR_DEVICENOTREG, DI8 GetDeviceStatus
+ * answers DI_NOTATTACHED and the legacy one DIERR_DEVICENOTREG, all of which
+ * a game handles by taking its no-joystick path. RECOMP_DI_NO_JOYSTICK=1 is a
+ * diagnostic override that forces this truthful no-device path headlessly.
+ *
  * What is absent, and named as such rather than faked:
- *   - Force feedback, effects, and writable device properties.
- *   - Joystick devices. DirectInput's joystick path needs the DIDATAFORMAT the
- *     game passes plus per-axis ranges it then reads back through properties;
- *     answering it with a device that never reports an axis would make a game
- *     believe a stick is centred and connected. CreateDevice for a joystick
- *     returns DIERR_DEVICENOTREG so the game takes its no-joystick path, which
- *     is the truth on a host with no stick enumerated.
+ *   - Force feedback, effects, and writable device properties. The joystick's
+ *     guidFFDriver is zero, DIDC_FORCEFEEDBACK is never set, and every FF slot
+ *     answers DIERR_UNSUPPORTED. There is no XInput/HID/Raw Input facade here.
+ *   - Per-object axis ranges/dead-zones and custom DIDATAFORMAT object offsets:
+ *     the guest's 32-bit offsets are not reinterpreted; the standard DIJOYSTATE
+ *     layout is filled and its unused fields are zero. DIPROP_RANGE,
+ *     DIPROP_DEADZONE, DIPROP_JOYSTICKID, DIPROP_GUIDANDPATH and DIPROP_VIDPID
+ *     answer DIERR_UNSUPPORTED rather than a plausible-looking value.
  *   - Action mapping (BuildActionMap/SetActionMap/GetImageInfo,
  *     EnumDevicesBySemantics, ConfigureDevices) and a control panel: the DI8
  *     slots exist and return DIERR_UNSUPPORTED, never a fake success or a
  *     null function pointer a guest could jump through.
- *   - EnumDevices reports exactly the keyboard and mouse above.
+ *   - EnumDevices reports the keyboard, the mouse, and only the joysticks SDL
+ *     actually enumerates.
  *
  * These are stdcall exports (DINPUT.dll is a WINAPI DLL), so every shim ends in
  * RET(value, argc) with arg 0 = `this` for COM methods.
@@ -95,9 +109,12 @@ int  hle_input_replay(const char *what, void *data, size_t n);
 #define DIDEVTYPEMOUSE_TRADITIONAL   2u
 #define DIDEVTYPEKEYBOARD_PCENH      4u
 /* DIDEVICEINSTANCE_DX3A/W: dwSize, two GUIDs, dwDevType and two MAX_PATH
- * names. 4+16+16+4+260+260 = 560 bytes on x86; the A and W layouts match. */
-enum { DIDEVICEINSTANCE_DX3_SIZE = 560, DIDEVICEINSTANCE_DX3_DEVTYPE = 36,
-       DIDEVICEINSTANCE_DX3_NAME = 40, DIDEVICEINSTANCE_DX3_PRODUCT = 300 };
+ * names. The ANSI one is 560 bytes; the wide one doubles both names, so it is
+ * 1080. The second name starts at 300 (A) or 560 (W) -- writing it at 300 for
+ * W would land inside the first WCHAR name. */
+enum { DIDEVICEINSTANCE_DX3_SIZE = 560, DIDEVICEINSTANCE_DX3_W_SIZE = 1080,
+       DIDEVICEINSTANCE_DX3_DEVTYPE = 36, DIDEVICEINSTANCE_DX3_NAME = 40,
+       DIDEVICEINSTANCE_DX3_PRODUCT = 300, DIDEVICEINSTANCE_DX3_W_PRODUCT = 560 };
 
 /* DI8 device classes/type codes used by IDirectInput8::EnumDevices and the
  * DIDEVICEINSTANCE.dwDevType it hands the callback. Values from wine-10.0's
@@ -109,9 +126,12 @@ enum { DIDEVICEINSTANCE_DX3_SIZE = 560, DIDEVICEINSTANCE_DX3_DEVTYPE = 36,
 #define DI8DEVTYPE_DEVICE     0x11u
 #define DI8DEVTYPE_MOUSE      0x12u
 #define DI8DEVTYPE_KEYBOARD   0x13u
+#define DI8DEVTYPE_JOYSTICK   0x14u
 #define DI8DEVTYPE_SUPPLEMENTAL 0x1Cu
 #define DI8DEVTYPEMOUSE_TRADITIONAL 2u
 #define DI8DEVTYPEKEYBOARD_PCENH    4u
+/* DIDEVTYPEJOYSTICK_TRADITIONAL / DI8DEVTYPEJOYSTICK_STANDARD are both 2. */
+#define DIJOY_SUBTYPE         2u
 /* DIEDFL_*: which enumeration flags are legal. */
 #define DIEDFL_ATTACHEDONLY   0x00000001u
 #define DIEDFL_FORCEFEEDBACK  0x00000100u
@@ -122,15 +142,23 @@ enum { DIDEVICEINSTANCE_DX3_SIZE = 560, DIDEVICEINSTANCE_DX3_DEVTYPE = 36,
                       DIEDFL_INCLUDEALIASES | DIEDFL_INCLUDEPHANTOMS | \
                       DIEDFL_INCLUDEHIDDEN)
 /* DIDEVICEINSTANCEA/W: dwSize + 2 GUIDs + dwDevType + 2 x MAX_PATH names +
- * GUID + 2 WORDs. The A and W layouts are the same 580 bytes on x86. */
-enum { DIDEVICEINSTANCE_SIZE = 580, DIDEVICEINSTANCE_DEVTYPE = 36,
-       DIDEVICEINSTANCE_NAME = 40, DIDEVICEINSTANCE_PRODUCT = 300 };
+ * GUID + 2 WORDs: 580 bytes (A) or 1100 (W). */
+enum { DIDEVICEINSTANCE_SIZE = 580, DIDEVICEINSTANCE_W_SIZE = 1100,
+       DIDEVICEINSTANCE_DEVTYPE = 36, DIDEVICEINSTANCE_NAME = 40,
+       DIDEVICEINSTANCE_PRODUCT = 300, DIDEVICEINSTANCE_W_PRODUCT = 560 };
 
 /* Bit a device reports in GetDeviceData's dwOfs / the DIDEVICEOBJECTDATA stream.
  * The keyboard is 256 bytes of DIK_* codes; the mouse is 3 axes then 4
  * buttons. */
 enum { DIK_SIZE = 256, DIMOFS_X = 0, DIMOFS_Y = 4, DIMOFS_Z = 8,
        DIMOFS_BUTTON0 = 12 };
+/* DIJOYSTATE/DIJOYSTATE2 x86 offsets (wine-10.0 dinput.h): six LONG axes, two
+ * LONG sliders, four DWORD POVs, then the button bytes. We fill the first eight
+ * LONGs and 32 buttons; velocity/acceleration/force stay zero. The whole struct
+ * is 272 bytes, so a guest asking for DIJOYSTATE2 still gets a bounded copy. */
+enum { DIJOFS_X = 0, DIJOFS_POV0 = 32, DIJOFS_BUTTON0 = 48,
+       DIN_JOY_AXES = 8, DIN_JOY_BUTTONS = 32, DIJOYSTATE2_SIZE = 272 };
+#define DI_POV_CENTERED 0xFFFFFFFFu
 
 /* DIPROP_* are not real GUIDs. dinput.h's MAKEDIPROP(n) casts the small
  * integer n to a GUID *pointer*, so a guest passes n (1..26) in rguidProp; it
@@ -156,6 +184,14 @@ static const uint8_t GUID_SYS_MOUSE[16] = {
     0x60, 0x2B, 0x1D, 0x6F, 0xA0, 0xD5, 0xCF, 0x11,
     0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 };
 
+/* GUID_Joystick (wine-10.0 dinput.h: 6F1D2B70-D5A0-11CF-BFC7...); the GUID a
+ * game passes to CreateDevice when it wants "the joystick" without enumerating.
+ * Per-instance GUIDs keep the 0x70 tag and carry SDL's 128-bit device GUID so
+ * they are stable across calls and distinguish two identical physical sticks. */
+static const uint8_t GUID_SYS_JOYSTICK[16] = {
+     0x70, 0x2B, 0x1D, 0x6F, 0xA0, 0xD5, 0xCF, 0x11,
+     0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 };
+
 /* IIDs DirectInput8Create accepts, as the guest passes them (GUID byte order).
  * IID_IDirectInput8A = BF798030-483A-4DA2-AA99-5D64ED369700,
  * IID_IDirectInput8W = BF798031-... and IID_IUnknown = 00000000-...-C0...46.
@@ -175,7 +211,7 @@ static const uint8_t IID_UNKNOWN[16] = {
 enum { DIN_MAX_DEVICES = 8 };
 typedef struct {
     uint32_t obj;             /* guest IDirectInputDevice */
-    int kind;                 /* 1 = keyboard, 2 = mouse */
+    int kind;                 /* 1 = keyboard, 2 = mouse, 3 = SDL joystick */
     int acquired;
     uint32_t data_size;       /* the DIDATAFORMAT's dwDataSize the game passed */
     int have_format;
@@ -184,6 +220,14 @@ typedef struct {
     int32_t last_x, last_y;   /* previous absolute sample, for exclusive relative axes */
     int have_last;
     int wide;                 /* A/W encoding for string properties */
+    int di8;                  /* which facade made the device (dwDevType numbering) */
+    /* Joystick-only host state. The SDL pointer stays host-side: the guest
+     * object itself is a 16-byte guest allocation and cannot hold it. */
+    SDL_Joystick *joy;
+    int joy_index;            /* SDL_NumJoysticks index, -1 for other devices */
+    int joy_axes, joy_buttons;/* clamped to what GetDeviceState really fills */
+    uint8_t inst_guid[16];    /* the instance GUID handed to the guest */
+    char name[64];            /* copy of SDL's name, valid after SDL closes it */
 } din_device;
 
 static din_device g_dev[DIN_MAX_DEVICES];
@@ -251,6 +295,51 @@ static int dev_index(uint32_t obj) {
     return -1;
 }
 
+/* ---- SDL joystick state (the same state SDL 1.2's joystick shims use) ----
+ * Enumeration is pull-based: SDL owns the device list, this layer never caches
+ * a fabricated one. A failed subsystem init or a host with no stick is simply
+ * zero devices, which every entry point below reports as an absent device. */
+static int di_joy_disabled(void) {
+    /* Headless/diagnostic override: present fewer (never fake) devices. */
+    const char *s = getenv("RECOMP_DI_NO_JOYSTICK");
+    return s && *s && strcmp(s, "0") != 0;
+}
+static int di_joy_count(void) {
+    if (di_joy_disabled()) return 0;
+    if (!SDL_WasInit(SDL_INIT_JOYSTICK))
+        if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != 0) return 0;
+    int n = SDL_NumJoysticks();
+    return n > 0 ? (n < DIN_MAX_DEVICES ? n : DIN_MAX_DEVICES) : 0;
+}
+/* Stable instance GUID for an SDL index. SDL's 128-bit device GUID supplies
+ * bytes 4..14, byte 15 disambiguates two identical sticks, and the 0x70/2B/1D
+ * prefix keeps the GUID in the GUID_Joystick family. */
+static void di_joy_guid(uint8_t out[16], int index) {
+    SDL_JoystickGUID g = SDL_JoystickGetDeviceGUID(index);
+    memcpy(out, GUID_SYS_JOYSTICK, 16);
+    memcpy(out + 4, &g, 12);
+    out[15] = (uint8_t)index;
+}
+/* Resolve the GUID a guest got from EnumDevices/FindDevice, or the generic
+ * GUID_Joystick, back to an SDL index. -1 means "not connected": no device is
+ * created from a stale or invented GUID. */
+static int di_joy_index(const uint8_t *g) {
+    if (!g) return -1;
+    int n = di_joy_count();
+    if (!memcmp(g, GUID_SYS_JOYSTICK, 16)) return n > 0 ? 0 : -1;
+    for (int i = 0; i < n; i++) {
+        uint8_t want[16];
+        di_joy_guid(want, i);
+        if (!memcmp(g, want, 16)) return i;
+    }
+    return -1;
+}
+static void di_joy_name(int index, char out[64]) {
+    const char *n = SDL_JoystickNameForIndex(index);
+    if (!n) n = "Joystick";
+    snprintf(out, 64, "%s", n);
+}
+
 /* One device factory for every facade. `vt` selects the interface layout the
  * guest will index (DX3/5/7's 29-slot device or DI8's 32-slot one); the state
  * and every method behind it are the same SDL-backed implementation. All the
@@ -263,20 +352,41 @@ static uint32_t make_device(uint32_t guid, uint32_t vt, uint32_t out, int wide) 
     const uint8_t *g = hle_ptr(guid);
     int kind = memcmp(g, GUID_SYS_KEYBOARD, 16) == 0 ? 1
              : memcmp(g, GUID_SYS_MOUSE, 16) == 0 ? 2 : 0;
+    int joy_index = -1;
+    SDL_Joystick *joy = NULL;
     if (!kind) {
-        /* A joystick, a wheel, a flight stick: this host enumerates none, and a
+        /* An unknown GUID is not a device. Only a GUID SDL really enumerated
+         * (or GUID_Joystick with a stick connected) may make a joystick; a
          * device that never reports an axis would tell the game a stick is
-         * connected and centred. DIERR_DEVICENOTREG is the true answer and the
-         * one a game handles by taking its no-joystick path. */
-        return DIERR_DEVICENOTREG;
+         * connected and centred. DIERR_DEVICENOTREG is the true no-stick answer. */
+        joy_index = di_joy_index(g);
+        if (joy_index < 0) return DIERR_DEVICENOTREG;
+        joy = SDL_JoystickOpen(joy_index);
+        if (!joy) return DIERR_DEVICENOTREG;
+        kind = 3;
     }
     uint32_t obj = hle_com_new(vt, 16);
-    if (!obj) return DIERR_DEVICENOTREG;
+    if (!obj) {
+        if (joy) SDL_JoystickClose(joy);
+        return DIERR_DEVICENOTREG;
+    }
     din_device *d = &g_dev[g_ndev++];
     memset(d, 0, sizeof *d);
     d->obj = obj;
     d->kind = kind;
     d->wide = wide != 0;
+    d->di8 = (vt == g_vt_dev8);
+    if (kind == 3) {
+        d->joy = joy;
+        d->joy_index = joy_index;
+        int na = SDL_JoystickNumAxes(joy), nb = SDL_JoystickNumButtons(joy);
+        d->joy_axes = na > DIN_JOY_AXES ? DIN_JOY_AXES : na;
+        d->joy_buttons = nb > DIN_JOY_BUTTONS ? DIN_JOY_BUTTONS : nb;
+        if (d->joy_axes < 0) d->joy_axes = 0;
+        if (d->joy_buttons < 0) d->joy_buttons = 0;
+        di_joy_guid(d->inst_guid, joy_index);
+        di_joy_name(joy_index, d->name);
+    }
     MEM32(out) = obj;
     return DI_OK;
 }
@@ -296,22 +406,45 @@ static void dev_QueryInterface(void) {
     RET(DI_OK, 3);
 }
 static void dev_GetCapabilities(void) {
-    /* DIDEVICEOBJECTINSTANCE/DIDEVCAPS is filled from what the device really
-     * is: a keyboard sends 256 keys, a mouse 3 axes and 4 buttons. */
+    /* DIDEVCAPS is filled from what the device really is: a keyboard sends 256
+     * keys, a mouse 3 axes and 4 buttons, a joystick only the axes and buttons
+     * SDL actually reports. Nothing beyond the guest's dwSize is touched, and
+     * the FF flags are never set (there is no force feedback on this host). */
     uint32_t caps = A32(1);
     if (!caps) RET(E_POINTER, 2);
     int i = dev_index(A32(0));
-    memset(hle_ptr(caps), 0, MEM32(caps + 0) >= 44 ? 44 : 44);
-    MEM32(caps + 0) = 44;                                 /* dwSize */
-    MEM32(caps + 4) = 0x00000001;                         /* dwFlags: DIDC_ATTACHED */
-    if (i >= 0 && g_dev[i].kind == 2) MEM32(caps + 20) = 4;   /* dwButtons */
+    uint32_t n = MEM32(caps);
+    if (n > 44) n = 44;
+    if (n > 4) memset(hle_ptr(caps + 4), 0, n - 4);
+    if (n >= 4) {
+        MEM32(caps) = 44;                                 /* the real struct size */
+        MEM32(caps + 4) = 0x00000001;                     /* DIDC_ATTACHED only */
+    }
+    uint32_t type = 0, axes = 0, buttons = 0;
+    if (i >= 0) {
+        const din_device *d = &g_dev[i];
+        if (d->kind == 1) type = d->di8 ? DI8DEVTYPE_KEYBOARD : DIDEVTYPE_KEYBOARD;
+        else if (d->kind == 2) {
+            type = d->di8 ? DI8DEVTYPE_MOUSE : DIDEVTYPE_MOUSE;
+            axes = 3; buttons = 4;
+        } else if (d->kind == 3) {
+            type = d->di8 ? DI8DEVTYPE_JOYSTICK : DIDEVTYPE_JOYSTICK;
+            type |= DIJOY_SUBTYPE << 8;
+            axes = (uint32_t)d->joy_axes;
+            buttons = (uint32_t)d->joy_buttons;
+        }
+    }
+    if (type && n >= 12) MEM32(caps + 8) = type;
+    if (n >= 16) MEM32(caps + 12) = axes;
+    if (n >= 24) MEM32(caps + 20) = buttons;
     RET(DI_OK, 2);
 }
 static void dev_EnumObjects(void) {
     /* A callback that is never called reports no objects. That is true for the
-     * keyboard (a game reads its 256-byte array, not the object list) and for
-     * the mouse; a game that enumerates to discover the layout falls back to
-     * the data format it passed, which is what actually defines the buffer. */
+     * keyboard (a game reads its 256-byte array, not the object list), the
+     * mouse, and the joystick: this layer fills the standard DIJOYSTATE layout
+     * rather than a per-object descriptor table, so claiming objects here would
+     * be a lie. A game falls back to the data format it passed. */
     RET(DI_OK, 4);
 }
 static void dev_SetDataFormat(void) {
@@ -338,6 +471,8 @@ static void dev_Acquire(void) {
     if (i < 0) RET(DIERR_INVALIDPARAM, 1);
     if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_EVENTS | SDL_INIT_VIDEO) != 0)
         RET(DIERR_NOTINITIALIZED, 1);
+    if (g_dev[i].kind == 3 && !SDL_WasInit(SDL_INIT_JOYSTICK) &&
+        SDL_InitSubSystem(SDL_INIT_JOYSTICK) != 0) RET(DIERR_NOTINITIALIZED, 1);
     SDL_PumpEvents();
     g_dev[i].acquired = 1;
     g_dev[i].have_last = 0;
@@ -357,6 +492,8 @@ static void dev_GetDeviceState(void) {
     if (want < 0) want = 0;
     if (g_dev[i].kind == 1) {
         if (want > DIK_SIZE) want = DIK_SIZE;
+    } else if (g_dev[i].kind == 3) {
+        if (want > DIJOYSTATE2_SIZE) want = DIJOYSTATE2_SIZE;
     } else if (want > 20) {
         want = 20;                       /* DIMOUSESTATE2: three axes and eight buttons */
     }
@@ -365,10 +502,12 @@ static void dev_GetDeviceState(void) {
      * time SDL is not consulted at all, which is what makes the transcript
      * device-neutral and lets a recorder on another machine produce the same
      * file. */
-    const char *what = g_dev[i].kind == 1 ? "dikeys" : "dimouse";
+    const char *what = g_dev[i].kind == 1 ? "dikeys"
+                     : g_dev[i].kind == 3 ? "dijoystate" : "dimouse";
     if (want > 0 && hle_input_replaying() && hle_input_replay(what, hle_ptr(buf), (size_t)want))
         RET(DI_OK, 3);
     SDL_PumpEvents();
+    if (g_dev[i].kind == 3) SDL_JoystickUpdate();
     if (g_dev[i].kind == 1) {
         memset(hle_ptr(buf), 0, (size_t)want);
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
@@ -379,6 +518,40 @@ static void dev_GetDeviceState(void) {
             if (dik > 0 && dik < DIK_SIZE && dik < want) { MEM8(buf + dik) = 0x80; n++; }
         }
         (void)n;
+    } else if (g_dev[i].kind == 3) {
+        /* The joystick: standard DIJOYSTATE offsets, filled only from the SDL
+         * device this object opened. A POV is centred rather than a fake "up"
+         * when no hat is reported; the unused velocity/acceleration/force tail
+         * is zero. Every write is gated by the guest's dwDataSize AND by this
+         * struct's own layout, so a short buffer cannot be overrun. */
+        din_device *d = &g_dev[i];
+        memset(hle_ptr(buf), 0, (size_t)want);
+        for (int a = 0; a < DIN_JOY_AXES && a < d->joy_axes; a++) {
+            uint32_t off = DIJOFS_X + 4u * (uint32_t)a;
+            if (want >= (int)off + 4) {
+                MEM32(buf + off) = (uint32_t)SDL_JoystickGetAxis(d->joy, a);
+            }
+        }
+        for (int p = 0; p < 4; p++) {
+            uint32_t off = DIJOFS_POV0 + 4u * (uint32_t)p;
+            if (want >= (int)off + 4) MEM32(buf + off) = DI_POV_CENTERED;
+        }
+        if (want >= (int)DIJOFS_POV0 + 4 && SDL_JoystickNumHats(d->joy) > 0) {
+            /* SDL hat bits (1=up,2=right,4=down,8=left) map to DirectInput's
+             * hundredths of a degree; impossible combinations stay centred. */
+            static const uint32_t pov[16] = {
+                DI_POV_CENTERED, 0u, 9000u, 4500u, 18000u, DI_POV_CENTERED,
+                13500u, DI_POV_CENTERED, 27000u, 31500u, DI_POV_CENTERED,
+                DI_POV_CENTERED, 22500u, DI_POV_CENTERED, DI_POV_CENTERED,
+                DI_POV_CENTERED };
+            uint8_t h = SDL_JoystickGetHat(d->joy, 0);
+            if (h < 16) MEM32(buf + DIJOFS_POV0) = pov[h];
+        }
+        for (int b = 0; b < DIN_JOY_BUTTONS && b < d->joy_buttons; b++) {
+            uint32_t off = DIJOFS_BUTTON0 + (uint32_t)b;
+            if (want >= (int)off + 1)
+                MEM8(buf + off) = SDL_JoystickGetButton(d->joy, b) ? 0x80 : 0;
+        }
     } else {
         /* The mouse: 3 axes then 4 buttons. A nonexclusive device reports the
          * pointer's absolute position in the game's pixels (the presenter
@@ -465,7 +638,7 @@ static void dev_GetProperty(void) {
         MEM32(data) = 0;
         RET(DI_OK, 3);
     case DIPROP_GRANULARITY:
-        if (g_dev[i].kind != 2) RET(DIERR_UNSUPPORTED, 3); /* no keyboard axes */
+        if (g_dev[i].kind != 2) RET(DIERR_UNSUPPORTED, 3); /* keyboard/joystick ranges not claimed */
         if (size != DIPROPDWORD_SIZE || how != DIPH_BYOFFSET)
             RET(DIERR_INVALIDPARAM, 3);
         /* The mouse axes are reported in whole presenter pixels by
@@ -487,12 +660,14 @@ static void dev_GetProperty(void) {
     case DIPROP_PRODUCTNAME:
         if (size != DIPROPSTRING_SIZE || how != DIPH_DEVICE || obj)
             RET(DIERR_INVALIDPARAM, 3);
-        prop_string(data, g_dev[i].kind == 2 ? "Mouse" : "Keyboard", g_dev[i].wide);
+        prop_string(data, g_dev[i].kind == 2 ? "Mouse"
+                         : g_dev[i].kind == 3 ? g_dev[i].name : "Keyboard",
+                    g_dev[i].wide);
         RET(DI_OK, 3);
     case DIPROP_JOYSTICKID:
     case DIPROP_GUIDANDPATH:
     case DIPROP_VIDPID:
-        RET(DIERR_UNSUPPORTED, 3);  /* no joystick, HID path or VID/PID on this host */
+        RET(DIERR_UNSUPPORTED, 3);  /* no HID path or VID/PID claim, for any device */
     default:
         RET(DIERR_UNSUPPORTED, 3);
     }
@@ -503,19 +678,59 @@ static void dev_SetProperty(void) {
 static void dev_GetObjectInfo(void) {
     RET(DIERR_UNSUPPORTED, 4);                            /* no object list to describe (EnumObjects reports none) */
 }
+/* Write one MAX_PATH name field, staying inside the guest's declared dwSize.
+ * A and W name fields are 260 bytes and 260 WCHARs respectively; a short struct
+ * gets no write at all rather than a write past its end. */
+static void di_info_name(uint32_t info, uint32_t off, uint32_t limit,
+                         const char *s, int wide) {
+    if (off >= limit) return;
+    uint32_t room = limit - off, cap = wide ? room / 2u : room;
+    if (!cap) return;
+    if (cap > 260) cap = 260;
+    size_t len = strlen(s);
+    uint32_t n = len < cap - 1u ? (uint32_t)len : cap - 1u;
+    if (wide) {
+        for (uint32_t k = 0; k < n; k++)
+            MEM16(info + off + 2u * k) = (uint16_t)(unsigned char)s[k];
+        MEM16(info + off + 2u * n) = 0;
+    } else {
+        memcpy(hle_ptr(info + off), s, n);
+        MEM8(info + off + n) = 0;
+    }
+}
 static void dev_GetDeviceInfo(void) {
-    /* DIDEVICEINSTANCE: the GUID and the instance name a device really has. */
+    /* DIDEVICEINSTANCE: the GUID and names the device really has. A short
+     * dwSize is honoured -- no bytes beyond it are touched -- and guidFFDriver
+     * stays zero because this host has no force feedback. */
     uint32_t info = A32(1);
     if (!info) RET(E_POINTER, 2);
     int i = dev_index(A32(0));
-    uint32_t size = MEM32(info + 0);
-    if (size > 4) memset(hle_ptr(info + 4), 0, (size_t)(size - 4));
+    uint32_t size = MEM32(info);
+    uint32_t n = size < DIDEVICEINSTANCE_SIZE ? size : DIDEVICEINSTANCE_SIZE;
+    if (n > 4) memset(hle_ptr(info + 4), 0, n - 4);
     if (i >= 0) {
-        const uint8_t *g = g_dev[i].kind == 2 ? GUID_SYS_MOUSE : GUID_SYS_KEYBOARD;
-        const char *name = g_dev[i].kind == 2 ? "Mouse" : "Keyboard";
-        memcpy(hle_ptr(info + 4), g, 16);
-        memcpy(hle_ptr(info + 20), name, strlen(name) + 1);
-        strncpy((char *)hle_ptr(info + 20 + 64), name, 63);   /* tszProductName */
+        const din_device *d = &g_dev[i];
+        const uint8_t *g;
+        const char *name;
+        uint32_t type, subtype;
+        if (d->kind == 2) {
+            g = GUID_SYS_MOUSE; name = "Mouse";
+            type = d->di8 ? DI8DEVTYPE_MOUSE : DIDEVTYPE_MOUSE;
+            subtype = DI8DEVTYPEMOUSE_TRADITIONAL;
+        } else if (d->kind == 3) {
+            g = d->inst_guid; name = d->name;
+            type = d->di8 ? DI8DEVTYPE_JOYSTICK : DIDEVTYPE_JOYSTICK;
+            subtype = DIJOY_SUBTYPE;
+        } else {
+            g = GUID_SYS_KEYBOARD; name = "Keyboard";
+            type = d->di8 ? DI8DEVTYPE_KEYBOARD : DIDEVTYPE_KEYBOARD;
+            subtype = DI8DEVTYPEKEYBOARD_PCENH;
+        }
+        if (n >= 20) memcpy(hle_ptr(info + 4), g, 16);
+        if (n >= 40) MEM32(info + DIDEVICEINSTANCE_DEVTYPE) = type | (subtype << 8);
+        di_info_name(info, DIDEVICEINSTANCE_NAME, n, name, d->wide);
+        di_info_name(info, d->wide ? DIDEVICEINSTANCE_W_PRODUCT
+                                   : DIDEVICEINSTANCE_PRODUCT, n, name, d->wide);
     }
     RET(DI_OK, 2);
 }
@@ -530,6 +745,7 @@ static void dev_Release(void) {
      * slots dense: the last device closes the gap. */
     uint32_t n = MEM32(self + 4) ? --MEM32(self + 4) : 0;
     if (n) RET(n, 1);
+    if (g_dev[i].joy) { SDL_JoystickClose(g_dev[i].joy); g_dev[i].joy = NULL; }
     hle_com_free(self);
     g_dev[i] = g_dev[--g_ndev];
     RET(0, 1);
@@ -563,6 +779,7 @@ static void dev_Poll(void) {
     if (i < 0) RET(DIERR_INVALIDPARAM, 1);
     if (!g_dev[i].acquired) RET(DIERR_NOTACQUIRED, 1);
     SDL_PumpEvents();
+    if (g_dev[i].joy) SDL_JoystickUpdate();
     RET(DI_OK, 1);
 }
 static void dev_SendDeviceData(void) { RET(DI_OK, 4); }       /* no output report to send */
@@ -593,14 +810,39 @@ static void di_CreateDevice(void) {
     RET(make_device(A32(1), g_vt_dev, A32(2),
                     (int)MEM32(A32(0) + DI_HOST_UNICODE)), 4);
 }
-static void di_legacy_name(uint32_t inst, uint32_t off, const char *s, int wide) {
-    size_t n = strlen(s) + 1;
-    if (!wide) {
-        memcpy(hle_ptr(inst + off), s, n);
-    } else {
-        for (size_t i = 0; i < n; i++)
-            MEM16(inst + off + 2u * (uint32_t)i) = (uint16_t)(unsigned char)s[i];
-    }
+/* Which legacy/DI8 filter wants a device with these two type codes? Keyboard
+ * and mouse use the same numbers in both number spaces; joystick is 4 (legacy)
+ * or 0x14 (DI8), and the game-control class selects it. */
+static int di_legacy_want(uint32_t devtype, uint32_t legacy, uint32_t di8) {
+    if (!devtype) return 1;
+    if (devtype <= DIDEVTYPE_JOYSTICK) return devtype == legacy;
+    if (devtype <= DI8DEVCLASS_GAMECTRL)
+        return devtype == DI8DEVCLASS_ALL ||
+               (legacy == DIDEVTYPE_KEYBOARD && devtype == DI8DEVCLASS_KEYBOARD) ||
+               (legacy == DIDEVTYPE_MOUSE && devtype == DI8DEVCLASS_POINTER) ||
+               (legacy == DIDEVTYPE_JOYSTICK && devtype == DI8DEVCLASS_GAMECTRL);
+    if (devtype >= DI8DEVTYPE_DEVICE && devtype <= DI8DEVTYPE_SUPPLEMENTAL)
+        return devtype == di8;
+    return 0;
+}
+/* Fill one DIDEVICEINSTANCE_DX3A/W in scratch and invoke a two-arg guest
+ * callback. A/W name fields are capped at MAX_PATH by di_info_name, so a long
+ * SDL joystick name cannot run past the instance the guest is handed. */
+static uint32_t di_legacy_enum_one(uint32_t cb, uint32_t ctx, const uint8_t *g,
+                                   const char *name, uint32_t type, uint32_t subtype,
+                                   int wide) {
+    uint32_t size = wide ? DIDEVICEINSTANCE_DX3_W_SIZE : DIDEVICEINSTANCE_DX3_SIZE;
+    uint32_t inst = hle_scratch(size);
+    memset(hle_ptr(inst), 0, size);
+    MEM32(inst) = size;
+    memcpy(hle_ptr(inst + 4), g, 16);                 /* guidInstance */
+    memcpy(hle_ptr(inst + 20), g, 16);                /* guidProduct */
+    MEM32(inst + DIDEVICEINSTANCE_DX3_DEVTYPE) = type | (subtype << 8);
+    di_info_name(inst, DIDEVICEINSTANCE_DX3_NAME, size, name, wide);
+    di_info_name(inst, wide ? DIDEVICEINSTANCE_DX3_W_PRODUCT
+                            : DIDEVICEINSTANCE_DX3_PRODUCT, size, name, wide);
+    uint32_t args[2] = { inst, ctx };
+    return hle_call_guest(cb, 2, args);
 }
 static void di_EnumDevices(void) {
     /* (this, devType, callback, ctx, flags).
@@ -609,46 +851,41 @@ static void di_EnumDevices(void) {
      * (instance, context). A third argument left an extra dword on the guest
      * stack for a real callback to clean up, and the old 160-byte instance put
      * the names where guidProduct and dwDevType belong. Fill the real
-     * DIDEVICEINSTANCE_DX3A/W (560 bytes) and push two args, as the ABI says.
+     * DIDEVICEINSTANCE_DX3A/W (560 ANSI, 1080 wide) and push two args.
      *
      * devType accepts the legacy DIDEVTYPE_* codes as well as the DI8 class
      * and type codes that newer callers pass through this same vtable; both
      * number spaces agree for keyboard and mouse (2 = mouse/pointer, 3 =
-     * keyboard). Force-feedback-only enumeration finds neither device. */
+     * keyboard), while a joystick is 4 / 0x14. Force-feedback-only enumeration
+     * finds no device: none of them has a guidFFDriver. */
     uint32_t devtype = A32(1), cb = A32(2), ctx = A32(3), flags = A32(4);
     if (!cb) RET(DIERR_INVALIDPARAM, 5);
     int wide = (int)MEM32(A32(0) + DI_HOST_UNICODE);
     if (flags & DIEDFL_FORCEFEEDBACK) RET(DI_OK, 5);
 
     uint32_t mark = hle_scratch_mark();
-    for (int k = 1; k <= 2; k++) {                        /* 1 = keyboard, 2 = mouse */
+    int stopped = 0;
+    for (int k = 1; k <= 2 && !stopped; k++) {            /* 1 = keyboard, 2 = mouse */
         uint32_t legacy = k == 1 ? DIDEVTYPE_KEYBOARD : DIDEVTYPE_MOUSE;
         uint32_t di8 = k == 1 ? DI8DEVTYPE_KEYBOARD : DI8DEVTYPE_MOUSE;
-        int want;
-        if (devtype == 0) want = 1;
-        else if (devtype <= DIDEVTYPE_JOYSTICK) want = (devtype == legacy);
-        else if (devtype <= DI8DEVCLASS_GAMECTRL)
-            want = (devtype == DI8DEVCLASS_ALL ||
-                    (devtype == DI8DEVCLASS_KEYBOARD && k == 1) ||
-                    (devtype == DI8DEVCLASS_POINTER && k == 2));
-        else if (devtype >= DI8DEVTYPE_DEVICE && devtype <= DI8DEVTYPE_SUPPLEMENTAL)
-            want = (devtype == di8);
-        else want = 0;
-        if (!want) continue;
-
-        uint32_t inst = hle_scratch(DIDEVICEINSTANCE_DX3_SIZE);
-        memset(hle_ptr(inst), 0, DIDEVICEINSTANCE_DX3_SIZE);
-        MEM32(inst) = DIDEVICEINSTANCE_DX3_SIZE;
+        if (!di_legacy_want(devtype, legacy, di8)) continue;
         const uint8_t *g = k == 2 ? GUID_SYS_MOUSE : GUID_SYS_KEYBOARD;
-        memcpy(hle_ptr(inst + 4), g, 16);                 /* guidInstance */
-        memcpy(hle_ptr(inst + 20), g, 16);                /* guidProduct */
         uint32_t subtype = k == 2 ? DIDEVTYPEMOUSE_TRADITIONAL : DIDEVTYPEKEYBOARD_PCENH;
-        MEM32(inst + DIDEVICEINSTANCE_DX3_DEVTYPE) = legacy | (subtype << 8);
-        const char *name = k == 2 ? "Mouse" : "Keyboard";
-        di_legacy_name(inst, DIDEVICEINSTANCE_DX3_NAME, name, wide);
-        di_legacy_name(inst, DIDEVICEINSTANCE_DX3_PRODUCT, name, wide);
-        uint32_t args[2] = { inst, ctx };
-        if (hle_call_guest(cb, 2, args) == DIENUM_STOP) break;
+        stopped = di_legacy_enum_one(cb, ctx, g, k == 2 ? "Mouse" : "Keyboard",
+                                     legacy, subtype, wide) == DIENUM_STOP;
+    }
+    /* Joysticks exist only as long as SDL enumerates them. No stick means no
+     * callback at all, which is the honest no-device path a DX7 game expects. */
+    if (!stopped && di_legacy_want(devtype, DIDEVTYPE_JOYSTICK, DI8DEVTYPE_JOYSTICK)) {
+        int n = di_joy_count();
+        for (int j = 0; j < n && !stopped; j++) {
+            uint8_t guid[16];
+            char name[64];
+            di_joy_guid(guid, j);
+            di_joy_name(j, name);
+            stopped = di_legacy_enum_one(cb, ctx, guid, name,
+                                         DIDEVTYPE_JOYSTICK, DIJOY_SUBTYPE, wide) == DIENUM_STOP;
+        }
     }
     hle_scratch_release(mark);
     RET(DI_OK, 5);
@@ -657,7 +894,8 @@ static void di_GetDeviceStatus(void) {
     uint32_t guid = A32(1);
     if (!guid) RET(DIERR_INVALIDPARAM, 2);
     const uint8_t *g = hle_ptr(guid);
-    int known = memcmp(g, GUID_SYS_KEYBOARD, 16) == 0 || memcmp(g, GUID_SYS_MOUSE, 16) == 0;
+    int known = memcmp(g, GUID_SYS_KEYBOARD, 16) == 0 || memcmp(g, GUID_SYS_MOUSE, 16) == 0 ||
+                di_joy_index(g) >= 0;
     RET(known ? DI_OK : DIERR_DEVICENOTREG, 2);
 }
 static void di_Initialize(void) { RET(DI_OK, 4); }
@@ -728,7 +966,8 @@ static void di8_GetDeviceStatus(void) {
     uint32_t guid = A32(1);
     if (!guid) RET(E_POINTER, 2);
     const uint8_t *g = hle_ptr(guid);
-    int known = memcmp(g, GUID_SYS_KEYBOARD, 16) == 0 || memcmp(g, GUID_SYS_MOUSE, 16) == 0;
+    int known = memcmp(g, GUID_SYS_KEYBOARD, 16) == 0 || memcmp(g, GUID_SYS_MOUSE, 16) == 0 ||
+                di_joy_index(g) >= 0;
     RET(known ? DI_OK : DI_NOTATTACHED, 2);
 }
 static void di8_RunControlPanel(void) {
@@ -738,33 +977,24 @@ static void di8_RunControlPanel(void) {
 /* Fill one DIDEVICEINSTANCEA/W and invoke a guest callback. The callback takes
  * exactly two stdcall args (instance, context); dwDevType is a field of the
  * instance, not a third argument. DI8 instances report DI8DEVTYPE_* (mouse
- * 0x12, keyboard 0x13) with the traditional/PC-enhanced subtype in the high
- * byte, and a zero guidFFDriver because neither device has force feedback. */
-static uint32_t di8_enum_one(uint32_t cb, uint32_t ctx, int kind, int wide, uint32_t type) {
-    uint32_t inst = hle_scratch(DIDEVICEINSTANCE_SIZE);
-    memset(hle_ptr(inst), 0, DIDEVICEINSTANCE_SIZE);
-    MEM32(inst) = DIDEVICEINSTANCE_SIZE;
-    const uint8_t *g = kind == 2 ? GUID_SYS_MOUSE : GUID_SYS_KEYBOARD;
+ * 0x12, keyboard 0x13, joystick 0x14) with the subtype in the high byte, and a
+ * zero guidFFDriver because no device here has force feedback. */
+static uint32_t di8_enum_one(uint32_t cb, uint32_t ctx, const uint8_t *g,
+                             const char *name, uint32_t devtype,
+                             int wide, uint32_t filter) {
+    uint32_t size = wide ? DIDEVICEINSTANCE_W_SIZE : DIDEVICEINSTANCE_SIZE;
+    uint32_t inst = hle_scratch(size);
+    memset(hle_ptr(inst), 0, size);
+    MEM32(inst) = size;
     memcpy(hle_ptr(inst + 4), g, 16);
     memcpy(hle_ptr(inst + 20), g, 16);
-    uint32_t devtype = kind == 2
-        ? (DI8DEVTYPE_MOUSE | (DI8DEVTYPEMOUSE_TRADITIONAL << 8))
-        : (DI8DEVTYPE_KEYBOARD | (DI8DEVTYPEKEYBOARD_PCENH << 8));
     MEM32(inst + DIDEVICEINSTANCE_DEVTYPE) = devtype;
-    const char *name = kind == 2 ? "Mouse" : "Keyboard";
-    size_t nlen = strlen(name) + 1;
-    if (wide) {
-        for (size_t i = 0; i < nlen; i++)
-            MEM16(inst + DIDEVICEINSTANCE_NAME + 2u * (uint32_t)i) = (uint16_t)(uint8_t)name[i];
-        memcpy(hle_ptr(inst + DIDEVICEINSTANCE_PRODUCT),
-               hle_ptr(inst + DIDEVICEINSTANCE_NAME), 2u * (uint32_t)nlen);
-    } else {
-        memcpy(hle_ptr(inst + DIDEVICEINSTANCE_NAME), name, nlen);
-        memcpy(hle_ptr(inst + DIDEVICEINSTANCE_PRODUCT), name, nlen);
-    }
+    di_info_name(inst, DIDEVICEINSTANCE_NAME, size, name, wide);
+    di_info_name(inst, wide ? DIDEVICEINSTANCE_W_PRODUCT
+                            : DIDEVICEINSTANCE_PRODUCT, size, name, wide);
     /* A specific DI8DEVTYPE_* filter is checked against the low byte, as in
      * Wine's try_enum_device. Class filters are handled by the caller. */
-    if (type > DI8DEVCLASS_GAMECTRL && (devtype & 0xffu) != type) return DIENUM_CONTINUE;
+    if (filter > DI8DEVCLASS_GAMECTRL && (devtype & 0xffu) != filter) return DIENUM_CONTINUE;
     uint32_t args[2] = { inst, ctx };
     return hle_call_guest(cb, 2, args);
 }
@@ -776,29 +1006,41 @@ static void di8_EnumDevices(void) {
         type > DI8DEVTYPE_SUPPLEMENTAL) RET(DIERR_INVALIDPARAM, 5);
     if (flags & ~DIEDFL_VALID) RET(DIERR_INVALIDPARAM, 5);
     if (!MEM32(A32(0) + DI8_HOST_VERSION)) RET(DIERR_NOTINITIALIZED, 5);
-    /* A caller asking only for force-feedback devices gets none: both real
-     * devices report a null guidFFDriver. */
+    /* A caller asking only for force-feedback devices gets none: every device
+     * here reports a null guidFFDriver. */
     if (flags & DIEDFL_FORCEFEEDBACK) RET(DI_OK, 5);
 
-    int want_mouse = 0, want_kbd = 0;
+    int want_mouse = 0, want_kbd = 0, want_joy = 0;
     if (type <= DI8DEVCLASS_GAMECTRL) {                  /* a device *class* */
         want_mouse = (type == DI8DEVCLASS_ALL || type == DI8DEVCLASS_POINTER);
         want_kbd   = (type == DI8DEVCLASS_ALL || type == DI8DEVCLASS_KEYBOARD);
-        /* DI8DEVCLASS_GAMECTRL (and DEVICE): none enumerated on this host. */
+        want_joy   = (type == DI8DEVCLASS_ALL || type == DI8DEVCLASS_GAMECTRL);
     } else {                                             /* a specific type */
         want_mouse = (type == DI8DEVTYPE_MOUSE);
         want_kbd   = (type == DI8DEVTYPE_KEYBOARD);
+        want_joy   = (type == DI8DEVTYPE_JOYSTICK);
     }
+    int wide = (int)MEM32(A32(0) + DI8_HOST_UNICODE);
     uint32_t mark = hle_scratch_mark();
-    if (want_mouse && di8_enum_one(cb, ctx, 2,
-            (int)MEM32(A32(0) + DI8_HOST_UNICODE), type) != DIENUM_CONTINUE) {
-        hle_scratch_release(mark);
-        RET(DI_OK, 5);
-    }
-    if (want_kbd && di8_enum_one(cb, ctx, 1,
-            (int)MEM32(A32(0) + DI8_HOST_UNICODE), type) != DIENUM_CONTINUE) {
-        hle_scratch_release(mark);
-        RET(DI_OK, 5);
+    int stopped = 0;
+    if (want_mouse)
+        stopped = di8_enum_one(cb, ctx, GUID_SYS_MOUSE, "Mouse",
+                  DI8DEVTYPE_MOUSE | (DI8DEVTYPEMOUSE_TRADITIONAL << 8), wide, type) != DIENUM_CONTINUE;
+    if (!stopped && want_kbd)
+        stopped = di8_enum_one(cb, ctx, GUID_SYS_KEYBOARD, "Keyboard",
+                  DI8DEVTYPE_KEYBOARD | (DI8DEVTYPEKEYBOARD_PCENH << 8), wide, type) != DIENUM_CONTINUE;
+    /* Only SDL's joysticks are enumerated; with none connected the callback is
+     * never invoked for a game-controller filter. */
+    if (!stopped && want_joy) {
+        int n = di_joy_count();
+        for (int j = 0; j < n && !stopped; j++) {
+            uint8_t guid[16];
+            char name[64];
+            di_joy_guid(guid, j);
+            di_joy_name(j, name);
+            stopped = di8_enum_one(cb, ctx, guid, name,
+                      DI8DEVTYPE_JOYSTICK | (DIJOY_SUBTYPE << 8), wide, type) != DIENUM_CONTINUE;
+        }
     }
     hle_scratch_release(mark);
     RET(DI_OK, 5);
@@ -812,9 +1054,13 @@ static void di8_FindDevice(void) {
     if (!guid || !out) RET(E_POINTER, 4);
     MEM32(out) = 0;
     const uint8_t *g = hle_ptr(guid);
-    if (memcmp(g, GUID_SYS_KEYBOARD, 16) && memcmp(g, GUID_SYS_MOUSE, 16))
+    int joy = di_joy_index(g);
+    if (memcmp(g, GUID_SYS_KEYBOARD, 16) && memcmp(g, GUID_SYS_MOUSE, 16) && joy < 0)
         RET(DIERR_DEVICENOTREG, 4);
-    memcpy(hle_ptr(out), g, 16);
+    /* A joystick has one concrete instance GUID derived from SDL; the generic
+     * GUID_Joystick resolves to the first one, never to an invented GUID. */
+    if (joy >= 0) di_joy_guid((uint8_t *)hle_ptr(out), joy);
+    else memcpy(hle_ptr(out), g, 16);
     RET(DI_OK, 4);
 }
 static void di8_EnumDevicesBySemantics(void) { RET(DIERR_UNSUPPORTED, 6); }
