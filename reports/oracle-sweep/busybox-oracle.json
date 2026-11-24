@@ -1,0 +1,15 @@
+{
+  "source": "original PE32 executed under Wine (process-level, not retail Windows)",
+  "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
+  "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+  "stdout_contains": [
+    "BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)",
+    "(mingw32-gcc 15.2.1-2.fc43; mingw32-crt 13.0.0-2.fc43; glob)",
+    "BusyBox is copyrighted by many authors between 1998-2026.",
+    "Licensed under GPLv2. See source distribution for detailed",
+    "copyright notices.",
+    "Usage: busybox [function [arguments]...]"
+  ],
+  "stderr_contains": [],
+  "exit_code": 0
+}

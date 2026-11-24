@@ -140,3 +140,16 @@ gui/build/
 
 # Command Code agent state (taste, session scratch); not part of the project.
 .commandcode/
+
+# generated sweep projects (regenerable build artifacts)
+reports/oracle-sweep/*-project/
+
+# generated sweep projects (any depth)
+**/*-project/
+
+# local generated build trees (regenerable; never commit)
+/.chocd-new/
+/.igi-rebuild/
+/.tetris-new/
+/results/
+reports/linux-matrix/staging/

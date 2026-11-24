@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "game": "tetris-win-32-en.exe",
+  "status": "BLOCKED",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "OracleFault: original bytes at 0x004013D0 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED) -- entry needs real stack arguments"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "live attach disabled in bounded run (--live-frida available)"
+  },
+  "native": {
+    "status": "BLOCKED",
+    "reason": "bounded replay timed out"
+  },
+  "note": "Both engines are attempted by tools/hybrid_diff.py; this run produced no MATCH. No compatibility claim."
+}

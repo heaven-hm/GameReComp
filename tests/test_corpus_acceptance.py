@@ -15,6 +15,20 @@ from tools import corpus_acceptance as ca
 
 FIXTURE = Path(__file__).parent / "fixtures" / "pe32-minimal.exe"
 
+
+def assert_no_leaked_home_paths(text, allowed_input):
+    """No home-directory paths except the input the test explicitly supplied.
+
+    These tests pass a fixture from the checkout as `--original`, so the
+    checkout's own path is expected in the report. What must not leak is any
+    *other* path under the home directory (the old assertion forbade even the
+    supplied fixture and failed whenever the checkout lived under $HOME).
+    """
+    allowed = str(Path(allowed_input).resolve())
+    residual = text.replace(allowed, "")
+    home = str(Path.home())
+    assert home not in residual, f"unexpected {home} path in report"
+
 FAKE_NATIVE = r'''#!/usr/bin/env python3
 import os, struct
 from pathlib import Path
@@ -373,7 +387,7 @@ class IntegrationTest(unittest.TestCase):
             data = json.loads(out_json.read_text())
             self.assertEqual(data["games"][0]["status"], ca.BUILD_ONLY)
             self.assertIn("Corpus acceptance report", out_md.read_text())
-            self.assertNotIn("/Users/haseeb-mir", out_json.read_text())
+            assert_no_leaked_home_paths(out_json.read_text(), FIXTURE)
 
 
 class CliHelpersTest(unittest.TestCase):
@@ -653,7 +667,7 @@ class CliIntegrationTest(unittest.TestCase):
             rec = data["games"][0]
             self.assertEqual(rec["status"], ca.PARTIAL, rec["reasons"])
             self.assertEqual(rec["kind"], "cli")
-            self.assertNotIn("/Users/haseeb-mir", out_json.read_text())
+            assert_no_leaked_home_paths(out_json.read_text(), FIXTURE)
 
 
 if __name__ == "__main__":
