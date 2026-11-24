@@ -1,0 +1,29 @@
+{
+ "schema": 1,
+ "assets": [
+  {
+   "path": "binaries/windows/cube.exe",
+   "sha256": "7844757c04eea2fcee04a7029e0ed6e4893d471c44c0bef81d00d009f15e9814",
+   "size": 317538,
+   "description": "Original Windows PE32 x86 game, copied unchanged"
+  },
+  {
+   "path": "binaries/macos/cube-native",
+   "sha256": "2e73ab3436bf627e59f5f87f4cbacc072f99eff31be4247d60c6ab22565d6116",
+   "size": 4390792,
+   "description": "Native macOS arm64 binary rebuilt from cube.exe by GameReComp"
+  },
+  {
+   "path": "screenshots/macos/cube-native.bmp",
+   "sha256": "1bb345a93da8a6945f16feec9f30a1203e4f4ba874a26c0628db1e1ff77e6b1b",
+   "size": 189414,
+   "description": "Native macOS frame, 240x263, 4 distinct colours"
+  },
+  {
+   "path": "screenshots/macos/doconfig-frame.bmp",
+   "sha256": "21576d0738639c104726ec2bae957f08fa08238b78297a618327e894fbefce8b",
+   "size": 793494,
+   "description": "Native macOS frame from DoConfig, measured non-blank"
+  }
+ ]
+}
