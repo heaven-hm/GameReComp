@@ -1,0 +1,220 @@
+{
+  "schema": 1,
+  "agent": "P8",
+  "generated_at_utc": "2026-11-24T06:38:14Z",
+  "pipeline": {
+    "version": "game-recomp-cli 0.0.1",
+    "cli_sha256": "fa126d5e78058fcab381591bd08bb69571d0fa9628b7f7c5aa940a6e6df5bc9f",
+    "wrapper": "GameReComp (cargo build --release)"
+  },
+  "what_is_proven": "Official downloads with independently repeated hashes, real pipeline rebuilds, real native runner captures, and per-frame pixel/hash proof. No binary, archive or raw BMP is committed.",
+  "games": [
+    {
+      "name": "tetris-win-32-jp.exe",
+      "provenance": {
+        "file": "tetris-win-32-jp.exe",
+        "url": "https://github.com/OUCC/tetris/releases/download/v1.3/tetris-win-32-jp.exe",
+        "size_bytes": 43520,
+        "sha256": "f732c43fb147737a436d382a4e735519dbc13e7811ba304c3f6d500b559de249",
+        "redownload_sha256_match": true,
+        "arch": "PE32 executable (GUI) Intel 80386 (stripped to external PDB), for MS Windows",
+        "local_path_gitignored": "~/Downloads/recomp-new-tests/tetris-win-32-jp.exe",
+        "inner_exe_sha256": null,
+        "license": "OUCC Tetris public release"
+      },
+      "rebuild": {
+        "command": "./GameReComp ~/Downloads/recomp-new-tests/tetris-win-32-jp.exe --project-dir <gitignored>/p8-tetris-jp --assets-dir ~/Downloads/recomp-new-tests --no-table --out-mode binary-only --no-run --jobs 1",
+        "exit_code": 0,
+        "log": "evidence/p8-new-games/logs/tetris-jp-rebuild.log",
+        "report_path_gitignored": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-tetris-jp/reports/report.json",
+        "score": 70,
+        "pe_type": "PE32",
+        "machine": "i386",
+        "imports": 97,
+        "lift_errors": 0,
+        "native_binary_gitignored": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-tetris-jp/build/tetris_win_32_jp",
+        "native_binary_sha256": "3ff6ddaba46276f1dc267c00ee4aed010a9eac1fa4a4d8e58f0b318b0ca10591",
+        "native_binary_size_bytes": 1857392
+      },
+      "original_wine_run": {
+        "game": "tetris-win-32-jp",
+        "command": [
+          "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+          "C:\\recomp-oracle\\tetris-win-32-jp.exe"
+        ],
+        "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+        "sha256": "f732c43fb147737a436d382a4e735519dbc13e7811ba304c3f6d500b559de249",
+        "exit_code": "TIMEOUT",
+        "stdout_bytes": 0,
+        "stderr_bytes": 875,
+        "stdout_tail": "",
+        "stderr_tail": "Wine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\n"
+      },
+      "native_run": {
+        "command": "python3 -m tools.game_runner --game tetris-jp-p8 --binary <native build> --folder ~/Downloads/recomp-new-tests --out <gitignored>/p8-frames-final --timeout 15",
+        "exit_code": "TIMEOUT",
+        "seconds": 15.3,
+        "frame_count": 3,
+        "log": "evidence/p8-new-games/logs/tetris-jp-p8-run.log"
+      },
+      "frame_proof": [
+        {
+          "name": "frame-0000.bmp",
+          "width": 310,
+          "height": 418,
+          "distinct_colors": 4,
+          "blank": false,
+          "source_bmp_sha256": "cba72e1ad894ee6e663697e0ae648c8ffd17b872a8be89487de4ae7fce573c3f"
+        },
+        {
+          "name": "frame-0001.bmp",
+          "width": 310,
+          "height": 418,
+          "distinct_colors": 5,
+          "blank": false,
+          "source_bmp_sha256": "337dc530ce189824bf2bd68a9d53731dd84c23937b506d3fea0f63a4250bb799"
+        },
+        {
+          "name": "frame-0002.bmp",
+          "width": 310,
+          "height": 418,
+          "distinct_colors": 5,
+          "blank": false,
+          "source_bmp_sha256": "337dc530ce189824bf2bd68a9d53731dd84c23937b506d3fea0f63a4250bb799"
+        }
+      ],
+      "committed_screenshots": [
+        {
+          "game": "tetris-jp-p8",
+          "source_bmp": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0001.bmp",
+          "source_bmp_sha256": "337dc530ce189824bf2bd68a9d53731dd84c23937b506d3fea0f63a4250bb799",
+          "committed_png": "evidence/p8-new-games/screenshots/tetris-jp-p8-frame-0001.png",
+          "committed_png_sha256": "02209c5d8f7508182aff44aeed6e34e6109c7578f2714700bba3ca5b09327215",
+          "size_bytes": 1324
+        },
+        {
+          "game": "tetris-jp-p8",
+          "source_bmp": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0002.bmp",
+          "source_bmp_sha256": "337dc530ce189824bf2bd68a9d53731dd84c23937b506d3fea0f63a4250bb799",
+          "committed_png": "evidence/p8-new-games/screenshots/tetris-jp-p8-frame-0002.png",
+          "committed_png_sha256": "02209c5d8f7508182aff44aeed6e34e6109c7578f2714700bba3ca5b09327215",
+          "size_bytes": 1324
+        }
+      ],
+      "classification": "PARTIAL",
+      "classification_reason": "Real native rebuild and 3 non-blank 310x418 captured frames prove rendering; the original PE32 under Wine timed out waiting for GUI input (no process oracle), and no Windows-original frame, input, audio or gameplay comparison was performed. Localised menu glyphs are mojibake/tofu, so locale fidelity is not proven."
+    },
+    {
+      "name": "tetris-win-32-ch.exe",
+      "provenance": {
+        "file": "tetris-win-32-ch.exe",
+        "url": "https://github.com/OUCC/tetris/releases/download/v1.3/tetris-win-32-ch.exe",
+        "size_bytes": 43520,
+        "sha256": "27a64e559d735e383de67fda5658f72a212e92cf2090256f7a9157b22d61b8c4",
+        "redownload_sha256_match": true,
+        "arch": "PE32 executable (GUI) Intel 80386 (stripped to external PDB), for MS Windows",
+        "local_path_gitignored": "~/Downloads/recomp-new-tests/tetris-win-32-ch.exe",
+        "inner_exe_sha256": null,
+        "license": "OUCC Tetris public release"
+      },
+      "rebuild": {
+        "command": "./GameReComp ~/Downloads/recomp-new-tests/tetris-win-32-ch.exe --project-dir <gitignored>/p8-tetris-ch --assets-dir ~/Downloads/recomp-new-tests --no-table --out-mode binary-only --no-run --jobs 1",
+        "exit_code": 0,
+        "log": "evidence/p8-new-games/logs/tetris-ch-rebuild.log",
+        "report_path_gitignored": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-tetris-ch/reports/report.json",
+        "score": 70,
+        "pe_type": "PE32",
+        "machine": "i386",
+        "imports": 97,
+        "lift_errors": 0,
+        "native_binary_gitignored": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-tetris-ch/build/tetris_win_32_ch",
+        "native_binary_sha256": "c3312995972a762001af335789eb494e3ac29ba67a0c791c18f381da8ee60610",
+        "native_binary_size_bytes": 1857392
+      },
+      "original_wine_run": {
+        "game": "tetris-win-32-ch",
+        "command": [
+          "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+          "C:\\recomp-oracle\\tetris-win-32-ch.exe"
+        ],
+        "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+        "sha256": "27a64e559d735e383de67fda5658f72a212e92cf2090256f7a9157b22d61b8c4",
+        "exit_code": "TIMEOUT",
+        "stdout_bytes": 0,
+        "stderr_bytes": 875,
+        "stdout_tail": "",
+        "stderr_tail": "Wine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\n"
+      },
+      "native_run": {
+        "command": "python3 -m tools.game_runner --game tetris-ch-p8 --binary <native build> --folder ~/Downloads/recomp-new-tests --out <gitignored>/p8-frames-final --timeout 15",
+        "exit_code": "TIMEOUT",
+        "seconds": 15.0,
+        "frame_count": 3,
+        "log": "evidence/p8-new-games/logs/tetris-ch-p8-run.log"
+      },
+      "frame_proof": [
+        {
+          "name": "frame-0000.bmp",
+          "width": 310,
+          "height": 418,
+          "distinct_colors": 4,
+          "blank": false,
+          "source_bmp_sha256": "7d0615237cf71559fffe1920f0a5cd918344878597715243276909c7fe2929ef"
+        },
+        {
+          "name": "frame-0001.bmp",
+          "width": 310,
+          "height": 418,
+          "distinct_colors": 5,
+          "blank": false,
+          "source_bmp_sha256": "5b94c01b33aac7d33fe045bdb093a500f77e4a2feae3800989879042e99e0a45"
+        },
+        {
+          "name": "frame-0002.bmp",
+          "width": 310,
+          "height": 418,
+          "distinct_colors": 5,
+          "blank": false,
+          "source_bmp_sha256": "5b94c01b33aac7d33fe045bdb093a500f77e4a2feae3800989879042e99e0a45"
+        }
+      ],
+      "committed_screenshots": [
+        {
+          "game": "tetris-ch-p8",
+          "source_bmp": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-ch-p8/screenshots/frame-0001.bmp",
+          "source_bmp_sha256": "5b94c01b33aac7d33fe045bdb093a500f77e4a2feae3800989879042e99e0a45",
+          "committed_png": "evidence/p8-new-games/screenshots/tetris-ch-p8-frame-0001.png",
+          "committed_png_sha256": "67b22ee136c366a48caaa5aa66233fc669a77b92a8c812e4075f015ad2e324c3",
+          "size_bytes": 1194
+        },
+        {
+          "game": "tetris-ch-p8",
+          "source_bmp": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-ch-p8/screenshots/frame-0002.bmp",
+          "source_bmp_sha256": "5b94c01b33aac7d33fe045bdb093a500f77e4a2feae3800989879042e99e0a45",
+          "committed_png": "evidence/p8-new-games/screenshots/tetris-ch-p8-frame-0002.png",
+          "committed_png_sha256": "67b22ee136c366a48caaa5aa66233fc669a77b92a8c812e4075f015ad2e324c3",
+          "size_bytes": 1194
+        }
+      ],
+      "classification": "PARTIAL",
+      "classification_reason": "Real native rebuild and 3 non-blank 310x418 captured frames prove rendering; the original PE32 under Wine timed out waiting for GUI input (no process oracle), and no Windows-original frame, input, audio or gameplay comparison was performed. Localised menu glyphs are mojibake/tofu, so locale fidelity is not proven."
+    }
+  ],
+  "not_built": [
+    {
+      "name": "chocolate-hexen-3.1.0-win32.zip",
+      "reason": "Downloaded and hash-verified, but not rebuilt in this batch; no Hexen IWAD is legally supplied, so gameplay cannot be verified.",
+      "classification": "BLOCKED (no IWAD; not attempted)"
+    },
+    {
+      "name": "chocolate-heretic-3.1.0-win32.zip",
+      "reason": "Rebuild launched with the real extracted EXE but no pipeline report had been produced at the time this evidence was generated; the exact command and live log are in logs/heretic-rebuild.log. No IWAD is supplied, so gameplay could not be verified either.",
+      "classification": "BLOCKED (rebuild did not finish in session window)"
+    }
+  ],
+  "known_limits": [
+    "Native runs exit=TIMEOUT because these GUIs stay open waiting for input; this is a real result, not a successful exit.",
+    "Wine original runs also TIMEOUT (GUI idle), with 0 stdout bytes; no process-level oracle was produced.",
+    "frame_proof proves pixels, not game identity or gameplay equivalence."
+  ]
+}

@@ -12,6 +12,7 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -19,6 +20,53 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_ROOT = REPO_ROOT / "runtime"
 WIN32HLE = RUNTIME_ROOT / "win32hle"
 RECOMP32 = RUNTIME_ROOT / "recomp32"
+
+# Fallback only for a manifest written before the generator recorded its cap.
+# The generator's own value is always preferred when the manifest has one.
+_DEFAULT_UNIT_BYTES = 8 * 1024 * 1024
+
+
+def _translator_module():
+    """Import the lift translator's pure budget helpers.
+
+    tools/lift is not a package; pipeline.py adds it to sys.path the same way.
+    The import is lazy so importing projectgen on its own never pulls in the
+    disassembler or the lifter.
+    """
+    lift_dir = str(REPO_ROOT / "tools" / "lift")
+    if lift_dir not in sys.path:
+        sys.path.insert(0, lift_dir)
+    import translator
+    return translator
+
+
+def source_budget_for_project(project_dir):
+    """Return (budget, units) measured from a project's generator manifest.
+
+    The translate stage writes src/recomp/gen/recomp_units.json before the
+    project stage runs, so write_project can record and surface the source
+    budget without the pipeline having to pass it explicitly. Returns (None,
+    []) when there is nothing to measure yet -- a reporting failure must never
+    stop a project from being written.
+    """
+    manifest = Path(project_dir) / "src" / "recomp" / "gen" / "recomp_units.json"
+    if not manifest.is_file():
+        return None, []
+    try:
+        record = json.loads(manifest.read_text())
+        units = [u for u in (record.get("units") or []) if isinstance(u, dict)]
+        stored = record.get("budget") or {}
+        cap = int(stored.get("cap_bytes") or _DEFAULT_UNIT_BYTES)
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None, []
+    if not units or cap <= 0:
+        return None, []
+    try:
+        translator = _translator_module()
+        return translator.build_source_budget(units, cap), units
+    except (ImportError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        print(f"[!] source budget report skipped: {exc}")
+        return None, []
 
 
 def _validate_existing_license(path: Path) -> None:
@@ -454,6 +502,20 @@ def write_project(project_dir, name, exe_name, pe_info, extra=None,
     }
     if extra:
         record.update(extra)
+
+    # Issue #26: the delivered project records the measured size of the C tree
+    # it was built from. This is reporting only -- no generated source is
+    # changed, and no budget is enforced here.
+    budget, budget_units = source_budget_for_project(project_dir)
+    if budget is not None:
+        record["source_budget"] = budget
+        reports_dir = project_dir / "reports"
+        reports_dir.mkdir(exist_ok=True)
+        translator = _translator_module()
+        (reports_dir / "source_budget.txt").write_text(
+            translator.format_source_budget(budget) + "\n"
+            + translator.format_unit_table(budget_units))
+
     (project_dir / "project.json").write_text(json.dumps(record, indent=2) + "\n")
     return record
 

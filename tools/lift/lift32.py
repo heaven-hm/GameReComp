@@ -708,6 +708,10 @@ class Lifter:
                 'jb':  "0",               'jae': "1",                 # CF=0: jb never, jae always
                 'jg':  f"TEST_G({ops})",  'jle': f"TEST_LE({ops})",
                 'jge': f"TEST_NS({ops})", 'jl':  f"TEST_S({ops})",
+                # Logic clears OF. CMP_O/CMP_NO compute the overflow of a
+                # subtraction, which is NOT the question after `test a, b`
+                # (a - b can overflow while the test's OF is 0).
+                'jo':  "0",               'jno': "1",
             }
             if jform in test_only:
                 return test_only[jform]
@@ -750,6 +754,10 @@ class Lifter:
                 return f"BT_CF({ops})"
             if cmp_macro == 'CMP_AE':
                 return f"(!BT_CF({ops}))"
+            # BT leaves OF undefined; keep the deterministic answer the old
+            # constant macro gave instead of deriving a subtraction's overflow.
+            if jform in ('jo', 'jno'):
+                return '0' if jform == 'jo' else '1'
             return f"/* bt */ {cmp_macro}({ops})"
         else:
             return f"/* flag from {setter} */ {cmp_macro}({ops})"
@@ -1897,6 +1905,26 @@ class Lifter:
             lines.append(f"{{ uint32_t _d = {d}; if ({acc} == _d) {{ {self._fmt_write(ops[0], self._fmt_read(ops[1]))}; }} "
                          f"else {{ {acc_w}; }} }} {comment}")
             self._flag_state = ('cmp', "_flag_a, _flag_b")
+
+        elif m == 'cmpxchg8b' and len(ops) == 1 and ops[0].type == X86_OP_MEM:
+            # Compare edx:eax with the qword; equal: ZF=1 and it takes ecx:ebx,
+            # else ZF=0 and edx:eax takes it. Only ZF changes. Unlifted it was a
+            # no-op whose following `cmp eax, old` still passed, so a lock-free
+            # list (Rockall's heap, behind every allocation in Rise of Legends)
+            # believed each push and pop happened, and its share-lock count
+            # drifted until a claim spun forever. Lifted code runs under one
+            # machine lock, so the plain read-modify-write is already atomic;
+            # the `lock` prefix is folded into the mnemonic by capstone.
+            # The flags freeze into a word and only ZF (0x40) is rewritten, as
+            # the rotates do with CF.
+            addr = self._fmt_mem_addr(ops[0].mem)
+            lines.append(f"{{ uint32_t _a = {addr}, _zf; uint64_t _q = MEM64(_a); "
+                         f"if (_q == (((uint64_t)edx << 32) | eax)) {{ "
+                         f"MEM64(_a) = ((uint64_t)ecx << 32) | ebx; _zf = 0x40u; }} "
+                         f"else {{ eax = (uint32_t)_q; edx = (uint32_t)(_q >> 32); _zf = 0; }} "
+                         f"_flag_a = (recomp_eflags(_flag_k, _flag_a, _flag_b, _cf, _df) & ~0x40u) | _zf; "
+                         f"_flag_b = 0; _flag_k = FK_EFLAGS; }} {comment}")
+            self._flag_state = None
 
         elif m == 'sahf':
             # SF ZF AF PF CF <- ah bits 7 6 4 2 0. This was a comment, so a

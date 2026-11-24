@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "recomp_types.h"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */
+#include "pe_loader.h"      /* pe_image: TLS callback dispatch takes a mapped image */
 
 /* ---- the Win32 ABI, portably ----
  * Win32 is 32-bit stdcall. HANDLE/HWND/HDC are uint32_t; a guest pointer is a
@@ -155,7 +156,8 @@ uint32_t hle_call_guest(uint32_t va, int nargs, const uint32_t *args);
  * MSVC frames with a known catch continuation; these functions keep the host
  * checkpoint list and dispatch a throw using the guest's own metadata. */
 int hle_eh_cxx_throw(uint32_t object, uint32_t throw_info);
-int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va);
+int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
+                   const char **reason);
 void hle_eh_longjmp(uint32_t jump_buffer, uint32_t value);
 
 /* ---- the machine lock ----
@@ -227,7 +229,7 @@ void  hle_present_close(void);
  * Typed: hle_handle_obj(h, type) is NULL for a handle of another type (type 0
  * takes any). CloseHandle calls the type's closer. */
 enum { HLE_H_FILE = 1, HLE_H_FIND, HLE_H_EVENT, HLE_H_MUTEX, HLE_H_THREAD, HLE_H_SEMAPHORE,
-       HLE_H_REGKEY, HLE_H_SOCKET, HLE_H_OTHER, HLE_H_MAPPING, HLE_H_MMIO };
+       HLE_H_REGKEY, HLE_H_SOCKET, HLE_H_OTHER, HLE_H_MAPPING, HLE_H_MMIO, HLE_H_TIMER };
 uint32_t hle_handle_alloc(int type, void *obj);       /* 0 when the table is full */
 void    *hle_handle_obj(uint32_t h, int type);
 int      hle_handle_type(uint32_t h);
@@ -371,11 +373,14 @@ extern const win32hle_shim win32hle_ole32[];          /* OLE32 + OLEAUT32 */
 extern const win32hle_shim win32hle_storage[];        /* structured storage: compound files */
 extern const win32hle_shim win32hle_dsound[];         /* DirectSound on SDL audio (dsound.c) */
 extern const win32hle_shim win32hle_ddraw[];          /* DirectDraw in software (ddraw.c) */
+extern const win32hle_shim win32hle_d3d8[];           /* D3D8 guest COM frontend (d3d8.c) */
 uint32_t hle_d3d7_create(void);                       /* IDirect3D7 COM object; zero if GL screen is unavailable */
 uint32_t hle_d3d7_get(void);                          /* the same object, without taking a reference */
 void hle_d3d7_present_begin(void);                    /* bind the window framebuffer while presenting a frame */
 void hle_d3d7_present_end(void);                      /* hand the device's render target back */
+extern const win32hle_shim win32hle_d3d9[];          /* D3D9 guest COM frontend (d3d9.c) */
 extern const win32hle_shim win32hle_sdl12[];          /* SDL 1.2 imports on SDL2 (sdl12.c) */
+extern const win32hle_shim win32hle_sdl2[];           /* SDL 2.x window/render imports on the shared present path (sdl2.c) */
 extern const win32hle_shim win32hle_sdlmix[];         /* SDL_mixer 1.2 on SDL2 audio (sdlmix.c) */
 extern const win32hle_shim win32hle_gl32[];           /* OPENGL32/GLU32 on the host's GL (gl32.c) */
 extern const win32hle_shim win32hle_msvcrt[];         /* the MSVC CRT on the host libc (msvcrt.c) */
@@ -417,7 +422,14 @@ extern const win32hle_shim win32hle_bink[];           /* binkw32 on ffmpeg (bink
 /* The SDL2 display and input for a DirectDraw game (screen.c): installs
  * itself as the pump hook. headless: no window (a script drives input). */
 int  hle_screen_open(const char *title, int fullscreen, int headless);
+/* RECOMP_FULLSCREEN=1 / RECOMP_WINDOW_SIZE=WxH, parsed fail-closed. */
+int  hle_screen_parse_env(int *fullscreen, int *w, int *h);
+/* Match the host window to the guest display mode (or an explicit size). */
+void hle_screen_set_native_size(int w, int h);
 int  hle_screen_request_opengl(void);  /* before open: make the screen window own a GL context */
+void hle_screen_map_point(int px, int py, int pw, int ph, int ww, int wh,
+                          int dx, int dy, int dw, int dh, int gw, int gh,
+                          int *gx, int *gy);
 int  hle_screen_gl_active(void);
 void hle_screen_mouse(int *x, int *y);                                 /* the pointer in the game's pixels, clamped */
 void hle_screen_d3d7_active(int active); /* D3D7 swaps GL frames; suppress software-primary redraws */
@@ -475,6 +487,9 @@ void hle_reg_load(const char *file);
 uint32_t hle_com_vtable(const win32hle_shim *methods);
 uint32_t hle_com_new(uint32_t vtable, uint32_t size);
 void     hle_com_free(uint32_t obj);                  /* the last Release of an hle_com_new object */
+int      hle_com_iid_equal(const uint8_t *a, const uint8_t *b);
+void     hle_com_bind_iid(uint32_t obj, const uint8_t *iid, uint32_t iface);
+void     hle_com_unbind_iids(uint32_t obj);
 void     hle_com_register_class(const uint8_t *clsid, uint32_t (*create)(const uint8_t *iid, uint32_t *out));
 void     hle_com_QueryInterface(void);
 void     hle_com_AddRef(void);
@@ -515,7 +530,7 @@ int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
  * them. The host maps each DLL at its preferred base at boot and answers the
  * main image's IAT slots for its exports with the export VA. Nothing here is
  * a shim: the code that runs is the lifted DLL's own. */
-typedef struct { const char *name; uint32_t va; } recomp_export_t;
+typedef struct { const char *name; uint32_t va; uint16_t ordinal; } recomp_export_t;
 typedef struct {
     const char *dll;             /* as imported: "bulletml.dll" */
     uint32_t base;               /* ImageBase the lifted code targets */
@@ -535,3 +550,4 @@ extern const uint32_t recomp_companion_count;
 /* The export VA for `dll`/`name`, or 0. dll is matched by base name, case
  * insensitively. Called by the IAT binder before falling back to a shim. */
 uint32_t recomp_companion_resolve(const char *dll, const char *name);
+void hle_pe_run_tls_callbacks(const pe_image *img);

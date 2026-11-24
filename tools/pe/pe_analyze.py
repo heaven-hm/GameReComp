@@ -25,6 +25,29 @@ from dataclasses import dataclass, asdict, field
 from typing import Optional, List, Dict, Tuple
 
 
+def _cstring(data: bytes, off: int) -> Optional[str]:
+    """Decode a NUL-terminated ASCII string, or None if it is unterminated.
+
+    The struct fallback used to call data.index(b'\\x00', off) directly, which
+    raised ValueError on a truncated import/export name and escaped analyze_pe
+    as an unhandled exception. A malformed name is now skipped, not fatal.
+    """
+    if off < 0 or off >= len(data):
+        return None
+    end = data.find(b'\x00', off)
+    if end < 0:
+        return None
+    return data[off:end].decode('ascii', errors='replace')
+
+
+def _u16(data: bytes, off: int) -> Optional[int]:
+    return struct.unpack_from('<H', data, off)[0] if off >= 0 and off + 2 <= len(data) else None
+
+
+def _u32(data: bytes, off: int) -> Optional[int]:
+    return struct.unpack_from('<I', data, off)[0] if off >= 0 and off + 4 <= len(data) else None
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
@@ -98,11 +121,18 @@ class Section:
 
 @dataclass
 class ImportEntry:
-    """A single imported function."""
+    """A single imported function.
+
+    ``is_delayed`` marks an entry from the delay-import directory (13). Its
+    IAT slot is real and must be in the IAT map, but the Windows loader leaves
+    it pointing at a __delayLoadHelper thunk until the first call; a static
+    recompilation has no such helper and binds it at boot instead.
+    """
     dll: str
     name: Optional[str]
     ordinal: Optional[int]
     iat_rva: int          # IAT slot address (RVA)
+    is_delayed: bool = False
 
 
 @dataclass
@@ -261,16 +291,25 @@ def _analyze_with_pefile(filepath: str, info: PEInfo, pefile) -> None:
     info.overlay_size = max(0, info.filesize - max_raw_end)
 
     # ── Imports ───────────────────────────────────────────────────
-    if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT'):
-        for dll_entry in pe.DIRECTORY_ENTRY_IMPORT:
+    seen_dlls = set()
+    for entry_list in ('DIRECTORY_ENTRY_IMPORT', 'DIRECTORY_ENTRY_DELAY_IMPORT'):
+        if not hasattr(pe, entry_list):
+            continue
+        delayed = entry_list == 'DIRECTORY_ENTRY_DELAY_IMPORT'
+        for dll_entry in getattr(pe, entry_list):
             dll_name = dll_entry.dll.decode('ascii', errors='replace')
-            info.import_dlls.append(dll_name)
+            if dll_name not in seen_dlls:
+                seen_dlls.add(dll_name)
+                info.import_dlls.append(dll_name)
             for imp in dll_entry.imports:
+                # pefile's ImportData.address is the IAT slot VA (FirstThunk +
+                # ImageBase + index*4) for both ordinary and delay imports.
                 info.imports.append(ImportEntry(
                     dll=dll_name,
                     name=imp.name.decode('ascii', errors='replace') if imp.name else None,
                     ordinal=imp.ordinal if not imp.name else None,
                     iat_rva=imp.address - oh.ImageBase,
+                    is_delayed=delayed,
                 ))
 
     # ── Exports ───────────────────────────────────────────────────
@@ -406,6 +445,13 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
         return None
 
     # ── Imports ───────────────────────────────────────────────────
+    seen_dlls = set()
+
+    def add_dll(dll_name):
+        if dll_name not in seen_dlls:
+            seen_dlls.add(dll_name)
+            info.import_dlls.append(dll_name)
+
     if num_dirs >= 2:
         import_rva = struct.unpack_from('<I', data, dd_offset + 8)[0]
         if import_rva:
@@ -419,21 +465,22 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
                     if name_rva == 0:
                         break
                     name_off = rva_to_offset(name_rva)
-                    if name_off:
-                        end = data.index(b'\x00', name_off)
-                        dll_name = data[name_off:end].decode('ascii', errors='replace')
-                    else:
-                        dll_name = '???'
-                    info.import_dlls.append(dll_name)
+                    dll_name = (_cstring(data, name_off) if name_off is not None else None) or '???'
+                    add_dll(dll_name)
 
-                    # Walk ILT / IAT entries
+                    # Walk the ILT for names/ordinals, but record the IAT slot
+                    # RVA: the IAT is what the recompiler dispatches through.
+                    # Using the ILT RVA here silently mis-binds every import
+                    # when pefile is unavailable (a bound PE has ILT != IAT).
+                    # Bounded by file length: a missing terminator must not run
+                    # off the end of the data.
                     lookup_rva = ilt_rva if ilt_rva else iat_rva_base
+                    slot_rva = iat_rva_base or lookup_rva
                     if lookup_rva:
                         loff = rva_to_offset(lookup_rva)
-                        if loff:
-                            slot_rva = lookup_rva
+                        if loff is not None:
                             p = loff
-                            while True:
+                            while p + 4 <= len(data):
                                 entry = struct.unpack_from('<I', data, p)[0]
                                 if entry == 0:
                                     break
@@ -446,9 +493,9 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
                                     ))
                                 else:
                                     hint_off = rva_to_offset(entry)
-                                    if hint_off and hint_off + 2 < len(data):
-                                        end2 = data.index(b'\x00', hint_off + 2)
-                                        fname = data[hint_off + 2:end2].decode('ascii', errors='replace')
+                                    fname = (_cstring(data, hint_off + 2)
+                                             if hint_off is not None else None)
+                                    if fname:
                                         info.imports.append(ImportEntry(
                                             dll=dll_name,
                                             name=fname,
@@ -459,34 +506,93 @@ def _analyze_with_struct(filepath: str, info: PEInfo) -> None:
                                 slot_rva += 4
                     pos += 20
 
+    # ── Delay imports (directory 13) ──────────────────────────────
+    # ImgDelayDescr is 8 dwords: grAttrs, szName, phmod, pIAT, pINT,
+    # pBoundIAT, pUnloadIAT, dwTimeStamp. Bit 0 of grAttrs says the fields are
+    # RVAs (VC7+); when it is clear old linkers stored VAs, so subtract the
+    # ImageBase. The IAT slots are real addresses the recompiler's IAT map must
+    # contain even though Windows would bind them lazily on first call.
+    if num_dirs >= 14:
+        delay_rva = struct.unpack_from('<I', data, dd_offset + 13 * 8)[0]
+        delay_off = rva_to_offset(delay_rva) if delay_rva else None
+        pos = delay_off
+        while pos is not None and pos + 32 <= len(data):
+            attrs, name_rva, _hmod, iat_rva, int_rva, _b, _u, _t = \
+                struct.unpack_from('<8I', data, pos)
+            if not (name_rva or iat_rva or int_rva):
+                break
+            pos += 32
+            if not (attrs & 1):                      # old-style VAs, not RVAs
+                name_rva -= info.image_base if name_rva >= info.image_base else 0
+                iat_rva -= info.image_base if iat_rva >= info.image_base else 0
+                int_rva -= info.image_base if int_rva >= info.image_base else 0
+
+            name_off = rva_to_offset(name_rva)
+            if name_off is None:
+                continue
+            end = data.find(b'\x00', name_off)
+            dll_name = data[name_off:end].decode('ascii', errors='replace')
+            add_dll(dll_name)
+
+            lookup_rva = int_rva or iat_rva          # some linkers omit the INT
+            loff = rva_to_offset(lookup_rva)
+            if loff is None:
+                continue
+            slot_rva = iat_rva
+            p = loff
+            while p + 4 <= len(data):
+                entry = struct.unpack_from('<I', data, p)[0]
+                if entry == 0:
+                    break
+                if entry & 0x80000000:               # ordinal import
+                    info.imports.append(ImportEntry(
+                        dll=dll_name, name=None, ordinal=entry & 0xFFFF,
+                        iat_rva=slot_rva, is_delayed=True,
+                    ))
+                else:
+                    if not (attrs & 1) and entry >= info.image_base:
+                        entry -= info.image_base
+                    hint_off = rva_to_offset(entry)
+                    if hint_off and hint_off + 2 < len(data):
+                        end2 = data.find(b'\x00', hint_off + 2)
+                        fname = data[hint_off + 2:end2].decode('ascii', errors='replace')
+                        info.imports.append(ImportEntry(
+                            dll=dll_name, name=fname, ordinal=None,
+                            iat_rva=slot_rva, is_delayed=True,
+                        ))
+                p += 4
+                slot_rva += 4
+
     # ── Exports ───────────────────────────────────────────────────
     if num_dirs >= 1:
         export_rva = struct.unpack_from('<I', data, dd_offset)[0]
         export_size = struct.unpack_from('<I', data, dd_offset + 4)[0]
         if export_rva and export_size:
             exp_off = rva_to_offset(export_rva)
-            if exp_off:
-                num_funcs = struct.unpack_from('<I', data, exp_off + 20)[0]
-                num_names = struct.unpack_from('<I', data, exp_off + 24)[0]
-                funcs_rva = struct.unpack_from('<I', data, exp_off + 28)[0]
-                names_rva = struct.unpack_from('<I', data, exp_off + 32)[0]
-                ords_rva = struct.unpack_from('<I', data, exp_off + 36)[0]
+            if exp_off is not None:
+                num_names = _u32(data, exp_off + 24)
+                funcs_rva = _u32(data, exp_off + 28)
+                names_rva = _u32(data, exp_off + 32)
+                ords_rva = _u32(data, exp_off + 36)
+                if None in (num_names, funcs_rva, names_rva, ords_rva):
+                    num_names = funcs_rva = names_rva = ords_rva = 0
 
                 names_off = rva_to_offset(names_rva)
                 ords_off = rva_to_offset(ords_rva)
                 funcs_off = rva_to_offset(funcs_rva)
 
-                if names_off and ords_off and funcs_off:
+                if names_off is not None and ords_off is not None and funcs_off is not None:
                     for i in range(num_names):
-                        n_rva = struct.unpack_from('<I', data, names_off + i * 4)[0]
-                        ordinal = struct.unpack_from('<H', data, ords_off + i * 2)[0]
-                        func_rva = struct.unpack_from('<I', data, funcs_off + ordinal * 4)[0]
+                        # Every read is bounds-checked: a truncated table skips
+                        # its remaining entries instead of raising struct.error.
+                        n_rva = _u32(data, names_off + i * 4)
+                        ordinal = _u16(data, ords_off + i * 2)
+                        func_rva = (_u32(data, funcs_off + ordinal * 4)
+                                    if ordinal is not None else None)
+                        if None in (n_rva, ordinal, func_rva):
+                            break
                         noff = rva_to_offset(n_rva)
-                        if noff:
-                            end3 = data.index(b'\x00', noff)
-                            ename = data[noff:end3].decode('ascii', errors='replace')
-                        else:
-                            ename = None
+                        ename = _cstring(data, noff) if noff is not None else None
                         info.exports.append(ExportEntry(
                             name=ename,
                             ordinal=ordinal,
@@ -532,7 +638,12 @@ def read_bytes_at_va(filepath: str, sections: list, image_base: int,
 
 
 def build_iat_map(info: PEInfo) -> dict:
-    """Build a map from IAT VA -> (dll, function_name) for resolving import calls."""
+    """Build a map from IAT VA -> (dll, function_name) for resolving import calls.
+
+    Delay-loaded imports are included: their slots hold a helper thunk in the
+    original PE, but static recompilation binds them at boot, so a call through
+    one must be recognised as an import and not left as an unresolved ICALL.
+    """
     iat = {}
     for imp in info.imports:
         va = info.image_base + imp.iat_rva
@@ -639,6 +750,7 @@ def export_json(info: PEInfo, output_path: str):
         'data_end': info.data_end,
         'sections': [asdict(s) for s in info.sections],
         'imports': [asdict(i) for i in info.imports],
+        'delay_import_count': sum(1 for i in info.imports if i.is_delayed),
         'exports': [asdict(e) for e in info.exports],
         'iat_map': {
             f"0x{info.image_base + imp.iat_rva:08X}": {

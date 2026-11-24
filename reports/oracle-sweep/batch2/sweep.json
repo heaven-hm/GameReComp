@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "rows": [
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/prime-gen.exe",
+      "name": "prime-gen",
+      "status": "BLOCKED",
+      "reason": "original hangs under Wine without input"
+    },
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/luhn/luhn.exe",
+      "name": "luhn",
+      "status": "BLOCKED",
+      "reason": "original hangs under Wine without input"
+    },
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/keen.exe",
+      "name": "keen",
+      "status": "BLOCKED",
+      "reason": "oracle run: Command '['/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine', 'C:\\\\recomp-oracle\\\\keen.exe']' timed out after 10 seconds"
+    },
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/keensolver.exe",
+      "name": "keensolver",
+      "original": {
+        "exit_code": 1,
+        "sha256": "6e36aaa7bd453da42a71bdf6570cf840a12e8c506076503c71bc648f939196f4",
+        "stdout_bytes": 0
+      },
+      "pipeline": {
+        "score": 85,
+        "verification": "trace-diverged"
+      },
+      "status": "FAIL",
+      "reason": "stderr missing 'usage: C:\\\\recomp-oracle\\\\keensolver.exe [-g | -v] <game_id>'"
+    },
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/mines.exe",
+      "name": "mines",
+      "status": "BLOCKED",
+      "reason": "oracle run: Command '['/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine', 'C:\\\\recomp-oracle\\\\mines.exe']' timed out after 10 seconds"
+    },
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/flood.exe",
+      "name": "flood",
+      "status": "BLOCKED",
+      "reason": "oracle run: Command '['/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine', 'C:\\\\recomp-oracle\\\\flood.exe']' timed out after 10 seconds"
+    },
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/flip.exe",
+      "name": "flip",
+      "status": "BLOCKED",
+      "reason": "oracle run: Command '['/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine', 'C:\\\\recomp-oracle\\\\flip.exe']' timed out after 10 seconds"
+    },
+    {
+      "exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/cube.exe",
+      "name": "cube",
+      "status": "BLOCKED",
+      "reason": "oracle run: Command '['/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine', 'C:\\\\recomp-oracle\\\\cube.exe']' timed out after 10 seconds"
+    }
+  ]
+}

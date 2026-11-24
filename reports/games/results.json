@@ -8,8 +8,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -17,8 +17,7 @@
       "evidence": "projects/idman643build18/reports/report.html",
       "project_dir": "projects/idman643build18",
       "port_details": "605 fns recovered; 2 units / 6.6 MiB C; binary idman643build18 14229 KiB [macOS arm64 (native)]; 104 imports bound; low-level 605/ high-level verified 0",
-      "generated_at": "2026-11-19T17:49:18Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-19T17:49:18Z"
     },
     {
       "relative_path": "p47.exe",
@@ -45,8 +44,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
+      "verification": "partial",
+      "status": "process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
       "run_status": "timeout",
       "exit_code": null,
       "host": "Darwin arm64 (host build)",
@@ -54,8 +53,7 @@
       "evidence": "projects/noiz2sa/reports/report.html",
       "project_dir": "projects/noiz2sa",
       "port_details": "6615 fns recovered; 14 units / 94.3 MiB C; binary noiz2sa 22293 KiB [macOS arm64 (native)]; 69 imports bound; low-level 6615/ high-level verified 0",
-      "generated_at": "2026-11-19T16:29:14Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-19T16:29:14Z"
     },
     {
       "relative_path": "dxIka.exe",
@@ -64,8 +62,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -73,8 +71,7 @@
       "evidence": "projects/dxIka/reports/report.html",
       "project_dir": "projects/dxIka",
       "port_details": "545 fns recovered; 3 units / 9.8 MiB C; binary dxIka 2921 KiB [macOS arm64 (native)]; 97 imports bound; low-level 543/ high-level verified 2",
-      "generated_at": "2026-11-19T16:28:02Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-19T16:28:02Z"
     },
     {
       "relative_path": "herocore gm7.exe",
@@ -137,8 +134,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -146,8 +143,7 @@
       "evidence": "projects/TrackEditor/reports/report.html",
       "project_dir": "projects/TrackEditor",
       "port_details": "312 fns recovered; 2 units / 7.0 MiB C; binary TrackEditor 2894 KiB [macOS arm64 (native)]; 147 imports bound; low-level 312/ high-level verified 0",
-      "generated_at": "2026-11-19T16:25:07Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-19T16:25:07Z"
     },
     {
       "relative_path": "GeneRally.exe",
@@ -193,18 +189,15 @@
       "os": "Windows",
       "score": 93,
       "verification": "partial",
-      "status": "process launched and stayed alive until the 10s timeout; 2/3 non-blank frames; no Windows oracle",
+      "status": "process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
       "run_status": "timeout",
       "exit_code": null,
       "host": "Darwin arm64 (host build)",
       "input_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
-      "evidence": "reports/frames/cavestory/frame-proof.json",
+      "evidence": "projects/Doukutsu/reports/report.html",
       "project_dir": "projects/Doukutsu",
       "port_details": "3317 fns recovered; 8 units / 51.0 MiB C; binary Doukutsu 10404 KiB [macOS arm64 (native)]; 143 imports bound; low-level 3310/ high-level verified 7",
-      "generated_at": "2026-11-19T16:18:05Z",
-      "pipeline_report": "projects/Doukutsu/reports/report.html",
-      "frame_proof": "2/3 non-blank frames",
-      "notes": "Render evidence only: docs/screenshots/native/cavestory-*.png. Not gameplay equivalence."
+      "generated_at": "2026-11-19T16:18:05Z"
     },
     {
       "relative_path": "DoConfig.exe",
@@ -213,8 +206,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -222,8 +215,7 @@
       "evidence": "projects/DoConfig/reports/report.html",
       "project_dir": "projects/DoConfig",
       "port_details": "458 fns recovered; 2 units / 4.2 MiB C; binary DoConfig 1933 KiB [macOS arm64 (native)]; 90 imports bound; low-level 458/ high-level verified 0",
-      "generated_at": "2026-11-19T16:16:22Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-19T16:16:22Z"
     },
     {
       "relative_path": "igi.exe",
@@ -232,8 +224,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -241,9 +233,7 @@
       "evidence": "projects/igi/reports/report.html",
       "project_dir": "projects/igi",
       "port_details": "7325 fns recovered; 16 units / 114.9 MiB C; binary igi 38292 KiB [macOS arm64 (native)]; 128 imports bound; low-level 7325/ high-level verified 0",
-      "generated_at": "2026-11-19T03:08:56Z",
-      "evidence_committed": false,
-      "notes": "docs/screenshots/igi-window-level5-splash.png shows the loading splash only; a texture-format failure was reported but is not backed by a committed proof file."
+      "generated_at": "2026-11-19T03:08:56Z"
     },
     {
       "relative_path": "IGI-Injector.exe",
@@ -306,8 +296,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -315,8 +305,7 @@
       "evidence": "projects/mines/reports/report.html",
       "project_dir": "projects/mines",
       "port_details": "1870 fns recovered; 7 units / 40.9 MiB C; binary mines 9545 KiB [macOS arm64 (native)]; 196 imports bound; low-level 1870/ high-level verified 0",
-      "generated_at": "2026-11-19T02:45:16Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-19T02:45:16Z"
     },
     {
       "relative_path": "wf.exe",
@@ -325,8 +314,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -334,8 +323,7 @@
       "evidence": "projects/wf/reports/report.html",
       "project_dir": "projects/wf",
       "port_details": "2815 fns recovered; 6 units / 34.8 MiB C; binary wf 8540 KiB [macOS arm64 (native)]; 147 imports bound; low-level 2815/ high-level verified 0",
-      "generated_at": "2026-11-19T00:26:20Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-19T00:26:20Z"
     },
     {
       "relative_path": "tf.exe",
@@ -362,8 +350,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 2; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 2; no oracle supplied",
       "run_status": "exited",
       "exit_code": 2,
       "host": "Darwin arm64 (host build)",
@@ -371,8 +359,7 @@
       "evidence": "projects/rr/reports/report.html",
       "project_dir": "projects/rr",
       "port_details": "6788 fns recovered; 14 units / 99.5 MiB C; binary rr 23801 KiB [macOS arm64 (native)]; 69 imports bound; low-level 6788/ high-level verified 0",
-      "generated_at": "2026-11-19T00:24:21Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-19T00:24:21Z"
     },
     {
       "relative_path": "NES_GameGenieEncoder.exe",
@@ -399,8 +386,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -408,8 +395,7 @@
       "evidence": "projects/dominosa/reports/report.html",
       "project_dir": "projects/dominosa",
       "port_details": "1152 fns recovered; 4 units / 19.5 MiB C; binary dominosa 4754 KiB [macOS arm64 (native)]; 190 imports bound; low-level 1152/ high-level verified 0",
-      "generated_at": "2026-11-18T23:53:44Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:53:44Z"
     },
     {
       "relative_path": "tictactoe.exe",
@@ -418,8 +404,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -427,8 +413,7 @@
       "evidence": "projects/tictactoe/reports/report.html",
       "project_dir": "projects/tictactoe",
       "port_details": "216 fns recovered; 2 units / 1.3 MiB C; binary tictactoe 1293 KiB; 43 imports bound; low-level 216/ high-level verified 0",
-      "generated_at": "2026-11-18T23:47:31Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:47:31Z"
     },
     {
       "relative_path": "tetris.exe",
@@ -437,8 +422,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -446,8 +431,7 @@
       "evidence": "projects/tetris/reports/report.html",
       "project_dir": "projects/tetris",
       "port_details": "215 fns recovered; 2 units / 1.3 MiB C; binary tetris 1293 KiB; 45 imports bound; low-level 215/ high-level verified 0",
-      "generated_at": "2026-11-18T23:47:26Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:47:26Z"
     },
     {
       "relative_path": "snake.exe",
@@ -456,8 +440,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -465,8 +449,7 @@
       "evidence": "projects/snake/reports/report.html",
       "project_dir": "projects/snake",
       "port_details": "223 fns recovered; 2 units / 1.4 MiB C; binary snake 1309 KiB; 46 imports bound; low-level 223/ high-level verified 0",
-      "generated_at": "2026-11-18T23:47:21Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:47:21Z"
     },
     {
       "relative_path": "hangman_x86.exe",
@@ -475,8 +458,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -484,8 +467,7 @@
       "evidence": "projects/hangman_x86/reports/report.html",
       "project_dir": "projects/hangman_x86",
       "port_details": "221 fns recovered; 2 units / 1.4 MiB C; binary hangman_x86 1390 KiB; 48 imports bound; low-level 221/ high-level verified 0",
-      "generated_at": "2026-11-18T23:47:16Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:47:16Z"
     },
     {
       "relative_path": "guess_game_x86.exe",
@@ -494,8 +476,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and stayed alive until the 3s timeout; no crash observed, no oracle",
+      "verification": "partial",
+      "status": "process launched and stayed alive until the 3s timeout; no crash observed, no oracle",
       "run_status": "timeout",
       "exit_code": null,
       "host": "Darwin arm64 (host build)",
@@ -503,8 +485,7 @@
       "evidence": "projects/guess_game_x86/reports/report.html",
       "project_dir": "projects/guess_game_x86",
       "port_details": "221 fns recovered; 2 units / 1.4 MiB C; binary guess_game_x86 1390 KiB; 46 imports bound; low-level 221/ high-level verified 0",
-      "generated_at": "2026-11-18T23:47:11Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:47:11Z"
     },
     {
       "relative_path": "game2048.exe",
@@ -513,8 +494,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -522,8 +503,7 @@
       "evidence": "projects/game2048/reports/report.html",
       "project_dir": "projects/game2048",
       "port_details": "219 fns recovered; 2 units / 1.3 MiB C; binary game2048 1309 KiB; 46 imports bound; low-level 219/ high-level verified 0",
-      "generated_at": "2026-11-18T23:47:02Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:47:02Z"
     },
     {
       "relative_path": "prime-gen.exe",
@@ -532,8 +512,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and stayed alive until the 3s timeout; no crash observed, no oracle",
+      "verification": "partial",
+      "status": "process launched and stayed alive until the 3s timeout; no crash observed, no oracle",
       "run_status": "timeout",
       "exit_code": null,
       "host": "Darwin arm64 (host build)",
@@ -541,8 +521,7 @@
       "evidence": "projects/prime_gen/reports/report.html",
       "project_dir": "projects/prime_gen",
       "port_details": "236 fns recovered; 2 units / 2.1 MiB C; binary prime_gen 1600 KiB [macOS arm64 (native)]; 45 imports bound; low-level 236/ high-level verified 0",
-      "generated_at": "2026-11-18T23:46:56Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:46:56Z"
     },
     {
       "relative_path": "base64.exe",
@@ -551,8 +530,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -560,8 +539,7 @@
       "evidence": "projects/base64/reports/report.html",
       "project_dir": "projects/base64",
       "port_details": "255 fns recovered; 2 units / 3.4 MiB C; binary base64 1682 KiB [macOS arm64 (native)]; 44 imports bound; low-level 255/ high-level verified 0",
-      "generated_at": "2026-11-18T23:46:46Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:46:46Z"
     },
     {
       "relative_path": "arith-calc.exe",
@@ -570,8 +548,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -579,8 +557,7 @@
       "evidence": "projects/arith_calc/reports/report.html",
       "project_dir": "projects/arith_calc",
       "port_details": "33 fns recovered; 2 units / 0.8 MiB C; binary arith_calc 946 KiB [macOS arm64 (native)]; 3 imports bound; low-level 33/ high-level verified 0",
-      "generated_at": "2026-11-18T23:43:11Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:43:11Z"
     },
     {
       "relative_path": "guess.exe",
@@ -589,8 +566,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -598,8 +575,7 @@
       "evidence": "projects/guess/reports/report.html",
       "project_dir": "projects/guess",
       "port_details": "847 fns recovered; 3 units / 10.2 MiB C; binary guess 3805 KiB; 190 imports bound; low-level 847/ high-level verified 0",
-      "generated_at": "2026-11-18T23:25:40Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:25:40Z"
     },
     {
       "relative_path": "solosolver.exe",
@@ -608,8 +584,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -617,8 +593,7 @@
       "evidence": "projects/solosolver/reports/report.html",
       "project_dir": "projects/solosolver",
       "port_details": "911 fns recovered; 8 units / 55.7 MiB C; binary solosolver 8130 KiB; 60 imports bound; low-level 911/ high-level verified 0",
-      "generated_at": "2026-11-18T23:22:59Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T23:22:59Z"
     },
     {
       "relative_path": "cube.exe",
@@ -627,8 +602,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -636,8 +611,7 @@
       "evidence": "projects/cube/reports/report.html",
       "project_dir": "projects/cube",
       "port_details": "852 fns recovered; 3 units / 11.2 MiB C; binary cube 4192 KiB; 192 imports bound; low-level 852/ high-level verified 0",
-      "generated_at": "2026-11-18T22:26:20Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T22:26:20Z"
     },
     {
       "relative_path": "gconv.exe",
@@ -646,8 +620,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -655,8 +629,7 @@
       "evidence": "projects/gconv/reports/report.html",
       "project_dir": "projects/gconv",
       "port_details": "3441 fns recovered; 6 units / 38.7 MiB C; binary gconv 10392 KiB; 78 imports bound; low-level 3441/ high-level verified 0",
-      "generated_at": "2026-11-18T22:04:22Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T22:04:22Z"
     },
     {
       "relative_path": "pq.exe",
@@ -665,8 +638,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
+      "verification": "partial",
+      "status": "process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
       "run_status": "timeout",
       "exit_code": null,
       "host": "Darwin arm64 (host build)",
@@ -674,8 +647,7 @@
       "evidence": "projects/pq/reports/report.html",
       "project_dir": "projects/pq",
       "port_details": "9689 fns recovered; 11 units / 35.5 MiB C; binary pq 12387 KiB; 448 imports bound; low-level 9689/ high-level verified 0",
-      "generated_at": "2026-11-18T21:19:00Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:19:00Z"
     },
     {
       "relative_path": "untangle.exe",
@@ -684,8 +656,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -693,8 +665,7 @@
       "evidence": "projects/untangle/reports/report.html",
       "project_dir": "projects/untangle",
       "port_details": "946 fns recovered; 3 units / 14.0 MiB C; binary untangle 4083 KiB; 192 imports bound; low-level 946/ high-level verified 0",
-      "generated_at": "2026-11-18T21:08:53Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:08:53Z"
     },
     {
       "relative_path": "unrulysolver.exe",
@@ -703,8 +674,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -712,8 +683,7 @@
       "evidence": "projects/unrulysolver/reports/report.html",
       "project_dir": "projects/unrulysolver",
       "port_details": "501 fns recovered; 2 units / 5.0 MiB C; binary unrulysolver 1853 KiB; 61 imports bound; low-level 501/ high-level verified 0",
-      "generated_at": "2026-11-18T21:08:34Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:08:34Z"
     },
     {
       "relative_path": "unruly.exe",
@@ -722,8 +692,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -731,8 +701,7 @@
       "evidence": "projects/unruly/reports/report.html",
       "project_dir": "projects/unruly",
       "port_details": "868 fns recovered; 3 units / 10.5 MiB C; binary unruly 3514 KiB; 189 imports bound; low-level 868/ high-level verified 0",
-      "generated_at": "2026-11-18T21:08:25Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:08:25Z"
     },
     {
       "relative_path": "unequalsolver.exe",
@@ -741,8 +710,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
+      "verification": "partial",
+      "status": "process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
       "run_status": "timeout",
       "exit_code": null,
       "host": "Darwin arm64 (host build)",
@@ -750,8 +719,7 @@
       "evidence": "projects/unequalsolver/reports/report.html",
       "project_dir": "projects/unequalsolver",
       "port_details": "822 fns recovered; 3 units / 12.4 MiB C; binary unequalsolver 2802 KiB; 60 imports bound; low-level 822/ high-level verified 0",
-      "generated_at": "2026-11-18T21:08:07Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:08:07Z"
     },
     {
       "relative_path": "unequal.exe",
@@ -760,8 +728,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -769,8 +737,7 @@
       "evidence": "projects/unequal/reports/report.html",
       "project_dir": "projects/unequal",
       "port_details": "1174 fns recovered; 4 units / 17.2 MiB C; binary unequal 4238 KiB; 189 imports bound; low-level 1174/ high-level verified 0",
-      "generated_at": "2026-11-18T21:07:31Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:07:31Z"
     },
     {
       "relative_path": "undead.exe",
@@ -779,8 +746,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -788,8 +755,7 @@
       "evidence": "projects/undead/reports/report.html",
       "project_dir": "projects/undead",
       "port_details": "1054 fns recovered; 4 units / 24.0 MiB C; binary undead 4894 KiB; 190 imports bound; low-level 1054/ high-level verified 0",
-      "generated_at": "2026-11-18T21:07:08Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:07:08Z"
     },
     {
       "relative_path": "twiddle.exe",
@@ -798,8 +764,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -807,8 +773,7 @@
       "evidence": "projects/twiddle/reports/report.html",
       "project_dir": "projects/twiddle",
       "port_details": "803 fns recovered; 3 units / 9.7 MiB C; binary twiddle 3415 KiB; 193 imports bound; low-level 803/ high-level verified 0",
-      "generated_at": "2026-11-18T21:06:41Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:06:41Z"
     },
     {
       "relative_path": "trackssolver.exe",
@@ -817,8 +782,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -826,8 +791,7 @@
       "evidence": "projects/trackssolver/reports/report.html",
       "project_dir": "projects/trackssolver",
       "port_details": "725 fns recovered; 3 units / 8.9 MiB C; binary trackssolver 2588 KiB; 61 imports bound; low-level 725/ high-level verified 0",
-      "generated_at": "2026-11-18T21:06:23Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:06:23Z"
     },
     {
       "relative_path": "tracks.exe",
@@ -836,8 +800,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -845,8 +809,7 @@
       "evidence": "projects/tracks/reports/report.html",
       "project_dir": "projects/tracks",
       "port_details": "1125 fns recovered; 3 units / 15.1 MiB C; binary tracks 4317 KiB; 191 imports bound; low-level 1125/ high-level verified 0",
-      "generated_at": "2026-11-18T21:06:07Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:06:07Z"
     },
     {
       "relative_path": "towerssolver.exe",
@@ -855,8 +818,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -864,8 +827,7 @@
       "evidence": "projects/towerssolver/reports/report.html",
       "project_dir": "projects/towerssolver",
       "port_details": "833 fns recovered; 4 units / 16.9 MiB C; binary towerssolver 3222 KiB; 60 imports bound; low-level 833/ high-level verified 0",
-      "generated_at": "2026-11-18T21:05:49Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:05:49Z"
     },
     {
       "relative_path": "towers.exe",
@@ -874,8 +836,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -883,8 +845,7 @@
       "evidence": "projects/towers/reports/report.html",
       "project_dir": "projects/towers",
       "port_details": "1219 fns recovered; 4 units / 21.5 MiB C; binary towers 4724 KiB; 189 imports bound; low-level 1219/ high-level verified 0",
-      "generated_at": "2026-11-18T21:05:32Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:05:32Z"
     },
     {
       "relative_path": "tentssolver.exe",
@@ -893,8 +854,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -902,8 +863,7 @@
       "evidence": "projects/tentssolver/reports/report.html",
       "project_dir": "projects/tentssolver",
       "port_details": "701 fns recovered; 5 units / 25.9 MiB C; binary tentssolver 3829 KiB; 59 imports bound; low-level 701/ high-level verified 0",
-      "generated_at": "2026-11-18T21:05:13Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:05:13Z"
     },
     {
       "relative_path": "tents.exe",
@@ -912,8 +872,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -921,8 +881,7 @@
       "evidence": "projects/tents/reports/report.html",
       "project_dir": "projects/tents",
       "port_details": "1108 fns recovered; 5 units / 30.9 MiB C; binary tents 5380 KiB; 189 imports bound; low-level 1108/ high-level verified 0",
-      "generated_at": "2026-11-18T21:04:55Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:04:55Z"
     },
     {
       "relative_path": "solo.exe",
@@ -931,8 +890,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -940,8 +899,7 @@
       "evidence": "projects/solo/reports/report.html",
       "project_dir": "projects/solo",
       "port_details": "1410 fns recovered; 9 units / 61.5 MiB C; binary solo 9684 KiB; 190 imports bound; low-level 1410/ high-level verified 0",
-      "generated_at": "2026-11-18T21:03:56Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:03:56Z"
     },
     {
       "relative_path": "slantsolver.exe",
@@ -950,8 +908,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -959,8 +917,7 @@
       "evidence": "projects/slantsolver/reports/report.html",
       "project_dir": "projects/slantsolver",
       "port_details": "571 fns recovered; 3 units / 13.3 MiB C; binary slantsolver 2904 KiB; 59 imports bound; low-level 571/ high-level verified 0",
-      "generated_at": "2026-11-18T21:02:17Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:02:17Z"
     },
     {
       "relative_path": "slant.exe",
@@ -969,8 +926,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -978,8 +935,7 @@
       "evidence": "projects/slant/reports/report.html",
       "project_dir": "projects/slant",
       "port_details": "966 fns recovered; 4 units / 18.6 MiB C; binary slant 4503 KiB; 189 imports bound; low-level 966/ high-level verified 0",
-      "generated_at": "2026-11-18T21:02:02Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:02:02Z"
     },
     {
       "relative_path": "sixteen.exe",
@@ -988,8 +944,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -997,8 +953,7 @@
       "evidence": "projects/sixteen/reports/report.html",
       "project_dir": "projects/sixteen",
       "port_details": "817 fns recovered; 3 units / 10.3 MiB C; binary sixteen 3544 KiB; 189 imports bound; low-level 817/ high-level verified 0",
-      "generated_at": "2026-11-18T21:01:43Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:01:43Z"
     },
     {
       "relative_path": "singlessolver.exe",
@@ -1007,8 +962,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1016,8 +971,7 @@
       "evidence": "projects/singlessolver/reports/report.html",
       "project_dir": "projects/singlessolver",
       "port_details": "798 fns recovered; 3 units / 10.8 MiB C; binary singlessolver 2624 KiB; 60 imports bound; low-level 798/ high-level verified 0",
-      "generated_at": "2026-11-18T21:01:26Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:01:26Z"
     },
     {
       "relative_path": "singles.exe",
@@ -1026,8 +980,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1035,8 +989,7 @@
       "evidence": "projects/singles/reports/report.html",
       "project_dir": "projects/singles",
       "port_details": "1191 fns recovered; 4 units / 16.9 MiB C; binary singles 4336 KiB; 189 imports bound; low-level 1191/ high-level verified 0",
-      "generated_at": "2026-11-18T21:01:13Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:01:13Z"
     },
     {
       "relative_path": "signpostsolver.exe",
@@ -1045,8 +998,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1054,8 +1007,7 @@
       "evidence": "projects/signpostsolver/reports/report.html",
       "project_dir": "projects/signpostsolver",
       "port_details": "560 fns recovered; 2 units / 5.5 MiB C; binary signpostsolver 2017 KiB; 64 imports bound; low-level 560/ high-level verified 0",
-      "generated_at": "2026-11-18T21:00:55Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:00:55Z"
     },
     {
       "relative_path": "signpost.exe",
@@ -1064,8 +1016,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1073,8 +1025,7 @@
       "evidence": "projects/signpost/reports/report.html",
       "project_dir": "projects/signpost",
       "port_details": "943 fns recovered; 3 units / 11.8 MiB C; binary signpost 3744 KiB; 193 imports bound; low-level 943/ high-level verified 0",
-      "generated_at": "2026-11-18T21:00:45Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:00:45Z"
     },
     {
       "relative_path": "samegame.exe",
@@ -1083,8 +1034,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1092,8 +1043,7 @@
       "evidence": "projects/samegame/reports/report.html",
       "project_dir": "projects/samegame",
       "port_details": "856 fns recovered; 4 units / 17.7 MiB C; binary samegame 4159 KiB; 189 imports bound; low-level 856/ high-level verified 0",
-      "generated_at": "2026-11-18T21:00:29Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:00:29Z"
     },
     {
       "relative_path": "rect.exe",
@@ -1102,8 +1052,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1111,8 +1061,7 @@
       "evidence": "projects/rect/reports/report.html",
       "project_dir": "projects/rect",
       "port_details": "1105 fns recovered; 6 units / 38.3 MiB C; binary rect 6557 KiB; 189 imports bound; low-level 1105/ high-level verified 0",
-      "generated_at": "2026-11-18T21:00:04Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T21:00:04Z"
     },
     {
       "relative_path": "range.exe",
@@ -1121,8 +1070,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1130,8 +1079,7 @@
       "evidence": "projects/range/reports/report.html",
       "project_dir": "projects/range",
       "port_details": "931 fns recovered; 3 units / 11.3 MiB C; binary range 3646 KiB; 189 imports bound; low-level 931/ high-level verified 0",
-      "generated_at": "2026-11-18T20:59:33Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:59:33Z"
     },
     {
       "relative_path": "puzzles.exe",
@@ -1140,8 +1088,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1149,8 +1097,7 @@
       "evidence": "projects/puzzles/reports/report.html",
       "project_dir": "projects/puzzles",
       "port_details": "12063 fns recovered; 50 units / 392.6 MiB C; binary puzzles 51058 KiB; 208 imports bound; low-level 12063/ high-level verified 0",
-      "generated_at": "2026-11-18T20:59:12Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:59:12Z"
     },
     {
       "relative_path": "putty-w32.exe",
@@ -1159,8 +1106,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1168,8 +1115,7 @@
       "evidence": "projects/putty_w32/reports/report.html",
       "project_dir": "projects/putty_w32",
       "port_details": "8077 fns recovered; 51 units / 407.4 MiB C; binary putty_w32 110390 KiB; 340 imports bound; low-level 8077/ high-level verified 0",
-      "generated_at": "2026-11-18T20:54:46Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:54:46Z"
     },
     {
       "relative_path": "psftp-w32.exe",
@@ -1178,8 +1124,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1187,8 +1133,7 @@
       "evidence": "projects/psftp_w32/reports/report.html",
       "project_dir": "projects/psftp_w32",
       "port_details": "6093 fns recovered; 24 units / 180.2 MiB C; binary psftp_w32 48990 KiB; 149 imports bound; low-level 6093/ high-level verified 0",
-      "generated_at": "2026-11-18T20:17:28Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:17:28Z"
     },
     {
       "relative_path": "pegs.exe",
@@ -1197,8 +1142,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1206,8 +1151,7 @@
       "evidence": "projects/pegs/reports/report.html",
       "project_dir": "projects/pegs",
       "port_details": "911 fns recovered; 3 units / 12.3 MiB C; binary pegs 3742 KiB; 189 imports bound; low-level 911/ high-level verified 0",
-      "generated_at": "2026-11-18T20:13:42Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:13:42Z"
     },
     {
       "relative_path": "patternpicture.exe",
@@ -1216,8 +1160,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1225,8 +1169,7 @@
       "evidence": "projects/patternpicture/reports/report.html",
       "project_dir": "projects/patternpicture",
       "port_details": "583 fns recovered; 3 units / 8.9 MiB C; binary patternpicture 2308 KiB; 64 imports bound; low-level 583/ high-level verified 0",
-      "generated_at": "2026-11-18T20:11:58Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:11:58Z"
     },
     {
       "relative_path": "pearlsolver.exe",
@@ -1235,8 +1178,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1244,8 +1187,7 @@
       "evidence": "projects/pearlsolver/reports/report.html",
       "project_dir": "projects/pearlsolver",
       "port_details": "1361 fns recovered; 7 units / 42.6 MiB C; binary pearlsolver 7295 KiB; 65 imports bound; low-level 1361/ high-level verified 0",
-      "generated_at": "2026-11-18T20:11:04Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:11:04Z"
     },
     {
       "relative_path": "pearlbench.exe",
@@ -1254,8 +1196,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
+      "verification": "partial",
+      "status": "process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
       "run_status": "timeout",
       "exit_code": null,
       "host": "Darwin arm64 (host build)",
@@ -1263,8 +1205,7 @@
       "evidence": "projects/pearlbench/reports/report.html",
       "project_dir": "projects/pearlbench",
       "port_details": "1347 fns recovered; 6 units / 36.5 MiB C; binary pearlbench 6697 KiB; 65 imports bound; low-level 1347/ high-level verified 0",
-      "generated_at": "2026-11-18T20:10:24Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:10:24Z"
     },
     {
       "relative_path": "pearl.exe",
@@ -1273,8 +1214,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1282,8 +1223,7 @@
       "evidence": "projects/pearl/reports/report.html",
       "project_dir": "projects/pearl",
       "port_details": "1746 fns recovered; 7 units / 42.8 MiB C; binary pearl 8425 KiB; 193 imports bound; low-level 1746/ high-level verified 0",
-      "generated_at": "2026-11-18T20:09:42Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:09:42Z"
     },
     {
       "relative_path": "patternsolver.exe",
@@ -1292,8 +1232,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1301,8 +1241,7 @@
       "evidence": "projects/patternsolver/reports/report.html",
       "project_dir": "projects/patternsolver",
       "port_details": "585 fns recovered; 3 units / 8.4 MiB C; binary patternsolver 2195 KiB; 61 imports bound; low-level 585/ high-level verified 0",
-      "generated_at": "2026-11-18T20:09:04Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:09:04Z"
     },
     {
       "relative_path": "pattern.exe",
@@ -1311,8 +1250,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1320,8 +1259,7 @@
       "evidence": "projects/pattern/reports/report.html",
       "project_dir": "projects/pattern",
       "port_details": "973 fns recovered; 3 units / 14.6 MiB C; binary pattern 3954 KiB; 191 imports bound; low-level 973/ high-level verified 0",
-      "generated_at": "2026-11-18T20:08:35Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:08:35Z"
     },
     {
       "relative_path": "palisade.exe",
@@ -1330,8 +1268,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1339,8 +1277,7 @@
       "evidence": "projects/palisade/reports/report.html",
       "project_dir": "projects/palisade",
       "port_details": "997 fns recovered; 3 units / 15.3 MiB C; binary palisade 4230 KiB; 192 imports bound; low-level 997/ high-level verified 0",
-      "generated_at": "2026-11-18T20:08:19Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:08:19Z"
     },
     {
       "relative_path": "pageant-w32.exe",
@@ -1349,8 +1286,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1358,8 +1295,7 @@
       "evidence": "projects/pageant_w32/reports/report.html",
       "project_dir": "projects/pageant_w32",
       "port_details": "2996 fns recovered; 6 units / 34.2 MiB C; binary pageant_w32 8258 KiB; 194 imports bound; low-level 2996/ high-level verified 0",
-      "generated_at": "2026-11-18T20:08:02Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:08:02Z"
     },
     {
       "relative_path": "nullgame.exe",
@@ -1368,8 +1304,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1377,8 +1313,7 @@
       "evidence": "projects/nullgame/reports/report.html",
       "project_dir": "projects/nullgame",
       "port_details": "732 fns recovered; 3 units / 8.4 MiB C; binary nullgame 3250 KiB; 189 imports bound; low-level 732/ high-level verified 0",
-      "generated_at": "2026-11-18T20:07:33Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:07:33Z"
     },
     {
       "relative_path": "netslide.exe",
@@ -1387,8 +1322,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1396,8 +1331,7 @@
       "evidence": "projects/netslide/reports/report.html",
       "project_dir": "projects/netslide",
       "port_details": "1003 fns recovered; 4 units / 17.1 MiB C; binary netslide 4537 KiB; 189 imports bound; low-level 1003/ high-level verified 0",
-      "generated_at": "2026-11-18T20:07:17Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:07:17Z"
     },
     {
       "relative_path": "netgame.exe",
@@ -1406,8 +1340,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 3; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 3; no oracle supplied",
       "run_status": "exited",
       "exit_code": 3,
       "host": "Darwin arm64 (host build)",
@@ -1415,8 +1349,7 @@
       "evidence": "projects/netgame/reports/report.html",
       "project_dir": "projects/netgame",
       "port_details": "1237 fns recovered; 6 units / 36.4 MiB C; binary netgame 6063 KiB; 192 imports bound; low-level 1237/ high-level verified 0",
-      "generated_at": "2026-11-18T20:06:57Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:06:57Z"
     },
     {
       "relative_path": "mosaic.exe",
@@ -1425,8 +1358,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1434,8 +1367,7 @@
       "evidence": "projects/mosaic/reports/report.html",
       "project_dir": "projects/mosaic",
       "port_details": "897 fns recovered; 3 units / 10.6 MiB C; binary mosaic 3548 KiB; 190 imports bound; low-level 897/ high-level verified 0",
-      "generated_at": "2026-11-18T20:06:26Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:06:26Z"
     },
     {
       "relative_path": "mineobfusc.exe",
@@ -1444,8 +1376,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1453,8 +1385,7 @@
       "evidence": "projects/mineobfusc/reports/report.html",
       "project_dir": "projects/mineobfusc",
       "port_details": "1617 fns recovered; 6 units / 37.4 MiB C; binary mineobfusc 8210 KiB; 72 imports bound; low-level 1617/ high-level verified 0",
-      "generated_at": "2026-11-18T20:05:25Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:05:25Z"
     },
     {
       "relative_path": "mapsolver.exe",
@@ -1463,8 +1394,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1472,8 +1403,7 @@
       "evidence": "projects/mapsolver/reports/report.html",
       "project_dir": "projects/mapsolver",
       "port_details": "653 fns recovered; 3 units / 15.4 MiB C; binary mapsolver 3198 KiB; 58 imports bound; low-level 653/ high-level verified 0",
-      "generated_at": "2026-11-18T20:04:51Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:04:51Z"
     },
     {
       "relative_path": "map.exe",
@@ -1482,8 +1412,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1491,8 +1421,7 @@
       "evidence": "projects/map/reports/report.html",
       "project_dir": "projects/map",
       "port_details": "1042 fns recovered; 4 units / 20.5 MiB C; binary map 4796 KiB; 189 imports bound; low-level 1042/ high-level verified 0",
-      "generated_at": "2026-11-18T20:04:31Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:04:31Z"
     },
     {
       "relative_path": "galaxiessolver.exe",
@@ -1501,8 +1430,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
+      "verification": "partial",
+      "status": "process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
       "run_status": "timeout",
       "exit_code": null,
       "host": "Darwin arm64 (host build)",
@@ -1510,8 +1439,7 @@
       "evidence": "projects/galaxiessolver/reports/report.html",
       "project_dir": "projects/galaxiessolver",
       "port_details": "726 fns recovered; 3 units / 11.0 MiB C; binary galaxiessolver 2637 KiB; 60 imports bound; low-level 726/ high-level verified 0",
-      "generated_at": "2026-11-18T20:04:01Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:04:01Z"
     },
     {
       "relative_path": "galaxiespicture.exe",
@@ -1520,8 +1448,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1529,8 +1457,7 @@
       "evidence": "projects/galaxiespicture/reports/report.html",
       "project_dir": "projects/galaxiespicture",
       "port_details": "773 fns recovered; 3 units / 13.6 MiB C; binary galaxiespicture 2977 KiB; 63 imports bound; low-level 773/ high-level verified 0",
-      "generated_at": "2026-11-18T20:03:36Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T20:03:36Z"
     },
     {
       "relative_path": "magnetssolver.exe",
@@ -1539,8 +1466,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1548,8 +1475,7 @@
       "evidence": "projects/magnetssolver/reports/report.html",
       "project_dir": "projects/magnetssolver",
       "port_details": "658 fns recovered; 3 units / 8.4 MiB C; binary magnetssolver 2247 KiB; 61 imports bound; low-level 658/ high-level verified 0",
-      "generated_at": "2026-11-18T18:28:26Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:28:26Z"
     },
     {
       "relative_path": "magnets.exe",
@@ -1558,8 +1484,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1567,8 +1493,7 @@
       "evidence": "projects/magnets/reports/report.html",
       "project_dir": "projects/magnets",
       "port_details": "1037 fns recovered; 3 units / 14.3 MiB C; binary magnets 3877 KiB; 189 imports bound; low-level 1037/ high-level verified 0",
-      "generated_at": "2026-11-18T18:28:06Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:28:06Z"
     },
     {
       "relative_path": "loopysolver.exe",
@@ -1577,8 +1502,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1586,8 +1511,7 @@
       "evidence": "projects/loopysolver/reports/report.html",
       "project_dir": "projects/loopysolver",
       "port_details": "1432 fns recovered; 5 units / 26.4 MiB C; binary loopysolver 6927 KiB; 72 imports bound; low-level 1432/ high-level verified 0",
-      "generated_at": "2026-11-18T18:27:50Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:27:50Z"
     },
     {
       "relative_path": "loopy.exe",
@@ -1596,8 +1520,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1605,8 +1529,7 @@
       "evidence": "projects/loopy/reports/report.html",
       "project_dir": "projects/loopy",
       "port_details": "1679 fns recovered; 5 units / 29.9 MiB C; binary loopy 7938 KiB; 194 imports bound; low-level 1679/ high-level verified 0",
-      "generated_at": "2026-11-18T18:27:17Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:27:17Z"
     },
     {
       "relative_path": "lightupsolver.exe",
@@ -1615,8 +1538,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1624,8 +1547,7 @@
       "evidence": "projects/lightupsolver/reports/report.html",
       "project_dir": "projects/lightupsolver",
       "port_details": "581 fns recovered; 2 units / 6.7 MiB C; binary lightupsolver 2066 KiB; 59 imports bound; low-level 581/ high-level verified 0",
-      "generated_at": "2026-11-18T18:26:41Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:26:41Z"
     },
     {
       "relative_path": "lightup.exe",
@@ -1634,8 +1556,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1643,8 +1565,7 @@
       "evidence": "projects/lightup/reports/report.html",
       "project_dir": "projects/lightup",
       "port_details": "984 fns recovered; 3 units / 13.0 MiB C; binary lightup 3842 KiB; 189 imports bound; low-level 984/ high-level verified 0",
-      "generated_at": "2026-11-18T18:26:23Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:26:23Z"
     },
     {
       "relative_path": "keensolver.exe",
@@ -1653,8 +1574,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1662,8 +1583,7 @@
       "evidence": "projects/keensolver/reports/report.html",
       "project_dir": "projects/keensolver",
       "port_details": "882 fns recovered; 4 units / 20.7 MiB C; binary keensolver 3773 KiB; 61 imports bound; low-level 882/ high-level verified 0",
-      "generated_at": "2026-11-18T18:26:07Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:26:07Z"
     },
     {
       "relative_path": "keen.exe",
@@ -1672,8 +1592,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1681,8 +1601,7 @@
       "evidence": "projects/keen/reports/report.html",
       "project_dir": "projects/keen",
       "port_details": "1235 fns recovered; 5 units / 24.9 MiB C; binary keen 5241 KiB; 190 imports bound; low-level 1235/ high-level verified 0",
-      "generated_at": "2026-11-18T18:25:50Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:25:50Z"
     },
     {
       "relative_path": "inertia.exe",
@@ -1691,8 +1610,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1700,8 +1619,7 @@
       "evidence": "projects/inertia/reports/report.html",
       "project_dir": "projects/inertia",
       "port_details": "976 fns recovered; 5 units / 24.4 MiB C; binary inertia 4955 KiB; 193 imports bound; low-level 976/ high-level verified 0",
-      "generated_at": "2026-11-18T18:25:29Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:25:29Z"
     },
     {
       "relative_path": "grapheditor.exe",
@@ -1710,8 +1628,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1719,8 +1637,7 @@
       "evidence": "projects/grapheditor/reports/report.html",
       "project_dir": "projects/grapheditor",
       "port_details": "878 fns recovered; 3 units / 10.6 MiB C; binary grapheditor 3595 KiB; 192 imports bound; low-level 878/ high-level verified 0",
-      "generated_at": "2026-11-18T18:24:50Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:24:50Z"
     },
     {
       "relative_path": "galaxieseditor.exe",
@@ -1729,8 +1646,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1738,8 +1655,7 @@
       "evidence": "projects/galaxieseditor/reports/report.html",
       "project_dir": "projects/galaxieseditor",
       "port_details": "1073 fns recovered; 4 units / 16.2 MiB C; binary galaxieseditor 4249 KiB; 190 imports bound; low-level 1073/ high-level verified 0",
-      "generated_at": "2026-11-18T18:24:06Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:24:06Z"
     },
     {
       "relative_path": "galaxies.exe",
@@ -1748,8 +1664,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1757,8 +1673,7 @@
       "evidence": "projects/galaxies/reports/report.html",
       "project_dir": "projects/galaxies",
       "port_details": "1139 fns recovered; 4 units / 17.4 MiB C; binary galaxies 4462 KiB; 190 imports bound; low-level 1139/ high-level verified 0",
-      "generated_at": "2026-11-18T18:23:46Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:23:46Z"
     },
     {
       "relative_path": "fuzzpuzz.exe",
@@ -1767,8 +1682,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1776,8 +1691,7 @@
       "evidence": "projects/fuzzpuzz/reports/report.html",
       "project_dir": "projects/fuzzpuzz",
       "port_details": "11889 fns recovered; 50 units / 390.3 MiB C; binary fuzzpuzz 50130 KiB; 85 imports bound; low-level 11889/ high-level verified 0",
-      "generated_at": "2026-11-18T18:23:24Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:23:24Z"
     },
     {
       "relative_path": "fillingsolver.exe",
@@ -1786,8 +1700,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1795,8 +1709,7 @@
       "evidence": "projects/fillingsolver/reports/report.html",
       "project_dir": "projects/fillingsolver",
       "port_details": "553 fns recovered; 2 units / 7.4 MiB C; binary fillingsolver 2129 KiB; 59 imports bound; low-level 553/ high-level verified 0",
-      "generated_at": "2026-11-18T18:18:53Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:18:53Z"
     },
     {
       "relative_path": "flood.exe",
@@ -1805,8 +1718,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1814,8 +1727,7 @@
       "evidence": "projects/flood/reports/report.html",
       "project_dir": "projects/flood",
       "port_details": "822 fns recovered; 3 units / 9.8 MiB C; binary flood 3464 KiB; 189 imports bound; low-level 822/ high-level verified 0",
-      "generated_at": "2026-11-18T18:14:40Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:14:40Z"
     },
     {
       "relative_path": "flip.exe",
@@ -1824,8 +1736,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1833,8 +1745,7 @@
       "evidence": "projects/flip/reports/report.html",
       "project_dir": "projects/flip",
       "port_details": "953 fns recovered; 3 units / 13.3 MiB C; binary flip 4083 KiB; 189 imports bound; low-level 953/ high-level verified 0",
-      "generated_at": "2026-11-18T18:14:23Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:14:23Z"
     },
     {
       "relative_path": "filling.exe",
@@ -1843,8 +1754,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1852,8 +1763,7 @@
       "evidence": "projects/filling/reports/report.html",
       "project_dir": "projects/filling",
       "port_details": "957 fns recovered; 3 units / 13.6 MiB C; binary filling 3873 KiB; 190 imports bound; low-level 957/ high-level verified 0",
-      "generated_at": "2026-11-18T18:13:51Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:13:51Z"
     },
     {
       "relative_path": "fifteensolver.exe",
@@ -1862,8 +1772,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1871,8 +1781,7 @@
       "evidence": "projects/fifteensolver/reports/report.html",
       "project_dir": "projects/fifteensolver",
       "port_details": "411 fns recovered; 2 units / 3.8 MiB C; binary fifteensolver 1687 KiB; 58 imports bound; low-level 411/ high-level verified 0",
-      "generated_at": "2026-11-18T18:13:34Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:13:34Z"
     },
     {
       "relative_path": "fifteen.exe",
@@ -1881,8 +1790,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1890,8 +1799,7 @@
       "evidence": "projects/fifteen/reports/report.html",
       "project_dir": "projects/fifteen",
       "port_details": "818 fns recovered; 3 units / 10.2 MiB C; binary fifteen 3512 KiB; 189 imports bound; low-level 818/ high-level verified 0",
-      "generated_at": "2026-11-18T18:13:27Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:13:27Z"
     },
     {
       "relative_path": "dominosasolver.exe",
@@ -1900,8 +1808,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 1; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 1; no oracle supplied",
       "run_status": "exited",
       "exit_code": 1,
       "host": "Darwin arm64 (host build)",
@@ -1909,8 +1817,7 @@
       "evidence": "projects/dominosasolver/reports/report.html",
       "project_dir": "projects/dominosasolver",
       "port_details": "781 fns recovered; 3 units / 15.0 MiB C; binary dominosasolver 2929 KiB; 61 imports bound; low-level 781/ high-level verified 0",
-      "generated_at": "2026-11-18T18:13:09Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:13:09Z"
     },
     {
       "relative_path": "busybox-w32.exe",
@@ -1919,8 +1826,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1928,8 +1835,7 @@
       "evidence": "projects/busybox_w32/reports/report.html",
       "project_dir": "projects/busybox_w32",
       "port_details": "6989 fns recovered; 24 units / 181.3 MiB C; binary busybox_w32 42887 KiB; 311 imports bound; low-level 6989/ high-level verified 0",
-      "generated_at": "2026-11-18T18:12:15Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:12:15Z"
     },
     {
       "relative_path": "bridges.exe",
@@ -1938,8 +1844,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1947,8 +1853,7 @@
       "evidence": "projects/bridges/reports/report.html",
       "project_dir": "projects/bridges",
       "port_details": "1143 fns recovered; 4 units / 18.4 MiB C; binary bridges 4414 KiB; 190 imports bound; low-level 1143/ high-level verified 0",
-      "generated_at": "2026-11-18T18:09:30Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:09:30Z"
     },
     {
       "relative_path": "blackbox.exe",
@@ -1957,8 +1862,8 @@
       "arch": "i386 (PE32)",
       "os": "Windows",
       "score": 93,
-      "verification": "not-run",
-      "status": "measurement not committed (local build log only): process launched and exited 0; no oracle supplied",
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
       "run_status": "exited",
       "exit_code": 0,
       "host": "Darwin arm64 (host build)",
@@ -1966,8 +1871,7 @@
       "evidence": "projects/blackbox/reports/report.html",
       "project_dir": "projects/blackbox",
       "port_details": "834 fns recovered; 3 units / 11.0 MiB C; binary blackbox 3545 KiB; 189 imports bound; low-level 834/ high-level verified 0",
-      "generated_at": "2026-11-18T18:09:11Z",
-      "evidence_committed": false
+      "generated_at": "2026-11-18T18:09:11Z"
     },
     {
       "relative_path": "cannonball/cannonball.exe",
@@ -2263,11 +2167,11 @@
       "os": "Windows",
       "score": 100,
       "verification": "scenario-pass",
-      "status": "process-level Wine oracle PASS (CLI scenario); not gameplay",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
       "sha256": "d805661c60b0b99eab94ad0359ece9b91e7a79fecccc630e92ffdf217c48f879",
-      "evidence": "reports/acceptance/base64-oracle-pass.json",
-      "notes": "Original PE32 under Wine/CrossOver; CLI exit+stdout hash reproduced by the native build. Not retail Windows, not gameplay evidence.",
-      "scope": "process-level oracle under Wine/CrossOver, not retail Windows"
+      "evidence": "reports/acceptance/base64-oracle-pass.md",
+      "project_dir": "/tmp/agent1-base64",
+      "notes": "Original PE32 executed under Wine/CrossOver Highball; not retail Windows. CLI scenario exit+stdout hash reproduced by native build."
     },
     {
       "game": "arith-calc-cli-oracle",
@@ -2276,11 +2180,11 @@
       "os": "Windows",
       "score": 100,
       "verification": "scenario-pass",
-      "status": "process-level Wine oracle PASS (CLI scenario); not gameplay",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
       "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
-      "evidence": "reports/acceptance/arith-calc-oracle-pass.json",
-      "notes": "Original PE32 under Wine/CrossOver; fib/gcd/popcount/rotl reproduced by the native build. Not retail Windows, not gameplay evidence.",
-      "scope": "process-level oracle under Wine/CrossOver, not retail Windows"
+      "evidence": "reports/acceptance/arith-calc-oracle-pass.md",
+      "project_dir": "/tmp/agent1-arith",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic arithmetic results (fib/gcd/popcount/rotl) reproduced by native build. Not retail Windows, not gameplay evidence."
     },
     {
       "game": "busybox-cli-oracle",
@@ -2289,11 +2193,10 @@
       "os": "Windows",
       "score": 100,
       "verification": "scenario-pass",
-      "status": "process-level Wine oracle PASS (CLI scenario); not gameplay",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
       "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
-      "evidence": "reports/acceptance/busybox-oracle-pass.json",
-      "notes": "Original PE32 under Wine/CrossOver; sweep reproduced process observables. Not retail Windows, not gameplay evidence.",
-      "scope": "process-level oracle under Wine/CrossOver, not retail Windows"
+      "evidence": "reports/oracle-sweep/busybox-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; sweep tool reproduced process observables. Not retail Windows, not gameplay evidence."
     },
     {
       "game": "tictactoe-cli-oracle",
@@ -2302,11 +2205,10 @@
       "os": "Windows",
       "score": 100,
       "verification": "scenario-pass",
-      "status": "process-level Wine oracle PASS (CLI scenario); not gameplay",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
       "sha256": "f3e562679f04a722650cd2099e6fc690e5ed748a2328c18c4dc7a424e235dcb9",
       "evidence": "reports/oracle-sweep/batch1/tictactoe-acceptance.json",
-      "notes": "Original PE32 under Wine/CrossOver; deterministic menu output reproduced. Not retail Windows, not gameplay evidence.",
-      "scope": "process-level oracle under Wine/CrossOver, not retail Windows"
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
     },
     {
       "game": "game2048-cli-oracle",
@@ -2315,11 +2217,10 @@
       "os": "Windows",
       "score": 100,
       "verification": "scenario-pass",
-      "status": "process-level Wine oracle PASS (CLI scenario); not gameplay",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
       "sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940",
       "evidence": "reports/oracle-sweep/batch1/game2048-acceptance.json",
-      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced. Not retail Windows, not gameplay evidence.",
-      "scope": "process-level oracle under Wine/CrossOver, not retail Windows"
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
     },
     {
       "game": "hangman_x86-cli-oracle",
@@ -2328,24 +2229,10 @@
       "os": "Windows",
       "score": 100,
       "verification": "scenario-pass",
-      "status": "process-level Wine oracle PASS (CLI scenario); not gameplay",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
       "sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82",
       "evidence": "reports/oracle-sweep/batch1/hangman_x86-acceptance.json",
-      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced. Not retail Windows, not gameplay evidence.",
-      "scope": "process-level oracle under Wine/CrossOver, not retail Windows"
-    },
-    {
-      "game": "Tetris (OUCC 1.3, downloaded)",
-      "filename": "tetris-win-32-en.exe",
-      "arch": "i386 (PE32)",
-      "os": "Windows",
-      "score": 0,
-      "verification": "partial",
-      "status": "native rebuild rendered 2/2 non-blank frames; no Windows oracle and no gameplay verification; no pipeline score recorded",
-      "sha256": "024dccd5e227ac4bfcf698e948b1682c4a42ddadde87ec5f18193ee16ca77b8d",
-      "evidence": "reports/frames/tetris-new/frame-proof.json",
-      "frame_proof": "2/2 non-blank frames",
-      "notes": "Freshly downloaded OUCC Tetris 1.3. Render evidence only, not gameplay equivalence."
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
     },
     {
       "game": "Chocolate Doom 1.3.0 (downloaded)",

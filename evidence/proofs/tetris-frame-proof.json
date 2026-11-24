@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "game": "tetris-win-32-en.exe",
+  "source_url": "https://github.com/OUCC/tetris/releases/download/v1.3/tetris-win-32-en.exe",
+  "sha256": "024dccd5e227ac4bfcf698e948b1682c4a42ddadde87ec5f18193ee16ca77b8d",
+  "command": "python3 -m tools.game_runner --game tetris-new --binary <project>/build/tetris_win_32_en --folder ~/Downloads/recomp-new-tests --out /tmp/agent1-tetris-frames --timeout 15",
+  "classification": "PARTIAL - native render evidence, no Windows oracle/gameplay comparison",
+  "frames": [
+    {
+      "width": 310,
+      "height": 418,
+      "distinct_colors": 4,
+      "blank": false,
+      "source_bmp_sha256": "d62f04a00e3c16ac4f98a65834ff27181b769faa2162c109a5c8cfbadeb58640",
+      "committed_png": "docs/screenshots/native/tetris-oucc-new-01.png",
+      "committed_png_sha256": "faec4330a2ff5c7981425d7a5354b40461d81de453d2ab2229c59f8638b839a6"
+    },
+    {
+      "width": 310,
+      "height": 418,
+      "distinct_colors": 5,
+      "blank": false,
+      "source_bmp_sha256": "c0701ba5ec7f499d91a7b1782f81c65492537ccc90b934b5ec67b378566aace7",
+      "committed_png": "docs/screenshots/native/tetris-oucc-new-02.png",
+      "committed_png_sha256": "faec4330a2ff5c7981425d7a5354b40461d81de453d2ab2229c59f8638b839a6"
+    }
+  ],
+  "filename": "tetris-win-32-en.exe"
+}

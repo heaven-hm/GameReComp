@@ -13,7 +13,7 @@
 typedef struct {
     uint16_t e_magic;      /* 'MZ' = 0x5A4D */
     uint16_t e_cblp[29];   /* rest of the DOS header, unused */
-    int32_t  e_lfanew;     /* file offset of the PE signature */
+    uint32_t e_lfanew;     /* file offset of the PE signature (unsigned) */
 } pe_dos_header;
 
 typedef struct {
@@ -68,6 +68,13 @@ typedef struct {
     uint32_t FirstThunk;           /* RVA of the IAT */
 } pe_import_descriptor;
 
+/* ImgDelayDescr / IMAGE_DELAYLOAD_DESCRIPTOR, data directory 13. The IAT and
+ * INT are a thunk pair just like an ordinary import's; grAttrs bit 0 says the
+ * pointer fields are RVAs (VC7+), otherwise old linkers stored plain VAs. */
+typedef struct {
+    uint32_t grAttrs, szName, phmod, pIAT, pINT, pBoundIAT, pUnloadIAT, dwTimeStamp;
+} pe_delay_import_descriptor;
+
 typedef struct { uint32_t VirtualAddress, SizeOfBlock; } pe_base_reloc;
 
 /* The 32-bit TLS directory (DataDirectory[9]). AddressOfIndex is the VA of the
@@ -88,6 +95,8 @@ typedef struct {
 #define PE_DIR_RESOURCE  2
 #define PE_DIR_BASERELOC 5
 #define PE_DIR_TLS       9
+#define PE_DIR_DELAY_IMPORT 13
+#define PE_DELAY_ATTR_RVA 1u
 #define PE_REL_HIGHLOW   3
 #define PE_ORDINAL_FLAG  0x80000000u
 
