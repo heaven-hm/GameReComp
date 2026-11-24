@@ -1,0 +1,114 @@
+{
+  "exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+  "status": "MATCH",
+  "reason": "process-level MATCH: Unicorn and native replay agree; frida: PermissionDeniedError: unable to access process with pid 86596 from the current user account -- NOT a 100% compatibility claim",
+  "original_runner": "highball",
+  "matched_engines": [
+    "unicorn",
+    "native"
+  ],
+  "blocked_engines": [
+    "frida"
+  ],
+  "diverged_engines": [],
+  "claim": "CPU/process-level differential evidence only; not gameplay or frame equivalence and not a 100% compatibility claim",
+  "process_level_only": true,
+  "artifacts": {
+    "original": {
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+      "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6"
+    },
+    "native": {
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p6-native/arith-calc/build/arith_calc",
+      "sha256": "2107338c9df5308fd1d634f41cf222563a55c3226cf4292fa502bf1e7ef35b34"
+    }
+  },
+  "unicorn": {
+    "status": "OK",
+    "blocked_class": null,
+    "function": "0x4010a0",
+    "entry": "0x401b00",
+    "from_entry": false,
+    "section": ".text",
+    "cases": 8,
+    "seeds": [
+      "0x1",
+      "0x2",
+      "0x3",
+      "0x4",
+      "0x5",
+      "0x6",
+      "0x7",
+      "0x8"
+    ],
+    "named": [],
+    "distinct_eax": 7,
+    "nonvacuous": true,
+    "signatures": [
+      "{'regs': {'eax': 1, 'ecx': 1, 'edx': 0, 'ebx': 1, 'esp': 4460548, 'ebp': 0, 'esi': 1, 'edi': 1}, 'eflags': 582, 'mem': {}, 'fp_depth': 0, 'st': []}",
+      "{'regs': {'eax': 1, 'ecx': 2, 'edx': 0, 'ebx': 2, 'esp': 4460548, 'ebp': 0, 'esi': 2, 'edi': 2}, 'eflags': 582, 'mem': {}, 'fp_depth': 0, 'st': []}",
+      "{'regs': {'eax': 2, 'ecx': 1, 'edx': 0, 'ebx': 3, 'esp': 4460548, 'ebp': 0, 'esi': 3, 'edi': 3}, 'eflags': 582, 'mem': {}, 'fp_depth': 0, 'st': []}",
+      "{'regs': {'eax': 3, 'ecx': 2, 'edx': 0, 'ebx': 4, 'esp': 4460548, 'ebp': 0, 'esi': 4, 'edi': 4}, 'eflags': 582, 'mem': {}, 'fp_depth': 0, 'st': []}",
+      "{'regs': {'eax': 5, 'ecx': 1, 'edx': 0, 'ebx': 5, 'esp': 4460548, 'ebp': 0, 'esi': 5, 'edi': 5}, 'eflags': 582, 'mem': {}, 'fp_depth': 0, 'st': []}",
+      "{'regs': {'eax': 8, 'ecx': 2, 'edx': 0, 'ebx': 6, 'esp': 4460548, 'ebp': 0, 'esi': 6, 'edi': 6}, 'eflags': 582, 'mem': {}, 'fp_depth': 0, 'st': []}",
+      "{'regs': {'eax': 13, 'ecx': 1, 'edx': 0, 'ebx': 7, 'esp': 4460548, 'ebp': 0, 'esi': 7, 'edi': 7}, 'eflags': 582, 'mem': {}, 'fp_depth': 0, 'st': []}",
+      "{'regs': {'eax': 21, 'ecx': 2, 'edx': 0, 'ebx': 8, 'esp': 4460548, 'ebp': 0, 'esi': 8, 'edi': 8}, 'eflags': 582, 'mem': {}, 'fp_depth': 0, 'st': []}"
+    ]
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "PermissionDeniedError: unable to access process with pid 86596 from the current user account",
+    "script_sha256": "d981d7402c622f3c",
+    "runner": "highball",
+    "timeout_s": 5,
+    "killed_on_timeout": false,
+    "blocked_class": "environment"
+  },
+  "native": {
+    "original": {
+      "exit_code": 0,
+      "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+      "stdout_hash": "dc10bfee0bdb528994ae67cf9f5a8580f36447daf28b4744556ca178733fb38b",
+      "runner": "highball",
+      "command": [
+        "/Users/haseeb-mir/.local/bin/highball",
+        "run",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe"
+      ]
+    },
+    "native": {
+      "exit_code": 0,
+      "stdout_hash": "dc10bfee0bdb528994ae67cf9f5a8580f36447daf28b4744556ca178733fb38b"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [
+      "arith:start",
+      "primes<200=46",
+      "fib(20)=6765",
+      "gcd(1071,462)=21",
+      "popcount(0xF0F0F0F0)=16",
+      "rotl(0x12345678,8)=878082066",
+      "poly=12512",
+      "mul=-8369910",
+      "div=-18",
+      "mod=-141",
+      "arith:done"
+    ],
+    "native_lines": [
+      "arith:start",
+      "primes<200=46",
+      "fib(20)=6765",
+      "gcd(1071,462)=21",
+      "popcount(0xF0F0F0F0)=16",
+      "rotl(0x12345678,8)=878082066",
+      "poly=12512",
+      "mul=-8369910",
+      "div=-18",
+      "mod=-141",
+      "arith:done"
+    ],
+    "status": "MATCH"
+  },
+  "note": "CPU/process-level differential evidence only; not gameplay or frame equivalence and not a 100% compatibility claim"
+}

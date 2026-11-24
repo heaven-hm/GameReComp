@@ -21,6 +21,7 @@ SCREENSHOTS = ["evidence/screenshots/" + n for n in (
     "tetris-oucc-new-02.png")]
 EVIDENCE = ["evidence/README.md", "reports/frames/cavestory/frame-proof.json",
             "reports/frames/tetris-new/frame-proof.json", "reports/hybrid-tetris.json",
+            "reports/hybrid-arith-calc.json",
             "reports/oracle/base64-oracle.json", "reports/oracle/arith-calc-oracle.json"]
 
 
@@ -38,7 +39,7 @@ def check(root: Path) -> dict:
                 try:
                     doc = json.loads(data)
                     item["json_ok"] = True
-                    if rel == "reports/hybrid-tetris.json":
+                    if rel in ("reports/hybrid-tetris.json", "reports/hybrid-arith-calc.json"):
                         item["hybrid_status"] = doc.get("status")
                 except ValueError:
                     item["json_ok"] = False
@@ -47,6 +48,8 @@ def check(root: Path) -> dict:
     screenshots = [r for r in rows if r["path"].endswith(".png")]
     frame_proofs = [r for r in rows if "frame-proof" in r["path"]]
     hybrid = next((r for r in rows if r["path"] == "reports/hybrid-tetris.json"), None)
+    hybrid_arith = next((r for r in rows
+                         if r["path"] == "reports/hybrid-arith-calc.json"), None)
     gaps = [r["path"] for r in rows if not r["present"]]
     gaps += [r["path"] for r in frame_proofs if not r.get("json_ok", False)]
     return {
@@ -54,6 +57,7 @@ def check(root: Path) -> dict:
         "counts": {"checked": len(rows), "present": sum(1 for r in rows if r["present"]),
                    "screenshots": len(screenshots)},
         "hybrid_status": (hybrid or {}).get("hybrid_status", "MISSING"),
+        "hybrid_arith_status": (hybrid_arith or {}).get("hybrid_status", "MISSING"),
         "gaps": gaps,
         "classification": "EVIDENCE PRESENT - not 100% compatibility; see evidence/README.md",
         "rows": rows,
@@ -72,7 +76,8 @@ def main(argv=None) -> int:
         args.out.write_text(text)
     print(f"checked {doc['counts']['checked']} artifacts, "
           f"{doc['counts']['present']} present, {len(doc['gaps'])} gaps; "
-          f"hybrid={doc['hybrid_status']}")
+          f"hybrid(tetris)={doc['hybrid_status']}, "
+          f"hybrid(arith)={doc['hybrid_arith_status']}")
     for gap in doc["gaps"]:
         print(f"  GAP {gap}")
     return 0 if not doc["gaps"] else 1
