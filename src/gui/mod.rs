@@ -473,6 +473,31 @@ pub struct GameReCompApp {
     pub wasm_server_startup_error: Arc<Mutex<Option<(u64, String, Option<PathBuf>)>>>,
 }
 
+/// Prepare the shared pipeline options for a real (non-dry-run) "Run pipeline"
+/// start from the project workspace.
+///
+/// The Home screen reuses `App::opts` for both "Start recompiling" and
+/// "Dry-run plan". A dry-run used to leave `dry_run = true` behind, so a later
+/// "Run pipeline" on an opened project silently printed a plan and produced no
+/// binary, logs or launchable build. Clearing it here makes every real start
+/// explicit and keeps the backend command free of `--dry-run`.
+///
+/// Returns `false` when no original PE is configured, in which case the caller
+/// should show the "Missing executable" guidance instead of starting a job.
+pub fn prepare_active_project_options(
+    opts: &mut PipelineOptions,
+    project_dir: Option<&Path>,
+) -> bool {
+    if opts.pe_file.trim().is_empty() {
+        return false;
+    }
+    opts.dry_run = false;
+    if let Some(dir) = project_dir {
+        opts.project_dir = dir.display().to_string();
+    }
+    true
+}
+
 impl GameReCompApp {
     pub fn new(
         cfg: AppConfig,
@@ -1106,6 +1131,11 @@ impl GameReCompApp {
         self.picked_owned_checked = false;
         self.opts.pe_file.clear();
         self.opts.project_dir.clear();
+        // A "Dry-run plan" must not leak into the next real recompile. Every
+        // real start path clears this explicitly, but clearing it here too
+        // keeps the shared options object from carrying plan-only state
+        // across a pick -> open project -> Run pipeline flow.
+        self.opts.dry_run = false;
     }
 
     pub fn pick_pe_path(&mut self, path: PathBuf) {
@@ -1408,7 +1438,8 @@ impl GameReCompApp {
     }
 
     pub fn start_active_project_pipeline(&mut self, cx: &mut Context<Self>) {
-        if self.opts.pe_file.trim().is_empty() {
+        let mut opts = self.opts.clone();
+        if !prepare_active_project_options(&mut opts, self.active_project_dir.as_deref()) {
             self.push_toast(
                 "Missing executable",
                 "Set the Original PE executable path in Settings first.",
@@ -1417,10 +1448,6 @@ impl GameReCompApp {
             );
             cx.notify();
             return;
-        }
-        let mut opts = self.opts.clone();
-        if let Some(ref dir) = self.active_project_dir {
-            opts.project_dir = dir.display().to_string();
         }
         self.enqueue_or_start_pipeline(opts, cx);
     }
