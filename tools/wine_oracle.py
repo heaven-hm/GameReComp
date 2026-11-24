@@ -119,18 +119,34 @@ def run_original(wine: str | None, bottle: Path, exe: Path, args: list[str],
     try:
         out, err = proc.communicate(input=payload, timeout=timeout)
         rc = proc.returncode
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         try:
             os.killpg(proc.pid, 9)
         except OSError:
             proc.kill()
-        out, err = proc.communicate(timeout=10)
+        try:
+            out, err = proc.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            # Wine helpers may keep the inherited pipes open after the guest
+            # was killed. Keep the bytes captured so far and report BLOCKED;
+            # a timeout is never a successful run.
+            out = exc.output or ""
+            err = exc.stderr or ""
+            if isinstance(out, bytes):
+                out = out.decode("utf-8", "replace")
+            if isinstance(err, bytes):
+                err = err.decode("utf-8", "replace")
         rc = "TIMEOUT"
-    return {"exit_code": rc, "stdout": out or "", "stderr": err or "",
-            "sha256": sha, "command": cmd, "wine": wine,
-            "highball": highball if use_hb else None,
-            "runner": "highball" if use_hb else "wine-fallback",
-            "bottle": str(bottle)}
+    record = {"exit_code": rc, "stdout": out or "", "stderr": err or "",
+              "sha256": sha, "command": cmd, "wine": wine,
+              "highball": highball if use_hb else None,
+              "runner": "highball" if use_hb else "wine-fallback",
+              "bottle": str(bottle)}
+    if rc == "TIMEOUT":
+        record.update({"status": "BLOCKED", "blocked_class": "environment",
+                       "reason": "guest process and its Wine helpers timed out; "
+                                 "no verified stdout was produced"})
+    return record
 
 
 def oracle_from_run(run: dict, stdout_lines: int = 6,
