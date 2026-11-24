@@ -1,0 +1,60 @@
+{
+  "count": 9,
+  "results": {
+    "win64__bridges.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__bridges.exe"
+    },
+    "win64__galaxies.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__galaxies.exe"
+    },
+    "win64__keen.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__keen.exe"
+    },
+    "win64__netgame.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__netgame.exe"
+    },
+    "win64__rect.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__rect.exe"
+    },
+    "win64__tents.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__tents.exe"
+    },
+    "win64__towers.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__towers.exe"
+    },
+    "win64__tracks.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__tracks.exe"
+    },
+    "win64__unequal.exe": {
+      "engines": "BLOCKED",
+      "linux_to_windows": "BLOCKED",
+      "macos_to_windows": "BLOCKED",
+      "slug": "win64__unequal.exe"
+    }
+  },
+  "schema": 1
+}

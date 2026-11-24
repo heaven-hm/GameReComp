@@ -1,0 +1,113 @@
+{
+  "b1_arch": "pe32plus_x64",
+  "b1_detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x14001a264, delta 0, imports 194\\n'}",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__netgame.exe/bin_netgame",
+    "sha256": "a0742571c738e001b64132cc29851790484d7020cbdf9877fabaf101b7af8592",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win64__netgame.exe/status.json",
+    "evidence/corpus/win64__netgame.exe/report.json",
+    "evidence/corpus/win64__netgame.exe/build.log",
+    "evidence/corpus/win64__netgame.exe/frame-proof.json",
+    "evidence/corpus/win64__netgame.exe/summary.json",
+    "evidence/corpus/win64__netgame.exe/run.log",
+    "evidence/corpus/win64__netgame.exe/highball.log",
+    "evidence/corpus/win64__netgame.exe/native-frames.html"
+  ],
+  "cross_os_paths": {
+    "linux_to_windows_shared": {
+      "citation": "PR #176: evidence/corpus/_cross_os/PR176_LINUX_TO_WINDOWS_SOURCE_BUILD.md",
+      "status": "SHARED PROOF (PR #176)"
+    },
+    "windows_to_linux": {
+      "citation": "PR #175: evidence/corpus/_cross_os/PR175_LINUX_RUNNER_EVIDENCE.md (real ELF build+run of a generated project on a Linux host)",
+      "status": "NOT TESTED per target"
+    },
+    "x64_to_macos": {
+      "citation": "PR #174: evidence/corpus/_cross_os/PR174_X64_CORPUS_EVIDENCE.md",
+      "status": "PATH-LEVEL (PR #174)"
+    }
+  },
+  "engines": {
+    "frida": {
+      "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+      "script_sha256": "e95a6e07c56ce886",
+      "status": "BLOCKED"
+    },
+    "native": {
+      "args": [],
+      "native": {
+        "exit_code": 2,
+        "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_lines": [],
+      "original": {
+        "exit_code": 1,
+        "sha256": "9ec8d4af3c854194e604cec8bb9516c86f440751522da2499e4d9de15d3b376d",
+        "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "original_lines": [],
+      "reason": "exit 1 vs 2",
+      "status": "DIVERGED",
+      "stdin_bytes": 0
+    },
+    "note": "CPU/process-level evidence only; BLOCKED is never MATCH",
+    "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/win64/netgame.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; exit 1 vs 2",
+    "status": "BLOCKED",
+    "unicorn": {
+      "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/win64/netgame.exe: not PE32 (magic 0x20B)",
+      "status": "BLOCKED"
+    }
+  },
+  "exit": 2,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "linux_to_windows": {
+    "code": "NO_REAL_SOURCE",
+    "reason": "no real C source found; refusing to synthesise a source (source-level cross-build only, no ELF/Mach-O binary conversion)",
+    "roots": [
+      "/Users/haseeb-mir/Downloads/Other/gitHub_C/FloatMemory.c",
+      "/Users/haseeb-mir/Downloads/recomp-apps/win64"
+    ],
+    "status": "BLOCKED"
+  },
+  "macos_to_windows": {
+    "reason": "no generated C project available",
+    "status": "BLOCKED"
+  },
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__netgame.exe/bin_netgame",
+    "sha256": "a0742571c738e001b64132cc29851790484d7020cbdf9877fabaf101b7af8592",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win64__netgame.exe",
+  "snapshot": "2026-11-24T13:39:05",
+  "source": {
+    "exists": true,
+    "machine": "0x8664",
+    "magic": "MZ",
+    "pe_type": "PE32+",
+    "sha256": "9ec8d4af3c854194e604cec8bb9516c86f440751522da2499e4d9de15d3b376d",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/netgame.exe",
+  "source_rejected": false
+}

@@ -1,0 +1,42 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/hangman_x64.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; exit 0 vs 2",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/hangman_x64.exe: not PE32 (magic 0x20B)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": 0,
+      "sha256": "0addeb5ae85e793156e11cf387e20bb424a4df275641c71555ababd64d41a4d0",
+      "stdout_hash": "b21b606dff31fa9caeffa6ee586fd0def2a3010dd0d09fba57d3af6b79a83106"
+    },
+    "native": {
+      "exit_code": 2,
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [
+      "========================================",
+      "C99 HANGMAN WORD PUZZLE",
+      "========================================",
+      "+---+",
+      "|   |",
+      "|",
+      "|",
+      "|",
+      "|",
+      "========="
+    ],
+    "native_lines": [],
+    "status": "DIVERGED",
+    "reason": "exit 0 vs 2"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

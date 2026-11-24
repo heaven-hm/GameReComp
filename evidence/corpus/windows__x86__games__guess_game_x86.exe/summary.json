@@ -46,10 +46,10 @@
   "highball": {
     "command": "highball run guess_game_x86.exe",
     "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
-    "exit": 124,
+    "exit": 1,
     "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__guess_game_x86.exe/highball.log",
-    "bytes": 585359438,
-    "seconds": 28.8,
-    "tail": "r an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess\nmsync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n"
+    "bytes": 302,
+    "seconds": 0.3,
+    "tail": "Launching guess_game_x86.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T075042Z-Games-guess_game_x86.exe.log\n\n01a4:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
   }
 }

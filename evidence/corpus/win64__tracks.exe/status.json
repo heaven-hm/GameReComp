@@ -1,0 +1,16 @@
+{
+  "slug": "win64__tracks.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/tracks.exe",
+  "sha256": "a8d55e0dbb97c00f9690424827a289fd1a686947274e23c988f089e539c93974",
+  "size": 187976,
+  "is_game": true,
+  "started": 1795506769.5986738,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x14001b1a8, delta 0, imports 193\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__tracks.exe/bin_tracks",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__tracks.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__tracks.exe/report.json",
+  "seconds": 55.8
+}

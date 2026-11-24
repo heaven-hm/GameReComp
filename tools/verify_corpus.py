@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections import Counter
 import shutil
 import struct
 import time
@@ -252,6 +253,7 @@ def verify_one(rec: dict, snapshot: str) -> dict:
 
     # Copy only small verified evidence.  Binary files are never copied.
     edir = CORPUS / slug
+    edir.mkdir(parents=True, exist_ok=True)
     copied = []
     for srcp, name in [
         (b1dir / "status.json", "status.json"),
@@ -298,9 +300,93 @@ def verify_one(rec: dict, snapshot: str) -> dict:
         "binary_hash_mismatch": any("sha-256" in r.lower() for r in rejects),
         "snapshot": snapshot,
     }
+    # Dual-engine + cross-OS probe results (produced by tools/corpus_probe.py).
+    def probe_file(name):
+        p = edir / name
+        if p.is_file():
+            try:
+                return json.loads(p.read_text(errors="replace"))
+            except ValueError:
+                pass
+        return None
+
+    def ensure_probe(name: str, default: dict) -> dict:
+        found = probe_file(name)
+        if found is not None:
+            return found
+        (edir / name).write_text(json.dumps(default, indent=2) + "\n")
+        return default
+
+    eng = ensure_probe("engines.json", {
+        "status": "BLOCKED",
+        "reason": "not attempted: no verified native binary in this snapshot",
+        "unicorn": {"status": "BLOCKED", "reason": "no verified native binary in this snapshot"},
+        "frida": {"status": "BLOCKED", "reason": "no verified native binary in this snapshot"},
+        "native": {"status": "BLOCKED", "reason": "no verified native binary in this snapshot"},
+    })
+    out["engines"] = eng
+    out["macos_to_windows"] = ensure_probe("macos-to-windows.json", {
+        "status": "BLOCKED",
+        "reason": "no generated C project or no native build in this snapshot"})
+    out["linux_to_windows"] = ensure_probe("linux-to-windows.json", {
+        "status": "BLOCKED",
+        "reason": "not attempted in this snapshot: no real C source / no native build"})
+    out["cross_os_paths"] = {
+        "windows_to_linux": {
+            "status": "NOT TESTED per target",
+            "citation": "PR #175: evidence/corpus/_cross_os/PR175_LINUX_RUNNER_EVIDENCE.md "
+                        "(real ELF build+run of a generated project on a Linux host)",
+        },
+        "x64_to_macos": {
+            "status": ("PATH-LEVEL (PR #174)" if "64" in (out["b1_arch"] or "")
+                       else "N/A (x86 target)"),
+            "citation": "PR #174: evidence/corpus/_cross_os/PR174_X64_CORPUS_EVIDENCE.md",
+        },
+        "linux_to_windows_shared": {
+            "status": "SHARED PROOF (PR #176)",
+            "citation": "PR #176: evidence/corpus/_cross_os/PR176_LINUX_TO_WINDOWS_SOURCE_BUILD.md",
+        },
+    }
+
     out["classification"], out["rationale"] = classify(out)
     (edir / "verification.json").write_text(
         json.dumps(out, indent=2, sort_keys=True) + "\n")
+    return out
+
+
+def all_targets(records: list[dict]) -> list[dict]:
+    """Add every remaining PE executable in the tree as a fail-closed BLOCKED row.
+
+    The B1 batch is still running; a PE that has no B1 build record in this
+    snapshot is NOT silently skipped.  It is reported with the exact reason
+    that no native binary was produced in this snapshot.
+    """
+    import re
+    root = Path.home() / "Downloads" / "recomp-apps"
+    known = {r["pe_path"] for r in records}
+    out = list(records)
+    for exe in sorted(root.rglob("*.exe")):
+        real = str(exe.resolve())
+        if real in known or not exe.is_file():
+            continue
+        rel = exe.relative_to(root)
+        slug = re.sub(r"[^A-Za-z0-9._-]+", "__", str(rel)).strip("_")[:160]
+        info = pe_info(exe)
+        out.append({
+            "slug": slug,
+            "arch": "pe32plus_x64" if info.get("pe_type") == "PE32+"
+                    else "pe32_i386" if info.get("pe_type") == "PE32" else "unknown",
+            "pe_path": real,
+            "sha256": info.get("sha256"),
+            "size": exe.stat().st_size,
+            "is_game": "/games/" in real.lower(),
+            "status": "BLOCKED",
+            "detail": "no B1 build record in this snapshot (batch still running); "
+                      "not recompiled to native, so no native replay or frames",
+            "binary_path": None,
+            "log_path": None,
+            "report_path": None,
+        })
     return out
 
 
@@ -313,6 +399,7 @@ def main() -> int:
     # A frozen copy makes the report reproducible even while B1 keeps building.
     results_path = RESULTS_SNAPSHOT if RESULTS_SNAPSHOT.is_file() else B1 / "results.jsonl"
     records = [json.loads(line) for line in results_path.read_text().splitlines() if line.strip()]
+    records = all_targets(records)
     verified = [verify_one(rec, snapshot) for rec in records]
 
     CORPUS.mkdir(parents=True, exist_ok=True)
@@ -328,9 +415,11 @@ def main() -> int:
         "",
         f"Snapshot: `{snapshot}` (files under `b1-builds/` and `b2-tests/` change while agents run).",
         "",
-        "Scope: every target with a B1 build record under "
-        "`/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/results.jsonl`, "
-        "covering the whole `~/Downloads/recomp-apps` tree (games **and** apps). "
+        "Scope: **every `.exe` under `~/Downloads/recomp-apps`** (games **and** apps, "
+        "x86 PE32 and x64 PE32+). Targets with a B1 build record under "
+        "`/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/results.jsonl` "
+        "are reported from that record; the rest are fail-closed BLOCKED rows with the exact "
+        "reason that no native binary exists in this snapshot. "
         "No claim is copied from a B1/B2 report without re-deriving it from the actual file: "
         "source PE `MZ`+`PE\\0\\0`, native Mach-O magic, both SHA-256 digests, "
         "report.json/run.log presence, and frame contents (BMP pixels re-decoded here).",
@@ -342,10 +431,24 @@ def main() -> int:
         f"Targets with evidence: **{len(verified)}** "
         + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())),
         "",
+        "Dual-engine signals (attempted for every target, fail-closed): "
+        + "Unicorn " + str(dict(Counter(str(v["engines"].get("unicorn", {}).get("status")) for v in verified)))
+        + "; Frida " + str(dict(Counter(str(v["engines"].get("frida", {}).get("status")) for v in verified)))
+        + "; native replay " + str(dict(Counter(str(v["engines"].get("native", {}).get("status")) for v in verified)))
+        + ". Cross-OS source builds: macOS→Windows "
+        + str(dict(Counter(str(v["macos_to_windows"].get("status")) for v in verified)))
+        + "; Linux→Windows "
+        + str(dict(Counter(str(v["linux_to_windows"].get("status")) for v in verified)))
+        + ".",
+        "",
+        "No row is marked PASS: neither differential engine returned a MATCH, so native replay "
+        "MATCHes alone cannot certify equivalence. The strongest label is PARTIAL, based solely on "
+        "independently proven non-blank frames.",
+        "",
         "## Per-target table",
         "",
-        "| Name | Source exe | Architecture | Build status | Native binary SHA-256 | Launch exit | Frames | Non-blank | Screenshots (relative) | Logs (relative) | Classification | Rationale |",
-        "|---|---|---|---|---|---|---:|---:|---|---|---|---|",
+        "| Name | Source exe | Architecture | Build status | Native binary SHA-256 | Launch exit | Frames | Non-blank | Screenshots (relative) | Logs (relative) | Unicorn | Frida | Native replay | macOS→Windows | Linux→Windows | Windows→Linux | x64→macOS | Classification | Rationale |",
+        "|---|---|---|---|---|---|---:|---:|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for v in verified:
         def cell_paths(paths, limit=4):
@@ -362,12 +465,32 @@ def main() -> int:
             f"evidence/corpus/{v['slug']}/run.log",
             "evidence/corpus/{slug}/frame-proof.json".format(slug=v["slug"]),
             "evidence/corpus/{slug}/report.json".format(slug=v["slug"]),
+            "evidence/corpus/{slug}/highball.log".format(slug=v["slug"]),
         ]
         others = [p for p in v["copied"] if p.endswith((".log", ".json", ".html"))]
         logs = [verification_path] + [p for p in preferred if p in others]
         logs += [p for p in others if p not in logs]
+        def status_cell(rec, key):
+            if not isinstance(rec, dict):
+                return "BLOCKED"
+            status = rec.get("status") or rec.get("code") or "UNKNOWN"
+            reason = rec.get("reason") or ""
+            return md_cell(f"{status} — {reason[:70]}") if reason else md_cell(status)
+
+        s = v["slug"]
+        eng = v["engines"]
+        u = eng.get("unicorn") if isinstance(eng, dict) else None
+        f = eng.get("frida") if isinstance(eng, dict) else None
+        n = eng.get("native") if isinstance(eng, dict) else None
+        mw = v["macos_to_windows"]
+        lw = v["linux_to_windows"]
+        x64p = v["cross_os_paths"]["x64_to_macos"]
+        wl = v["cross_os_paths"]["windows_to_linux"]
         lines.append(
-            "| {name} | `{src}` | {arch} | {build} | `{sha}` | {exit} | {frames} | {nb} | {shots} | {logs} | **{cls}** | {why} |".format(
+            "| {name} | `{src}` | {arch} | {build} | `{sha}` | {exit} | {frames} | {nb} | {shots} | {logs} | "
+            "{uni} `evidence/corpus/{s}/engines.json` | {frida} | {nat} | {m2w} `evidence/corpus/{s}/macos-to-windows.json` | "
+            "{l2w} `evidence/corpus/{s}/linux-to-windows.json` | {w2l} `evidence/corpus/_cross_os/PR175_LINUX_RUNNER_EVIDENCE.md` | "
+            "{x2m} `evidence/corpus/_cross_os/PR174_X64_CORPUS_EVIDENCE.md` | **{cls}** | {why} |".format(
                 name=md_cell(Path(v["source_exe"]).name),
                 src=md_cell(v["source_exe"]),
                 arch=md_cell(arch),
@@ -377,7 +500,15 @@ def main() -> int:
                 frames=v["frames_verified"],
                 nb=v["nonblank_verified"],
                 shots=cell_paths(v["screenshots"]),
-                logs=cell_paths(logs),
+                logs=cell_paths(logs, limit=5),
+                uni=status_cell(u, "unicorn"),
+                frida=status_cell(f, "frida"),
+                nat=status_cell(n, "native"),
+                m2w=status_cell(mw, "macos_to_windows"),
+                l2w=status_cell(lw, "linux_to_windows"),
+                w2l=md_cell(wl["status"]),
+                x2m=md_cell(x64p["status"]),
+                s=s,
                 cls=v["classification"],
                 why=md_cell(v["rationale"]),
             ))
@@ -406,6 +537,16 @@ def main() -> int:
         "Timeouts and missing DLLs are negative results; they do not establish equivalence.",
         "- A B1 `BUILD-ONLY` status stays BUILD-ONLY even if a later test run launched the binary: "
         "the run/verify stages of the pipeline were not executed.",
+        "- Dual-engine columns are fail-closed. `BLOCKED` means the engine was attempted and returned "
+        "an exact reason (Unicorn cannot map many original entry states; live Frida on this macOS host "
+        "returns `NotSupportedError: unexpected error while probing dyld of target process`, consistent "
+        "with taskgated/SIP). `MATCH` from native replay alone is **not** upgraded to PASS when either "
+        "differential engine is blocked.",
+        "- Cross-OS columns are source-level only. `tools/win32_crossbuild.py` (macOS→Windows) fails on "
+        "POSIX `win32hle`/SDL2 headers for generated game projects; `tools/linux_to_windows.py` "
+        "(PR #176) is BLOCKED with `NO_REAL_SOURCE` where no real C source exists, while PR #176's "
+        "shared proof shows a real host C source building to PE32/PE32+ and printing stdout under Wine. "
+        "Windows→Linux (PR #175) and x64→macOS (PR #174) are path-level citations, not per-target passes.",
         "- No game binary, generated project tree or full-size frame is vendored into this repository; "
         "only small logs, JSON reports and downscaled PNG previews are copied.",
         "",
@@ -413,6 +554,8 @@ def main() -> int:
         "",
         "```sh",
         "cp <b1-builds>/results.jsonl reports/b1_results_snapshot.jsonl",
+        "python3 tools/verify_corpus.py",
+        "python3 tools/run_corpus_verification.py",
         "python3 tools/verify_corpus.py",
         "python3 -m pytest tests/test_corpus_final_report.py -q",
         "```",

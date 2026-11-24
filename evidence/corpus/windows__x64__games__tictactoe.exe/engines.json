@@ -1,0 +1,39 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tictactoe.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; exit 0 vs 2",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tictactoe.exe: not PE32 (magic 0x20B)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": 0,
+      "sha256": "bfc12319beeda7a3029a055e4cdf25b5fc9e13b05a772f11403767effdb9e23c",
+      "stdout_hash": "d39f19fbf0d63fee9ebfedb913bf0eb05d952af2b8ddde04d979cf7e257a83c4"
+    },
+    "native": {
+      "exit_code": 2,
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [
+      "=== Tic-Tac-Toe AI (You: X, AI: O) ===",
+      "1 | 2 | 3",
+      "---|---|---",
+      "4 | 5 | 6",
+      "---|---|---",
+      "7 | 8 | 9",
+      "Enter move (1-9): Game ended in a Draw!"
+    ],
+    "native_lines": [],
+    "status": "DIVERGED",
+    "reason": "exit 0 vs 2"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

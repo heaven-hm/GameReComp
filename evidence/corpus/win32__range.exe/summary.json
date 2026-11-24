@@ -1,7 +1,8 @@
 {
   "game": "win32__range.exe",
   "status": "BLOCKED",
-  "reason": "no native binary found in build dir yet",
+  "reason": "no native binary found in build dir yet (B1 status: timeout after 900s)",
+  "b1_status_detail": "timeout after 900s",
   "native_binary": null,
   "exit": null,
   "frames": 0,

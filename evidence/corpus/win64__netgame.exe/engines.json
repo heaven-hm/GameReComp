@@ -1,0 +1,31 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/win64/netgame.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; exit 1 vs 2",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/win64/netgame.exe: not PE32 (magic 0x20B)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": 1,
+      "sha256": "9ec8d4af3c854194e604cec8bb9516c86f440751522da2499e4d9de15d3b376d",
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native": {
+      "exit_code": 2,
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [],
+    "native_lines": [],
+    "status": "DIVERGED",
+    "reason": "exit 1 vs 2"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

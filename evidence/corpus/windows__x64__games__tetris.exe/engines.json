@@ -1,0 +1,42 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tetris.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; exit 0 vs 2",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tetris.exe: not PE32 (magic 0x20B)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": 0,
+      "sha256": "d210fa37f717b03fb06839ac6de2067694b48ac305753ea8aefbb7c81e4d1b61",
+      "stdout_hash": "5b64ef56e567848f0a80b46c60a096043b9b91738540a12c8edd715e5fab4f29"
+    },
+    "native": {
+      "exit_code": 2,
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [
+      "=== Minimalist Tetris (Score: 0) ===",
+      "############",
+      "#          #",
+      "#          #",
+      "#          #",
+      "#          #",
+      "#          #",
+      "#          #",
+      "#          #",
+      "#          #"
+    ],
+    "native_lines": [],
+    "status": "DIVERGED",
+    "reason": "exit 0 vs 2"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

@@ -1,0 +1,55 @@
+{
+  "game": "win64__signpost.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__signpost.exe/signpost",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win64/signpost.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win64",
+  "arch": "PE32+ x64",
+  "match_reason": "path partial match",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__signpost.exe",
+  "native": {
+    "game": "win64__signpost.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__signpost.exe/signpost",
+    "binary_sha256": "34e7ec684e819465961a4780dc03fb2027b41e0dbf2819fbec8506652533b3f4",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win64",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__signpost.exe/signpost"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__signpost.exe/screenshots"
+    },
+    "exit_code": 2,
+    "stdout_tail": "usage: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__signpost.exe/signpost <pe32plus.exe>\n",
+    "seconds": 0.0,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__signpost.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win64__signpost.exe  exit=      2 frames=0 0.0s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 2,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__signpost.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run signpost.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win64",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win64__signpost.exe/highball.log",
+    "bytes": 290,
+    "seconds": 0.2,
+    "tail": "Launching signpost.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T075106Z-Games-signpost.exe.log\n\n0158:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
+  }
+}

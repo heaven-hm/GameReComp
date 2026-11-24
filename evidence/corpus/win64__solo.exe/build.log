@@ -1,0 +1,36 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win64/solo.exe
+arch=pe32plus_x64 sha256=26b01b71ca8eeac124aed7cbcc8975ab39f665b91cfa65583a440441cade0c60
+host=macos/arm64
+======================================================================
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/disasm/disasm64.py /Users/haseeb-mir/Downloads/recomp-apps/win64/solo.exe -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/funcs.json --funcs-txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/funcs.txt
+[*] solo.exe: base=0x140000000, 1 exec sections, 134,982 code bytes
+[*] seeds: pdata=215, guard_cf=0, exports=0, entry=1, reloc=68, thunk=2, funclet=2, chunks=0
+[*] functions: 304 (37 thunks)
+
+[exit 0 in 1.4s]
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/lift/generate64.py /Users/haseeb-mir/Downloads/recomp-apps/win64/solo.exe /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/funcs.txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/gen
+[*] image base 0x140000000, entry 0x1400214a4, 7 sections
+[*] catalog: 304 functions
+[*] imports: 192 IAT slots
+[*] closure round 1: +25 dispatch targets not in the catalog
+[*] closure round 2: +15 dispatch targets not in the catalog
+[*] closure round 3: +13 dispatch targets not in the catalog
+[*] closure round 4: +5 dispatch targets not in the catalog
+[*] closure round 5: +1 dispatch targets not in the catalog
+[*] catalog closed after 6 rounds, 59 entries added (363 total)
+
+[*] === COMPLETE in 2s ===
+[*] image_base           0x140000000
+[*] entry_point          0x1400214a4
+[*] size_of_image        212992
+[*] functions            363
+[*] translation_units    1
+[*] lift_errors          0
+[*] recomp_todo_sites    44
+[*] imports              192
+
+[exit 0 in 2.6s]
+
+$ clang -target arm64-apple-macos11 -O1 -w -I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/gen -I/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu/cpu64.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/runner64_generic.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/gen/recomp_funcs_0000.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/gen/recomp_dispatch.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/gen/recomp_imports.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__solo.exe/solo
