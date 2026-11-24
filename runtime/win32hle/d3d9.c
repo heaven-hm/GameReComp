@@ -7,9 +7,17 @@
  * mode via hle_dd_mode(); anything needing a rasteriser returns
  * D3DERR_NOTAVAILABLE. Presentation stays in d3d7.c/ddraw.c.
  *
+ * IDirect3DVertexBuffer9 / IDirect3DIndexBuffer9 objects are frontend-only
+ * resources too: they own a descriptor and a device reference, expose the
+ * correct 14-slot public vtables and real refcounting, and describe themselves
+ * through GetDevice/GetPriority/GetType/GetDesc. Lock and every other
+ * rasteriser-dependent method stay NOTAVAILABLE; no guest data is rasterised.
+ *
  * Vtable order and argument counts were derived from wine-mirror/wine
- * include/d3d9.h at commit 97027f879ba9a36dbe594720d4710818536e5433 (IDirect3D9 and IDirect3DDevice9).
- * No Wine code was copied: only the public ABI layout is encoded below.
+ * include/d3d9.h and include/d3d9types.h at commit
+ * 97027f879ba9a36dbe594720d4710818536e5433 (IDirect3D9, IDirect3DDevice9,
+ * IDirect3DVertexBuffer9, IDirect3DIndexBuffer9). No Wine code was copied: only
+ * the public ABI layout is encoded below.
  */
 #include "win32hle.h"
 
@@ -22,6 +30,12 @@
 #define D3DENUM_WHQL_LEVEL     0x2u
 #define D3DFMT_R5G6B5          23u
 #define D3DFMT_X8R8G8B8        22u
+#define D3DFMT_VERTEXDATA      100u
+#define D3DFMT_INDEX16         101u
+#define D3DFMT_INDEX32         102u
+#define D3DPOOL_SCRATCH        3u
+#define D3DRTYPE_VERTEXBUFFER  6u
+#define D3DRTYPE_INDEXBUFFER   7u
 
 /* D3DADAPTER_IDENTIFIER9 is 512+512+32 bytes of fixed char arrays, a
  * LARGE_INTEGER, four DWORDs, a 16-byte GUID and a final WHQL DWORD = 1100
@@ -44,6 +58,31 @@ static const uint8_t d3d9_iid_device9[16] = {
     0x96, 0x3B, 0x22, 0xD0, 0x7A, 0xBF, 0xFD, 0x43,
     0x92, 0xBD, 0xA4, 0x3B, 0x0D, 0x82, 0xB9, 0xEB
 };
+static const uint8_t d3d9_iid_resource9[16] = {
+    0x5D, 0xC0, 0xEE, 0x05, 0x7D, 0x8F, 0x62, 0x43,
+    0xB9, 0x99, 0xD1, 0xBA, 0xF3, 0x57, 0xC7, 0x04
+};
+static const uint8_t d3d9_iid_vertexbuffer9[16] = {
+    0xB5, 0xB1, 0x4B, 0xB6, 0x70, 0xFD, 0xF6, 0x4D,
+    0xBF, 0x91, 0x19, 0xD0, 0xA1, 0x24, 0x55, 0xE3
+};
+static const uint8_t d3d9_iid_indexbuffer9[16] = {
+    0x5E, 0xD6, 0x9D, 0x7C, 0xF7, 0xD3, 0x29, 0x45,
+    0xAC, 0xEE, 0x78, 0x58, 0x30, 0xAC, 0xDE, 0x35
+};
+
+/* Frontend state of an IDirect3DVertexBuffer9 / IDirect3DIndexBuffer9 object:
+ * vtable pointer, refcount, owning device (with one reference held by the
+ * resource), type,
+ * priority, byte length, usage, format-or-FVF, pool. hle_com_new zeroes it. */
+#define D3D9_RES_DEVICE    8u
+#define D3D9_RES_TYPE      12u
+#define D3D9_RES_PRIORITY  16u
+#define D3D9_RES_LENGTH    20u
+#define D3D9_RES_USAGE     24u
+#define D3D9_RES_FMT_FVF   28u
+#define D3D9_RES_POOL      32u
+#define D3D9_RES_SIZE      40u
 
 static int d3d9_trace(void) {
     static int on = -1;
@@ -78,13 +117,16 @@ static void d3d9_d3d_qi(void) {
     RET(hr, 3);
 }
 static void d3d9_d3d_addref(void) { RET(++MEM32(A32(0) + 4), 1); }
-static void d3d9_d3d_release(void) {
-    uint32_t self = A32(0), r = MEM32(self + 4);
+/* One decrement-and-destroy path for every frontend object, so a resource's
+ * final Release can also drop the device reference it owns. */
+static uint32_t d3d9_drop_ref(uint32_t self) {
+    uint32_t r = MEM32(self + 4u);
     if (r) r--;
-    MEM32(self + 4) = r;
+    MEM32(self + 4u) = r;
     if (!r) hle_com_free(self);
-    RET(r, 1);
+    return r;
 }
+static void d3d9_d3d_release(void) { RET(d3d9_drop_ref(A32(0)), 1); }
 static void d3d9_dev_qi(void) {
     static const uint8_t *const ids[] = { d3d9_iid_unknown, d3d9_iid_device9 };
     uint32_t iid = A32(1), out = A32(2);
@@ -93,12 +135,166 @@ static void d3d9_dev_qi(void) {
     RET(hr, 3);
 }
 static void d3d9_dev_addref(void) { RET(++MEM32(A32(0) + 4), 1); }
-static void d3d9_dev_release(void) {
-    uint32_t self = A32(0), r = MEM32(self + 4);
-    if (r) r--;
-    MEM32(self + 4) = r;
-    if (!r) hle_com_free(self);
+static void d3d9_dev_release(void) { RET(d3d9_drop_ref(A32(0)), 1); }
+
+/* ---- frontend resource objects -----------------------------------------
+ * A vertex/index buffer is a descriptor in guest memory, not a GPU allocation:
+ * there is no rasteriser and no host memory backing. Everything a guest can
+ * legitimately ask about a descriptor without one (IUnknown identity, owning
+ * device, priority, resource type and the buffer DESC) is answered directly.
+ * Lock/Unlock/private data keep their real stdcall purges and return
+ * D3DERR_NOTAVAILABLE rather than pretending to store pixels or vertices. */
+static void d3d9_vb_qi(void) {
+    static const uint8_t *const ids[] = {
+        d3d9_iid_unknown, d3d9_iid_resource9, d3d9_iid_vertexbuffer9
+    };
+    uint32_t iid = A32(1), out = A32(2);
+    uint32_t hr = d3d9_qi(A32(0), iid, out, ids, 3) ? D3D_OK : E_NOINTERFACE;
+    if (!iid || !out) hr = E_POINTER;
+    RET(hr, 3);
+}
+static void d3d9_ib_qi(void) {
+    static const uint8_t *const ids[] = {
+        d3d9_iid_unknown, d3d9_iid_resource9, d3d9_iid_indexbuffer9
+    };
+    uint32_t iid = A32(1), out = A32(2);
+    uint32_t hr = d3d9_qi(A32(0), iid, out, ids, 3) ? D3D_OK : E_NOINTERFACE;
+    if (!iid || !out) hr = E_POINTER;
+    RET(hr, 3);
+}
+static void d3d9_res_addref(void) { RET(++MEM32(A32(0) + 4u), 1); }
+static void d3d9_res_release(void) {
+    uint32_t self = A32(0), dev = MEM32(self + D3D9_RES_DEVICE);
+    uint32_t r = d3d9_drop_ref(self);
+    /* The resource owned one device reference from the moment it was created;
+     * releasing the last resource reference gives it back. */
+    if (!r && dev) (void)d3d9_drop_ref(dev);
     RET(r, 1);
+}
+static void d3d9_res_get_device(void) {
+    uint32_t out = A32(1);
+    if (!out) RET(E_POINTER, 2);
+    uint32_t dev = MEM32(A32(0) + D3D9_RES_DEVICE);
+    MEM32(out) = dev;
+    if (dev) MEM32(dev + 4u)++;
+    RET(dev ? D3D_OK : D3DERR_NOTAVAILABLE, 2);
+}
+static void d3d9_res_set_priority(void) {
+    uint32_t self = A32(0), old = MEM32(self + D3D9_RES_PRIORITY);
+    MEM32(self + D3D9_RES_PRIORITY) = A32(1);
+    RET(old, 2);                                /* returns the previous priority */
+}
+static void d3d9_res_get_priority(void) { RET(MEM32(A32(0) + D3D9_RES_PRIORITY), 1); }
+static void d3d9_res_preload(void) { RETV(1); }
+static void d3d9_res_get_type(void) { RET(MEM32(A32(0) + D3D9_RES_TYPE), 1); }
+
+static void d3d9_vb_get_desc(void) {
+    uint32_t out = A32(1);
+    if (!out) RET(E_POINTER, 2);
+    uint32_t self = A32(0);
+    /* D3DVERTEXBUFFER_DESC: Format, Type, Usage, Pool, Size, FVF = 24 bytes. */
+    for (unsigned i = 0; i < 24u; i += 4u) MEM32(out + i) = 0u;
+    MEM32(out)       = D3DFMT_VERTEXDATA;
+    MEM32(out + 4u)  = MEM32(self + D3D9_RES_TYPE);
+    MEM32(out + 8u)  = MEM32(self + D3D9_RES_USAGE);
+    MEM32(out + 12u) = MEM32(self + D3D9_RES_POOL);
+    MEM32(out + 16u) = MEM32(self + D3D9_RES_LENGTH);
+    MEM32(out + 20u) = MEM32(self + D3D9_RES_FMT_FVF);
+    RET(D3D_OK, 2);
+}
+static void d3d9_ib_get_desc(void) {
+    uint32_t out = A32(1);
+    if (!out) RET(E_POINTER, 2);
+    uint32_t self = A32(0);
+    /* D3DINDEXBUFFER_DESC: Format, Type, Usage, Pool, Size = 20 bytes. */
+    for (unsigned i = 0; i < 20u; i += 4u) MEM32(out + i) = 0u;
+    MEM32(out)       = MEM32(self + D3D9_RES_FMT_FVF);
+    MEM32(out + 4u)  = MEM32(self + D3D9_RES_TYPE);
+    MEM32(out + 8u)  = MEM32(self + D3D9_RES_USAGE);
+    MEM32(out + 12u) = MEM32(self + D3D9_RES_POOL);
+    MEM32(out + 16u) = MEM32(self + D3D9_RES_LENGTH);
+    RET(D3D_OK, 2);
+}
+
+/* The 14 entries are IUnknown (3) + IDirect3DResource9 (8) + the buffer's own
+ * Lock/Unlock/GetDesc (3), in the order declared in Wine's public d3d9.h. */
+#define D3D9_RESOURCE_METHODS(X, P, QI, GD) \
+    X(P "::QueryInterface", QI, 3) \
+    X(P "::AddRef", d3d9_res_addref, 1) \
+    X(P "::Release", d3d9_res_release, 1) \
+    X(P "::GetDevice", d3d9_res_get_device, 2) \
+    X(P "::SetPrivateData", d3d9_na5, 5) \
+    X(P "::GetPrivateData", d3d9_na4, 4) \
+    X(P "::FreePrivateData", d3d9_na2, 2) \
+    X(P "::SetPriority", d3d9_res_set_priority, 2) \
+    X(P "::GetPriority", d3d9_res_get_priority, 1) \
+    X(P "::PreLoad", d3d9_res_preload, 1) \
+    X(P "::GetType", d3d9_res_get_type, 1) \
+    X(P "::Lock", d3d9_na5, 5) \
+    X(P "::Unlock", d3d9_na1, 1) \
+    X(P "::GetDesc", GD, 2)
+
+#define D3D9_RESOURCE_ENTRY(name, fn, argc) { name, fn },
+static const win32hle_shim d3d9_vb_methods[] = {
+    D3D9_RESOURCE_METHODS(D3D9_RESOURCE_ENTRY, "D3D9::VertexBuffer",
+                          d3d9_vb_qi, d3d9_vb_get_desc)
+    { 0, 0 }
+};
+static const win32hle_shim d3d9_ib_methods[] = {
+    D3D9_RESOURCE_METHODS(D3D9_RESOURCE_ENTRY, "D3D9::IndexBuffer",
+                          d3d9_ib_qi, d3d9_ib_get_desc)
+    { 0, 0 }
+};
+static uint32_t d3d9_vb_vt(void) {
+    static uint32_t vt;
+    if (!vt) vt = hle_com_vtable(d3d9_vb_methods);
+    return vt;
+}
+static uint32_t d3d9_ib_vt(void) {
+    static uint32_t vt;
+    if (!vt) vt = hle_com_vtable(d3d9_ib_methods);
+    return vt;
+}
+
+static uint32_t d3d9_new_buffer(uint32_t dev, uint32_t vt, uint32_t type,
+                                uint32_t length, uint32_t usage, uint32_t fmt,
+                                uint32_t pool, uint32_t out) {
+    uint32_t obj = hle_com_new(vt, D3D9_RES_SIZE);
+    if (!obj) return D3DERR_NOTAVAILABLE;
+    MEM32(obj + D3D9_RES_DEVICE) = dev;
+    MEM32(obj + D3D9_RES_TYPE) = type;
+    MEM32(obj + D3D9_RES_LENGTH) = length;
+    MEM32(obj + D3D9_RES_USAGE) = usage;
+    MEM32(obj + D3D9_RES_FMT_FVF) = fmt;
+    MEM32(obj + D3D9_RES_POOL) = pool;
+    /* Device outlives its resources: the resource owns one reference. */
+    MEM32(dev + 4u)++;
+    MEM32(out) = obj;
+    if (d3d9_trace()) fprintf(stderr, "[d3d9] buffer -> %08x (frontend, no rasteriser)\n", obj);
+    return D3D_OK;
+}
+
+/* CreateVertexBuffer(Length, Usage, FVF, Pool, ppVertexBuffer, pSharedHandle)
+ * and CreateIndexBuffer(Length, Usage, Format, Pool, ppIndexBuffer,
+ * pSharedHandle) both take six arguments after `this`: ret + this + 6 = 7
+ * words. Shared resources need a rasteriser this frontend does not have. */
+static void d3d9_dev_create_vb(void) {
+    uint32_t out = A32(5);
+    if (!out) RET(E_POINTER, 7);
+    MEM32(out) = 0;
+    if (!A32(1) || A32(4) > D3DPOOL_SCRATCH || A32(6)) RET(D3DERR_INVALIDCALL, 7);
+    RET(d3d9_new_buffer(A32(0), d3d9_vb_vt(), D3DRTYPE_VERTEXBUFFER,
+                        A32(1), A32(2), A32(3), A32(4), out), 7);
+}
+static void d3d9_dev_create_ib(void) {
+    uint32_t out = A32(5);
+    if (!out) RET(E_POINTER, 7);
+    MEM32(out) = 0;
+    if (!A32(1) || A32(4) > D3DPOOL_SCRATCH || A32(6) ||
+        (A32(3) != D3DFMT_INDEX16 && A32(3) != D3DFMT_INDEX32))
+        RET(D3DERR_INVALIDCALL, 7);
+    RET(d3d9_new_buffer(A32(0), d3d9_ib_vt(), D3DRTYPE_INDEXBUFFER,
+                        A32(1), A32(2), A32(3), A32(4), out), 7);
 }
 
 /* One virtual adapter; geometry is the shared display mode, never a host GL
@@ -169,8 +365,9 @@ static void d3d9_d3d_get_adapter_identifier(void) {
 }
 
 /* A device object exists so guests can inspect IDirect3DDevice9's vtable and
- * reference counting, but it owns no rasteriser: all 116 non-IUnknown entries
- * answer D3DERR_NOTAVAILABLE with their real stdcall purge count. */
+ * reference counting, but it owns no rasteriser: apart from the two frontend
+ * buffer factories, all non-IUnknown entries answer D3DERR_NOTAVAILABLE with
+ * their real stdcall purge count. */
 static uint32_t d3d9_device_vt(void);
 static void d3d9_d3d_create_device(void) {
     uint32_t out = A32(6);
@@ -233,8 +430,8 @@ static void d3d9_d3d_create_device(void) {
     X("D3D9::Device::CreateTexture", d3d9_na9, 9) \
     X("D3D9::Device::CreateVolumeTexture", d3d9_na10, 10) \
     X("D3D9::Device::CreateCubeTexture", d3d9_na8, 8) \
-    X("D3D9::Device::CreateVertexBuffer", d3d9_na7, 7) \
-    X("D3D9::Device::CreateIndexBuffer", d3d9_na7, 7) \
+    X("D3D9::Device::CreateVertexBuffer", d3d9_dev_create_vb, 7) \
+    X("D3D9::Device::CreateIndexBuffer", d3d9_dev_create_ib, 7) \
     X("D3D9::Device::CreateRenderTarget", d3d9_na9, 9) \
     X("D3D9::Device::CreateDepthStencilSurface", d3d9_na9, 9) \
     X("D3D9::Device::UpdateSurface", d3d9_na5, 5) \
