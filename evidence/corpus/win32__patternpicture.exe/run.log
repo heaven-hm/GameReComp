@@ -1,0 +1,6 @@
+[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__patternpicture.exe/screenshots, at most one every 500 ms
+[pe] <embedded image> mapped at 0x00400000, span 0x2C000
+[pe] static TLS: template 0x0040F000..0x0040F004 (+0 zero), index 0
+[pe] bound 64 imports, 0 unresolved
+[host] C:\patternpicture.exe booted: entry 0x00401460, 0 unresolved imports
+fatal error: allocation too large

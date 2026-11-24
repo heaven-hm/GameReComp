@@ -1,0 +1,6 @@
+[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__fifteensolver.exe/screenshots, at most one every 500 ms
+[pe] <embedded image> mapped at 0x00400000, span 0x2A000
+[pe] static TLS: template 0x0040D000..0x0040D004 (+0 zero), index 0
+[pe] bound 58 imports, 0 unresolved
+[host] C:\fifteensolver.exe booted: entry 0x00401460, 0 unresolved imports
+usage: C:\fifteensolver.exe [-g | -v] <game_id>

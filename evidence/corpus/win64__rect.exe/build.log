@@ -1,0 +1,37 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win64/rect.exe
+arch=pe32plus_x64 sha256=0e727e5af58679c81ebd5a755b393e4261de62ff3cf45359c88dfe2cadee93ba
+host=macos/arm64
+======================================================================
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/disasm/disasm64.py /Users/haseeb-mir/Downloads/recomp-apps/win64/rect.exe -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/funcs.json --funcs-txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/funcs.txt
+[*] rect.exe: base=0x140000000, 1 exec sections, 101,206 code bytes
+[*] seeds: pdata=184, guard_cf=0, exports=0, entry=1, reloc=64, thunk=2, funclet=2, chunks=0
+[*] functions: 268 (37 thunks)
+
+[exit 0 in 0.6s]
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/lift/generate64.py /Users/haseeb-mir/Downloads/recomp-apps/win64/rect.exe /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/funcs.txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/gen
+[*] image base 0x140000000, entry 0x1400190b4, 7 sections
+[*] catalog: 268 functions
+[*] imports: 192 IAT slots
+[*] closure round 1: +23 dispatch targets not in the catalog
+[*] closure round 2: +11 dispatch targets not in the catalog
+[*] closure round 3: +13 dispatch targets not in the catalog
+[*] closure round 4: +1 dispatch targets not in the catalog
+[*] catalog closed after 5 rounds, 48 entries added (316 total)
+
+[*] === COMPLETE in 2s ===
+[*] image_base           0x140000000
+[*] entry_point          0x1400190b4
+[*] size_of_image        172032
+[*] functions            316
+[*] translation_units    1
+[*] lift_errors          0
+[*] recomp_todo_sites    4
+[*] imports              192
+
+[exit 0 in 1.9s]
+
+$ clang -target arm64-apple-macos11 -O1 -w -I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/gen -I/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu/cpu64.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/runner64_generic.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/gen/recomp_funcs_0000.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/gen/recomp_dispatch.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/gen/recomp_imports.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__rect.exe/rect
+
+[exit 0 in 130.0s]

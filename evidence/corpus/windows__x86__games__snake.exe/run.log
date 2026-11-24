@@ -1,0 +1,20 @@
+[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__snake.exe/screenshots, at most one every 500 ms
+[pe] <embedded image> mapped at 0x00400000, span 0x22000
+[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0
+[pe] bound 46 imports, 0 unresolved
+[host] C:\snake.exe booted: entry 0x00401460, 0 unresolved imports
+
+=== Retro Snake (Score: 0) ===
+######################
+#                    #
+#        @           #
+#                    #
+#                    #
+#                    #
+#          O         #
+#                    #
+#                    #
+#                    #
+#                    #
+######################
+Move: W (Up), A (Left), S (Down), D (Right), Q (Quit): 

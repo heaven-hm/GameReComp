@@ -1,0 +1,4 @@
+{
+  "status": "BLOCKED",
+  "reason": "no generated C project or no native build in this snapshot"
+}

@@ -1,0 +1,16 @@
+{
+  "slug": "tetris__Tetris.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/tetris/Tetris.exe",
+  "sha256": "f7ccf8fc2f57020c50f1d66de772dc50e2d0e47f5bd819d4a6ddde795c3c959f",
+  "size": 224809,
+  "is_game": true,
+  "started": 1795505625.106308,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/bin_Tetris",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/report.json",
+  "seconds": 15.7
+}

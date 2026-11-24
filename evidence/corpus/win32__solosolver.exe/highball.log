@@ -1,0 +1,4 @@
+Launching solosolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...
+exit=1 after 12s — log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T073910Z-Games-solosolver.exe.log
+
+usage: Z:\Users\haseeb-mir\Downloads\recomp-apps\win32\solosolver.exe [-g | -v] <game_id>

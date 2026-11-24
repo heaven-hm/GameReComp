@@ -1,0 +1,55 @@
+{
+  "game": "windows__x86__games__hangman_x86.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__hangman_x86.exe/bin_hangman_x86",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/hangman_x86.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__hangman_x86.exe",
+  "native": {
+    "game": "windows__x86__games__hangman_x86.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__hangman_x86.exe/bin_hangman_x86",
+    "binary_sha256": "b1415fb52744a01a21ab0e8609337ee8bd3286e5a370b75af3afa940412e3f82",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__hangman_x86.exe/bin_hangman_x86"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__hangman_x86.exe/screenshots"
+    },
+    "exit_code": 0,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__hangman_x86.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 48 imports, 0 unresolved\n[host] C:\\hangman_x86.exe booted: entry 0x00401460, 0 unresolved imports\n\n\u001b[35m\u001b[1m========================================\n        C99 HANGMAN WORD PUZZLE         \n========================================\u001b[0m\n\n\u001b[33m  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\u001b[0m\n\nWord: _ _ _ _ _ _ _ _ \nGuessed so far: \nLives remaining: 6\nEnter a letter guess: \nPlay again? (y/n): \n\u001b[32mThanks for playing! Goodbye.\u001b[0m\n\n",
+    "seconds": 1.9,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__hangman_x86.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "windows__x86__games__hangman_x86.exe exit=      0 frames=0 1.9s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 0,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__hangman_x86.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run hangman_x86.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__hangman_x86.exe/highball.log",
+    "bytes": 296,
+    "seconds": 0.1,
+    "tail": "Launching hangman_x86.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T072916Z-Games-hangman_x86.exe.log\n\n013c:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
+  }
+}

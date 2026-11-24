@@ -1,0 +1,85 @@
+{
+  "agent": "P2",
+  "task": "IGI 'Invalid texture format' at guest 0x004A5AF7",
+  "repo": "GameReComp",
+  "branch": "agent-p2/igi-texture",
+  "input": {
+    "binary": "/Users/haseeb-mir/Downloads/IGI/igi.exe",
+    "assets": "/Users/haseeb-mir/Downloads/IGI",
+    "rebuilt": "projects/igi/build/igi (7325 functions, 128 imports, 0 unresolved, 16 units)"
+  },
+  "status": "FIXED (this specific abort); no claim of full IGI playability",
+  "root_cause": {
+    "summary": "runtime/win32hle/ddraw.c desc_shape() treated every DDSURFACEDESC whose dwSize >= 124 as a four-byte-shifted variant and placed ddpfPixelFormat at +76. DDSURFACEDESC (108) and DDSURFACEDESC2 (124) actually share ddpf at +72 and ddsCaps at +104 (mingw-w64 ddraw.h). Retail IGI passes dwSize 124 and reads DDPF_RGB from +76 and dwRGBBitCount from +84 in its 0x50B4F0 conversion routine (test al,0x40 at 0x50B6E8; cmp 0x20/0x10 at 0x50B6FE/0x50B8F7; error branch 0x50BB62 pushes 'Invalid texture format' at 0x54EAD8). With the shifted layout the surface was created with bpp 63488 = 0xF800 (the RGB565 red mask read from +88) and GetSurfaceDesc returned dwFlags 32 (dwSize) at the address IGI reads as dwFlags.",
+    "guest_evidence": [
+      "0x50B50E mov [ebp-0xb0],0x7c (IGI's GetSurfaceDesc desc is 124 bytes)",
+      "0x50B5A5 rep movsd copies a 32-byte DDPIXELFORMAT from ebp-0x68 (= desc+0x48 = +72) into the desc's ddpf at ebp-0xe4",
+      "0x50B6E5 mov al,[ebp-0x64] = desc+0x4c = ddpf.dwFlags; test al,0x40; je 0x50B6EC -> 'Invalid texture format'",
+      "0x50B6FB mov eax,[ebp-0x5c] = desc+0x54 = ddpf.dwRGBBitCount; cmp 0x20 / 0x10",
+      "0x50BC00..0x50BD55: EnumTextureFormats callback accepts only DDPF_RGB formats with bitcount <= 16 and nonzero RGB masks; Unicorn confirms 11 of develop's 20 formats are accepted."
+    ],
+    "fix": "desc_shape() now uses the standard offsets for 108- and 124-byte descriptors and keeps the shifted layout only for the nonstandard 128-byte shape (wf.exe) and the old dwSize=0 signature fallback."
+  },
+  "verification": {
+    "native_baseline_before_fix": {
+      "command": "cd ~/Downloads/IGI && RECOMP_D3D7_DIAG=1 HLE_DDTRACE=1 <project>/build/igi",
+      "exit_code": 1,
+      "evidence": "native-baseline.log",
+      "observations": [
+        "[d3d7] EnumTextureFormats: delivered 20 formats",
+        "[ddraw] CreateSurface 64x32 63488 bpp ... desc2(124) -> ... ret=0050AD90",
+        "[MessageBox] IGI: Fatal error:",
+        "Invalid texture format",
+        "[win32hle] ExitProcess(1) from guest 0x004A5AF7"
+      ]
+    },
+    "native_after_fix": {
+      "command": "same rebuilt binary after the ddraw.c fix",
+      "exit_code": "124 (timeout after 25 s: process still running, i.e. past the abort)",
+      "evidence": "native-fixed.log",
+      "observations": [
+        "no 'Invalid texture format' MessageBox",
+        "no ExitProcess / fatal error",
+        "[ddraw] CreateSurface 64x32 16 bpp ... ret=0050B4F0 (the 0x50B4F0 caller)",
+        "textures continue to be created, Blt'd and drawn (64x32 bpp=16) for the whole observation window"
+      ],
+      "not_claimed": "Mission start / level5 gameplay input was not automated on the native port; the result is 'gets past this check and keeps rendering', not 'playable end to end'."
+    },
+    "unicorn": {
+      "status": "RAN",
+      "evidence": "unicorn-format-check.json",
+      "harness": "tools/p2_igi_tex_unicorn.py (original x86 bytes from igi.exe, no reimplemented guest logic)",
+      "pytest": "tests/test_p2_igi_texture_unicorn.py: 3 passed",
+      "result": "For the format IGI selects, guest callback accepts it and the real check bytes take the success path 0x50B6FB; a zeroed PF takes 0x50B6EC (error). 32bpp entries are rejected by IGI's callback."
+    },
+    "frida": {
+      "status": "BLOCKED",
+      "evidence": "frida-blocked.json, frida-spawn-blocked.txt, frida-attach-blocked.txt",
+      "reason": "macOS ARM64 with SIP enabled; Frida cannot task_for_pid the Highball Wine process or spawn any process. Exact errors recorded; no Frida result is claimed."
+    },
+    "original_reference": {
+      "engine": "Highball Wine",
+      "command": "cd ~/Downloads/IGI && highball run --verbose igi.exe window level5",
+      "evidence": "highball-level5-reference.log",
+      "observation": "ran for the full 30 s observation window; no 'Invalid texture format' and no fatal exit. Wine/dxvk emitted unrelated warnings (fwpkclnt.sys missing, GL_INVALID_FRAMEBUFFER_OPERATION in wined3d).",
+      "comparison": "Both the original and the fixed native port pass the texture-format check and keep rendering; the pre-fix native port aborted immediately after EnumTextureFormats. Pixel-for-pixel frame equality is NOT claimed: an original frame capture was not obtainable on this shared desktop (the only screencapture showed another agent's terminal; the Wine game window is not exposed through macOS accessibility)."
+    },
+    "selftests": {
+      "status": "RAN",
+      "evidence": "selftests.log",
+      "tests": [
+        "ddraw7_igi_texture_desc_selftest.c (new): 15 checks OK",
+        "ddraw7_lock_rect_selftest.c (updated to the real 124-byte layout): 19 checks OK",
+        "ddraw7_create_selftest.c (128-byte wf.exe compatibility): all checks OK"
+      ]
+    }
+  },
+  "files_changed": [
+    "runtime/win32hle/ddraw.c",
+    "runtime/win32hle/ddraw7_lock_rect_selftest.c",
+    "runtime/win32hle/ddraw7_igi_texture_desc_selftest.c (new)",
+    "tools/p2_igi_tex_unicorn.py (new)",
+    "tests/test_p2_igi_texture_unicorn.py (new)",
+    "evidence/agent-p2-igi-texture/*"
+  ]
+}

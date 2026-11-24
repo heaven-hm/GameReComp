@@ -1,0 +1,361 @@
+{
+  "schema": 1,
+  "tool": "tools/pe/cli_metadata.py",
+  "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+  "counts": {
+    "NOT_CLI": 557,
+    "NOT_PE": 1941,
+    "REJECTED_MALFORMED": 4,
+    "UNSUPPORTED_NOT_TESTED": 4
+  },
+  "files": [
+    {
+      "schema": 1,
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/opentyrian/data/netipx.exe",
+      "sha256": "e92b1f1a57c48527d3480b95dd8ac801a7d3df5a36a4c94b9510b0e8e47e0de1",
+      "file_size": 27124,
+      "is_pe": false,
+      "is_managed": false,
+      "pe_type": "",
+      "machine": 0,
+      "status": "REJECTED_MALFORMED",
+      "reason": "invalid PE header offset: 0x10000",
+      "cor20": null,
+      "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+      "recompile_attempted": false
+    },
+    {
+      "schema": 1,
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/opentyrian/data/netmodem.exe",
+      "sha256": "24329b1c3278f192897e022c2a2046984f3a1b7cf39a715bc0c15d9b13a42f4d",
+      "file_size": 41982,
+      "is_pe": false,
+      "is_managed": false,
+      "pe_type": "",
+      "machine": 0,
+      "status": "REJECTED_MALFORMED",
+      "reason": "invalid PE header offset: 0x10000",
+      "cor20": null,
+      "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+      "recompile_attempted": false
+    },
+    {
+      "schema": 1,
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/opentyrian/data/order.exe",
+      "sha256": "3648ae05c9963b847c3de3adaac556a012af82d7a5d1421e72ae134ca6288e99",
+      "file_size": 20557,
+      "is_pe": false,
+      "is_managed": false,
+      "pe_type": "",
+      "machine": 0,
+      "status": "REJECTED_MALFORMED",
+      "reason": "invalid PE header offset: 0xe6f0040",
+      "cor20": null,
+      "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+      "recompile_attempted": false
+    },
+    {
+      "schema": 1,
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/opentyrian/data/rtm.exe",
+      "sha256": "10acd85af3767634450a793f2af1e057de888621cbfc578d35d3fa91abc09661",
+      "file_size": 120853,
+      "is_pe": false,
+      "is_managed": false,
+      "pe_type": "",
+      "machine": 0,
+      "status": "REJECTED_MALFORMED",
+      "reason": "invalid PE header offset: 0x700000",
+      "cor20": null,
+      "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+      "recompile_attempted": false
+    },
+    {
+      "schema": 1,
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/luhn/luhn.dll",
+      "sha256": "e30a028e8db474b8a3b17f7088efb8054b818f08b1e30011a50112480d5be353",
+      "file_size": 6144,
+      "is_pe": true,
+      "is_managed": true,
+      "pe_type": "PE32",
+      "machine": 332,
+      "status": "UNSUPPORTED_NOT_TESTED",
+      "reason": "managed CLI assembly detected; no IL recompiler is implemented here, so nothing was built or run",
+      "cor20": {
+        "file_offset": 520,
+        "cb": 72,
+        "major_runtime_version": 2,
+        "minor_runtime_version": 5,
+        "flags": 1,
+        "flag_names": [
+          "ILONLY"
+        ],
+        "entrypoint_token": 100663297,
+        "metadata": {
+          "file_offset": 904,
+          "size": 2676,
+          "version_major": 1,
+          "version_minor": 1,
+          "runtime_version": "v4.0.30319",
+          "flags": 0,
+          "streams": [
+            {
+              "name": "#~",
+              "offset": 108,
+              "size": 716,
+              "file_offset": 1012,
+              "known": true
+            },
+            {
+              "name": "#Strings",
+              "offset": 824,
+              "size": 832,
+              "file_offset": 1728,
+              "known": true
+            },
+            {
+              "name": "#US",
+              "offset": 1656,
+              "size": 572,
+              "file_offset": 2560,
+              "known": true
+            },
+            {
+              "name": "#GUID",
+              "offset": 2228,
+              "size": 16,
+              "file_offset": 3132,
+              "known": true
+            },
+            {
+              "name": "#Blob",
+              "offset": 2244,
+              "size": 432,
+              "file_offset": 3148,
+              "known": true
+            }
+          ],
+          "missing_expected_streams": []
+        }
+      },
+      "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+      "recompile_attempted": false
+    },
+    {
+      "schema": 1,
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/luhn/luhn.exe",
+      "sha256": "61069ebfe79053477e3859075d0a9c800d60d755a795a28ad069efc1d851b304",
+      "file_size": 12288,
+      "is_pe": true,
+      "is_managed": true,
+      "pe_type": "PE32",
+      "machine": 332,
+      "status": "UNSUPPORTED_NOT_TESTED",
+      "reason": "managed CLI assembly detected; no IL recompiler is implemented here, so nothing was built or run",
+      "cor20": {
+        "file_offset": 520,
+        "cb": 72,
+        "major_runtime_version": 2,
+        "minor_runtime_version": 5,
+        "flags": 1,
+        "flag_names": [
+          "ILONLY"
+        ],
+        "entrypoint_token": 100663309,
+        "metadata": {
+          "file_offset": 1972,
+          "size": 7620,
+          "version_major": 1,
+          "version_minor": 1,
+          "runtime_version": "v4.0.30319",
+          "flags": 0,
+          "streams": [
+            {
+              "name": "#~",
+              "offset": 108,
+              "size": 2676,
+              "file_offset": 2080,
+              "known": true
+            },
+            {
+              "name": "#Strings",
+              "offset": 2784,
+              "size": 2700,
+              "file_offset": 4756,
+              "known": true
+            },
+            {
+              "name": "#US",
+              "offset": 5484,
+              "size": 872,
+              "file_offset": 7456,
+              "known": true
+            },
+            {
+              "name": "#GUID",
+              "offset": 6356,
+              "size": 16,
+              "file_offset": 8328,
+              "known": true
+            },
+            {
+              "name": "#Blob",
+              "offset": 6372,
+              "size": 1248,
+              "file_offset": 8344,
+              "known": true
+            }
+          ],
+          "missing_expected_streams": []
+        }
+      },
+      "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+      "recompile_attempted": false
+    },
+    {
+      "schema": 1,
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/tictactoe/TicTacToe.exe",
+      "sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402",
+      "file_size": 59392,
+      "is_pe": true,
+      "is_managed": true,
+      "pe_type": "PE32",
+      "machine": 332,
+      "status": "UNSUPPORTED_NOT_TESTED",
+      "reason": "managed CLI assembly detected; no IL recompiler is implemented here, so nothing was built or run",
+      "cor20": {
+        "file_offset": 520,
+        "cb": 72,
+        "major_runtime_version": 2,
+        "minor_runtime_version": 5,
+        "flags": 131075,
+        "flag_names": [
+          "ILONLY",
+          "32BITREQUIRED",
+          "32BITPREFERRED"
+        ],
+        "entrypoint_token": 100663331,
+        "metadata": {
+          "file_offset": 14208,
+          "size": 9228,
+          "version_major": 1,
+          "version_minor": 1,
+          "runtime_version": "v4.0.30319",
+          "flags": 0,
+          "streams": [
+            {
+              "name": "#~",
+              "offset": 108,
+              "size": 2964,
+              "file_offset": 14316,
+              "known": true
+            },
+            {
+              "name": "#Strings",
+              "offset": 3072,
+              "size": 3664,
+              "file_offset": 17280,
+              "known": true
+            },
+            {
+              "name": "#US",
+              "offset": 6736,
+              "size": 1356,
+              "file_offset": 20944,
+              "known": true
+            },
+            {
+              "name": "#GUID",
+              "offset": 8092,
+              "size": 16,
+              "file_offset": 22300,
+              "known": true
+            },
+            {
+              "name": "#Blob",
+              "offset": 8108,
+              "size": 1120,
+              "file_offset": 22316,
+              "known": true
+            }
+          ],
+          "missing_expected_streams": []
+        }
+      },
+      "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+      "recompile_attempted": false
+    },
+    {
+      "schema": 1,
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/tictactoe-net.exe",
+      "sha256": "df4aec7299b1e002ca0e1008b20a889e0cfe5b482a19958399fab16ac6090402",
+      "file_size": 59392,
+      "is_pe": true,
+      "is_managed": true,
+      "pe_type": "PE32",
+      "machine": 332,
+      "status": "UNSUPPORTED_NOT_TESTED",
+      "reason": "managed CLI assembly detected; no IL recompiler is implemented here, so nothing was built or run",
+      "cor20": {
+        "file_offset": 520,
+        "cb": 72,
+        "major_runtime_version": 2,
+        "minor_runtime_version": 5,
+        "flags": 131075,
+        "flag_names": [
+          "ILONLY",
+          "32BITREQUIRED",
+          "32BITPREFERRED"
+        ],
+        "entrypoint_token": 100663331,
+        "metadata": {
+          "file_offset": 14208,
+          "size": 9228,
+          "version_major": 1,
+          "version_minor": 1,
+          "runtime_version": "v4.0.30319",
+          "flags": 0,
+          "streams": [
+            {
+              "name": "#~",
+              "offset": 108,
+              "size": 2964,
+              "file_offset": 14316,
+              "known": true
+            },
+            {
+              "name": "#Strings",
+              "offset": 3072,
+              "size": 3664,
+              "file_offset": 17280,
+              "known": true
+            },
+            {
+              "name": "#US",
+              "offset": 6736,
+              "size": 1356,
+              "file_offset": 20944,
+              "known": true
+            },
+            {
+              "name": "#GUID",
+              "offset": 8092,
+              "size": 16,
+              "file_offset": 22300,
+              "known": true
+            },
+            {
+              "name": "#Blob",
+              "offset": 8108,
+              "size": 1120,
+              "file_offset": 22316,
+              "known": true
+            }
+          ],
+          "missing_expected_streams": []
+        }
+      },
+      "claim": "detection only; no IL-to-C or IL-to-native translation implemented",
+      "recompile_attempted": false
+    }
+  ]
+}

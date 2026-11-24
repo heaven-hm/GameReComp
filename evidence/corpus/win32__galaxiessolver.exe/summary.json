@@ -1,0 +1,55 @@
+{
+  "game": "win32__galaxiessolver.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/bin_galaxiessolver",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiessolver.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiessolver.exe",
+  "native": {
+    "game": "win32__galaxiessolver.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/bin_galaxiessolver",
+    "binary_sha256": "8f68350d349d9191cd1283969f3a4e9833214ff956ca2336b5546d9020f2f680",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/bin_galaxiessolver"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiessolver.exe/screenshots"
+    },
+    "exit_code": "TIMEOUT",
+    "stdout_tail": "         |\n+ + + + + + +o+ o + + + o + + +\n|                             |\n+ + + + + + + + + + + + + + +o+\n|    o    o          o        |\n+ o + + + + + + + o + + + + + +\n|      o       o              |\n+ + + + + + + + + + + + + + + +\n|         o                   |\n+ + + + + + +o+ + + + + o + + +\n|  o o     o   o o            |\n+ + + + + + + + + + + + + + + +\n|       o                 o  o|\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n\nGenerated Normal game 15x13:iglxgdntczzvgpkdznfzoeelczztchzzmeekjprhzzczgkhbfdbzxrc\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n|W|W W|W o W|W|WoW|W W|W|W|WoW|\n+ + + +-+-+-+ +-+-+ + +o+ +-+-+\n|o|W o W|W W|W|W|W o W|W|W W W|\n+ +-+ + + o +o+ + + +-+-+ + + +\n|W|W|W W|W W|W|W|W W|W W|W W W|\n+-+ +-+-+-+-+ + +-+-+ + + +o+ +\n|W W|o|W|W W|W|W W|W o W|W W W|\n+-+o+-+o+ + +-+-+ + + +-+ + + +\n|W|W W|W|W W W W|o|W W|o|W W W|\n+ + +-+-+ + + +-+ +-+-+-+-+-+ +\n|W|W|o|W WoW W|o|W W|W W W|o|W|\n+o+-+-+ + + +-+-+-+ + + + +-+-+\n|W|W|W W W W|W|W W|W|W W W W|W|\n+ + +-+-+ + +o+ o + + + o + + +\n|W|W|W W|W W|W|W W|W|W W W W|W|\n+-+ +-+ +-+-+-+-+-+-+-+ + + +o+\n|W W|o|W|WoW|W W W W|o|W W W|W|\n+ o +-+ +-+-+-+-+ o +-+-+-+-+ +\n|W W|W o W|W W|o|W W W W|W W|W|\n+ +-+-+ +-+-+ +-+-+-+-+-+ + +-+\n|W|W W|W|WoW|W|W W|W W W W W W|\n+ + +-+ +-+-+o+-+ + + + o + + +\n|W|o|o|W W|o|W|o|o|W W W W W W|\n+-+ +-+-+-+-+ +-+ +-+ + +-+-+-+\n|W W|W WoW W|W W|W W|W W|WoW|o|\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n\nGenerating a 5x8 Normal puzzle.\n+-+-+-+-+-+\n| o       |\n+ + + + + +\n|         |\n+ + o + + +\n|        o|\n+ + + + + +\n|         |\n+ + + +o+ +\n|o        |\n+ + + + + +\n|  o      |\n+ + + + + +\n|     o   |\n+ + + + +o+\n|      o  |\n+-+-+-+-+-+\n\nGenerated Normal game 5x8:bzdnyctulg\n+-+-+-+-+-+\n|WoW|W W|W|\n+-+-+ + + +\n|W W W W|W|\n+ + o + + +\n|W W W W|o|\n+ + +-+-+ +\n|W W|W|W|W|\n+-+-+ +o+ +\n|o|W W|W|W|\n+-+ + +-+-+\n|W o W|W W|\n+ + +-+ +-+\n|W W|WoW|W|\n+ +-+ +-+o+\n|W|W W|o|W|\n+-+-+-+-+-+\n\nGenerating a 11x7 Normal puzzle.\n+-+-+-+-+-+-+-+-+-+-+-+\n|   o            o    |\n+ + + + + + +o+ + + + +\n|    o             o  |\n+o+ + + + + + + + + +o+\n|                     |\n+ + + + +o+ + + + + + +\n|  o               o  |\n+ + + + + + + + + + + +\n| o            o      |\n+ + + o + + + + + + + +\n|                 o  o|\n+ o + + + o + + + + + +\n|                     |\n+-+-+-+-+-+-+-+-+-+-+-+\n\nGenerated Normal game 11x7:dmqmnctzeopymlzhcbh\n+-+-+-+-+-+-+-+-+-+-+-+\n|W|WoW|W|W W W W|o|W|W|\n+ +-+-+ +-+ +o+ +-+ + +\n|W|W o W|W|W W W W|o|W|\n+o+ +-+-+ +-+-+-+-+ +o+\n|W|W|W W W|W W W W|W|W|\n+ +-+-+-+o+-+-+ + +-+ +\n|W|o|W W|W W W|W W|o|W|\n+-+-+ + + +-+-+ + +-+-+\n|WoW|W W|W|W W o W W|W|\n+-+-+ o +-+-+ + +-+-+ +\n|W W|W W|W W|W W|WoW|o|\n+ o + + + o + + +-+-+ +\n|W W|W W|W W|W W W W|W|\n+-+-+-+-+-+-+-+-+-+-+-+\n\nGenerating a 9x17 Normal puzzle.\n+-+-+-+-+-+-+-+-+-+\n|o             o  |\n+ + + + + o + + + +\n|  o              |\n+ + + + + + + + + +\n| o               |\n+ + + + + + o + +o+\n| o               |\n+ + + + + + + + + +\n|    o            |\n+ + + + + + o + + +\n|                 |\n+ + + + + + + +o+ +\n|                 |\n+o+ + + + + + + + +\n|        ",
+    "seconds": 18.1,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiessolver.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win32__galaxiessolver.exe exit=TIMEOUT frames=0 18.1s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": "TIMEOUT",
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiessolver.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run galaxiessolver.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiessolver.exe/highball.log",
+    "bytes": 302,
+    "seconds": 0.2,
+    "tail": "Launching galaxiessolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T073520Z-Games-galaxiessolver.exe.log\n\n0034:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
+  }
+}

@@ -1,0 +1,153 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win32/singlessolver.exe
+arch=pe32_i386 sha256=365e9e8e3c2223499ea9409865846d3a4f0461ae4e05002a1cd06b4c2c6749e7
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/win32/singlessolver.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/win32 --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+==> inspect
+    ok         0.1s  inspect: i386 PE32, 60 imports, entry 0x00401460
+==> recover
+    ok         8.9s  recover: 798 functions, 102168 instructions
+==> translate
+    ok         8.0s  translate: 3 source files, 11272531 bytes, 0 lift errors
+==> project
+    ok         0.2s  project: project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project
+==> compile
+    ok        14.4s  compile: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project/build/singlessolver (2773088 bytes, 14.3s)
+==> report
+    ok         0.2s  report: reports in /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project/reports
+
+project:      /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project
+input:        windows/x86 (singlessolver.exe)
+output:       macos/arm64 native
+source code:  /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project/src/recomp/gen
+binary:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project/build/singlessolver
+stages:       inspect(ok), recover(ok), translate(ok), project(ok), compile(ok), report(ok)
+score:        70/100
+verification: not-run
+report:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project/reports/report.html
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:30:56Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/win32/singlessolver.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.06,
+      "status": "ok",
+      "message": "i386 PE32, 60 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/singlessolver.exe",
+        "size": 217311,
+        "sha256": "365e9e8e3c2223499ea9409865846d3a4f0461ae4e05002a1cd06b4c2c6749e7",
+        "md5": "2e9abecf6befd99b50f8a209e8d556d0",
+        "sha1": "b9764e0c67d259d6b3d50f3a8acd9f6af8cb77ce",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x0040FC00"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-convert-l1-1-0.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll"
+        ],
+        "import_count": 60,
+        "iat_entries": 60
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 8.94,
+      "status": "ok",
+      "message": "798 functions, 102168 instructions",
+      "data": {
+        "count": 798,
+        "instructions": 102168
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 8.03,
+      "status": "ok",
+      "message": "3 source files, 11272531 bytes, 0 lift errors",
+      "data": {
+        "source_units": 3,
+        "source_bytes": 11272531,
+        "lift_errors": 0,
+        "seconds": 8.0
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.24,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project",
+        "name": "singlessolver",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 798,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "365e9e8e3c2223499ea9409865846d3a4f0461ae4e05002a1cd06b4c2c6749e7"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "365e9e8e3c2223499ea9409865846d3a4f0461ae4e05002a1cd06b4c2c6749e7"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 14.4,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project/build/singlessolver (2773088 bytes, 14.3s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/project/build/singlessolver",
+        "sha256": "b8375bcc02ed977d7e432d828ad57e42e2e18e5ec8c8219785a60c277ae53957",
+        "seconds": 14.3,
+        "source_bytes": 12880946,
+        "build_timeout_seconds": 661.4211368560791,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}
+
+[exit 0 in 32.8s]

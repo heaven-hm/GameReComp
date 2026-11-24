@@ -1,0 +1,55 @@
+{
+  "game": "windows__x86__games__guess_game_x86.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/bin_guess_game_x86",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/guess_game_x86.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__guess_game_x86.exe",
+  "native": {
+    "game": "windows__x86__games__guess_game_x86.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/bin_guess_game_x86",
+    "binary_sha256": "f34d55b12ca187fb0c84c12dc0aec46d6df1c8ba41fb68d2ba0d498e0d583dcd",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/bin_guess_game_x86"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__guess_game_x86.exe/screenshots"
+    },
+    "exit_code": "TIMEOUT",
+    "stdout_tail": "31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess: \u001b[0m\u001b[31mInvalid input! Enter an integer.\u001b[0m\n\u001b[34mEnter guess",
+    "seconds": 18.4,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__guess_game_x86.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "windows__x86__games__guess_game_x86.exe exit=TIMEOUT frames=0 18.4s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": "TIMEOUT",
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__guess_game_x86.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run guess_game_x86.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__guess_game_x86.exe/highball.log",
+    "bytes": 302,
+    "seconds": 0.3,
+    "tail": "Launching guess_game_x86.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T075042Z-Games-guess_game_x86.exe.log\n\n01a4:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
+  }
+}

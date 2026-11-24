@@ -1,0 +1,11 @@
+[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__tumiki_fighters__tf.exe/screenshots, at most one every 500 ms
+[pe] <embedded image> mapped at 0x00400000, span 0x3D000
+[pe] <embedded image> mapped at 0x7EFB0000, span 0x48000
+[pe] bound 58 imports, 0 unresolved
+[module] GetProcAddress(tf.exe, ___CPPdebugHook): not answered
+[module] GetProcAddress(tf.exe, ___CPPdebugHook): not answered
+[module] GetProcAddress(kernel32.dll, Borland32): not answered
+[pe] companion bulletml.dll mapped at 0x7EFB0000 (25 exports)
+[pe] bound 145 imports, 0 unresolved
+[host] C:\tf.exe booted: entry 0x004187D0, 0 unresolved imports
+[win32hle] RaiseException(0xE0440001) from guest 0x00412125: guest exceptions are not handled

@@ -1,0 +1,16 @@
+{
+  "status": "BLOCKED",
+  "reason": "not attempted: no verified native binary in this snapshot",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "no verified native binary in this snapshot"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "no verified native binary in this snapshot"
+  },
+  "native": {
+    "status": "BLOCKED",
+    "reason": "no verified native binary in this snapshot"
+  }
+}

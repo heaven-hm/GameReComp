@@ -1,0 +1,8 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win32/lightup.exe
+arch=pe32_i386 sha256=7300461da8df8946b51cdc537a82bfa86ca69d64bac6fbad493fdf88d83c973f
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/win32/lightup.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__lightup.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/win32 --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+
+[LAUNCH ERROR: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli']

@@ -1,0 +1,16 @@
+{
+  "slug": "win64__galaxies.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/galaxies.exe",
+  "sha256": "34d8c2c29cd4459bb8d996bea484c2b8d42955209df884701fa1d70497f6101d",
+  "size": 187976,
+  "is_game": true,
+  "started": 1795506735.5037901,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x14001ae48, delta 0, imports 193\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__galaxies.exe/bin_galaxies",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__galaxies.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__galaxies.exe/report.json",
+  "seconds": 34.1
+}

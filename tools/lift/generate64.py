@@ -59,7 +59,8 @@ HLE_STRIDE = 8
 
 
 def read_pe(path):
-    data = open(path, 'rb').read()
+    with open(path, 'rb') as f:
+        data = f.read()
     pe = struct.unpack_from('<I', data, 0x3c)[0]
     nsec = struct.unpack_from('<H', data, pe + 6)[0]
     optsz = struct.unpack_from('<H', data, pe + 20)[0]

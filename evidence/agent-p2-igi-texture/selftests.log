@@ -1,0 +1,75 @@
+=== ddraw7_igi_texture_desc_selftest.c ===
+advapi32.c:492:49: warning: unused variable 'needed' [-Wunused-variable]
+  492 |     uint32_t chars = (uint32_t)strlen(v->name), needed = (chars + 1u) * 2u;
+      |                                                 ^~~~~~
+1 warning generated.
+RC=0
+[ddraw] SetDisplayMode(640x480x16)
+ok   DirectDrawCreateEx resolves by name
+ok   DirectDrawCreateEx(IID_IDirectDraw7) -> DD_OK
+ok   SetDisplayMode(640x480x16) -> DD_OK
+ok   IDirectDrawSurface::GetSurfaceDesc resolves by name
+ok   CreateSurface(124-byte DDSURFACEDESC2, 16bpp) -> DD_OK
+ok   the surface was created with bpp 16 (not the +88 red mask)
+ok   GetSurfaceDesc(124-byte desc) -> DD_OK
+ok   descriptor size is still 124
+ok   ddpfPixelFormat.dwSize at +72 is 32
+ok   ddpfPixelFormat.dwFlags at +76 has DDPF_RGB (0x40) - IGI 0x50B6E8
+ok   dwRGBBitCount at +84 is 16 - IGI 0x50B6FE
+ok   red mask at +88 is RGB565's 0xF800
+ok   the shifted slot at +80 is not the DDPF word
+ok   CreateSurface(nonstandard 128-byte desc) -> DD_OK
+ok   the 128-byte shape still yields a 16bpp surface
+ddraw7_igi_texture_desc_selftest: all checks passed
+=== ddraw7_lock_rect_selftest.c ===
+advapi32.c:492:49: warning: unused variable 'needed' [-Wunused-variable]
+  492 |     uint32_t chars = (uint32_t)strlen(v->name), needed = (chars + 1u) * 2u;
+      |                                                 ^~~~~~
+1 warning generated.
+RC=0
+ok   DirectDrawCreateEx resolves by name
+ok   DirectDrawCreateEx(IID_IDirectDraw7) -> DD_OK
+ok   IDirectDrawSurface::Lock resolves by name
+ok   IDirectDraw7::SetDisplayMode(320x200x16) -> DD_OK
+ok   CreateSurface(DDSURFACEDESC2 primary) -> DD_OK
+ok   hle_dd_frame exposes the primary
+ok   Lock(rect, DDSURFACEDESC2) -> DD_OK
+ok   DDSURFACEDESC2 lpSurface(+36) is the sub-rectangle address
+ok   ... not the whole-surface address
+ok   ... descriptor size and pitch survive the Lock
+ok   ... the +40 colour-key slot is not clobbered by a pointer
+ok   Unlock -> DD_OK
+ok   the pixel landed at (10,20) in the shared frame
+ok   the pixel at (0,0) was not moved by the sub-rect Lock
+ok   CreateSurface(DDSURFACEDESC offscreen) -> DD_OK
+ok   hle_dd_surface_pixels exposes the offscreen surface
+ok   Lock(rect, DDSURFACEDESC) -> DD_OK
+ok   legacy lpSurface(+36) is still the sub-rectangle address
+ok   legacy Unlock -> DD_OK
+ddraw7_lock_rect_selftest: all checks passed
+=== ddraw7_create_selftest.c ===
+advapi32.c:492:49: warning: unused variable 'needed' [-Wunused-variable]
+  492 |     uint32_t chars = (uint32_t)strlen(v->name), needed = (chars + 1u) * 2u;
+      |                                                 ^~~~~~
+1 warning generated.
+RC=0
+ok   CreateClipper(nonzero flags) -> DDERR_INVALIDPARAMS with out cleared
+ok   IDirectDraw::CreateClipper shares the clipper vtable
+ok   IDirectDrawClipper::SetHWnd -> DD_OK
+ok   IDirectDraw7::SetDisplayMode -> DD_OK
+ok   IDirectDraw7::CreateSurface(DDSURFACEDESC2 primary) -> DD_OK
+ok   hle_dd_frame exposes the 640x480x16 primary
+ok   primary has its back buffer
+ok   IDirectDrawSurface::Lock(DDSURFACEDESC2) -> DD_OK
+ok   Lock wrote lpSurface at the DDSURFACEDESC2 offset +40
+ok   Lock wrote ddsCaps at the DDSURFACEDESC2 offset +108
+ok   IDirectDrawSurface::Unlock -> DD_OK
+ok   hle_dd_frame still exposes the written pixels
+ok   the shared presenter published one frame
+ok   that frame carries the game's pixel
+ok   CreateSurface with inherited size (DDSD_CAPS only) -> DD_OK
+ok   the separately created back buffer is attached to the primary
+ok   CreateSurface(DDSCAPS_ZBUFFER) -> DD_OK
+ok   depth buffer attached to the primary
+ok   CreateSurface(DDSURFACEDESC legacy) -> DD_OK
+ddraw7_create_selftest: all checks passed

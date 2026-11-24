@@ -1,0 +1,16 @@
+{
+  "slug": "win32__lightup.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/lightup.exe",
+  "sha256": "7300461da8df8946b51cdc537a82bfa86ca69d64bac6fbad493fdf88d83c973f",
+  "size": 319000,
+  "is_game": true,
+  "started": 1795505784.61602,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__lightup.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

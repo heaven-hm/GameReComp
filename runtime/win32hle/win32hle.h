@@ -44,7 +44,12 @@ typedef uint32_t win_handle;   /* HANDLE/HWND/HDC/HMODULE/HBITMAP... */
  * hle_va convert either way; guest NULL is host NULL. Anything the guest is
  * handed an address of must live in that block: allocate it with hle_alloc,
  * hle_vm_reserve or hle_scratch, never malloc or the host's stack. */
-#if defined(RECOMP_FLAT_MEMORY) || UINTPTR_MAX == 0xFFFFFFFFu
+/* RECOMP_BASED_MEMORY forces the 64-bit-style "guest VAs are offsets from
+ * g_mem_base" model on a 32-bit host.  The Windows PE32 cross-build needs it:
+ * a flat 32-bit guest would have to reserve VA 0x400000, which the Wine
+ * engine already uses for its own low mappings. */
+#if !defined(RECOMP_BASED_MEMORY) && \
+    (defined(RECOMP_FLAT_MEMORY) || UINTPTR_MAX == 0xFFFFFFFFu)
 #define HLE_FLAT 1                                /* any 32-bit host: g_mem_base is 0 */
 static inline void    *hle_ptr(uint32_t va)   { return (void *)(uintptr_t)va; }
 static inline uint32_t hle_va(const void *p)  { return (uint32_t)(uintptr_t)p; }

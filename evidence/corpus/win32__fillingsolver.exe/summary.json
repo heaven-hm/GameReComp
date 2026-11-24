@@ -1,0 +1,55 @@
+{
+  "game": "win32__fillingsolver.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fillingsolver.exe/bin_fillingsolver",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fillingsolver.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__fillingsolver.exe",
+  "native": {
+    "game": "win32__fillingsolver.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fillingsolver.exe/bin_fillingsolver",
+    "binary_sha256": "a7a0483f03238efcdc08ab41fc06166e751d699a3955a251fdfcd54bd935f11d",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fillingsolver.exe/bin_fillingsolver"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__fillingsolver.exe/screenshots"
+    },
+    "exit_code": 0,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__fillingsolver.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x2D000\n[pe] static TLS: template 0x00411000..0x00411004 (+0 zero), index 0\n[pe] bound 59 imports, 0 unresolved\n[host] C:\\fillingsolver.exe booted: entry 0x00401460, 0 unresolved imports\n",
+    "seconds": 0.4,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__fillingsolver.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win32__fillingsolver.exe exit=      0 frames=0 0.4s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 0,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__fillingsolver.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run fillingsolver.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__fillingsolver.exe/highball.log",
+    "bytes": 300,
+    "seconds": 0.1,
+    "tail": "Launching fillingsolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T072831Z-Games-fillingsolver.exe.log\n\n0108:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
+  }
+}

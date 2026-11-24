@@ -1,0 +1,55 @@
+{
+  "game": "win32__unrulysolver.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/bin_unrulysolver",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unrulysolver.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__unrulysolver.exe",
+  "native": {
+    "game": "win32__unrulysolver.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/bin_unrulysolver",
+    "binary_sha256": "70c13e19f40f790bb076abc537c59667b2b01b7ec4e049ed11516bbcb7df3382",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/bin_unrulysolver"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__unrulysolver.exe/screenshots"
+    },
+    "exit_code": 0,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__unrulysolver.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x2C000\n[pe] static TLS: template 0x0040F000..0x0040F004 (+0 zero), index 0\n[pe] bound 61 imports, 0 unresolved\n[host] C:\\unrulysolver.exe booted: entry 0x00401460, 0 unresolved imports\nGenerating puzzle with parameters 8x8dt\n. . 1 . 1 1 . 1 \n. 0 0 . . . . . \n1 . . . . 0 . 0 \n. . . . . . . . \n. 0 . . 1 . 1 . \n1 . 1 . . . 0 . \n. . . 0 1 . . . \n. . . 0 . . . 1 \nGame ID: CBABbaFebjCBBBdeAgDa\n",
+    "seconds": 0.4,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__unrulysolver.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win32__unrulysolver.exe exit=      0 frames=0 0.4s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 0,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__unrulysolver.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run unrulysolver.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__unrulysolver.exe/highball.log",
+    "bytes": 298,
+    "seconds": 0.1,
+    "tail": "Launching unrulysolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T072835Z-Games-unrulysolver.exe.log\n\n0174:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
+  }
+}

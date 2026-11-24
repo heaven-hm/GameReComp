@@ -1,0 +1,16 @@
+{
+  "slug": "win64__sixteen.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/sixteen.exe",
+  "sha256": "ba2907cb000b81b42b9a466167622aad512512e7ecaa1d24c192dcfdb4317aaf",
+  "size": 158792,
+  "is_game": true,
+  "started": 1795505844.075626,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140014738, delta 0, imports 191\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__sixteen.exe/bin_sixteen",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__sixteen.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__sixteen.exe/report.json",
+  "seconds": 14.5
+}

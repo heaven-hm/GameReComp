@@ -1,0 +1,31 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: no named guest addresses at entry; frida: NotSupportedError: unexpected error while probing dyld of target process; native: one side timed out",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "no named guest addresses at entry"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": 1,
+      "sha256": "ced9e54e6578a0e10fae997dcf23889cba323c9df926bafe1a455aa014876410",
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native": {
+      "exit_code": "TIMEOUT",
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [],
+    "native_lines": [],
+    "status": "BLOCKED",
+    "reason": "one side timed out"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

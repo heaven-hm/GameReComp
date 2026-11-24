@@ -1,0 +1,9 @@
+{
+  "status": "BLOCKED",
+  "code": "NO_REAL_SOURCE",
+  "reason": "no real C source found; refusing to synthesise a source (source-level cross-build only, no ELF/Mach-O binary conversion)",
+  "roots": [
+    "/Users/haseeb-mir/Downloads/Other/gitHub_C/FloatMemory.c",
+    "/Users/haseeb-mir/Downloads/recomp-apps/win32"
+  ]
+}

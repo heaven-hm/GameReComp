@@ -1,0 +1,129 @@
+[pe] <embedded image> mapped at 0x00400000, span 0x835000
+[pe] bound 128 imports (0 delay), 0 unresolved
+[host] C:\igi.exe booted: entry 0x004A50F5, 0 unresolved imports
+[ddraw] IDirectDraw::QueryInterface {B3A6F3E0-2B43-11CF-A2DE-00AA00B93356}
+[ddraw] SetCooperativeLevel(hwnd=00000000, flags=0x8): accepted, no real mode change
+[screen] window 1280x925 fullscreen=0 (RECOMP_WINDOW_SIZE/RECOMP_FULLSCREEN)
+[screen] cocoa, OpenGL context, scaling sharp (F12), fullscreen F11
+[ddraw] CreateSurface 640x480 16 bpp caps 0xA00 flags 0x1 mips 0 desc1(108) -> 0x10003FD0 ret=00498480
+[dsound] coreaudio, 44100 Hz
+[ddraw] IDirectDraw::QueryInterface {F5049E77-4861-11D2-A407-00A0C90629A8}
+[ddraw] QueryInterface(IDirect3D7) -> 10041980
+[d3d7] EnumDevices: HAL and T&L HAL advertised, devCaps 0x00090540
+[d3d7] IDirect3D7::Release 10041980 -> refs 1
+[ddraw] EnumDisplayModes -> 0x00492670: 640x480x8
+[ddraw] EnumDisplayModes -> 0x00492670: 800x600x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1024x768x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1152x864x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x720x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x768x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x800x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x960x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x1024x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1360x768x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1366x768x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1440x900x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x900x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x1200x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1680x1050x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1080x8
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1200x8
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1080x8
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1440x8
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1600x8
+[ddraw] EnumDisplayModes -> 0x00492670: 3440x1440x8
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x1600x8
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x2160x8
+[ddraw] EnumDisplayModes -> 0x00492670: 640x480x16
+[ddraw] EnumDisplayModes -> 0x00492670: 800x600x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1024x768x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1152x864x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x720x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x768x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x800x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x960x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x1024x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1360x768x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1366x768x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1440x900x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x900x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x1200x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1680x1050x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1080x16
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1200x16
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1080x16
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1440x16
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1600x16
+[ddraw] EnumDisplayModes -> 0x00492670: 3440x1440x16
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x1600x16
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x2160x16
+[ddraw] EnumDisplayModes -> 0x00492670: 640x480x32
+[ddraw] EnumDisplayModes -> 0x00492670: 800x600x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1024x768x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1152x864x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x720x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x768x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x800x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x960x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1280x1024x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1360x768x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1366x768x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1440x900x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x900x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1600x1200x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1680x1050x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1080x32
+[ddraw] EnumDisplayModes -> 0x00492670: 1920x1200x32
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1080x32
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1440x32
+[ddraw] EnumDisplayModes -> 0x00492670: 2560x1600x32
+[ddraw] EnumDisplayModes -> 0x00492670: 3440x1440x32
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x1600x32
+[ddraw] EnumDisplayModes -> 0x00492670: 3840x2160x32
+[pump] screen pump runs
+[pump] motion 426,880 -> game 426,880
+[ddraw] IDirectDraw::QueryInterface {F5049E77-4861-11D2-A407-00A0C90629A8}
+[ddraw] QueryInterface(IDirect3D7) -> 10041980
+[d3d7] EnumDevices: HAL and T&L HAL advertised, devCaps 0x00090540
+[d3d7] IDirect3D7::Release 10041980 -> refs 1
+[ddraw] SetCooperativeLevel(hwnd=00010010, flags=0x1011): accepted, no real mode change
+[ddraw] IDirectDraw::QueryInterface {F5049E77-4861-11D2-A407-00A0C90629A8}
+[ddraw] QueryInterface(IDirect3D7) -> 10041980
+[ddraw] SetDisplayMode(640x480x16)
+[ddraw] CreateSurface 640x480 16 bpp caps 0x840 flags 0x21 mips 0 desc2(124) -> 0x100E9B90 ret=004942A0
+[ddraw] GetAttachedSurface 640x480 caps=0x82004 -> 0x0
+[ddraw] CreateSurface 640x480 0 bpp caps 0x840 flags 0x1007 mips 0 desc2(124) -> 0x100E9D40 ret=004942A0
+[ddraw] IDirectDraw::CreateClipper(flags=0x0, out=104FEA4C, outer=00000000)
+[d3d7] CreateVertexBuffer desc=104fea18 fvf=000001c4 count=32768 stride=32
+[d3d7] tex fmt 0 flags=0x40 bpp=16 masks=00F800/0007E0/00001F cb=1
+[d3d7] tex fmt 1 flags=0x41 bpp=16 masks=007C00/0003E0/00001F cb=1
+[d3d7] tex fmt 2 flags=0x41 bpp=16 masks=000F00/0000F0/00000F cb=1
+[d3d7] tex fmt 3 flags=0x40 bpp=16 masks=007C00/0003E0/00001F cb=1
+[d3d7] tex fmt 4 flags=0x41 bpp=32 masks=FF0000/00FF00/0000FF cb=1
+[d3d7] tex fmt 5 flags=0x40 bpp=32 masks=FF0000/00FF00/0000FF cb=1
+[d3d7] tex fmt 6 flags=0x41 bpp=16 masks=00F800/0007E0/00001F cb=1
+[d3d7] tex fmt 7 flags=0x40 bpp=24 masks=FF0000/00FF00/0000FF cb=1
+[d3d7] tex fmt 8 flags=0x20 bpp=8 masks=000000/000000/000000 cb=1
+[d3d7] tex fmt 9 flags=0x20 bpp=4 masks=000000/000000/000000 cb=1
+[d3d7] tex fmt 10 flags=0x40 bpp=8 masks=0000E0/00001C/000003 cb=1
+[d3d7] tex fmt 11 flags=0x1 bpp=8 masks=000000/000000/000000 cb=1
+[d3d7] tex fmt 12 flags=0x20000 bpp=8 masks=0000FF/000000/000000 cb=1
+[d3d7] tex fmt 13 flags=0x40 bpp=16 masks=000F00/0000F0/00000F cb=1
+[d3d7] tex fmt 14 flags=0x41 bpp=32 masks=0000FF/00FF00/FF0000 cb=1
+[d3d7] tex fmt 15 flags=0x40 bpp=32 masks=0000FF/00FF00/FF0000 cb=1
+[d3d7] tex fmt 16 flags=0x41 bpp=16 masks=00001F/0003E0/007C00 cb=1
+[d3d7] tex fmt 17 flags=0x40 bpp=16 masks=00001F/0003E0/007C00 cb=1
+[d3d7] tex fmt 18 flags=0x41 bpp=16 masks=00000F/0000F0/000F00 cb=1
+[d3d7] tex fmt 19 flags=0x40 bpp=8 masks=00001C/0000E0/000003 cb=1
+[d3d7] EnumTextureFormats: delivered 20 formats
+[d3d7] CreateVertexBuffer desc=104fe624 fvf=00000112 count=4000 stride=32
+[d3d7] CreateVertexBuffer desc=104fe624 fvf=00000142 count=1000 stride=24
+[d3d7] CreateVertexBuffer desc=104fe624 fvf=00000144 count=1000 stride=28
+[ddraw] CreateSurface 64x32 63488 bpp caps 0x858 flags 0x101007 mips 0 desc2(124) -> 0x1116B830 ret=0050AD90
+[ddraw] CreateSurface 64x32 63488 bpp caps 0x840 flags 0x1007 mips 0 desc2(124) -> 0x1116B8F0 ret=0050B4F0
+[d3d7] IDirect3D7::Release 10041980 -> refs 1
+[ddraw] SetCooperativeLevel(hwnd=00010010, flags=0x1008): accepted, no real mode change
+[MessageBox] IGI: Fatal error:
+
+Invalid texture format
+[win32hle] ExitProcess(1) from guest 0x004A5AF7

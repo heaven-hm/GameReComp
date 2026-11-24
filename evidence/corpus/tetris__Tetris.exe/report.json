@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:34:00Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/tetris/Tetris.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.15,
+      "status": "ok",
+      "message": "i386 PE32, 99 imports, entry 0x004012E0",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/tetris/Tetris.exe",
+        "size": 224809,
+        "sha256": "f7ccf8fc2f57020c50f1d66de772dc50e2d0e47f5bd819d4a6ddde795c3c959f",
+        "md5": "ff3acc8f1479970949609a745a6df9cf",
+        "sha1": "0f34cad3a5e937d45a7e33111446f6dfbc7ffff6",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x004012E0",
+        "linker_version": "2.28",
+        "code_range": [
+          "0x00401000",
+          "0x0040B000"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "msvcrt.dll",
+          "msvcrt.dll",
+          "libgcc_s_dw2-1.dll",
+          "libstdc++-6.dll"
+        ],
+        "import_count": 99,
+        "iat_entries": 99
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 1.6,
+      "status": "ok",
+      "message": "767 functions, 47454 instructions",
+      "data": {
+        "count": 767,
+        "instructions": 47454
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.32,
+      "status": "ok",
+      "message": "2 source files, 5045962 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 5045962,
+        "lift_errors": 0,
+        "seconds": 0.3
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.24,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/project",
+        "name": "Tetris",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 767,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "f7ccf8fc2f57020c50f1d66de772dc50e2d0e47f5bd819d4a6ddde795c3c959f"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "f7ccf8fc2f57020c50f1d66de772dc50e2d0e47f5bd819d4a6ddde795c3c959f"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 12.81,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/project/build/Tetris (2226536 bytes, 12.8s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/project/build/Tetris",
+        "sha256": "dcddf3cde91dd2f3ece0ebeeb1eb3ca125d32a824663614e4e707bc03a6214b7",
+        "seconds": 12.8,
+        "source_bytes": 6660296,
+        "build_timeout_seconds": 631.7587661743164,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}

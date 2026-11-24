@@ -1,0 +1,16 @@
+{
+  "slug": "win64__unruly.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/unruly.exe",
+  "sha256": "981ea82fb1a793c9f3432ab525741d74e24a2de2606fed6df114901931837ea7",
+  "size": 168520,
+  "is_game": true,
+  "started": 1795506082.1473541,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140016aa4, delta 0, imports 191\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__unruly.exe/bin_unruly",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__unruly.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__unruly.exe/report.json",
+  "seconds": 34.4
+}

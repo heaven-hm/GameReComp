@@ -1,0 +1,16 @@
+{
+  "slug": "win32__slantsolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/slantsolver.exe",
+  "sha256": "28841175ab7fa9bb5716892396e06c4d3c207c4c3eaee465b0c99a6acc223a44",
+  "size": 200294,
+  "is_game": true,
+  "started": 1795505277.867008,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/bin_slantsolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/report.json",
+  "seconds": 26.8
+}

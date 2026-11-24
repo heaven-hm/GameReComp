@@ -5,6 +5,13 @@ All notable changes to this repository: the GameReComp PCRecomp-first product
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.2.0] - 2026-11-24
+
+Evidence-backed release of the PE32 x86 to host pipeline. 1105 Python tests,
+16/16 paired Unicorn difftest, 7/7 differential gate, 35 Rust tests; real
+binaries, frames and per-OS status in `proof/`. No game is claimed 100%
+verified without an original-Windows scenario. See `docs/RELEASE_0.2.0.md`.
+
 ## [Unreleased]
 
 ### Fixed

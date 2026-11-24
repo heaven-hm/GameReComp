@@ -1,0 +1,16 @@
+{
+  "slug": "win32__lightupsolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/lightupsolver.exe",
+  "sha256": "083c74e0fc0af452010be6c21ee05e254ceff48735144f332a1a166b33efa0a5",
+  "size": 196349,
+  "is_game": true,
+  "started": 1795505253.158232,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__lightupsolver.exe/bin_lightupsolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__lightupsolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__lightupsolver.exe/report.json",
+  "seconds": 24.7
+}

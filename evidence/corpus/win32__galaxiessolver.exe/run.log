@@ -1,0 +1,2885 @@
+-+ +
+|W W W|W|W|o|W W|o|W|
++ + + +-+ +-+-+-+-+o+
+|W WoW W|W|WoW|WoW|W|
++-+ + + + +-+-+-+-+ +
+|W|W W W|o|o|W W W|W|
++o+ + +-+ +-+-+ o +-+
+|W|W W|W|W|W W|W W W|
++-+-+ +o+ + o +-+-+-+
+|WoW|W|W|W|W W|W o W|
++-+-+-+-+-+-+-+-+-+-+
+
+Generating a 11x10 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+
+|          o   o    o |
++ + + + + + + + + + + +
+| o         o    o    |
++ + + + + + + + + + + +
+|      o       o      |
++ + + + + + + + + + + +
+|                o    |
++ o + + + + + + + + + +
+|          o          |
++ + + + + + + + + +o+ +
+|                     |
++ + + + + + + +o+ + + +
+|   o                 |
++ + + + o + + + + o + +
+|o          o         |
++ + + + + + + + + + +o+
+|    o           o    |
++ o + + + + + + + + + +
+|        o       o    |
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 11x10:kdexjezghzsfzezdzmjyjdkzeelfzch
++-+-+-+-+-+-+-+-+-+-+-+
+|W W|W W W|o|W|o|W|WoW|
++ + + + + +-+ +-+ +-+-+
+|WoW|W W W|WoW|W o W|W|
++ + + + + + +-+-+ +-+ +
+|W W|W o W|W|W|o|W|W W|
++-+-+ + + +-+ +-+-+ + +
+|W W|W W W|W|W W o W W|
++ o + + + + + + +-+-+ +
+|W W|W W W|o|W W|W W|W|
++-+-+-+-+-+ + +-+-+o+-+
+|W W W W W|W|W|W|W|W W|
++ +-+-+ + +-+-+o+ +-+-+
+|W|WoW|W W W W|W|W W|W|
++-+-+-+ o +-+-+-+ o + +
+|o|W W W W|WoW|W|W W|W|
++-+-+-+ + +-+-+ +-+ +o+
+|W W|o|W W W W W|o|W|W|
++ o +-+-+-+-+-+-+-+-+ +
+|W W|W W o W W|W o W|W|
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 17x15 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|       o             o         o |
++ o + + + + + o + + + + + + + + + +
+|    o                 o    o   o |
++ + + + +o+ + + + + + + + + + + + +
+|   o        o                    |
++ + + + + + + + + + + + o + + + o +
+|                o                |
++ + + + + + o + + + + + + + + + + +
+|  o                              |
++ + + + + + + + + + + + + o + + +o+
+|                   o             |
++ + + + + o + + + + + + + + + + + +
+|  o                o        o    |
++ + + + + + + + + + + + + + + + + +
+|       o        o     o       o  |
++ + o + + + + +o+ + + + + + + + + +
+|          o         o   o o      |
++o+ + + + + + + + + + + + + +o+ + +
+|                                 |
++ + + + + + + o + + o + o + + + o +
+|     o                           |
++ + + + + + + + + + + + + + + + + +
+|    o                            |
++ + + + + +o+ + o + + + + o + + + +
+|  o                              |
++ + + + + + + + + + + + + + + + + +
+|       o   o               o  o o|
++ o + + + + + + + + +o+ + + + + + +
+|    o      o               o     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 17x15:hnjclxredjzcizshrzcxzzfgtwzaqiztifhfkzdjdbgzczzafdhgzzoznejjzzudpcbbsqgp
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W W|W WoW W|W W W|W WoW W|W W|WoW|
++ o +-+-+-+-+ o +-+-+-+-+-+ + +-+-+
+|W W|o|W|W|W W W|W W|W o W|WoW|WoW|
++-+-+-+ +o+-+-+-+-+ +-+-+-+ + +-+-+
+|W WoW W|W|W|o|W W|W W W W|W W|W W|
++ +-+-+-+-+ +-+-+ +-+-+ o +-+-+ o +
+|W|W W|W|W W W W|o|W W|W W W W|W W|
++-+ + + + + o + + +-+ +-+-+-+ +-+-+
+|W o W|W|W W W W|W W|W W W W|W W|W|
++ + +-+ +-+-+ +-+-+-+-+-+ o +-+-+o+
+|W W|W W W W|W|W|W WoW W|W W W W|W|
++-+-+ +-+ o +-+ +-+-+-+-+-+-+-+ +-+
+|W|o|W|W|W W W W|W|WoW|W|W W|o|W W|
++ +-+-+ +-+-+ +-+ +-+-+ +-+ +-+-+-+
+|W W W|WoW|W|W|W|o|W|W o W|W|W o W|
++-+ o +-+ + + +o+ + +-+ +-+ +-+-+-+
+|W|W W W|W|o|W|W|W|W|o|W|o|o|W|W W|
++o+-+-+ +-+ +-+-+-+ +-+-+-+ +o+ + +
+|W|W W|W|W|W|W W|W|W W|W W|W|W|W W|
++-+ + +-+ +-+ o + + o + o + +-+ o +
+|W W WoW W W|W W|W|W W|W W|W W|W W|
++-+ +-+ + +-+-+-+ +-+ +-+-+-+-+ + +
+|W|W|o|W W|W|W W W W|W|W W W W|W W|
++ +-+-+-+-+o+ + o + + + + o + +-+-+
+|W o W|W W|W|W W W W|W|W W W W|W|W|
++-+-+ + + +-+-+ +-+-+-+-+-+-+-+ + +
+|W W|W|WoW|WoW|W|W W W W W|WoW|o|o|
++ o +-+ + +-+-+ + + +o+ + +-+-+ + +
+|W W|o|W W|WoW|W|W W W W W|WoW|W|W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 16x10 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   o             o   o    o    |
++ + + + o + + + + + + + + + + + +
+|o                o        o    |
++ + + + + + + +o+ + + + + + +o+ +
+|      o                 o     o|
++ + + + + + + + + + + + + + + + +
+|  o       o     o              |
++ + + + + + + + + +o+ o + + + + +
+|o   o   o                  o   |
++ + + + + + + + + + + + +o+ + + +
+| o           o                 |
++ + + +o+ + + + + + o + + + o + +
+|                               |
++ + + + + + + + + + + + + + + + +
+|  o     o             o     o  |
++ + + + + + o + + + + + + + + + +
+|     o            o            |
++ + + + + + + + + + + + o + + o +
+|      o       o           o    |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 16x10:dndelxqisnirfzihfzhcjddszchlxmhzzrfnfnymzkfhhl
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|WoW|W W W W|W|WoW|WoW|W o W|W|
++ +-+-+ o +-+-+ +-+-+-+-+-+-+-+ +
+|o|W W W W|W W W|WoW|W W W|o|W|W|
++ +-+-+-+-+-+-+o+-+-+-+ + +-+o+ +
+|W|W W o W W|W|W W W|W|W o W|W|o|
++-+-+-+-+-+-+ + +-+-+ +-+ + +-+ +
+|W o W|W W|o|W|W|o|W|W W|W W W|W|
++-+-+-+-+ +-+ +-+-+o+ o +-+-+-+ +
+|o|W|o|W|o|W W W W|W|W W|W|WoW|W|
++-+ +-+ + +-+ + +-+-+-+ +o+-+-+-+
+|WoW|W|W|W W|WoW|W W W|W|W|W W W|
++ +-+ +o+-+-+ + +-+ o +-+-+ o +-+
+|W|W W|W|W|W W W W|W W W|W W W|W|
++-+ + + + +-+-+ +-+-+-+-+-+-+-+ +
+|W o W|W|o|W W|W|W W|W o W|W o W|
++ + +-+-+ + o + + + +-+-+-+ +-+-+
+|W W|WoW|W|W W|W|W o W|W W|W|W W|
++ +-+-+-+-+-+-+-+-+ + + o +-+ o +
+|W|W W o W W|W o W|W W|W W|o|W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 7x8 Normal puzzle.
++-+-+-+-+-+-+-+
+|  o        o |
++o+ + + +o+ + +
+|      o      |
++ +o+ + + + o +
+|             |
++ + + + + + + +
+|    o        |
++ + + + + + +o+
+|          o  |
++ + + + + + + +
+|             |
++ + + o + + + +
+|o         o o|
++ + + + + + + +
+|      o      |
++-+-+-+-+-+-+-+
+
+Generated Normal game 7x8:cibhkiizgukzihjbt
++-+-+-+-+-+-+-+
+|W|o|W W|W|WoW|
++o+-+-+ +o+-+-+
+|W|W W|o|W|W W|
++-+o+-+ +-+ o +
+|W W|W|W W|W W|
++-+-+ +-+-+-+-+
+|W W o W W|W|W|
++-+-+ +-+-+ +o+
+|W W|W|W W|o|W|
++-+ +-+ + + +-+
+|W|W W W W|W|W|
++ + + o + +-+ +
+|o|W W W W|o|o|
++ + + +-+ +-+ +
+|W|W W|o|W W|W|
++-+-+-+-+-+-+-+
+
+Generating a 3x4 Normal puzzle.
++-+-+-+
+|o    |
++ + + +
+|  o  |
++ + + +
+|    o|
++ + + +
+|  o  |
++-+-+-+
+
+Generated Normal game 3x4:allh
++-+-+-+
+|o|W W|
++-+ + +
+|W o W|
++ + +-+
+|W W|o|
++-+-+-+
+|W o W|
++-+-+-+
+
+Generating a 11x14 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+
+|       o    o        |
++ +o+ + + + + + + + + +
+|       o            o|
++ + + + + + + + + + + +
+|  o     o      o     |
++o+ + + + + + + + + + +
+|        o            |
++ + + + + + + + + + + +
+|      o              |
++ + o + + + + + + + + +
+|          o       o  |
++ + + + + + + +o+ + + +
+|                o    |
++ + + +o+ + + + + + +o+
+|                o    |
++ + + + +o+ o + + + + +
+|o              o     |
++ +o+ + + + + + + + + +
+|              o      |
++ + + + + + + + + + + +
+|      o              |
++ + o + + + + +o+ + + +
+|          o          |
++ + + + + + + + + +o+o+
+|        o            |
++ + + + + + + +o+ + + +
+|     o          o    |
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 11x14:hekzamxfgfzdzorzchqwknqmcjohzhzirkqzdbizblk
++-+-+-+-+-+-+-+-+-+-+-+
+|W W W|WoW|W|o|W W W|W|
++ +o+ +-+-+ +-+ + + + +
+|W W W|WoW|W W W W W|o|
++-+-+-+-+-+-+ + + + + +
+|W|o|W|W o W|W WoW W|W|
++o+-+ +-+-+-+ + + + +-+
+|W|W W|W o W|W W W W W|
++-+ + +-+-+-+ + + +-+ +
+|W W W|o|W W|W W W|W|W|
++-+ o +-+ + +-+-+-+ +-+
+|W|W W W|W o W|W|W o W|
++ + + +-+-+ + +o+-+ +-+
+|W|W W|W W|W W|W|o|W|W|
++ + +-+o+-+-+-+-+-+-+o+
+|W|W|W W|W|W W|W o W|W|
++ +-+-+-+o+ o +-+-+-+-+
+|o|W|W W|W|W W|WoW|W W|
++ +o+ + +-+-+-+-+-+ + +
+|W|W|W W|W W W o W W W|
++ +-+ +-+ + +-+-+-+-+-+
+|W|W W|o|W W|W W W|W|W|
++ + o +-+-+-+ +o+ + + +
+|W|W W|W W|o|W W W|W|W|
++-+ +-+ + +-+-+-+-+o+o+
+|W W|W W o W W|W W|W|W|
++ + +-+-+ + +-+o+-+ + +
+|W W|WoW|W W|W W|o|W|W|
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 6x13 Normal puzzle.
++-+-+-+-+-+-+
+|    o     o|
++ o + +o+ + +
+|           |
++ + + + + o +
+|           |
++ +o+ +o+ + +
+|    o      |
++o+ + + + + +
+|  o       o|
++ + + + + + +
+|           |
++ + +o+ + + +
+|           |
++ + + + + + +
+|           |
++ + + + o + +
+|o          |
++ +o+ + + +o+
+|           |
++ + + + + + +
+|           |
++ o + +o+ o +
+|    o      |
++ + + + + + +
+|    o      |
++-+-+-+-+-+-+
+
+Generated Normal game 6x13:efbeyodigmhzbzvdmhzjecfv
++-+-+-+-+-+-+
+|W W|o|W|W|o|
++ o +-+o+ +-+
+|W W|W|W|W W|
++-+-+ +-+ o +
+|W|W|W W|W W|
++ +o+-+o+-+ +
+|W|W|o|W W|W|
++o+-+-+-+ +-+
+|W|o|W W|W|o|
++ +-+ + +-+-+
+|W|W W W W|W|
++-+ +o+ +-+ +
+|W W W W|W W|
++-+ + +-+ + +
+|W|W W|W W W|
++ +-+-+ o +-+
+|o|W|W W W|W|
++ +o+ + +-+o+
+|W|W|W W|W|W|
++-+-+ +-+ +-+
+|W W|W|W|W W|
++ o +-+o+ o +
+|W W|o|W|W W|
++-+-+-+-+-+ +
+|W W o W W|W|
++-+-+-+-+-+-+
+
+Generating a 10x4 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+
+|                  o|
++o+ + + + + + + + + +
+|     o       o   o |
++ + + + + +o+ + + + +
+|                   |
++ o + + + + + + o + +
+|    o              |
++-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 10x4:saxhdlzdnh
++-+-+-+-+-+-+-+-+-+-+
+|W|W W W|W W W W|W|o|
++o+ + + +-+ +-+-+ +-+
+|W|W WoW W|W|WoW|WoW|
++-+-+ + + +o+-+-+-+ +
+|W W|W W W|W|W W W|W|
++ o +-+-+-+ +-+ o +-+
+|W W|o|W W W W|W W W|
++-+-+-+-+-+-+-+-+-+-+
+
+Generating a 16x3 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|              o         o     o|
++ + +o+ + + + + + + + o + + + + +
+| o     o   o                   |
++ + + + + + + + + +o+ + + + + o +
+|      o             o   o      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 16x3:ojfeqkfdzmkhnd
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W W|W|W W W W|o|W W W W|o|W W|o|
++ + +o+-+-+ + +-+ +-+ o +-+ +-+-+
+|WoW|W|WoW|WoW|W W|W|W W W W|W W|
++ + +-+-+-+ + +-+-+o+-+-+-+-+ o +
+|W W|W o W|W W W W|W|o|W o W|W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 17x7 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|     o          o        o   o   |
++ + + + + + + + + + + + + + + + + +
+|  o                 o            |
++ + + + + + o + + + + + + + + + +o+
+|                 o      o        |
++o+ + + + + + + + + + + + + + o + +
+|  o  o                o          |
++ + + + + + + + + + o + + + + + + +
+|           o  o                  |
++ + + + + + + + + + + + o + + + + +
+|  o                              |
++ + + + +o+ + + +o+ + + + + +o+ + +
+|          o         o           o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 17x7:fkidznrxurgizdfcqzeyczqlznhlojl
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W WoW W|W W W|o|W|W|W|WoW|WoW|W|
++ +-+-+-+-+ + + +-+ + + +-+-+-+-+ +
+|W|o|W W|W W W W W|W|o|W W|W W W|W|
++ +-+ +-+ + o + +-+ + + + +-+ + +o+
+|W|W W|W W W W W|WoW|W|W o W|W W|W|
++o+-+ +-+ + + +-+ +-+-+-+ + + o + +
+|W|o|WoW|W W W|W|W|W W|o|W W|W W|W|
++ +-+-+ +-+-+-+ + + o +-+-+ + + +-+
+|W|W W|W W|WoW|o|W|W W|W W|W|W W W|
++ + +-+ +-+-+-+ +-+-+-+ o +-+-+-+-+
+|W|o|W W|W W W|W|W W W|W W|W W W W|
++-+ +-+-+o+-+-+-+o+-+-+-+-+ +o+ +-+
+|W W|W W W|o|W W W|W o W|W W W W|o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 17x9 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|        o                o     o |
++ +o+ + + + o + + + + + + + + + + +
+|       o            o   o       o|
++ + + + + + + + o + + + + +o+ + + +
+| o                               |
++ + + + + +o+ + + + + + + + + + + +
+|            o                 o  |
++ + + o + + + + + +o+ + + + + + + +
+|                        o        |
++ + + + + + + + + + + + + + + + + +
+|o o         o                    |
++ + + + + + + + + + o + + + + + + +
+|              o             o    |
++ + + + +o+ + + + + + + + + + + + +
+|o   o               o     o      |
++ + + + + + + + o + + +o+ + + + o +
+| o         o              o      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 17x9:iqfdizdmdhpkhzqzjrhmznzqbjzozcnmydpfvgicjo
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W W W|W|o|W W|W W|W W W|WoW|W|WoW|
++ +o+ + +-+ o + + + + + +-+-+ +-+-+
+|W W W|WoW|W W|W W|W o W|o|W|W W|o|
++-+-+-+-+ +-+-+ o + + + +-+o+ + +-+
+|WoW|W W|W|W|W|W W|W W W|W|W|W W W|
++-+-+ + +-+o+ + + +-+-+-+ +-+ + + +
+|W W W W W|W|o|W W|W W|W W W|W o W|
++-+ + o + +-+ +-+-+o+-+ + + + + + +
+|W|W W W W W|W|W|W W|W|W o W|W W W|
++ +-+ + +-+-+-+ +-+-+ + + + +-+ + +
+|o|o|W W|W|W o W|W W W|W W W|W|W W|
++ +-+-+-+ + +-+-+-+ o +-+ +-+ +-+ +
+|W|W W|W W|W|W o W|W W W|W|W o W|W|
++-+ + +-+o+-+-+-+-+ +-+-+-+-+ +-+-+
+|o|W o W|W W|W W W|W|o|W W|o|W|W W|
++-+-+ + + +-+-+ o +-+-+o+-+-+-+ o +
+|WoW|W W|W|WoW|W W W|W W|W o W|W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 11x6 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+
+|  o       o      o   |
++ + +o+ + + +o+ + + + +
+|                o    |
++ + + + + + + + + + + +
+|o   o    o      o  o |
++ + + + + + + + + + + +
+|                     |
++ + + + + + + + o + + +
+|  o   o             o|
++ + + + + + + + + + + +
+|   o        o        |
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 11x6:chghhyzadegczzihdnyi
++-+-+-+-+-+-+-+-+-+-+-+
+|W|o|W|W W|o|W|W WoW W|
++ +-+o+-+ +-+o+-+-+-+-+
+|W|W|W|W|W W|W|W o W|W|
++ + +-+ + + +-+-+-+-+ +
+|o|W o W|WoW|W W|o|WoW|
++ + +-+ + + + + +-+ +-+
+|W|W|W|W|W W|W W W|W|W|
++ +-+ +-+-+ +-+ o +-+ +
+|W|o|W o W|W W|W W W|o|
++-+-+-+-+ +-+-+-+ + + +
+|W WoW W|W|W o W|W W|W|
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 9x3 Normal puzzle.
++-+-+-+-+-+-+-+-+-+
+|  o              |
++ + + o + + + + +o+
+|            o o  |
++ + + + +o+ + + + +
+|o   o          o |
++-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 9x3:ctkmbkidk
++-+-+-+-+-+-+-+-+-+
+|W|o|W W W W|W W|W|
++ +-+ o +-+ + +-+o+
+|W W W W|W|W|o|o|W|
++-+-+-+-+o+-+ +-+-+
+|o|W o W|W|W W|WoW|
++-+-+-+-+-+-+-+-+-+
+
+Generating a 9x17 Normal puzzle.
++-+-+-+-+-+-+-+-+-+
+|   o        o   o|
++ + + + + o + + + +
+|o o              |
++ + + + + + + + + +
+|                 |
++ + + + + +o+ + + +
+|   o             |
++ + + + + + + + o +
+|            o    |
++ + + + + + + + + +
+|        o        |
++ + + + + + + + + +
+|            o    |
++ o + + + + + + + +
+|        o        |
++ + + + + + + +o+ +
+|     o      o    |
++ + + + + + + + + +
+|           o    o|
++ + + + + + + + + +
+|  o              |
++ + + + + + + + + +
+|o   o        o   |
++ + + +o+ + + + + +
+| o              o|
++ + + + + + + + + +
+|                 |
++ + + + + o + +o+ +
+|                 |
++ + + o + + + + + +
+| o      o   o    |
++ + + + + + + + +o+
+|       o    o    |
++-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 9x17:didjhbzzijzdnzezmfxwhgzhetzgdijlozseymgduhe
++-+-+-+-+-+-+-+-+-+
+|W|WoW|W W W|o|W|o|
++ +-+-+-+ o +-+ +-+
+|o|o|W W|W W W|W W|
++ +-+ + +-+-+-+ + +
+|W|W W W|W W W|W W|
++-+ + + + +o+ + + +
+|W WoW W|W W W|W W|
++ + + +-+-+-+-+ o +
+|W W W|W W W|o|W W|
++ + +-+ + + +-+ + +
+|W W|W W o W W|W W|
++-+-+-+ + + +-+ + +
+|W W|W|W W W|o|W W|
++ o + +-+-+-+-+-+ +
+|W W|W W|o|W|W W|W|
++-+-+ + +-+ +-+o+-+
+|W W WoW W W|o|W W|
++ +-+ + +-+-+-+-+-+
+|W|W|W W|W WoW W|o|
++-+ +-+ +-+-+-+-+-+
+|W o W|W|W W W|W W|
++-+ +-+-+ +-+-+ + +
+|o|W|o|W W|W WoW W|
++-+-+-+o+-+ + +-+-+
+|WoW|W W|W|W W|W|o|
++-+-+ +-+ +-+-+ +-+
+|W W W|W|W W|W W W|
++-+-+-+ + o + +o+ +
+|W W|W W|W W|W W W|
++ + + o +-+ +-+ +-+
+|WoW|W W|o|W|o|W|W|
++ + + +-+-+-+-+-+o+
+|W W|W|WoW|W o W|W|
++-+-+-+-+-+-+-+-+-+
+
+Generating a 3x16 Normal puzzle.
++-+-+-+
+|    o|
++ o + +
+|     |
++ + +o+
+|o    |
++ + + +
+|     |
++ + + +
+| o  o|
++ + + +
+|     |
++ + + +
+|    o|
++ +o+ +
+|     |
++ + + +
+|     |
++ o + +
+|    o|
++ + + +
+|o    |
++ + + +
+|     |
++ +o+ +
+|     |
++ + + +
+|o    |
++ + + +
+|  o  |
++ + +o+
+|     |
++-+-+-+
+
+Generated Normal game 3x16:ebmauctcshfqmlg
++-+-+-+
+|W W|o|
++ o +-+
+|W W|W|
++-+-+o+
+|o|W|W|
++-+ +-+
+|W W|W|
++ + + +
+|WoW|o|
++ + + +
+|W W|W|
++ +-+-+
+|W|W|o|
++-+o+-+
+|W|W|W|
++ +-+ +
+|W W|W|
++ o + +
+|W W|o|
++-+ + +
+|o|W|W|
++-+-+ +
+|W W|W|
++-+o+-+
+|W|W W|
++ +-+-+
+|o|W W|
++ + +-+
+|W|o|W|
++-+ +o+
+|W W|W|
++-+-+-+
+
+Generating a 15x16 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   o        o         o    o |
++o+ + + + o + + + o + + + + + +
+|                             |
++ + + + + + + + + + + + o + + +
+|                             |
++ + + o + + + + o + + + + + + +
+|o           o                |
++ + + + + + + + + + + + + o + +
+| o                  o        |
++ + + + + + + o + + + + + + + +
+|o                           o|
++ + + +o+ + + + + + + + + +o+ +
+|                   o         |
++o+ + + + + + + + + + + + + + +
+|      o                  o   |
++ + + + + + + + o + + + + + + +
+|                             |
++ + + + + + + + + + + + o + + +
+| o         o                 |
++ + + o +o+ + + +o+ + + + + o +
+|              o      o       |
++ + + + + + + + + + + + + + + +
+|       o        o            |
++ + + + + + o + + + + + o + + +
+|                    o        |
++ + + + + + + + + + + + + + + +
+|                 o           |
++ + + + +o+ + + + + + + + o + +
+| o            o             o|
++ + + + + + + + + + + + + + + +
+|     o           o      o    |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 15x16:dijebihzznzojnlzqesvpzcgtvjzjsszzpgjwchkpgzsixlzazzetqemnzjlg
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|WoW|W|W W|o|W W W W|o|W|WoW|
++o+-+-+ + o +-+ + o + +-+ +-+-+
+|W|W W W|W W|W|W W W W|W W W W|
++-+ + + +-+-+ +-+-+-+-+ o +-+-+
+|W W W W W|W W W W|W W W W|W W|
++-+ + o + +-+-+ o +-+-+ +-+ + +
+|o|W W W W W|o|W W W W|W|W W W|
++-+-+ + + +-+-+-+-+ +-+-+ o +-+
+|WoW|W W W|W W W W|W|o|W W W|W|
++-+-+ +-+-+ + o + +-+-+ + +-+ +
+|o|W|W|W W|W W W W|W W|W W|W|o|
++-+ +-+o+-+-+-+-+-+ + +-+-+o+ +
+|W|W|W W|W|W W|W W WoW W W|W|W|
++o+ +-+-+ + + +-+-+ + +-+-+-+-+
+|W|W|W o W|W W W W|W W|W WoW W|
++-+ + +-+-+-+-+ o +-+-+-+-+-+-+
+|W W|W|W W|W W|W W W W|W W|W W|
++ + +-+ +-+ + +-+-+ + + o + + +
+|WoW|W W|W|WoW|W W|W W|W W|W W|
++ + + o +o+ + +-+o+-+-+-+-+ o +
+|W W|W W|W|W W|o|W W|WoW|W|W W|
++ +-+ +-+-+-+-+-+-+-+-+-+ + + +
+|W|W W|WoW|W W W|o|W W W W|W W|
++ +-+-+-+-+ o +-+-+-+-+ o +-+-+
+|W|W W W|W W W|W W W|o|W W W W|
++ +-+ + +-+-+-+ + + +-+ +-+-+-+
+|W|W|W W W W W|W WoW W|W|W W W|
++-+ + + +o+ + +-+ + + +-+ o +-+
+|WoW|W W W W W|o|W W W|W W W|o|
++ +-+-+-+-+ + +-+-+-+-+-+-+-+-+
+|W|W WoW W|W W W|WoW|W W o W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 4x6 Normal puzzle.
++-+-+-+-+
+|     o |
++ + + + +
+|       |
++ + o +o+
+|o      |
++ + + + +
+|  o    |
++ + + + +
+|o   o  |
++ + + + +
+|   o   |
++-+-+-+-+
+
+Generated Normal game 4x6:fscapldm
++-+-+-+-+
+|W W|WoW|
++-+ +-+-+
+|W|W W|W|
++ + o +o+
+|o|W W|W|
++ +-+ +-+
+|W|o|W W|
++-+-+-+-+
+|o|W o W|
++-+-+-+-+
+|W WoW W|
++-+-+-+-+
+
+Generating a 5x16 Normal puzzle.
++-+-+-+-+-+
+|o       o|
++ + o + + +
+|         |
++ + + + + +
+|         |
++ +o+ + + +
+|     o   |
++ + + + +o+
+|         |
++o+ + + + +
+|       o |
++ + + + + +
+|         |
++ +o+ + + +
+|       o |
++ + +o+ + +
+| o       |
++ + + + +o+
+|o        |
++ + + + + +
+|        o|
++ o + + + +
+|         |
++ + + + + +
+|    o    |
++ + + + + +
+|         |
++ + + + o +
+|         |
++o+ + + + +
+|      o  |
++-+-+-+-+-+
+
+Generated Normal game 5x16:ahdzjlljpvnffpazabzezeko
++-+-+-+-+-+
+|o|W W W|o|
++-+ o +-+-+
+|W W W|W W|
++-+-+-+ + +
+|W|W|W W W|
++ +o+ + +-+
+|W|W|WoW|W|
++ +-+ + +o+
+|W|W W W|W|
++o+ + +-+-+
+|W|W W|WoW|
++ +-+-+-+-+
+|W|W|W W|W|
++ +o+ +-+ +
+|W|W|W|WoW|
++-+-+o+ +-+
+|WoW|W|W|W|
++-+-+ +-+o+
+|o|W W|W|W|
++-+-+-+ +-+
+|W W|W W|o|
++ o + + +-+
+|W W|W W W|
++-+-+ + + +
+|W W o W W|
++ + + +-+-+
+|W W W|W W|
++-+ + + o +
+|W|W W|W W|
++o+ +-+-+-+
+|W|W|W o W|
++-+-+-+-+-+
+
+Generating a 13x17 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|        o     o   o     o|
++ +o+ + + + + + + + + + + +
+|        o   o       o o  |
++ + + + + + + +o+ o + + +o+
+|                         |
++ +o+ + + + + + + + + + + +
+|                         |
++ + + + + o + + + + + + + +
+|              o  o  o    |
++ o + + + + + + + + + + + +
+|        o   o            |
++ + + + + + + + + + + +o+ +
+| o    o   o      o       |
++ + + + + + + + + + + + + +
+|   o       o            o|
++ + + + + + + + + + + + + +
+|o     o      o    o      |
++ + + + + + + + + + + + + +
+|        o            o   |
++ + + o + + + + + + + + + +
+|             o   o       |
++ + + + + + + + + + +o+ + +
+|                       o |
++ + o + + + + + + + + + + +
+|                       o |
++ + + + + + + + + + + + + +
+|  o               o     o|
++ + + + o + + + + + + + + +
+|o  o                     |
++ + + + + + o + + + + + + +
+|  o                      |
++ + +o+ + + + + o + o +o+o+
+| o     o    o            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 13x17:ifdfczfdhbqcgzczzgzeccfzgdzjdedgzkhmzafgezomizhdzczceztzdpfhrczhpzbkdcbbfe
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W W W|W|o|W|W o W|o|W|W|o|
++ +o+ + +-+ +-+-+-+-+ + +-+
+|W W W|W o W|o|W|W W|o|o|W|
++-+-+-+ +-+ +-+o+ o + + +o+
+|W W W|W|W|W|W|W|W W|W|W|W|
++ +o+ +-+ +-+ +-+-+-+-+-+-+
+|W W W|W W W W W|W W W|W W|
++-+-+-+ + o + +-+ + +-+ + +
+|W W|W W W W W|o|WoW|o|W W|
++ o +-+ +-+ +-+-+ + +-+ +-+
+|W W|W|W|o|W|o|W W W|W|W|W|
++-+-+ +-+-+-+-+-+-+-+ +o+ +
+|WoW|W o W|o|W|W WoW W|W|W|
++-+-+-+-+ +-+ + +-+-+-+ + +
+|W WoW W|W|WoW|W|W|W|W W|o|
++-+-+-+-+-+ +-+-+ + + + + +
+|o|W|W o W|W|WoW|W|o|W W|W|
++-+ +-+-+-+-+-+-+ + +-+-+ +
+|W W W W|o|W|W W W|W|WoW|W|
++ +-+ o +-+ + + +-+-+-+-+-+
+|W|W|W W W W|WoW|WoW|W W W|
++-+ +-+-+ +-+ + +-+-+o+-+-+
+|W W W W|W|W W W|W W W|WoW|
++ + o + +-+ +-+-+-+-+-+-+-+
+|W W W W|W|W|W W W W W|WoW|
++-+-+ +-+ + +-+ + + + +-+-+
+|W|o|W|W W|W|W|W W o W W|o|
++ +-+-+ o +-+ +-+ + + + +-+
+|o|WoW|W W|W W W|W W W W W|
++ +-+-+ +-+ o +-+-+-+-+-+-+
+|W|o|W|W|W W W|W W|W W|W|W|
++-+-+o+-+-+ +-+ o + o +o+o+
+|WoW|W|WoW|W|o|W W|W W|W|W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 15x4 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|        o     o          o  o|
++ + + + + + + + + + + + + + + +
+|o      o              o o    |
++ +o+o+ + + o + + + o + + + o +
+|                             |
++ + + + + + + + o + + + + + + +
+|        o   o         o     o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 15x4:ifkczegobgbghhzuvdjf
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W W|W o W|W|o|W W|W W|WoW|o|
++ + +-+-+-+-+ +-+ +-+-+ +-+-+-+
+|o|W|W|WoW|W W W W|W W|o|o|W W|
++ +o+o+-+-+ o +-+-+ o + +-+ o +
+|W|W|W|W W W W|W W|W W|W W|W W|
++-+ +-+ +-+ +-+ o +-+-+-+-+-+-+
+|W W|W W|o|W|o|W W|W W o W W|o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 13x17 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                o       o|
++ +o+ + + + + + + + + + + +
+|                      o  |
++ + + + + o + + +o+ + + + +
+|                        o|
++ + + + + + + + + +o+ + + +
+|  o            o      o  |
++ + + +o+ + + + + + + + + +
+|                    o    |
++ + + + + o + + + + + + + +
+|                     o   |
++ + + + + + + + +o+ + + + +
+|  o                     o|
++ + + + + + + + + + + + + +
+|                         |
++ + + o + + o + + + +o+ + +
+|o                 o      |
++ + + + +o+ + + + + + + o +
+|              o          |
++ + + + + + + + + + + + + +
+|  o      o               |
++ + + + + + + + + + + + + +
+|     o  o     o      o   |
++ + + + + + + + + + + + + +
+|         o               |
++ + + + + + + + + + + + + +
+| o                 o     |
++ + +o+ + + + o + + + + + +
+|       o                o|
++ + + + + + + + + + + + + +
+|   o                     |
++ + + + + + + + o + + + + +
+|   o              o      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 13x17:qhcztlgzhsimgiznnzltkvzzffieroopzmgzucfgzmzqrjisqzdzlmo
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W W W|W W|W W W o W W W|o|
++ +o+ + + +-+-+-+-+-+-+-+-+
+|W W W|W W W W W|W W|W o W|
++-+-+-+ + o + +-+o+-+-+-+-+
+|W W|W W W W W|W W|W|W W|o|
++ + +-+-+-+ + +-+-+o+ + +-+
+|W o W|W|W|W W|WoW|W|W o W|
++-+ + +o+ +-+-+-+-+-+-+ + +
+|W|W W|W|W W W W|W W|o|W W|
++ +-+-+-+ o +-+-+ + +-+-+-+
+|W|W|W W W W|W W W W|WoW|W|
++ + +-+-+-+ +-+ +o+ +-+-+ +
+|W|o|W W W|W|W|W W W W|W|o|
++ + + + + +-+ + + +-+-+ + +
+|W|W|W W W|W W|W W|W|W|W|W|
++ +-+ o +-+ o +-+-+ +o+ +-+
+|o|W W W|W|W W|W W|o|W|W W|
++ + + + +o+ +-+ + + +-+ o +
+|W|W W W|W|W|W o W|W|W|W W|
++ +-+-+-+-+-+ + +-+-+ +-+ +
+|W|o|W W|WoW|W W|W|W W W|W|
++ +-+ + +-+-+-+-+ +-+ + + +
+|W|W|WoW|o|W W o W W|WoW|W|
++ + + + +-+-+ +-+-+-+ + +-+
+|W|W|W W|WoW|W|W|W W|W W W|
++-+ +-+-+-+-+-+ +-+ +-+ +-+
+|WoW|W W|W W W W W|WoW|W|W|
++ +-+o+-+-+ + o + +-+ +-+ +
+|W|W W|WoW|W W W W W|W W|o|
++ +-+-+-+-+-+ +-+-+-+-+-+ +
+|W|WoW|W W W|W|W W W W W|W|
++-+-+-+-+ + +-+ o +-+ + +-+
+|W WoW W|W W W W W|o|W W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 17x13 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   o  o      o                   |
++ + + + +o+ + + + + + + +o+ + + +o+
+|o               o  o             |
++ + o + + + +o+ + + + + + + + + + +
+|      o                      o   |
++ + + + +o+ + + + + + + + + + + + +
+|                                o|
++ + o + + + + o + + +o+ +o+ + + + +
+|                                 |
++ + + + + + + + + + + + + + + + + +
+| o    o                     o    |
++ + + + + + +o+ + + + o + + + + + +
+|o                                |
++ + + + + + + + + + + + + o + + + +
+|         o                       |
++ o + + + + + + + + + + + + + + + +
+|                          o o    |
++ + + + o + + + + + + + + + + + o +
+|                o                |
++ + + + + + + + + + + o + + + + + +
+|    o  o      o              o   |
++ o + + + + + + + + + + +o+ + + + +
+|          o                 o   o|
++ + + + + + + + + + + +o+ + + + + +
+|           o       o      o      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 17x13:dcgzcphapcqizbwlzzgdjgdzzzaevqilzzhqyzzhblxrzmpcgoewsrdwvhg
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|WoW|o|W W|WoW|W|W W|W W W|W W|W|
++ +-+-+-+o+-+-+-+ + + + +o+ + + +o+
+|o|W W|W W|W W W|o|WoW|W W W|W W|W|
++ + o +-+-+ +o+ + + + +-+-+-+ + +-+
+|W|W W|o|W|W W W|W|W W|W W|W WoW W|
++-+-+-+-+o+-+-+-+-+-+-+ +-+-+ + +-+
+|W W W W|W|W W W W W|W W|W W|W W|o|
++ + o + +-+ + o + +-+o+-+o+-+ + +-+
+|W W W W|W W W W W|W W|W W|W|W W|W|
++-+-+-+-+-+-+-+-+-+ +-+-+-+ +-+-+ +
+|WoW|W|o|W|W W W|W W|W W W W|o|W W|
++-+-+ +-+ + +o+ +-+-+ o +-+-+-+ + +
+|o|W W W W|W W W|W W W W|W W W W W|
++-+-+ + + +-+-+-+ +-+-+-+ o +-+-+-+
+|W W|W W WoW W W|W|W W W W W|W W W|
++ o +-+-+-+ + + +-+ + +-+-+-+ +-+-+
+|W W|W|W W|W W W W|W W|W W|o|o|W W|
++-+-+ + o + +-+ +-+ +-+ +-+-+ + o +
+|W W|W|W W|W|W|W|o|W|W W|W W W|W W|
++ + + +-+-+-+ +-+-+-+ o +-+-+-+-+-+
+|W W|o|WoW|W W o W W|W W|W|W|WoW|W|
++ o + +-+-+-+-+-+ +-+ +-+o+ +-+-+ +
+|W W|W|W W o W W|W|W W|W|W|W o W|o|
++ + + +-+-+-+-+-+-+-+-+o+-+-+-+ + +
+|W W|W|W W WoW W W|WoW|W|W o W|W|W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 11x7 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+
+| o              o    |
++ + + o + + + + + + + +
+|o                    |
++ + + + +o+ + + o + + +
+| o                o  |
++ + + + + + + + + + +o+
+|o                    |
++ + + + + + + + + + + +
+|               o     |
++ + + o + + + + + + + +
+|                     |
++o+ + + + + + o + +o+ +
+|    o     o         o|
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 11x7:bojpzdggqwazzgkzlmegfj
++-+-+-+-+-+-+-+-+-+-+-+
+|WoW|W W W|W|W W|o|W W|
++-+-+ o +-+ +-+ +-+ + +
+|o|W W W|W W W|W W W W|
++-+-+-+-+o+-+-+ o +-+-+
+|WoW|W W W|W W W W|o|W|
++-+-+-+ +-+ + +-+ +-+o+
+|o|W W|W|W|W W|W|W W|W|
++-+ + +-+ +-+-+ +-+-+-+
+|W W W W W|W W WoW W W|
++-+ + o + +-+-+-+ +-+-+
+|W|W W W W W|W W|W|W W|
++o+ +-+ + +-+ o +-+o+-+
+|W|W|o|W W|o|W W|W W|o|
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 7x4 Normal puzzle.
++-+-+-+-+-+-+-+
+| o           |
++ + + + + + + +
+|             |
++ + o + + o +o+
+|             |
++ + + + + + + +
+|o   o        |
++-+-+-+-+-+-+-+
+
+Generated Normal game 7x4:bzpfczbd
++-+-+-+-+-+-+-+
+|WoW|W|W W W W|
++-+-+ +-+ + +-+
+|W W W W|W W|W|
++ + o + + o +o+
+|W W W W|W W|W|
++-+ +-+-+ + +-+
+|o|W|o|W W W W|
++-+-+-+-+-+-+-+
+
+Generating a 9x4 Normal puzzle.
++-+-+-+-+-+-+-+-+-+
+|    o     o      |
++ + + + + + + + +o+
+|o           o o  |
++ + + + + + + + + +
+| o    o          |
++ + + + + + o + + +
+|               o |
++-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 9x4:efwalbuevu
++-+-+-+-+-+-+-+-+-+
+|W W o W W|o|W W|W|
++-+-+-+-+-+-+-+ +o+
+|o|W|W W W W|o|o|W|
++-+ + + + +-+-+ +-+
+|WoW|W o W|W W|W W|
++ +-+ + + + o +-+-+
+|W|W W W W|W W|WoW|
++-+-+-+-+-+-+-+-+-+
+
+Generating a 17x3 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| o                        o      |
++ + + + +o+ + + +o+ +o+ + + + + o +
+|                         o       |
++o+ + + + + + + + + + + + + + + + +
+|    o      o            o        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 17x3:byohdkzbhzlgm
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|WoW|W W W W W W|W W|W W|W o W|W W|
++-+-+ + +o+ + +-+o+-+o+-+-+-+-+ o +
+|W|W W W W W W|W W|W W|W WoW W|W W|
++o+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W o W|W WoW W|W W W W o W W W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 16x16 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|    o                o      o  |
++ + + + + + + + o + + + + + + + +
+| o  o       o         o o      |
++ + + + + +o+ + + + + + + + +o+ +
+|o                              |
++ + + o + + + + + + o + + + + + +
+| o                             |
++ + + + + + + +o+ + + + + + +o+ +
+|                               |
++ + + + +o+ +o+ +o+ + +o+o+ + + +
+|  o                           o|
++o+ + + + + + + + + + + + + + + +
+|             o    o   o    o   |
++ + +o+ + + + + + + + + + + + + +
+|                o              |
++ + + + + + + +o+ + + + +o+ + + +
+|          o       o   o        |
++ + + + + + + + + + + + + +o+ + +
+|                               |
++ + o + + + + + + + + + + + + o +
+|        o     o     o     o    |
++ + + + + + + + + + + + +o+ + + +
+|                o o            |
++ o + + + + + o + + + + + + + + +
+|      o                     o  |
++ + + + + + + + + + + + + + + + +
+|       o                       |
++ + + + + + + + + + + o + + + + +
+|o o       o o   o       o     o|
++ + + o + + + + + + + + + +o+ + +
+|         o     o             o |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 16x16:eqgrqchjbqrczknmzsnzqddfbizcazsedehzrzdjqhdzjznzajfffzdwbnlxvzpztjbhbdhffunfn
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W o W|W W|W|W W|W|WoW|W|W o W|
++ +-+-+-+-+ + + o + +-+-+ +-+-+-+
+|WoW|o|W W|W|o|W W|W W|o|o|W W W|
++-+ +-+ +-+o+ +-+-+ + +-+ + +o+ +
+|o|W|W W|W|W|W|W W W W W|W|W W W|
++-+-+ o + + +-+-+ + o + +-+-+-+-+
+|WoW|W W|W|W W|W|W W W W W|W W W|
++-+-+ +-+ +-+-+o+-+ + +-+-+ +o+ +
+|W|W W|W W W|W|W|W|W W|W|W|W W W|
++ +-+-+ +o+ +o+-+o+-+ +o+o+-+-+-+
+|W|o|W|W W W|W|W|W|W|W|W|W|W W|o|
++o+-+ +-+ +-+-+ +-+ +-+-+-+ + +-+
+|W|W W W|W|W WoW W|o|W o W|WoW|W|
++ + +o+ + +-+ +-+-+ +-+-+-+ + + +
+|W|W W W|W|W|W|W|o|W|W W|W|W W|W|
++-+-+ +-+-+ +-+o+-+-+ +-+o+-+-+ +
+|W W|W|W|W o W|W|W o W|o|W|W W W|
++ + +-+ +-+ +-+-+ +-+-+-+-+o+-+-+
+|W W W|W W|W|W|W W|W|W|W W W|W W|
++-+ o +-+ +-+ +-+-+ + + +-+-+ o +
+|W|W W W|o|W W|o|W|W|o|W|W|o|W W|
++ +-+ + + +-+ +-+ + + + +o+-+-+-+
+|W W|W W|W W|W W|o|o|W|W|W|W W W|
++ o +-+-+-+ + o + + +-+-+-+ + + +
+|W W|W o W|W|W W|W|W|W W W|W o W|
++-+ +-+-+-+-+-+ +-+ + + + + + + +
+|W|W|W WoW W|W|W W|W|W W W|W W W|
++ +-+-+-+-+-+ + +-+-+ o +-+-+-+-+
+|o|o|W W W|o|o|W|o|W W W|o|W W|o|
++ +-+ o +-+-+ +-+-+ + + +-+o+-+-+
+|W|W W W|WoW|W|WoW|W W W|W W|WoW|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 3x12 Normal puzzle.
++-+-+-+
+|     |
++o+ +o+
+|     |
++ + + +
+|     |
++ + + +
+|  o  |
++ + + +
+|     |
++ + + +
+|o    |
++ + + +
+|    o|
++ + + +
+|     |
++ +o+ +
+|     |
++ + + +
+|     |
++ o + +
+|     |
++ + +o+
+|o    |
++-+-+-+
+
+Generated Normal game 3x12:fdwrnmsma
++-+-+-+
+|W|W|W|
++o+ +o+
+|W|W|W|
++-+ +-+
+|W W W|
++ + + +
+|W o W|
++ + + +
+|W W W|
++-+ +-+
+|o|W|W|
++-+ + +
+|W|W|o|
++ +-+ +
+|W W|W|
++-+o+-+
+|W|W W|
++ +-+ +
+|W W|W|
++ o +-+
+|W W|W|
++-+ +o+
+|o|W|W|
++-+-+-+
+
+Generating a 5x8 Normal puzzle.
++-+-+-+-+-+
+|      o  |
++ + +o+ + +
+|  o      |
++ + + + + +
+|         |
++o+ + o + +
+|        o|
++ + + + + +
+|         |
++ + + + + +
+|         |
++ + +o+ + +
+|      o  |
++ + + + +o+
+|     o   |
++-+-+-+-+-+
+
+Generated Normal game 5x8:gggyelzpkkf
++-+-+-+-+-+
+|W|W|W|o|W|
++ + +o+-+ +
+|W|o|W|W W|
++ + +-+ + +
+|W|W|W W W|
++o+-+ o +-+
+|W|W W W|o|
++ + + +-+-+
+|W|W W|W W|
++ + +-+ + +
+|W|W|W W W|
++-+-+o+-+-+
+|W W W|o|W|
++ + +-+-+o+
+|W W|WoW|W|
++-+-+-+-+-+
+
+Generating a 5x5 Normal puzzle.
++-+-+-+-+-+
+|o        |
++ +o+ +o+o+
+|         |
++ + + + + +
+|       o |
++ + +o+ + +
+|o       o|
++ +o+ + + +
+|       o |
++-+-+-+-+-+
+
+Generated Normal game 5x5:akdbzafehcn
++-+-+-+-+-+
+|o|W W|W|W|
++-+o+-+o+o+
+|W W|W|W|W|
++-+-+ +-+-+
+|W|W W|WoW|
++ +-+o+-+-+
+|o|W|W W|o|
++ +o+ +-+-+
+|W|W|W|WoW|
++-+-+-+-+-+
+
+Generating a 10x9 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+
+|          o   o    |
++ + + + + + + + + + +
+|o   o         o   o|
++ +o+ + + +o+ + + + +
+|                   |
++ + + + + + + + + + +
+|       o        o  |
++ + + + + + + + + + +
+|             o     |
++ + + + + + + + + +o+
+| o                 |
++ + + + o + + o + + +
+|  o                |
++ + + + + + + + + + +
+|                   |
++ + + o + + + + + + +
+| o               o |
++-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 10x9:kdxdjdchzzdizjxbyfhzzjop
++-+-+-+-+-+-+-+-+-+-+
+|W|W W|W W|o|W o W|W|
++ +-+ + + +-+-+-+-+ +
+|o|W|o|W W W W|o|W|o|
++ +o+ +-+ +o+ +-+ + +
+|W|W|W W|W W W W|W|W|
++-+-+-+-+-+-+ + + +-+
+|W W|W WoW W|W W|o|W|
++ + +-+-+-+-+-+-+ + +
+|W W W W|W W|WoW|W|W|
++-+-+ + +-+ +-+-+ +o+
+|WoW|W W W|W W W|W|W|
++-+-+-+ o +-+ o +-+ +
+|W o W|W W W|W W W|W|
++-+-+-+-+ + +-+-+ +-+
+|W W W W|W W W W|W W|
++-+-+ o +-+-+ + +-+-+
+|WoW|W W W W|W W|WoW|
++-+-+-+-+-+-+-+-+-+-+
+
+Generating a 15x17 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| o        o            o     |
++ + + + + + + + + + o + + + o +
+|      o                      |
++o+ + + + + + + + + + + + + + +
+|  o       o       o     o    |
++ + + + + + + + + + + + + + + +
+|              o        o    o|
++ + + + + + + + + + o + + + + +
+|                             |
++ + + o + + + + + + + + + + + +
+|                       o     |
++ + + + + + + + + + + + + + o +
+|                             |
++ + + + + + + o +o+o+ + + + + +
+|    o                        |
++o+ + + + + + + + + + o + + + +
+|             o          o    |
++ + + + + + + + + + + + + +o+ +
+|                             |
++ + + + + + + +o+ + +o+ + + + +
+|                             |
++ + + + + + o + + + + + + +o+ +
+|                o  o        o|
++ + o + + + + + + + + + + + + +
+|        o         o   o      |
++ + + + + + + + + + + + + + + +
+|             o           o  o|
++ + + + + +o+ + + + o + + + + +
+|o                         o  |
++ + + + + + + + + + + + + + + +
+|       o    o     o          |
++ + + + + + + + + + + + + o +o+
+| o      o       o     o      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 15x17:bimyhhwzfhhfzwietzszvzhzscboyuukzfzufzxoscidzijdzxlckijzaznefzkcbghf
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|WoW|W W|W o W|W W W W|WoW|W W|
++-+-+ + +-+-+-+-+-+ o +-+-+ o +
+|W|W W o W W|W W W|W W W W|W W|
++o+-+-+ + +-+ + + +-+-+-+-+-+-+
+|W|o|W|W W|o|W W W|o|W W o W W|
++-+-+ +-+-+-+ + + +-+-+-+-+-+-+
+|W W W W W W|W o W|W W|WoW|W|o|
++ + + + + + + + + + o +-+-+ +-+
+|W W W W W W|W W W|W W|W W|W W|
++ + + o + + + + + +-+-+ + + + +
+|W W W W W W|W W W|W W|WoW|W W|
++ + + + + + +-+-+-+-+ + + + o +
+|W W W W W W|W W|W|W|W|W W|W W|
++-+-+-+ +-+-+ o +o+o+ +-+-+ + +
+|W|W|o|W|W W|W W|W|W|W W|W|W W|
++o+ +-+-+ + +-+-+-+-+ o + +-+ +
+|W|W W W|W W WoW W W|W W|o|W|W|
++-+ + +-+-+-+-+-+ + +-+ + +o+-+
+|W W W|W W W|W W|W W|W|W|W|W|W|
++ + + +-+ + +-+o+-+-+o+ +-+-+ +
+|W W W W|W W W|W W|W|W|W W|W W|
++ + + + +-+ o +-+-+ +-+-+-+o+-+
+|W W W W|W|W W W|o|WoW|W|W W|o|
++ + o + + +-+ + +-+-+ + + +-+-+
+|W W W W|o|W|W W W|o|W|o|W|W|W|
++ + + + + + +-+-+-+-+-+ +-+ + +
+|W W W W|W|W|WoW|W W W|W|WoW|o|
++-+ + + +-+o+-+-+-+ o +-+ +-+ +
+|o|W W W|W|W|W W|W|W W W|W|o|W|
++-+ + +-+ + + +-+ +-+-+-+-+-+-+
+|W W W|WoW|W|o|W W o W W|W W|W|
++-+-+ + +-+-+ +-+-+-+ +-+ o +o+
+|WoW|W|W|o|W W|W o W|W|o|W W|W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 4x11 Normal puzzle.
++-+-+-+-+
+|     o |
++ + + + +
+|       |
++ + + + +
+| o     |
++ + + +o+
+|    o  |
++ + + + +
+|       |
++o+ + + +
+|       |
++ + + + +
+|       |
++ + + + +
+|       |
++ + +o+ +
+|       |
++o+ + + +
+|  o    |
++ + + + +
+|   o   |
++-+-+-+-+
+
+Generated Normal game 4x11:fxleqzujio
++-+-+-+-+
+|W|W|WoW|
++ + +-+-+
+|W|W W|W|
++ +-+ + +
+|WoW|W|W|
++-+ + +o+
+|W|W|o|W|
++ + + + +
+|W|W|W|W|
++o+-+ +-+
+|W|W|W W|
++ + +-+ +
+|W|W W|W|
++-+ + +-+
+|W|W W W|
++ + +o+ +
+|W|W W W|
++o+-+ + +
+|W|o|W W|
++ +-+-+ +
+|W|WoW|W|
++-+-+-+-+
+
+Generating a 11x6 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+
+|          o          |
++ + + + + + + + + + + +
+|  o   o         o   o|
++o+ + + + + + + + + + +
+|                     |
++ + + + + + + + + + + +
+|          o      o   |
++ + + + + + + + + + + +
+|o   o   o           o|
++ + + + + + + o + o + +
+| o                   |
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 11x6:kzidjdazzwgyddlnde
++-+-+-+-+-+-+-+-+-+-+-+
+|W|W|W W W|o|W W W W W|
++ + + + + +-+-+ + + +-+
+|W|o|W o W|W W|W o W|o|
++o+ + + + + +-+ + + +-+
+|W|W|W W W|W|W W W W W|
++ +-+-+-+-+ +-+-+-+-+-+
+|W|W W|W W o W W|WoW|W|
++-+ + +-+-+ +-+-+-+-+ +
+|o|W o W|o|W|W W|W W|o|
++-+-+ + +-+ + o + o + +
+|WoW|W W|W W|W W|W W|W|
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 10x9 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+
+|      o   o        |
++ + + + + + + + + o +
+|  o        o  o    |
++ + + o + + + + + + +
+|o                  |
++ + + + + + + + + + +
+|               o   |
++ + +o+ + + + + + + +
+|                   |
++ o + + + + + + + + +
+|          o      o |
++ + + o + + + + + + +
+| o          o      |
++ + + + + + + + + +o+
+|                   |
++ + + +o+ + + o + + +
+| o      o        o |
++-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 10x9:gdzadicjnzzchzjzcggokyzagggi
++-+-+-+-+-+-+-+-+-+-+
+|W W W|o|W|o|W W|W W|
++-+-+ +-+ +-+ +-+ o +
+|W|o|W W W|WoW|o|W W|
++ +-+ o +-+ +-+-+-+-+
+|o|W W W|W W|W W W W|
++ + +-+ +-+-+ + + + +
+|W|W|W|W W W|W WoW W|
++-+-+o+-+-+-+ + + + +
+|W W|W|W W W|W W W W|
++ o +-+ +-+-+-+-+-+-+
+|W W|W W|W o W|W|WoW|
++-+-+ o +-+-+-+ +-+-+
+|WoW|W W|W W o W W|W|
++-+-+ +-+-+ +-+-+-+o+
+|W W W|W W|W|W W W|W|
++-+-+-+o+-+-+ o +-+-+
+|WoW|W W|o|W W W|WoW|
++-+-+-+-+-+-+-+-+-+-+
+
+Generating a 6x17 Normal puzzle.
++-+-+-+-+-+-+
+|       o   |
++ + + + + + +
+|         o |
++ + o + + + +
+|        o  |
++ + + + + + +
+|o       o  |
++ + + + + + +
+|  o        |
++ + + + o + +
+|           |
++ + + + + + +
+|    o      |
++ + + + +o+ +
+|           |
++ + o + + + +
+|      o   o|
++ + + + + + +
+| o         |
++ + + + + + +
+|     o   o |
++o+ + + + + +
+|           |
++ + + + + + +
+|      o    |
++ + + + + + +
+| o        o|
++ + + + + + +
+|     o     |
++ + + + + + +
+|         o |
++ o +o+ + + +
+|      o    |
++-+-+-+-+-+-+
+
+Generated Normal game 6x17:hxepnhppzeoqndmzadbznqiqzaccm
++-+-+-+-+-+-+
+|W W|W WoW W|
++-+ +-+-+-+-+
+|W|W W|W|WoW|
++ + o + +-+-+
+|W|W W|W o W|
++ +-+ +-+-+ +
+|o|W|W W|o|W|
++ + +-+-+-+-+
+|W|o|W W W W|
++ + + + o + +
+|W|W|W W W W|
++-+-+-+-+-+-+
+|W W|o|W W W|
++-+ +-+ +o+ +
+|W|W W|W W W|
++ + o +-+-+-+
+|W|W W|o|W|o|
++ +-+ +-+ +-+
+|WoW|W W|W W|
++-+ +-+-+ + +
+|W|W|WoW|WoW|
++o+ +-+-+ + +
+|W|W|W W|W W|
++-+-+ + +-+ +
+|W W|W o W|W|
++ + +-+ + +-+
+|WoW|W|W W|o|
++ + + +-+-+-+
+|W W|WoW|W W|
++-+-+-+ + + +
+|W W|W|W|WoW|
++ o +o+-+ + +
+|W W|W|o|W W|
++-+-+-+-+-+-+
+
+Generating a 6x16 Normal puzzle.
++-+-+-+-+-+-+
+|  o        |
++ + + + o + +
+|           |
++ o + + + + +
+|      o    |
++ + + + + o +
+|o          |
++ + + + + + +
+|          o|
++ + + + o + +
+|           |
++ + + + + + +
+|           |
++ +o+ +o+ + +
+|o          |
++ + + + + + +
+|      o    |
++ + + + + o +
+|o          |
++ + + + + + +
+|          o|
++ + + + o + +
+|  o        |
++ + + + + + +
+|o          |
++ + + + + + +
+|    o     o|
++ + + + + + +
+|o          |
++ + + + o + +
+|  o        |
++-+-+-+-+-+-+
+
+Generated Normal game 6x16:cpppnbzghzndezcnbzghftzaflrf
++-+-+-+-+-+-+
+|W|o|W W W W|
++ +-+ + o + +
+|W W|W W W W|
++ o +-+-+-+-+
+|W W|W|o|W W|
++-+ + +-+ o +
+|o|W|W W|W W|
++-+-+ + +-+-+
+|W W|W W W|o|
++ + +-+ o +-+
+|W W W|W W W|
++ + +-+-+ + +
+|W W|W W|W W|
++-+o+-+o+-+ +
+|o|W W|W W|W|
++-+ + +-+-+-+
+|W W W|o|W W|
++-+ + +-+ o +
+|o|W W|W|W W|
++-+-+-+ +-+-+
+|W W|W W W|o|
++ + +-+ o +-+
+|W o W|W W W|
++-+ + +-+ +-+
+|o|W W|W|W|W|
++-+-+-+ +-+ +
+|W W o W W|o|
++-+ +-+-+-+ +
+|o|W|W W W|W|
++-+-+-+ o +-+
+|W o W|W W W|
++-+-+-+-+-+-+
+
+Generating a 13x5 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|o         o         o    |
++ + + + + + + + +o+ + + o +
+|                         |
++ + o + + +o+ + + + + + + +
+|                       o |
++ + + + + + + + + + + + + +
+|      o       o   o      |
++ + + + + o + + + + + +o+ +
+|   o                    o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 13x5:ajjugzegzmzhhdpmfu
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|o|W W W|W|o|W W W W|o|W W|
++-+ + + + +-+-+ +o+ +-+ o +
+|W W W W|W W W|W W W W|W W|
++ + o + + +o+ +-+-+-+-+-+-+
+|W W W W|W W W|W W|W W|WoW|
++ + + +-+-+-+ + +-+ + +-+-+
+|W W W|o|W W|W|o|W o W|W W|
++-+-+-+-+ o +-+ + + +-+o+-+
+|W WoW W|W W|W W|W W|W W|o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 14x4 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                o         o|
++ + +o+ + +o+ + + + + + + + +
+|o                    o     |
++ + + + + + + +o+ + + + + + +
+|                o         o|
++ + + +o+ + + + + + + + + + +
+|                   o    o  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 14x4:qjefqutzdjgzoe
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W W W W|W W|W W|o|W W W W|o|
++-+ +o+ +-+o+-+ +-+ + + + +-+
+|o|W W W W|W W|W|W W WoW W W|
++-+-+-+-+-+-+-+o+-+ + + + +-+
+|W W W W W W W|W|o|W W W W|o|
++ + + +o+ + + + +-+-+-+-+-+-+
+|W W W W W W W|W W|WoW|W o W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 17x4 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   o                 o    o     o|
++ + + + +o+ +o+ + o + + + + + + + +
+|o   o                         o  |
++ + + + + + + + + + + + + + + + + +
+|                    o            |
++ + + + o + + + + + + + + + o + +o+
+|            o          o      o  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 17x4:drefidepdzazzfttemkg
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|WoW|W|W|W W W|W W|WoW|W o W|W|o|
++ +-+-+ +o+ +o+ + o +-+-+-+-+-+ +-+
+|o|W o W|W|W W W|W W|W W W W|W o W|
++ + +-+-+-+-+-+-+-+-+ + + +-+-+ +-+
+|W|W|W W W W W W|W W o W W|W W|W|W|
++-+-+ + o + +-+-+ + + +-+-+ o +-+o+
+|W W W W W W|o|W W W W|WoW|W W|o|W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 13x16 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                  o      |
++o+ + o + + o + + + + + + +
+|               o        o|
++ + + + + + + + + + + + + +
+|   o                     |
++ + + + + + + + o + +o+ + +
+|  o                      |
++ + + +o+ + + + + + + + + +
+|                         |
++ + + + + + + + o + + + + +
+|        o          o     |
++ + + + + + + + + + + +o+o+
+|o          o             |
++ + + o + + + + + + + + + +
+|            o   o        |
++ + + + + + + + + + + + + +
+|   o     o               |
++ + + + + + + + + + + + +o+
+|o                 o      |
++ + + + + + + + + + + + + +
+|                    o    |
++ + + + + + o + + o + + + +
+|     o                 o |
++ + + + + + + + + + + + + +
+|                         |
++o+ + + + + + + o + + + + +
+|      o   o           o  |
++ + + + + + + + + + + + +o+
+|                         |
++ + o + + +o+ + + + + o + +
+|                o        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 13x16:sgefzdizdzlegzdzzirkzcbakszgdzlfzoarzzbpfmrzzbopdlzbzdgkt
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W W W W|W W|W W o W W|W|
++o+ + o + + o +-+-+-+-+-+ +
+|W|W W W W|W W|WoW|W W|W|o|
++-+-+-+-+-+-+-+-+-+ +-+ + +
+|W WoW W|W W|W W W W|W|W|W|
++-+-+-+-+ + + + o + +o+ +-+
+|W o W|W W W|W W W W|W|W W|
++-+-+-+o+-+-+ +-+-+-+-+ + +
+|W|W W W|W|W W|W W|W W|W W|
++ + + +-+ +-+-+ o + + + +-+
+|W|W W|W o W|W|W W|WoW|W|W|
++ +-+-+-+ +-+ +-+-+ + +o+o+
+|o|W W W|W|WoW|W W|W W|W|W|
++ +-+ o +-+ +-+ + +-+-+ +-+
+|W|W|W W W|W|o|W o W|W W|W|
++ + +-+-+-+-+-+-+ + + + + +
+|W|WoW|W WoW W|W|W W|W W|W|
++-+-+ +-+-+-+-+ +-+-+-+ +o+
+|o|W|W|W W|W W W|W o W|W|W|
++-+ +-+ + +-+-+ +-+-+-+ + +
+|W W W W W|W W|W W W|o|W|W|
++-+ + + + + o +-+ o +-+-+-+
+|W|W WoW W|W W|W|W W W|WoW|
++ + + + + +-+-+ +-+-+ +-+-+
+|W|W W W W W|W W W W|W W W|
++o+ + +-+ +-+ + o + + +-+-+
+|W|W W|o|W|o|W W W W|W|o|W|
++ +-+-+-+-+-+-+-+ +-+-+-+o+
+|W|W W W|W W W W|W|W W W|W|
++-+ o +-+ +o+ +-+-+-+ o +-+
+|W W W|W W W W|W o W|W W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 10x12 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+
+|  o        o       |
++ + + + + + + + + +o+
+|      o            |
++ + + + + + + + + + +
+|      o         o  |
++ + + + + + + + + + +
+| o            o    |
++ + + + o + + + + + +
+|o                 o|
++ + + + + + + + o + +
+| o                 |
++ + + + + + o + + + +
+|        o          |
++ + + +o+ + + + + + +
+|o         o       o|
++ + + + + + + + o + +
+|  o                |
++ + + + + + +o+ + + +
+|                   |
++ + + o + + + + + o +
+|o          o       |
++ + + + + + + + + + +
+| o      o        o |
++-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 10x12:cizagzmjwmllrpezdpqmjhpfzdzflbkzcgi
++-+-+-+-+-+-+-+-+-+-+
+|W o W|W W WoW W W|W|
++-+-+-+-+-+-+-+-+-+o+
+|W W W o W W W|W W|W|
++-+-+-+-+-+-+-+ + +-+
+|W W W o W W W|W o W|
++-+-+-+-+-+-+-+-+ + +
+|WoW|W W W W|W|o|W W|
++-+-+ + o + + +-+-+-+
+|o|W|W W W W|W W W|o|
++-+ +-+-+-+-+-+ o +-+
+|WoW|W|W W W W|W W W|
++ +-+ +-+-+ o +-+-+ +
+|W|W|W W|o|W W W W|W|
++-+ +-+o+-+-+-+-+-+-+
+|o|W W|W W|o|W W W|o|
++-+ + +-+ +-+-+ o +-+
+|W o W|W|W|W W|W W W|
++ + +-+ +-+-+o+-+-+-+
+|W W|W W|W W|W W|W W|
++-+ + o + + +-+-+ o +
+|o|W|W W|W WoW W|W W|
++-+-+ +-+-+-+ + +-+-+
+|WoW|W|W o W|W W|WoW|
++-+-+-+-+-+-+-+-+-+-+
+
+Generating a 10x4 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+
+| o             o   |
++ + + + + +o+ + + + +
+|                   |
++o+ o + o + + o + + +
+|                o o|
++ + + + + + + + + + +
+|    o       o      |
++-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 10x4:bnnzccdfvbxh
++-+-+-+-+-+-+-+-+-+-+
+|WoW|W W|W|W|W WoW W|
++-+-+ +-+ +o+-+-+-+-+
+|W|W W|W W|W|W W W|W|
++o+ o + o +-+ o +-+ +
+|W|W W|W W|W W W|o|o|
++-+ +-+ +-+-+-+-+-+ +
+|W W|o|W|W W o W W|W|
++-+-+-+-+-+-+-+-+-+-+
+
+Generating a 16x14 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|      o           o            |
++ + + + + + o + + + + o + + o + +
+|                               |
++o+ + + + + + + + + + + + + + + +
+|        o   o o           o    |
++ + + o + + + + + + + o + + + + +
+|  o                          o |
++ + + + + +o+o+ + + + + + + + + +
+| o                             |
++ + + + + + + + + + + + + + + + +
+|    o                          |
++ + + + + + + + + + + + + + + + +
+|  o                   o     o  |
++ + + + + + + + + + + + + + + + +
+|            o     o     o      |
++o+ o +o+ + + + + + + + + + + + +
+|                    o          |
++ + + + + + + + + + + + + + + + +
+|                    o          |
++ + + + + + + + + + + + + + + +o+
+|   o                    o      |
++ + + + + + + + + o + + + + + + +
+|      o       o             o  |
++ + + + + + + + + + + + + + + + +
+|              o      o         |
++ +o+ + + o + + + + + + + + o + +
+|o    o       o         o       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 16x14:glxjfzjzndbljplzblbtzzozzjtfzuffgccztzzlzpduxthnzwglgrdehj
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W|W o W|W W W|W|o|W W|W W W W|
++ + +-+-+-+ o +-+ +-+ o + + o + +
+|W|W W W|W W W|W|W W|W W|W W W W|
++o+ + + +-+-+-+ + + +-+-+-+-+-+-+
+|W|W W W|o|W|o|o|W W W W W|o|W W|
++ +-+ o +-+ +-+ +-+ + o + +-+ + +
+|W|o|W W W|W|W|W|W|W W W W W|WoW|
++-+-+ + + +o+o+-+ +-+-+-+ + + + +
+|WoW|W W W|W|W|W|W W W W|W W|W W|
++-+-+-+-+ + +-+ +-+-+-+ +-+ +-+-+
+|W|W o W|W|W|W W W W W|W W|W|W W|
++ +-+-+-+-+-+ + + +-+-+ + +-+ +-+
+|W|o|W|W W W W W W|W W o W W|o|W|
++ +-+ +-+ + + + + +-+ + +-+-+ + +
+|W|W W|W|W W o W W|o|W W|o|W W|W|
++o+ o +o+ + + + + +-+-+ +-+-+-+ +
+|W|W W|W|W W W W W W|o|W W W W|W|
++ + +-+-+ + + +-+-+-+-+-+-+-+ + +
+|W|W|W W W W W|W W W o W W W|W|W|
++ +-+-+-+-+ +-+-+-+-+-+-+-+-+-+o+
+|W|WoW|W W|W|W|W W W|W W o W W|W|
++-+-+-+ + +-+ +-+ o +-+-+-+-+-+ +
+|W W W o W W W|o|W W W|W W W|o|W|
++ +-+ + +-+-+-+-+-+-+-+ + +-+-+ +
+|W|W|W W|W W|W o W|W WoW W|W W|W|
++-+o+-+-+ o +-+-+-+ + +-+-+ o + +
+|o|W|WoW|W W|WoW|W W W|WoW|W W|W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 4x8 Normal puzzle.
++-+-+-+-+
+|   o   |
++ + + + +
+|o      |
++ + + + +
+|       |
++ + + + +
+|o     o|
++ + +o+ +
+|       |
++ o + + +
+|       |
++ + + + +
+|  o    |
++ + + + +
+|     o |
++-+-+-+-+
+
+Generated Normal game 4x8:dkzcfekvq
++-+-+-+-+
+|W WoW W|
++-+-+-+-+
+|o|W W|W|
++-+-+ + +
+|W W|W|W|
++-+ + + +
+|o|W|W|o|
++-+ +o+ +
+|W W|W|W|
++ o + + +
+|W W|W|W|
++ +-+ +-+
+|W|o|W W|
++ +-+-+-+
+|W W|WoW|
++-+-+-+-+
+
+Generating a 16x11 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|              o         o      |
++o+ + + + + + + + + + + + + + +o+
+|   o  o o o             o      |
++ + + + + + + + o + + + + + o + +
+|                               |
++ + + + + + + + + + + + o + + + +
+|          o     o   o        o |
++ + + +o+ + + o + + + + + + + + +
+|                          o   o|
++ o + + + + + + + o + +o+ + + + +
+|     o        o                |
++ + + + + + + + + + + + + o + + +
+|      o                        |
++ + + + + + + + + + + + + + +o+ +
+|       o       o               |
++ + + + + + + + + + + + + o + + +
+|  o           o     o          |
++o+ + + + + + + + + + +o+ + + + +
+|         o  o                  |
++ + +o+ + + + + +o+ + + + o + +o+
+|  o     o    o              o  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 16x11:ojgzedcbbnvlzzhrfdihgzsdbpenizqlzzcjhzphlfkvrcwliecfeo
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W W|W|W|W W o W W|W W o W W|W|
++o+ + + + +-+-+-+-+-+-+-+-+-+-+o+
+|W|WoW|o|o|o|W W W W W|W|o|W W|W|
++-+ + + + +-+ + o + +-+ +-+ o +-+
+|W|W W|W|W|W W W W W|W W W|W W|W|
++ +-+-+-+-+-+-+-+-+-+-+ o +-+-+ +
+|W W|W W W|o|W W|o|W|o|W W W|WoW|
++ + + +o+ +-+ o +-+ +-+-+ +-+ +-+
+|W W|W W W|W|W W|W W|W|W|W|o|W|o|
++ o +-+-+-+ +-+-+ o + +o+-+-+-+-+
+|W W|WoW|W|W W|o|W W|W|W|W W W W|
++ + +-+-+ +-+ +-+ +-+ +-+ o +-+ +
+|W W|W|o|W W|W W|W|W|W W W W|W|W|
++-+ + +-+ + + + +-+ +-+-+-+-+o+ +
+|W|W|W WoW W|W WoW W|W W W W|W|W|
++ +-+ + +-+ + +-+ + +-+-+ o +-+-+
+|W|o|W W|W|W|W|o|W W|o|W|W W W W|
++o+-+-+ + +-+-+-+-+ +-+o+-+-+-+-+
+|W|W W|W|WoW|o|W W|W W|W|W W W|W|
++ +-+o+-+-+ +-+-+o+-+ +-+ o +-+o+
+|W|o|W W|o|W|WoW|W W|W|W W W|o|W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 15x10 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|       o                    o|
++o+o+o+ + + + +o+ + + + +o+ + +
+|                    o        |
++ + + + + + + + + + + + + + o +
+|        o    o    o          |
++ +o+ + + + + + + + + + + + + +
+|                             |
++ + + + o + + + +o+ + + o + + +
+|            o               o|
++ + + + + + + + + + + + + + + +
+|o            o               |
++ +o+ + + + + + + + + + + + + +
+|                           o |
++ + + o + + + + + + +o+ + + + +
+|                             |
++ + + + +o+ + + + + + + + + + +
+|  o          o    o          |
++ + + +o+ + + + + + + + + o + +
+|   o     o         o        o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 15x10:huabbjjyzkjeemzzmigrpzemrzzdgozuwkeqsgfji
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W|W|WoW|W W W W W W W|W W|o|
++o+o+o+-+-+ + +o+ + +-+-+o+-+-+
+|W|W|W|W W W W W W W|o|W W|W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+ o +
+|W W W|W|o|W|WoW|W|o|W W W|W W|
++ +o+ + +-+ +-+-+ +-+ + + +-+-+
+|W W W|W W W W|W W W|W W W W|W|
++-+-+-+ o +-+-+ +o+ + + o + + +
+|W|W W W W|W|o|W W W|W W W W|o|
++ +-+ +-+ + +-+-+ +-+-+ + + + +
+|o|W|W|W|W|W|WoW|W|W W|W W W|W|
++ +o+-+ +-+ +-+-+-+ + +-+-+-+-+
+|W|W|W W W W|W W W W W W W|WoW|
++-+-+ o +-+-+-+-+ + +o+ + +-+-+
+|W W W W|W|W W W|W W W W W W W|
++ +-+ +-+o+ + + +-+-+ + +-+-+-+
+|W|o|W|W|W|W WoW W|o|W W|W W W|
++ +-+-+o+-+-+ + + +-+-+-+ o +-+
+|W|WoW|W|WoW|W W W|WoW|W W W|o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 4x7 Normal puzzle.
++-+-+-+-+
+|o    o |
++ + + + +
+| o   o |
++ + + + +
+|       |
++ + + + +
+|o      |
++ + + +o+
+| o  o  |
++ + + + +
+|  o    |
++o+ + + +
+|       |
++-+-+-+-+
+
+Generated Normal game 4x7:aejdwmbcle
++-+-+-+-+
+|o|W|WoW|
++-+ +-+-+
+|WoW|WoW|
++ +-+-+-+
+|W|W W W|
++-+ + +-+
+|o|W W|W|
++-+-+ +o+
+|WoW|o|W|
++-+-+ +-+
+|W|o|W W|
++o+-+ + +
+|W|W W W|
++-+-+-+-+
+
+Generating a 4x12 Normal puzzle.
++-+-+-+-+
+|o      |
++ + o + +
+|       |
++ + + +o+
+|    o  |
++ +o+ + +
+|       |
++ + + + +
+|  o    |
++ + + + +
+|o   o  |
++ + + + +
+|    o  |
++ + + + +
+|       |
++ + + + +
+|    o  |
++ + + + +
+|o      |
++ + + + +
+|       |
++ + + o +
+| o     |
++-+-+-+-+
+
+Generated Normal game 4x12:ajqeeuldnzcjzac
++-+-+-+-+
+|o|W W|W|
++-+ o + +
+|W|W W|W|
++ +-+-+o+
+|W W|o|W|
++-+o+-+ +
+|W|W W|W|
++ +-+ +-+
+|W|o|W|W|
++ +-+-+ +
+|o|W o W|
++ + +-+-+
+|W|W|o|W|
++ +-+-+ +
+|W|W W W|
++-+ + + +
+|W|W o W|
++ + + + +
+|o|W W W|
++ + +-+-+
+|W|W|W W|
++-+-+ o +
+|WoW|W W|
++-+-+-+-+
+
+Generating a 15x4 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| o          o                |
++ + + + + + + + + + + + + + +o+
+|                o      o  o  |
++ + o +o+ o + o + +o+ + + + + +
+|o                            |
++ + + + + + + + + + + + + +o+ +
+|      o               o      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 15x4:bkztqgcfccdekzzeip
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|WoW|W|W W|W o W|W W W W|W W|W|
++-+-+ +-+ +-+-+-+-+ + +-+ +-+o+
+|W|W W|W|W W|W W|o|W W|WoW|o|W|
++ + o +o+ o + o +-+o+-+ +-+-+-+
+|o|W W|W|W W|W W|W W|W W|W W W|
++ + +-+-+-+ +-+-+ + +-+-+ +o+ +
+|W|W|W o W|W W|W W W W|o|W W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 17x6 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| o               o               |
++ + +o+ + o + +o+ + + + + + + + +o+
+|o           o       o         o  |
++ + + + + + + + + + + + + o + + + +
+|                                 |
++ + o + +o+ + + + + + + + + + o + +
+|             o                   |
++o+ + + + + + + +o+ + + + + + + + +
+|     o            o   o       o o|
++ + + + + + +o+ + + + + + + +o+ + +
+|    o                   o        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 17x6:bpteeralhjzczseuqtpvmdhbmpit
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|WoW|W W|W W|W W|WoW|W W W W W W|W|
++-+-+o+-+ o +-+o+-+-+ + +-+-+-+-+o+
+|o|W W|W|W W|o|W W|W o W|W W W|o|W|
++-+-+-+ +-+-+-+-+-+ + +-+ o +-+-+-+
+|W W W|W W|W W W W W W|W W W|W W W|
++-+ o +-+o+-+-+-+-+-+-+-+-+-+ o +-+
+|W|W W W|W W|WoW|W|W W W|W|W W W|W|
++o+-+-+-+-+ +-+-+o+ +-+-+ +-+-+-+ +
+|W|W WoW W|W|W W|W|o|W o W|W W|o|o|
++-+-+-+-+-+-+o+-+-+ + +-+-+-+o+-+ +
+|W W o W W|W W|W W W|W|W o W|W W|W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 4x16 Normal puzzle.
++-+-+-+-+
+|      o|
++ o + + +
+|       |
++ + + o +
+|       |
++ + + + +
+|   o   |
++ + + + +
+|  o    |
++o+ + + +
+|    o  |
++ + + + +
+|    o  |
++ + + + +
+|   o   |
++ + + + +
+|       |
++ + + + +
+|    o  |
++ + + + +
+|       |
++ + + + +
+|     o |
++ + + + +
+|o o    |
++ + + + +
+|     o |
++ + + + +
+|       |
++ + o + +
+|      o|
++-+-+-+-+
+
+Generated Normal game 4x16:gbrsmeknmzdzdibqsj
++-+-+-+-+
+|W W|W|o|
++ o + +-+
+|W W|W W|
++-+-+ o +
+|W W|W W|
++-+ +-+ +
+|W|WoW|W|
++ +-+ +-+
+|W|o|W W|
++o+-+-+-+
+|W|W o W|
++ +-+-+-+
+|W|W|o|W|
++-+ +-+ +
+|W WoW W|
++ +-+ +-+
+|W|W|W|W|
++-+ +-+ +
+|W|W o W|
++ + +-+ +
+|W|W|W|W|
++ +-+ +-+
+|W|W|WoW|
++ + +-+ +
+|o|o|W|W|
++ + + +-+
+|W|W|WoW|
++ +-+-+ +
+|W|W W|W|
++ + o +-+
+|W|W W|o|
++-+-+-+-+
+
+Generating a 6x6 Normal puzzle.
++-+-+-+-+-+-+
+| o     o   |
++ + +o+ + + +
+|o     o   o|
++ +o+ + + + +
+|        o  |
++ + + + + + +
+|           |
++o+ + +o+ + +
+|           |
++ + +o+ + + +
+|  o       o|
++-+-+-+-+-+-+
+
+Generated Normal game 6x6:bfhgfdcqyftih
++-+-+-+-+-+-+
+|WoW|W|WoW|W|
++-+-+o+-+-+ +
+|o|W|W|o|W|o|
++-+o+-+-+ + +
+|W|W|W W|o|W|
++ +-+ + + +-+
+|W|W W W|W|W|
++o+ +-+o+-+ +
+|W|W|W|W W W|
++ +-+o+ + +-+
+|W|o|W|W W|o|
++-+-+-+-+-+-+
+
+Generating a 8x15 Normal puzzle.
++-+-+-+-+-+-+-+-+
+|        o      |
++ +o+ o + + + o +
+|               |
++ + + + + + + + +
+|            o  |
++o+ +o+ + + + + +
+|  o   o o      |
++ + + + + + + + +
+|         o  o  |
++ + + + + + + + +
+|              o|
++ + + + + + o + +
+|o    o         |
++ + + + + + + + +
+| o       o     |
++ + + o + + + + +
+| o      o      |
++ + + + + + + + +
+|  o            |
++ + + +o+ + + + +
+|               |
++ + + + + o + + +
+| o          o  |
++ + + + + + + + +
+|            o  |
++ + + + + + + + +
+|  o            |
++ + + + + + + o +
+|  o      o     |
++-+-+-+-+-+-+-+-+
+
+Generated Normal game 8x15:iichzscdmdbzfczgldezahkkgxszhgkzetzadg
++-+-+-+-+-+-+-+-+
+|W|W|W W|o|W|W W|
++ +o+ o +-+ + o +
+|W|W|W W|W W|W W|
++ +-+-+-+ +-+-+-+
+|W|W|W|W W|W|o|W|
++o+ +o+ +-+ +-+ +
+|W|o|W|o|o|W W|W|
++ + +-+ +-+ +-+ +
+|W|W|W W|WoW|o|W|
++ +-+ +-+ +-+-+ +
+|W|W W|W W|W W|o|
++-+ +-+-+ + o + +
+|o|W|WoW|W|W W|W|
++-+-+-+-+-+-+-+ +
+|WoW|W W|WoW|W|W|
++-+-+ o +-+-+ + +
+|WoW|W W|o|W W|W|
++-+-+-+-+-+ + +-+
+|W o W|W W|W W W|
++-+-+-+o+-+ + + +
+|W W|W W|W W W W|
++ + +-+-+ o +-+-+
+|WoW|W W W W|o|W|
++ + + + + +-+-+ +
+|W W|W W W|W o W|
++-+-+-+ + + +-+-+
+|W o W|W W|W|W W|
++-+-+-+ +-+-+ o +
+|W o W|W|WoW|W W|
++-+-+-+-+-+-+-+-+
+
+Generating a 13x12 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|            o         o  |
++ + + + + + + + + + + + + +
+| o                 o     |
++ + + + + + + +o+ + + + + +
+|        o               o|
++ + + + + + + + + + + + + +
+|                o        |
++ + + + + + + +o+ + + + + +
+|                 o       |
++ + + o + + + + + + + + + +
+| o        o        o     |
++ + + + + + + + + + + + o +
+|o                   o    |
++ + +o+ + + + + + + + + + +
+|             o           |
++ + + + + + + + + + + + + +
+|   o                   o |
++ + + + o + + + + +o+ + + +
+| o                  o    |
++ + + + + + +o+ + + + + + +
+|                         |
++o+ +o+ + + + + + + + +o+ +
+|  o          o           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 13x12:mjzdrtspzqwzcmuiizdbtizizotikhsqzmdrek
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W W|W W W|W o W|W W W|o|W|
++ + + + + +-+-+-+ + + +-+ +
+|WoW|W W W W|W W|W WoW W|W|
++ + + + + + +-+o+-+ + + + +
+|W W|W W o W W|W W|W W W|o|
++-+-+-+ + + + +-+-+-+-+-+ +
+|W W|W|W W W W|W|o|W W W|W|
++ +-+ +-+ + + +o+-+ +-+-+ +
+|W|W W W|W W W|W|WoW|W W|W|
++ +-+ o +-+-+-+-+ +-+ +-+-+
+|WoW|W W W|o|W W W|WoW|W W|
++-+ +-+ +-+-+-+-+-+ +-+ o +
+|o|W|W|W|W|W W W|W W|o|W W|
++-+ +o+-+ + + + +-+-+-+-+-+
+|W W|W|W W|W WoW W|W W|W W|
++-+-+-+ + +-+ + + + + + + +
+|W|WoW|W W W|W W W|W W|WoW|
++ +-+-+ o +-+-+-+-+o+-+ + +
+|WoW|W W W|W W W|W W|o|W W|
++-+ +-+ + + +o+ + + +-+-+-+
+|W|W|W|W W|W W W|W W|W W W|
++o+-+o+ +-+-+-+-+-+-+ +o+ +
+|W|o|W|W|W W WoW W W|W W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 3x11 Normal puzzle.
++-+-+-+
+|  o  |
++o+ + +
+|     |
++ + o +
+|o    |
++ + + +
+|     |
++ + + +
+|  o  |
++ + + +
+|  o  |
++ + + +
+|     |
++o+ + +
+|  o  |
++ + +o+
+|     |
++ + + +
+|     |
++ +o+ +
+|     |
++-+-+-+
+
+Generated Normal game 3x11:ccmbvjmggr
++-+-+-+
+|W|o|W|
++o+-+ +
+|W|W W|
++-+ o +
+|o|W W|
++-+ +-+
+|W|W|W|
++ +-+ +
+|W o W|
++ +-+ +
+|W|o|W|
++-+-+-+
+|W|W W|
++o+ +-+
+|W|o|W|
++-+ +o+
+|W W|W|
++-+-+-+
+|W W W|
++ +o+ +
+|W W W|
++-+-+-+
+
+Generating a 10x15 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+
+|o               o  |
++ + + +o+ + +o+ + + +
+|                  o|
++ +o+ + + + + + + + +
+|       o      o    |
++ + + + + + +o+ +o+ +
+|                   |
++ + + + + + + + + +o+
+|     o   o     o   |
++ o + + + + + + + + +
+|                   |
++ + + + + + + +o+ + +
+|                   |
++ + o + + + + + + + +
+|             o    o|
++ + + + + + + + + + +
+|    o  o    o      |
++ + + + + + + + + + +
+|        o      o   |
++ + + + + + + + + + +
+|                   |
++ + o + + + o + + + +
+|        o          |
++ + + + + + + + +o+ +
+|         o        o|
++ + + + + + + + + + +
+| o               o |
++ + + + o + + + + + +
+|o               o  |
++-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 10x15:apifycxgqdzofdfezzazbzdexcezigzthpzbliupilp
++-+-+-+-+-+-+-+-+-+-+
+|o|W W|W|W W W|W o W|
++-+ + +o+-+-+o+-+-+-+
+|W W W|W|W W|W W W|o|
++ +o+ +-+ +-+-+-+-+-+
+|W W W|WoW|W|W|o|W W|
++ + +-+ +-+ +o+-+o+-+
+|W W|W W|W W|W|W W|W|
++-+-+-+-+ + +-+-+-+o+
+|W W|WoW|WoW|W|WoW|W|
++ o +-+-+ + + +-+-+-+
+|W W|W W|W W|W W W W|
++-+-+ + + +-+ +o+ +-+
+|W W W W|W|W W W W|W|
++ + o + +-+-+-+-+ + +
+|W W W W|W|W|WoW|W|o|
++ + +-+-+ + +-+-+-+ +
+|W W|o|WoW|W|o|W W|W|
++-+-+-+ +-+ +-+ + +-+
+|W W W|W|o|W|W WoW W|
++ + + +-+-+ +-+ + +-+
+|W W W W|W W W|W W|W|
++ + o + +-+ o +-+-+ +
+|W W W W|o|W W W|W W|
++-+ + + +-+-+ +-+o+-+
+|W|W W W|WoW|W|W W|o|
++ +-+-+-+-+-+ + +-+-+
+|WoW|W W W W|W|W|WoW|
++-+ + + o + + +-+-+-+
+|o|W|W W W W|W|W o W|
++-+-+-+-+-+-+-+-+-+-+
+
+Generating a 17x14 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|    o                            |
++ +o+ + o + +o+ + + + + + + + o + +
+|                o  o             |
++ + + + + + + + + + + + + o + + + +
+|    o     o                     o|
++ + + + + + + + + + + + + + + +o+ +
+|      o                          |
++ +o+ + + + + + +o+ + + + + o + + +
+|                                 |
++ + + + + +o+ + + +o+ +o+ + + + + +
+|   o                o       o    |
++o+ + + + + + + + + + + + + + + + +
+|                        o        |
++ + +o+ + + + + + + + + + + + + + +
+|        o           o       o   o|
++o+ + + + + + + + + + + + + + + + +
+|             o                   |
++ + + o + + + + + + + + + + + + + +
+|           o              o    o |
++ + + + + + + + + + + + o + +o+ + +
+|  o                              |
++ + + +o+ + + + o + + + + + + + + +
+|                            o    |
++ + + + + + + + + + + + + + + + + +
+| o       o    o                  |
++ + +o+o+ + + + +o+ + + + + o + + +
+|        o          o             |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 17x14:ezfeeqtcznlfvzfizdnkzxhdnqhezzgmzllhdazuyznoeyegzlizuznhewbjknk
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W W|o|W W|W W W|W W W W W W|W W|W|
++-+o+-+ o + +o+ +-+ + +-+-+-+ o + +
+|W|W W|W W|W W W|o|WoW|W W W|W W|W|
++ +-+-+-+-+-+-+-+-+ + +-+ o +-+-+ +
+|W W o W W|o|W W W W W W|W W W|W|o|
++-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+o+ +
+|W W W|o|W|W W W|W|W W W W|W W|W|W|
++ +o+ +-+-+ + + +o+ + +-+-+ o +-+ +
+|W W W|W W W W W|W|W W|W|W|W W|W|W|
++-+-+-+ + +o+ + +-+o+-+o+ +-+-+ +-+
+|W|WoW|W W W W W|W W|o|W|W W o W W|
++o+-+-+ + + +-+-+ + +-+-+-+ +-+-+ +
+|W|W W|W W W|W W W W|W W|o|W|W W|W|
++-+-+o+-+-+-+-+-+-+-+ + +-+-+ +-+-+
+|W|W|W W|o|W W|W W W o W W W|o|W|o|
++o+ +-+-+-+ + +-+-+ + +-+-+-+ + +-+
+|W|W W W W|W WoW W|W W|W W|W W|W W|
++-+ + o + +-+-+ + +-+-+ + +-+-+ + +
+|W|W W W W|WoW|W W|W|W W W|o|W|WoW|
++ +-+-+-+ +-+-+-+-+ +-+ o +-+o+ + +
+|W o W|W|W|W W W W W W|W W W|W|W W|
++-+-+ +o+-+ + + o + + + + +-+-+-+ +
+|W W|W|W|W|W W W W W W|W W|W o W|W|
++ + +-+-+ +-+ +-+-+-+-+-+-+-+-+-+-+
+|WoW|W|W|WoW|W|o|W W W|W W W W W W|
++ + +o+o+-+ +-+-+o+-+-+ + + o + + +
+|W W|W|W|o|W|W W W|WoW|W W W W W W|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 7x15 Normal puzzle.
++-+-+-+-+-+-+-+
+|        o    |
++ + + + + + + +
+|   o      o  |
++ + + + + + + +
+|        o    |
++ +o+ + + + + +
+|      o      |
++ + + + + +o+o+
+|       o     |
++ +o+ + + + + +
+|             |
++ + + + + + + +
+| o           |
++ + + +o+ + + +
+|             |
++ + + + + + o +
+| o           |
++ + + + + + + +
+|        o    |
++ + + + + + +o+
+|o            |
++ + + + + + + +
+|           o |
++ + + o + + + +
+| o           |
++ + + + + + o +
+|             |
++ +o+ + + + + +
+|o          o |
++-+-+-+-+-+-+-+
+
+Generated Normal game 7x15:iugxgqqbhhzmrzfczhqazlgiwqkk
++-+-+-+-+-+-+-+
+|W W|W W o W W|
++ + +-+-+-+-+-+
+|W WoW W|W o W|
++-+-+ + +-+-+-+
+|W W|W W|o|W|W|
++-+o+-+-+-+ + +
+|W|W W|o|W|W|W|
++ +-+-+-+ +o+o+
+|W W W|WoW|W|W|
++ +o+ + +-+ + +
+|W W W|W|W|W|W|
++-+-+ +-+ +-+-+
+|WoW|W|W W W W|
++-+-+-+o+-+-+-+
+|W W W W|W|W W|
++-+-+ +-+ + o +
+|WoW|W|W W|W W|
++-+-+-+ + +-+-+
+|W|W W|W o W|W|
++ + + +-+ + +o+
+|o|W W W|W W|W|
++ + + + + +-+-+
+|W|W W W|W|WoW|
++-+-+ o +-+-+-+
+|WoW|W W W|W W|
++-+-+ + + + o +
+|W W|W W W|W W|
++-+o+-+ + +-+-+
+|o|W W|W W|WoW|
++-+-+-+-+-+-+-+
+
+Generating a 15x13 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|        o      o           o |
++ + + + + + + + + + + +o+ + + +
+|o   o             o          |
++ + + + + o +o+ + + + + + + + +
+|                             |
++ + + + + + + + + + + + + +o+ +
+|    o               o        |
++ +o+ +o+ + + + + + + + + + + +
+|                o     o      |
++ + + + + + + + + + + + + + + +
+|    o    o    o           o  |
++o+ + + + + + + + + + + + + + +
+|                             |
++ + + + + + +o+ o + + + o + + +
+|                             |
++ + + + + + + + + + + + + + +o+
+|    o    o          o        |
++ o + + + + + + + o + + + + + +
+|      o       o              |
++ + + + + + + + + + + + + + + +
+|         o                   |
++ + + + + + +o+ + + + + o + + +
+|  o o     o   o o            |
++ + + + + + + + + + + + + + + +
+|       o                 o  o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 15x13:iglxgdntczzvgpkdznfzoeelczztchzzmeekjprhzzczgkhbfdbzxrc
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|W|W W|W o W|W|WoW|W W|W|W|WoW|
++ + + +-+-+-+ +-+-+ + +o+ +-+-+
+|o|W o W|W W|W|W|W o W|W|W W W|
++ +-+ + + o +o+ + + +-+-+ + + +
+|W|W|W W|W W|W|W|W W|W W|W W W|
++-+ +-+-+-+-+ + +-+-+ + + +o+ +
+|W W|o|W|W W|W|W W|W o W|W W W|
++-+o+-+o+ + +-+-+ + + +-+ + + +
+|W|W W|W|W W W W|o|W W|o|W W W|
++ + +-+-+ + + +-+ +-+-+-+-+-+ +
+|W|W|o|W WoW W|o|W W|W W W|o|W|
++o+-+-+ + + +-+-+-+ + + + +-+-+
+|W|W|W W W W|W|W W|W|W W W W|W|
++ + +-+-+ + +o+ o + + + o + + +
+|W|W|W W|W W|W|W W|W|W W W W|W|
++-+ +-+ +-+-+-+-+-+-+-+ + + +o+
+|W W|o|W|WoW|W W W W|o|W W W|W|
++ o +-+ +-+-+-+-+ o +-+-+-+-+ +
+|W W|W o W|W W|o|W W W W|W W|W|
++ +-+-+ +-+-+ +-+-+-+-+-+ + +-+
+|W|W W|W|WoW|W|W W|W W W W W W|
++ + +-+ +-+-+o+-+ + + + o + + +
+|W|o|o|W W|o|W|o|o|W W W W W W|
++-+ +-+-+-+-+ +-+ +-+ + +-+-+-+
+|W W|W WoW W|W W|W W|W W|WoW|o|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 5x8 Normal puzzle.
++-+-+-+-+-+
+| o       |
++ + + + + +
+|         |
++ + o + + +
+|        o|
++ + + + + +
+|         |
++ + + +o+ +
+|o        |
++ + + + + +
+|  o      |
++ + + + + +
+|     o   |
++ + + + +o+
+|      o  |
++-+-+-+-+-+
+
+Generated Normal game 5x8:bzdnyctulg
++-+-+-+-+-+
+|WoW|W W|W|
++-+-+ + + +
+|W W W W|W|
++ + o + + +
+|W W W W|o|
++ + +-+-+ +
+|W W|W|W|W|
++-+-+ +o+ +
+|o|W W|W|W|
++-+ + +-+-+
+|W o W|W W|
++ + +-+ +-+
+|W W|WoW|W|
++ +-+ +-+o+
+|W|W W|o|W|
++-+-+-+-+-+
+
+Generating a 11x7 Normal puzzle.
++-+-+-+-+-+-+-+-+-+-+-+
+|   o            o    |
++ + + + + + +o+ + + + +
+|    o             o  |
++o+ + + + + + + + + +o+
+|                     |
++ + + + +o+ + + + + + +
+|  o               o  |
++ + + + + + + + + + + +
+| o            o      |
++ + + o + + + + + + + +
+|                 o  o|
++ o + + + o + + + + + +
+|                     |
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generated Normal game 11x7:dmqmnctzeopymlzhcbh
++-+-+-+-+-+-+-+-+-+-+-+
+|W|WoW|W|W W W W|o|W|W|
++ +-+-+ +-+ +o+ +-+ + +
+|W|W o W|W|W W W W|o|W|
++o+ +-+-+ +-+-+-+-+ +o+
+|W|W|W W W|W W W W|W|W|
++ +-+-+-+o+-+-+ + +-+ +
+|W|o|W W|W W W|W W|o|W|
++-+-+ + + +-+-+ + +-+-+
+|WoW|W W|W|W W o W W|W|
++-+-+ o +-+-+ + +-+-+ +
+|W W|W W|W W|W W|WoW|o|
++ o + + + o + + +-+-+ +
+|W W|W W|W W|W W W W|W|
++-+-+-+-+-+-+-+-+-+-+-+
+
+Generating a 9x17 Normal puzzle.
++-+-+-+-+-+-+-+-+-+
+|o             o  |
++ + + + + o + + + +
+|  o              |
++ + + + + + + + + +
+| o               |
++ + + + + + o + +o+
+| o               |
++ + + + + + + + + +
+|    o            |
++ + + + + + o + + +
+|                 |
++ + + + + + + +o+ +
+|                 |
++o+ + + + + + + + +
+|        

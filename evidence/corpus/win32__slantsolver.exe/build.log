@@ -1,0 +1,152 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win32/slantsolver.exe
+arch=pe32_i386 sha256=28841175ab7fa9bb5716892396e06c4d3c207c4c3eaee465b0c99a6acc223a44
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/win32/slantsolver.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/win32 --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+==> inspect
+    ok         0.1s  inspect: i386 PE32, 59 imports, entry 0x00401460
+==> recover
+    ok         6.5s  recover: 571 functions, 128023 instructions
+==> translate
+    ok         1.1s  translate: 3 source files, 13968945 bytes, 0 lift errors
+==> project
+    ok         0.2s  project: project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project
+==> compile
+    ok        17.4s  compile: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project/build/slantsolver (3060264 bytes, 17.4s)
+==> report
+    ok         0.2s  report: reports in /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project/reports
+
+project:      /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project
+input:        windows/x86 (slantsolver.exe)
+output:       macos/arm64 native
+source code:  /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project/src/recomp/gen
+binary:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project/build/slantsolver
+stages:       inspect(ok), recover(ok), translate(ok), project(ok), compile(ok), report(ok)
+score:        70/100
+verification: not-run
+report:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project/reports/report.html
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:28:24Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/win32/slantsolver.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.11,
+      "status": "ok",
+      "message": "i386 PE32, 59 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/slantsolver.exe",
+        "size": 200294,
+        "sha256": "28841175ab7fa9bb5716892396e06c4d3c207c4c3eaee465b0c99a6acc223a44",
+        "md5": "8d76cb4013e45f7253fa351bcf759db6",
+        "sha1": "56b25e2c518ac827c5cb91e2f6ff786f37b5511a",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x0040C600"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-convert-l1-1-0.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll"
+        ],
+        "import_count": 59,
+        "iat_entries": 59
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 6.52,
+      "status": "ok",
+      "message": "571 functions, 128023 instructions",
+      "data": {
+        "count": 571,
+        "instructions": 128023
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 1.15,
+      "status": "ok",
+      "message": "3 source files, 13968945 bytes, 0 lift errors",
+      "data": {
+        "source_units": 3,
+        "source_bytes": 13968945,
+        "lift_errors": 0,
+        "seconds": 1.2
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.22,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project",
+        "name": "slantsolver",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 571,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "28841175ab7fa9bb5716892396e06c4d3c207c4c3eaee465b0c99a6acc223a44"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "28841175ab7fa9bb5716892396e06c4d3c207c4c3eaee465b0c99a6acc223a44"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 17.45,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project/build/slantsolver (3060264 bytes, 17.4s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__slantsolver.exe/project/build/slantsolver",
+        "sha256": "759d6ab7bd2ac3ac2fdf26dbfb88ab9ee67c06c719a706fc258306d652ef37d2",
+        "seconds": 17.4,
+        "source_bytes": 15550578,
+        "build_timeout_seconds": 674.1509342193604,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}
+
+[exit 0 in 26.4s]

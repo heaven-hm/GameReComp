@@ -1,0 +1,31 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/win64/galaxies.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; native: one side timed out",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/win64/galaxies.exe: not PE32 (magic 0x20B)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": "TIMEOUT",
+      "sha256": "34d8c2c29cd4459bb8d996bea484c2b8d42955209df884701fa1d70497f6101d",
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native": {
+      "exit_code": 2,
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [],
+    "native_lines": [],
+    "status": "BLOCKED",
+    "reason": "one side timed out"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

@@ -1,0 +1,36 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/hangman_x64.exe
+arch=pe32plus_x64 sha256=0addeb5ae85e793156e11cf387e20bb424a4df275641c71555ababd64d41a4d0
+host=macos/arm64
+======================================================================
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/disasm/disasm64.py /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/hangman_x64.exe -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/funcs.json --funcs-txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/funcs.txt
+[*] hangman_x64.exe: base=0x140000000, 1 exec sections, 7,632 code bytes
+[*] seeds: pdata=48, guard_cf=0, exports=0, entry=1, reloc=8, thunk=0, funclet=1, chunks=0
+[*] functions: 84 (36 thunks)
+
+[exit 0 in 0.1s]
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/lift/generate64.py /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/hangman_x64.exe /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/funcs.txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/gen
+[*] image base 0x140000000, entry 0x140001440, 18 sections
+[*] catalog: 84 functions
+[*] imports: 49 IAT slots
+[*] closure round 1: +10 dispatch targets not in the catalog
+[*] closure round 2: +7 dispatch targets not in the catalog
+[*] closure round 3: +2 dispatch targets not in the catalog
+[*] catalog closed after 4 rounds, 19 entries added (103 total)
+
+[*] === COMPLETE in 0s ===
+[*] image_base           0x140000000
+[*] entry_point          0x140001440
+[*] size_of_image        159744
+[*] functions            103
+[*] translation_units    1
+[*] lift_errors          0
+[*] recomp_todo_sites    1
+[*] imports              49
+
+[exit 0 in 0.2s]
+
+$ clang -target arm64-apple-macos11 -O1 -w -I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/gen -I/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu/cpu64.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/runner64_generic.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/gen/recomp_funcs_0000.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/gen/recomp_dispatch.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/gen/recomp_imports.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/hangman_x64
+
+[exit 0 in 1.2s]

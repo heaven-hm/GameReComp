@@ -1,0 +1,16 @@
+{
+  "slug": "win32__sixteen.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/sixteen.exe",
+  "sha256": "639b4081ddf63837a34a368cfb2e86e309db097f52a616a744055da783bba56d",
+  "size": 303670,
+  "is_game": true,
+  "started": 1795505784.553043,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__sixteen.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

@@ -1,0 +1,16 @@
+{
+  "slug": "win32__magnetssolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/magnetssolver.exe",
+  "sha256": "a0836637d41727cf7dc58eda163f9fbcdb45f3eb0f5c19a43d32d582ac3ba6ec",
+  "size": 204213,
+  "is_game": true,
+  "started": 1795505373.546206,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__magnetssolver.exe/bin_magnetssolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__magnetssolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__magnetssolver.exe/report.json",
+  "seconds": 18.2
+}

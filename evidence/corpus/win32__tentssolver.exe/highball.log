@@ -1,0 +1,4 @@
+Launching tentssolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...
+exit=1 after 0s — log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T073924Z-Games-tentssolver.exe.log
+
+usage: Z:\Users\haseeb-mir\Downloads\recomp-apps\win32\tentssolver.exe [-g | -v] <game_id>

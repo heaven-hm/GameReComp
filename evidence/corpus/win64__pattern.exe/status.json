@@ -1,0 +1,16 @@
+{
+  "slug": "win64__pattern.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/pattern.exe",
+  "sha256": "ed5a1bd768d4f05d6c3a5d4f82b6ffa166996b401838895b94dfe154fe8adbf3",
+  "size": 173640,
+  "is_game": true,
+  "started": 1795506190.53535,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140017e54, delta 0, imports 193\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__pattern.exe/bin_pattern",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__pattern.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__pattern.exe/report.json",
+  "seconds": 35.6
+}

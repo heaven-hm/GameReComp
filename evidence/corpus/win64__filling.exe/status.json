@@ -1,0 +1,16 @@
+{
+  "slug": "win64__filling.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/filling.exe",
+  "sha256": "24d1aac87a122fc82ae9049dfcb4b877bca1adaee6bc4871818ef8a8a65858c2",
+  "size": 171592,
+  "is_game": true,
+  "started": 1795506164.9042308,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x1400174c4, delta 0, imports 192\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__filling.exe/bin_filling",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__filling.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__filling.exe/report.json",
+  "seconds": 25.6
+}

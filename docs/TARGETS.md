@@ -40,6 +40,7 @@ pointer value.
 | PE32+ x86-64 | macOS ARM64 | 64-bit | **not supported.** Same reason |
 | PE32 ARM / ARM64 | any | — | **not supported.** No lifter |
 | 16-bit NE (Windows 3.x) | any | — | **not supported.** A different segment model; the DOS32/NET paths in `docs/` describe reference material, not capability |
+| Managed CLI / .NET PE32 (COR20 + `BSJB` metadata) | any | — | **UNSUPPORTED_NOT_TESTED.** Recognised by `tools/pe/cli_metadata.py` (data directory 14, CLI header, metadata root and streams); its program is IL, not x86 machine code, and no IL recompiler or CLR runtime is implemented. `stage_inspect` refuses it instead of lifting the PE stub. Four real assemblies found on this host; see [DOTNET_CLI_DETECTION.md](DOTNET_CLI_DETECTION.md) |
 
 The wizard validates this before a run rather than after: an executable whose
 header is not `PE32 i386` is reported as an unsupported target and the reason is
