@@ -48,6 +48,7 @@
 #define WSAEADDRINUSE    10048u
 #define WSAECONNRESET    10054u
 #define WSAEFAULT        10014u
+#define WSAEOPNOTSUPP    10045u
 #define WSA_NOT_ENOUGH_MEMORY 10008u
 #define WSAHOST_NOT_FOUND 11001u
 #define WSATRY_AGAIN     11002u
@@ -312,6 +313,19 @@ static void w_getsockopt(void) {                         /* (s, level, opt, val,
     if (A32(4)) MEM32(A32(4)) = 4;
     RET(0, 5);
 }
+/* Bytes readable now. On macOS FIONREAD on a datagram socket counts the whole
+ * kernel buffer (headers included), while Winsock reports the payload of the
+ * next message; SO_NREAD is the BSD option with the guest-visible meaning for
+ * both stream and datagram sockets. */
+static int socket_readable_bytes(int fd, int *out) {
+#ifdef SO_NREAD
+    socklen_t l = sizeof *out;
+    return getsockopt(fd, SOL_SOCKET, SO_NREAD, out, &l);
+#else
+    return ioctl(fd, FIONREAD, out);
+#endif
+}
+
 static void w_ioctlsocket(void) {                        /* (s, cmd, &arg) */
     int fd = fd_of(A32(0));
     uint32_t cmd = A32(1);
@@ -322,13 +336,86 @@ static void w_ioctlsocket(void) {                        /* (s, cmd, &arg) */
     }
     if (cmd == 0x4004667Fu) {                            /* FIONREAD */
         int n = 0;
-        ioctl(fd, FIONREAD, &n);
+        if (socket_readable_bytes(fd, &n) != 0) FAIL(3);
         MEM32(A32(2)) = (uint32_t)n;
         RET(0, 3);
     }
     g_wsa_error = WSAEINVAL;
     RET(SOCKET_ERROR, 3);
 }
+
+/* ---- Winsock 2 WSAIoctl ------------------------------------------------
+ * The control codes a game actually asks for: FIONBIO/FIONREAD (the same
+ * operations ioctlsocket exposes), SIOCATMARK (out-of-band mark) and
+ * SIO_GET_BROADCAST_ADDRESS (the limited broadcast address in a guest
+ * sockaddr_in). The last two of its nine stdcall arguments are an overlapped
+ * block and a completion routine; this layer is synchronous and cannot honour
+ * them, so they are rejected rather than silently ignored.
+ *
+ * lpcbBytesReturned is optional. On success it receives the bytes written;
+ * when a buffer is too small it receives the size needed, as Winsock does. */
+static void w_WSAIoctl(void) {
+    uint32_t code = A32(1), in_va = A32(2), cin = A32(3);
+    uint32_t out_va = A32(4), cout = A32(5), ret_va = A32(6);
+    int fd = fd_of(A32(0));
+    if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 9); }
+    if (A32(7) || A32(8)) { g_wsa_error = WSAEINVAL; RET(SOCKET_ERROR, 9); }
+
+    if (code == 0x8004667Eu) {                         /* FIONBIO: BOOL in */
+        if (!in_va || cin < 4) {
+            if (ret_va) MEM32(ret_va) = 4;
+            g_wsa_error = WSAEFAULT;
+            RET(SOCKET_ERROR, 9);
+        }
+        int fl = fcntl(fd, F_GETFL);
+        if (fl < 0) FAIL(9);
+        int nl = MEM32(in_va) ? fl | O_NONBLOCK : fl & ~O_NONBLOCK;
+        if (fcntl(fd, F_SETFL, nl) != 0) FAIL(9);
+        if (ret_va) MEM32(ret_va) = 0;
+        RET(0, 9);
+    }
+    if (code == 0x4004667Fu) {                         /* FIONREAD: u_long out */
+        if (!out_va || cout < 4) {
+            if (ret_va) MEM32(ret_va) = 4;
+            g_wsa_error = WSAEFAULT;
+            RET(SOCKET_ERROR, 9);
+        }
+        int n = 0;
+        if (socket_readable_bytes(fd, &n) != 0) FAIL(9);
+        MEM32(out_va) = (uint32_t)n;
+        if (ret_va) MEM32(ret_va) = 4;
+        RET(0, 9);
+    }
+    if (code == 0x40047307u) {                         /* SIOCATMARK: BOOL out */
+        if (!out_va || cout < 4) {
+            if (ret_va) MEM32(ret_va) = 4;
+            g_wsa_error = WSAEFAULT;
+            RET(SOCKET_ERROR, 9);
+        }
+        int mark = sockatmark(fd);
+        if (mark < 0) FAIL(9);
+        MEM32(out_va) = mark ? 1u : 0u;
+        if (ret_va) MEM32(ret_va) = 4;
+        RET(0, 9);
+    }
+    if (code == 0x4004740Au) {                         /* SIO_GET_BROADCAST_ADDRESS */
+        if (!out_va || cout < 16) {                    /* guest sockaddr_in is 16 bytes */
+            if (ret_va) MEM32(ret_va) = 16;
+            g_wsa_error = WSAEFAULT;
+            RET(SOCKET_ERROR, 9);
+        }
+        struct sockaddr_in bc;
+        memset(&bc, 0, sizeof bc);
+        bc.sin_family = AF_INET;
+        bc.sin_addr.s_addr = htonl(INADDR_BROADCAST);   /* limited broadcast: the guest shares the host's LAN */
+        to_guest(&bc, (uint8_t *)hle_ptr(out_va));
+        if (ret_va) MEM32(ret_va) = 16;
+        RET(0, 9);
+    }
+    g_wsa_error = WSAEOPNOTSUPP;                       /* an unimplemented code is not a success */
+    RET(SOCKET_ERROR, 9);
+}
+
 static void w_getsockname(void) {
     struct sockaddr_in a;
     socklen_t l = sizeof a;
@@ -973,6 +1060,7 @@ const win32hle_shim win32hle_wsock32[] = {
     SHIM2(115, "WSAStartup", w_WSAStartup),
     SHIM2(116, "WSACleanup", w_WSACleanup),
     SHIM2(151, "__WSAFDIsSet", w___WSAFDIsSet),
+    { "WSAIoctl", w_WSAIoctl },
     { "getaddrinfo", w_getaddrinfo },
     { "freeaddrinfo", w_freeaddrinfo },
     { "getnameinfo", w_getnameinfo },
