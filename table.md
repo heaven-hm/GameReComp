@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-20T09:43:24Z by `python -m tools.gamesdb`. Measured 120; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-24T00:07:47Z by `python -m tools.gamesdb`. Measured 120; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process launched and exited 0; no oracle supplied.
 
