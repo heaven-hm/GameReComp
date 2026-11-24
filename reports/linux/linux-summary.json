@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "results": [
+    {
+      "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p3-real-projects/arith_calc",
+      "name": "arith_calc",
+      "image": "gamerecomp/linux-runner:local",
+      "original": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+      "resources": {
+        "generated_source_bytes": 848312,
+        "binary_bytes": 0,
+        "project_disk_bytes": 2723377,
+        "peak_rss_bytes": 43155456,
+        "peak_rss_bytes_self": 43155456,
+        "peak_rss_bytes_children": 0,
+        "stage_seconds": {
+          "inspect": 0.02,
+          "recover": 0.73,
+          "translate": 0.24,
+          "project": 0.05
+        },
+        "stage_seconds_total": 1.04,
+        "stage_peak_rss_bytes": {
+          "inspect": 0,
+          "recover": 0,
+          "translate": 0,
+          "project": 0
+        },
+        "build_seconds": 0.0
+      },
+      "toolchain": {
+        "CMAKE": "cmake version 3.28.3",
+        "CC": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+        "PKG": "1.8.1",
+        "SDL": "2.30.0 2.22.0",
+        "UNAME": "Linux 6.8.0-117-generic"
+      },
+      "provision": "prebuilt",
+      "network": "none",
+      "build_started": true,
+      "incbin_rewritten": [
+        "recomp_image.S: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p3-real-projects/arith_calc/src/recomp/gen/recomp_image.bin -> /work/src/recomp/gen/recomp_image.bin"
+      ],
+      "build_cmd": [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        "/Users/haseeb-mir/p3-results/linux/staging/arith_calc:/work",
+        "-w",
+        "/work",
+        "--network",
+        "none",
+        "gamerecomp/linux-runner:local",
+        "sh",
+        "-c",
+        "cmake -S /work -B /work/build -DCMAKE_BUILD_TYPE=Release > /dev/null && cmake --build /work/build -j 4"
+      ],
+      "build_rc": 0,
+      "build_log": "cation time 0.013 s in the future\n[  6%] Building C object CMakeFiles/arith_calc.dir/src/recomp/gen/recomp_0000.c.o\n[  6%] Building C object CMakeFiles/arith_calc.dir/src/main.c.o\n[  6%] Building C object CMakeFiles/arith_calc.dir/src/recomp/gen/recomp_image.c.o\n[  8%] Building C object CMakeFiles/arith_calc.dir/src/recomp/gen/recomp_dispatch.c.o\n[ 10%] Building ASM object CMakeFiles/arith_calc.dir/src/recomp/gen/recomp_image.S.o\n[ 12%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/advapi32.c.o\n[ 14%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/bink.c.o\n[ 17%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/avifil32.c.o\n[ 19%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/clock.c.o\n[ 21%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/comctl32.c.o\n[ 23%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/d3d7.c.o\n[ 25%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/d3d8.c.o\n[ 27%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/d3d9.c.o\n[ 29%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/ddraw.c.o\n[ 31%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/dinput.c.o\n[ 34%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/dsound.c.o\n[ 36%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/eh32.c.o\n[ 38%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/gdi32.c.o\n[ 42%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/gdidc.c.o\n[ 42%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/gl32.c.o\n[ 44%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/guest_mem.c.o\n[ 46%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/hle_path.c.o\n[ 48%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/host.c.o\n[ 51%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/host_lite.c.o\n[ 53%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/input_rec.c.o\n[ 55%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/kernel32.c.o\n[ 57%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/kernel32_atom.c.o\n[ 59%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/kernel32_crt.c.o\n[ 61%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/lz32.c.o\n[ 63%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/kernel32_ext.c.o\n[ 65%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/module.c.o\n[ 68%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/mss.c.o\n[ 70%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/msvcrt.c.o\n[ 72%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/ole32.c.o\n[ 74%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/pe_loader.c.o\n[ 76%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/present.c.o\n[ 78%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/screen.c.o\n[ 80%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/screenshot.c.o\n[ 85%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/sdl2.c.o\n[ 85%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/sdl12.c.o\n[ 87%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/sdlmix.c.o\n[ 89%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/storage.c.o\n[ 91%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/user32.c.o\n[ 93%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/winmm.c.o\n[ 95%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/wininet.c.o\n[ 97%] Building C object CMakeFiles/arith_calc.dir/src/runtime/win32hle/wsock32.c.o\n[100%] Linking C executable arith_calc\ngmake[2]: warning:  Clock skew detected.  Your build may be incomplete.\n[100%] Built target arith_calc\n",
+      "elf": {
+        "status": "OK",
+        "path": "/Users/haseeb-mir/p3-results/linux/staging/arith_calc/build/arith_calc",
+        "class": "ELF64",
+        "data": "LSB",
+        "machine": "0xb7",
+        "machine_name": "aarch64",
+        "size": 1669640,
+        "sha256": "4b27641cbf41f3f74bb6936862c654d6a707c0a7cac969742b0cd0d358b7bd51"
+      },
+      "run_cmd": [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        "/Users/haseeb-mir/p3-results/linux/staging/arith_calc:/work",
+        "-w",
+        "/work",
+        "--network",
+        "none",
+        "-v",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe:/original:ro",
+        "gamerecomp/linux-runner:local",
+        "sh",
+        "-c",
+        "cd /work && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 20 ./build/arith_calc /original"
+      ],
+      "run_rc": 0,
+      "run_log": "[pe] /original mapped at 0x00400000, span 0x5000\n[pe] bound 3 imports (0 delay), 0 unresolved\narith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\n[host] /original booted: entry 0x00401B00, 0 unresolved imports\n[win32hle] ExitProcess(0) from guest 0x00401B00\n",
+      "seconds": 101.5
+    }
+  ],
+  "image_probe": {
+    "image": "gamerecomp/linux-runner:local",
+    "status": "OK",
+    "rc": 0,
+    "raw": "CMAKE=cmake version 3.28.3\nCC=cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nPKG=1.8.1\nSDL=2.30.0 2.22.0 \nAPK=\nAPT=/usr/bin/apt-get\nUNAME=Linux 6.8.0-117-generic\n",
+    "CMAKE": "cmake version 3.28.3",
+    "CC": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "PKG": "1.8.1",
+    "SDL": "2.30.0 2.22.0",
+    "APK": "",
+    "APT": "/usr/bin/apt-get",
+    "UNAME": "Linux 6.8.0-117-generic",
+    "toolchain_ok": true
+  },
+  "provision": "prebuilt",
+  "disk_guard": {
+    "scratch": "/Users/haseeb-mir/p3-results/linux",
+    "min_free_bytes": 4294967296,
+    "blocked_inputs": []
+  }
+}

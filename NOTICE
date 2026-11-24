@@ -8,3 +8,22 @@ LICENSES/GameReComp-prior-MIT.txt.
 |---|---|---|---|
 | tools/assets/is3extract.py (the PKWARE DCL explode section) | zlib contrib/blast/blast.c, Mark Adler (https://github.com/madler/zlib) | 1.3, 24 Aug 2013 (zlib 1.3.1) | zlib licence: LICENSES/blast-zlib.txt. A Python port, altered from the original |
 | runtime/win32hle/ole32.c (DirectMusic COM class and method table) | HenryKun55/igi-recomp, shim/src/ole32.c (https://github.com/HenryKun55/igi-recomp/tree/278eaf6394f7f42c7de6cffef2cf982154f59899/shim/src/ole32.c) | 278eaf6394f7f42c7de6cffef2cf982154f59899 | MIT licence: LICENSES/igi-recomp-MIT.txt. Adapted to the existing Win32HLE COM and guest-call ABI. |
+| tools/pe/audit_api_surface.py (PE import/export audit, API database and missing-API ranking) | Sahilg93/arm64-recompiler, recompiler/build_wine_db.py, recompiler/audit_pe.py, recompiler/scan_missing_imports.py (https://github.com/Sahilg93/arm64-recompiler) | bc1ca0ecd6decdbf46cbd378a392a60863f81293 | MIT licence: LICENSES/arm64-recompiler-MIT.txt. Ported from the three Python utilities; pefile replaced by a dependency-free PE32/PE32+ reader and PE32+ support added. Details in docs/UPSTREAM_PROVENANCE_CONSOLIDATED.md. |
+| runtime/win32hle/ddraw.c (DDSCAPS_ZBUFFER CreateSurface + GetAttachedSurface depth-buffer attachment, and inherited surface dimensions) | HenryKun55/igi-recomp, shim/src/ddraw.c (https://github.com/HenryKun55/igi-recomp) | local checkout, 2026-11-24 | MIT licence: LICENSES/igi-recomp-MIT.txt, Copyright (c) 2026 HenryKun55. Behaviour adapted to GameReComp's surf_t/guest-ABI; regression in ddraw7_create_selftest.c. |
+
+## External build tools (invoked, not vendored)
+
+`tools/linux_to_windows.py` adds no third-party source to the repository. It
+calls locally installed tools, whose own licences govern them:
+
+| Tool | Upstream | Licence | Use |
+|---|---|---|---|
+| MinGW-w64 GCC 16.2.0 (`i686-w64-mingw32-gcc`, `x86_64-w64-mingw32-gcc`; Homebrew `mingw-w64 14.0.0_3`) | https://github.com/mingw-w64/mingw-w64 | Zope Public License 2.1 with exceptions for parts marked Public Domain, BSD or LGPL; GitHub API reports `NOASSERTION` (root `COPYING`). | Compiles real C source to PE32/PE32+ via the pre-existing `tools/win32_crossbuild.py`. |
+| LLVM/Clang 23.1.6 (`clang --target=x86_64-w64-mingw32`) | https://github.com/llvm/llvm-project | Apache License 2.0 with LLVM Exceptions (root `LICENSE.TXT`); GitHub API reports `NOASSERTION`. | Researched as an alternative source cross-compiler; not used in the verified path (no local MinGW sysroot). |
+| Zig 0.13.0 (`zig cc`) | https://github.com/ziglang/zig (project moved to https://codeberg.org/ziglang/zig) | MIT. | Researched as an alternative source cross-compiler; local install is broken (`libz3.4.13.dylib` missing). |
+
+The Highball/CrossOver Wine engine is locally installed software invoked as an
+external program through the existing `tools/wine_oracle.py`; no engine code is
+copied here. The host C source used by the end-to-end smoke test is referenced
+by absolute path and SHA-256 only, is not redistributed, and no licence is
+assumed for it. See `docs/LINUX_TO_WINDOWS_SOURCE_BUILD.md`.

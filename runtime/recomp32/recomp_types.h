@@ -357,9 +357,20 @@ static inline uint16_t _pop16(uint32_t *sp) {
 #define CMP_GE(a, b)   ((int32_t)(a) >= (int32_t)(b))       /* signed >= */
 #define CMP_S(a, b)    ((((uint32_t)(a) - (uint32_t)(b)) >> 31) != 0)  /* sign flag */
 #define CMP_NS(a, b)   ((((uint32_t)(a) - (uint32_t)(b)) >> 31) == 0)
-#define CMP_O(a, b)    0  /* TODO: overflow detection */
-#define CMP_NO(a, b)   1
-#define CMP_P(a, b)    0  /* TODO: parity */
+/* OF of the SUBTRACTION cmp/sub/dec perform: the carry into bit 31 differs
+ * from the carry out of it when a and b have different signs and the result's
+ * sign differs from a's. This is the same derivation recomp_cond() and
+ * recomp_eflags() use for FK_CMP/FK_DEC. A left-aligned narrow operand puts its
+ * own sign bit at 31, so the expression works at 8, 16 and 32 bits unchanged.
+ *
+ * These used to be the constants 0/1, so a `cmp; jo` or `sub; setno` read a
+ * fixed answer -- checked arithmetic and saturation code never took the
+ * overflow arm. Logic instructions clear OF and must not use these macros;
+ * lift32's _make_condition() emits 0/1 for them explicitly. */
+#define CMP_O(a, b)    ((((uint32_t)(a) ^ (uint32_t)(b)) & \
+                         ((uint32_t)(a) ^ ((uint32_t)(a) - (uint32_t)(b)))) >> 31)
+#define CMP_NO(a, b)   (!CMP_O(a, b))
+#define CMP_P(a, b)    0  /* TODO: parity (static jp/jnp use RECOMP_PF instead) */
 #define CMP_NP(a, b)   1
 
 /* Test-based conditions (from test a, b) */
@@ -1094,7 +1105,35 @@ static inline void CPUID_impl(uint32_t eax_val, uint32_t ebx_val, uint32_t ecx_v
     if (eax_val == 0x80000001u) g_edx &= g_cpuid_edx_ext;
     (void)ebx_val; (void)edx_val;
 #else
-    (void)eax_val; (void)ebx_val; (void)ecx_val; (void)edx_val;
+    /* On gcc/clang (macOS arm64, Linux x86_64) there is no guest CPUID
+     * instruction to execute. Answer the leaves a PE32 guest actually probes:
+     * leaf 0 (vendor/max leaf), leaf 1 (family/features), and the extended
+     * leaf 0x80000000/1. The feature masks stay in force so a host that wants
+     * the x87 path can clear SSE/SSE2 without rebuilding. Unrecognised leaves
+     * return zeros, as Intel does for leaves above the advertised maximum. */
+    uint32_t a = 0, b = 0, c = 0, d = 0;
+    switch (eax_val) {
+    case 0u:  /* max standard leaf + "GenuineIntel" (EBX/EDX/ECX order) */
+        a = 1u; b = 0x756E6547u; d = 0x49656E69u; c = 0x6C65746Eu;
+        break;
+    case 1u:  /* family 6, SSE/SSE2 etc.; ECX has no SSE3+ bits */
+        a = 0x000006F2u;
+        d = 0x078BFBFFu & g_cpuid_edx1;
+        c = g_cpuid_ecx1 & 0x00000000u;
+        break;
+    case 0x80000000u:
+        a = 0x80000001u;
+        break;
+    case 0x80000001u:
+        /* Long mode is deliberately not advertised: the guest is PE32. */
+        d = (0x00100000u /* NX */ | 0x80000000u /* 3DNow! */) & g_cpuid_edx_ext;
+        c = 0;
+        break;
+    default:
+        break;
+    }
+    g_eax = a; g_ebx = b; g_ecx = c; g_edx = d;
+    (void)ebx_val; (void)edx_val;
 #endif
 }
 
@@ -1172,6 +1211,59 @@ static inline int recomp_addr_readable(uint32_t va) {
 }
 #endif
 
+/* Report a failed indirect dispatch, once per distinct (target, caller) pair.
+ *
+ * A NULL target is NOT an unrecovered function: there is no VA to look up and
+ * no seed to add. It is the guest having called through a NULL vtable or
+ * interface pointer -- the exact shape Gunroar's `call [edx+0x58]` at
+ * 0x00409466, Tumiki Fighters' `call [ecx+0x38]` and Parsec47's virtual calls
+ * take when the object was never constructed. Naming it as "unresolved VA
+ * 0x00000000" sent the diagnosis toward function recovery (and
+ * seed_from_log) instead of the null pointer that produced it.
+ *
+ * The dedup matters too: Doukutsu's NULL interface logged 7,000 identical
+ * lines in a 15 s run, which buried every other line in the log.
+ *
+ * The pair table is per translation unit (generated C is split into chunks);
+ * that still bounds the noise to one line per site per unit. */
+static inline void recomp_icall_report_miss(uint32_t va, uint32_t caller) {
+    enum { MISS_PAIRS = 16 };
+    static uint32_t seen_va[MISS_PAIRS], seen_from[MISS_PAIRS];
+    static unsigned char seen_used[MISS_PAIRS];
+    static unsigned seen_next;
+    for (unsigned i = 0; i < MISS_PAIRS; i++)
+        if (seen_used[i] && seen_va[i] == va && seen_from[i] == caller)
+            return;
+    unsigned slot = seen_next++ % MISS_PAIRS;
+    seen_va[slot] = va;
+    seen_from[slot] = caller;
+    seen_used[slot] = 1;
+    if (va == 0u)
+        fprintf(stderr, "ICALL: null target from 0x%08X "
+                        "(NULL vtable/interface pointer; no dispatch possible)\n", caller);
+    else
+        fprintf(stderr, "ICALL: unresolved VA 0x%08X from 0x%08X\n", va, caller);
+}
+
+static inline void recomp_itail_report_miss(uint32_t va, uint32_t caller) {
+    enum { MISS_PAIRS = 16 };
+    static uint32_t seen_va[MISS_PAIRS], seen_from[MISS_PAIRS];
+    static unsigned char seen_used[MISS_PAIRS];
+    static unsigned seen_next;
+    for (unsigned i = 0; i < MISS_PAIRS; i++)
+        if (seen_used[i] && seen_va[i] == va && seen_from[i] == caller)
+            return;
+    unsigned slot = seen_next++ % MISS_PAIRS;
+    seen_va[slot] = va;
+    seen_from[slot] = caller;
+    seen_used[slot] = 1;
+    if (va == 0u)
+        fprintf(stderr, "ITAIL: null target from 0x%08X "
+                        "(NULL vtable/interface pointer; no dispatch possible)\n", caller);
+    else
+        fprintf(stderr, "ITAIL: unresolved VA 0x%08X from 0x%08X\n", va, caller);
+}
+
 /* Indirect call through dispatch */
 #define RECOMP_ICALL(target_va) do { \
     uint32_t _va = (uint32_t)(target_va); \
@@ -1199,12 +1291,15 @@ static inline int recomp_addr_readable(uint32_t va) {
         RECOMP_REGS_IN(); \
         g_cur_func = _caller;  /* the callee RECOMP_ENTER clobbered it */ \
     } else { \
-        /* Nothing was pushed on this path, so there is nothing to pop: an \
-         * `esp += 4` here shifted the caller's stack by one slot per miss. \
-         * (Nocturne's CRT init runner lost its saved registers that way and \
-         * skipped ~90 static constructors after its first unlifted entry.) */ \
-        fprintf(stderr, "ICALL: unresolved VA 0x%08X from 0x%08X\n", _va, g_cur_func); \
-        eax = 0; \
+        /* A miss is a guest-visible NO-OP: the callee never ran, so no guest \
+         * register may change. `esp += 4` here shifted the caller's stack by \
+         * one slot per miss (Nocturne's CRT init runner lost its saved \
+         * registers that way and skipped ~90 static constructors). The old \
+         * `eax = 0` was just as destructive: Borland/DMD pass `this` in EAX, \
+         * so after one unresolved virtual call the next guest dereference \
+         * read address 0 and the process died with SIGBUS. Never call NULL; \
+         * leave the register file exactly as the caller left it. */ \
+        recomp_icall_report_miss(_va, g_cur_func); \
     } \
 } while(0)
 
@@ -1221,7 +1316,7 @@ static inline int recomp_addr_readable(uint32_t va) {
     if (_fn) { RECOMP_FLAGS_OUT(); RECOMP_REGS_OUT(); _fn(); RECOMP_REGS_IN(); } \
     else if (_va == RECOMP_RETADDR) { /* setjmp and friends return by jumping \
         to the saved return address; that is a return, not a missing target. */ } \
-    else { fprintf(stderr, "ITAIL: unresolved VA 0x%08X from 0x%08X\n", _va, g_cur_func); } \
+    else recomp_itail_report_miss(_va, g_cur_func); \
 } while(0)
 
 /* `push target; ret` (Lifter dos=True): a jump to a computed address. Its own

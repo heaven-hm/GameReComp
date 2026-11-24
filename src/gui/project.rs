@@ -591,7 +591,11 @@ fn render_overview_tab(
                 .child(
                     style::primary_btn("post_launch_game_btn", t, "▶  Launch Standalone", true)
                         .on_click(cx.listener(move |this, _, _, cx| {
-                            this.launch_rebuilt_binary_with_data(&bin, None);
+                            // Infer the original PE's data directory the same
+                            // way the pipeline's run stage does; launching from
+                            // build/ with no assets root leaves the guest
+                            // unable to find its own files on macOS.
+                            this.launch_rebuilt_binary(&bin);
                             cx.notify();
                         })),
                 )

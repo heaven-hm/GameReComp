@@ -119,6 +119,59 @@ class InputIdentityTests(unittest.TestCase):
         self.assertIsNone(identity)
         self.assertIn("PE signature", error)
 
+
+class InputFormatRefusal(unittest.TestCase):
+    """Cross-OS inputs are refused with a named format, never guessed."""
+
+    def _refuse(self, payload):
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
+            f.write(payload)
+            path = f.name
+        identity, error = cli._resolve_input(Path(path), "auto", "auto")
+        self.assertIsNone(identity)
+        return error or ""
+
+    def test_elf64_is_named(self):
+        err = self._refuse(b"\x7fELF\x02\x01\x01\x00" + b"\x00" * 200)
+        self.assertIn("ELF 64", err)
+        self.assertIn("not supported", err)
+
+    def test_elf32_is_named(self):
+        err = self._refuse(b"\x7fELF\x01\x01\x01\x00" + b"\x00" * 200)
+        self.assertIn("ELF 32", err)
+
+    def test_macho_thin_and_fat_are_named(self):
+        for magic, label in ((b"\xcf\xfa\xed\xfe", "Mach-O 64-bit"),
+                             (b"\xce\xfa\xed\xfe", "Mach-O 32-bit"),
+                             (b"\xca\xfe\xba\xbe", "Mach-O fat/universal")):
+            err = self._refuse(magic + b"\x00" * 200)
+            self.assertIn(label, err)
+            self.assertIn("not supported", err)
+
+    def test_short_file_is_refused_without_index_error(self):
+        err = self._refuse(b"MZ")
+        self.assertIn("truncated DOS header", err)
+
+    def test_dotnet_pe_is_refused(self):
+        # Build a minimal PE32 header with a non-zero CLR data directory.
+        head = bytearray(b"\x00" * 4096)
+        head[0:2] = b"MZ"
+        pe = 0x80
+        head[0x3C:0x40] = pe.to_bytes(4, "little")
+        head[pe:pe + 4] = b"PE\x00\x00"
+        head[pe + 4:pe + 6] = (0x14C).to_bytes(2, "little")      # i386
+        head[pe + 24:pe + 26] = (0x10B).to_bytes(2, "little")    # PE32
+        dd = pe + 24 + 96  # PE32 has 96 bytes before its data directories
+        head[dd + 14 * 8:dd + 14 * 8 + 4] = (0x2000).to_bytes(4, "little")
+        err = self._refuse(bytes(head))
+        self.assertIn(".NET/CLR", err)
+        self.assertIn("DEFERRED", err)
+
+    def test_native_pe_still_accepted(self):
+        identity, error = cli._resolve_input(FIXTURE_EXE, "auto", "auto")
+        self.assertIsNone(error)
+        self.assertEqual(identity, ("windows", "x86"))
+
     def test_out_mode_aliases_map_to_the_same_plan(self):
         for alias, canon in (("full", "both"), ("source-only", "source"),
                              ("binary-only", "binary")):

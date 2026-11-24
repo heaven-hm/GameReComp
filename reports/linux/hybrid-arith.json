@@ -1,0 +1,19 @@
+{
+  "exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+  "status": "BLOCKED",
+  "reason": "unicorn: OracleFault: the ORIGINAL's bytes at 0x00401B00 faulted on case 0: Invalid memory fetch (UC_ERR_FETCH_UNMAPPED); frida: NotSupportedError: unexpected error while probing dyld of target process; native: no native binary supplied",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "OracleFault: the ORIGINAL's bytes at 0x00401B00 faulted on case 0: Invalid memory fetch (UC_ERR_FETCH_UNMAPPED)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "f5115fa29eb84f98"
+  },
+  "native": {
+    "status": "BLOCKED",
+    "reason": "no native binary supplied"
+  },
+  "note": "CPU/process-level evidence only; not gameplay or frame equivalence"
+}

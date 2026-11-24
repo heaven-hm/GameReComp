@@ -44,6 +44,132 @@ def script_source(names: list[str]) -> str:
     return DEFAULT_SCRIPT % json.dumps(names)
 
 
+# Frida's local attach on macOS goes through taskgated (task_for_pid). On a
+# non-root, SIP-enabled host it fails with PermissionDeniedError instead of
+# hanging, but on Wine it has also been observed to hang while the process is
+# being resumed. Never let that hang into a caller: the probe runs in a child
+# process group with a wall-clock deadline and the group is SIGKILLed on expiry.
+# The worker writes its result to a file *before* the parent is allowed to read
+# it, so a missing file is itself an honest BLOCKED reason, never a fake OK.
+_FRIDA_WORKER = r'''
+import json, os, shutil, sys, time
+from pathlib import Path
+cfg_path, result_path, pid_path = sys.argv[1], sys.argv[2], sys.argv[3]
+cfg = json.loads(Path(cfg_path).read_text())
+result = {"status": "BLOCKED", "reason": "worker exited without a result",
+          "script_sha256": cfg.get("script_sha256", "")}
+pid = None
+try:
+    import frida
+    from tools import wine_oracle
+    wine = cfg.get("wine")
+    hb = cfg.get("highball")
+    exe = Path(cfg["exe"])
+    child_env = dict(os.environ)
+    if hb:
+        # Highball owns the runner; this is the same path used by replay.
+        cmd = [hb, "run", str(exe)]
+        runner = "highball"
+    elif wine:
+        # Labelled fallback only, used when the highball CLI is unavailable.
+        target_dir = Path(cfg["bottle"]) / "drive_c" / "recomp-oracle"
+        target_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(exe, target_dir / exe.name)
+        child_env.update({"WINEPREFIX": str(target_dir.parents[1]),
+                          "WINEDEBUG": "-all",
+                          "WINEDLLOVERRIDES": "winemenubuilder.exe=d"})
+        cmd = [wine, "C:\\recomp-oracle\\" + exe.name]
+        runner = "wine-fallback"
+    else:
+        # Be specific about what is missing. A caller must be able to tell why
+        # no Frida capture could run, and must never receive a fabricated OK
+        # with an invented call trace.
+        raise RuntimeError(
+            "wine not found: neither the Highball engine nor a Wine runner is "
+            "available (set RECOMP_HIGHBALL or RECOMP_WINE); Frida has no "
+            "Windows process to attach to")
+    result["runner"] = runner
+    pid = frida.spawn(cmd, env=child_env)
+    Path(pid_path).write_text(str(pid))  # let the parent kill it on timeout
+    session = frida.attach(pid)
+    script = session.create_script(cfg["source"])
+    script.load()
+    frida.resume(pid)
+    time.sleep(cfg["window"])
+    calls = script.exports_sync.calls()
+    session.detach()
+    result = {"status": "OK", "calls": calls,
+              "counts": {h: calls.count(h) for h in cfg["hooks"]},
+              "script_sha256": cfg.get("script_sha256", ""), "pid": pid,
+              "runner": runner}
+except BaseException as exc:
+    result["reason"] = f"{type(exc).__name__}: {str(exc)[:400]}"
+Path(result_path).write_text(json.dumps(result))
+'''
+
+
+def bounded_probe(source: str, hooks: list[str], exe: Path, timeout: int = 5,
+                  *, root: Path | None = None, script_sha256: str = "",
+                  window: float | None = None) -> dict:
+    """Run a Frida capture in a killable child; always return a real status.
+
+    The child is spawned in its own process group. If it exceeds ``timeout``
+    seconds the whole group is SIGKILLed and the returned BLOCKED reason says so.
+    ``status`` is never inferred from a silent process.
+    """
+    import hashlib
+    import os
+    import subprocess
+    import tempfile
+
+    root = Path(root) if root else Path(__file__).resolve().parents[1]
+    hooks = list(hooks)
+    window = max(0.5, min(3.0, float(timeout) - 2)) if window is None else float(window)
+    from tools import wine_oracle
+
+    sha = script_sha256 or hashlib.sha256(source.encode()).hexdigest()[:16]
+    cfg = {"source": source, "hooks": hooks, "exe": str(exe),
+           "wine": wine_oracle.find_wine(),
+           "highball": wine_oracle.find_highball(),
+           "bottle": str(wine_oracle.find_bottle()), "window": window,
+           "script_sha256": sha}
+    with tempfile.TemporaryDirectory(prefix="frida-bounded-") as td:
+        cfg_path, out_path, pid_path = (Path(td) / n for n in
+                                        ("config.json", "result.json", "pid"))
+        cfg_path.write_text(json.dumps(cfg))
+        proc = subprocess.Popen([sys.executable, "-c", _FRIDA_WORKER,
+                                 str(cfg_path), str(out_path), str(pid_path)],
+                                cwd=str(root), stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, start_new_session=True)
+        killed = False
+        try:
+            _, err = proc.communicate(timeout=max(1, int(timeout)))
+        except subprocess.TimeoutExpired:
+            killed = True
+            try:
+                os.killpg(proc.pid, 9)
+            except OSError:
+                proc.kill()
+            _, err = proc.communicate(timeout=10)
+        # Best effort: Frida's spawn can detach Wine from the worker's group.
+        if killed and pid_path.is_file():
+            try:
+                os.kill(int(pid_path.read_text().strip()), 9)
+            except (OSError, ValueError):
+                pass
+        if not out_path.is_file():
+            return {"status": "BLOCKED",
+                    "reason": f"worker produced no result (rc={proc.returncode}, "
+                              f"killed_on_timeout={killed}, stderr={err.decode('utf-8', 'replace')[:200]})",
+                    "script_sha256": sha, "timeout_s": timeout,
+                    "killed_on_timeout": killed}
+        rec = json.loads(out_path.read_text())
+        rec["script_sha256"] = sha
+        rec["timeout_s"] = timeout
+        rec["killed_on_timeout"] = killed
+        return rec
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--pid", type=int)
