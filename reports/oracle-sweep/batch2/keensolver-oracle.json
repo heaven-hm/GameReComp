@@ -1,0 +1,10 @@
+{
+  "source": "original PE32 executed under Wine (process-level, not retail Windows)",
+  "sha256": "6e36aaa7bd453da42a71bdf6570cf840a12e8c506076503c71bc648f939196f4",
+  "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+  "stdout_contains": [],
+  "stderr_contains": [
+    "usage: C:\\recomp-oracle\\keensolver.exe [-g | -v] <game_id>"
+  ],
+  "exit_code": 1
+}

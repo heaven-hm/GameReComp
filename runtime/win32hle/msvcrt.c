@@ -30,11 +30,15 @@
  * A shim returning a double pushes it on the shared lifted x87 stack (fp_push),
  * as a cdecl function returning a double would.
  *
- * The five *data* exports (_iob, _pctype, _ctype, _fmode, __mb_cur_max) cannot
- * be answered by a function shim: the loader writes a shim's VA into the IAT
- * and the guest reads that slot as the object's address, so a function VA there
- * would be a silent lie. hle_msvcrt_data() gives the host's resolver the guest
- * address of each object instead; anything else returns 0 and stays unresolved.
+ * The *data* exports (_iob, _pctype, _ctype, _fmode, __mb_cur_max, __initenv,
+ * _acmdln, _adjust_fdiv) cannot be answered by a function shim: the loader
+ * writes a shim's VA into the IAT and the guest reads that slot as the object's
+ * address, so a function VA there would be a silent lie. hle_msvcrt_data()
+ * gives the host's resolver the guest address of each object instead; anything
+ * else returns 0 and stays unresolved. _acmdln is a 4-byte char* cell pointing
+ * at the guest command line; _adjust_fdiv is a 4-byte int (0: the modern CRT
+ * ignores the legacy FPU flag). The called symbols _controlfp, _XcptFilter and
+ * _except_handler3 are real cdecl shims, answered through the shim table.
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -158,6 +162,13 @@ static uint32_t g_fp_control = 0x0009001Fu;   /* _PC_53 | _RC_NEAR | _MCW_EM, th
 static uint32_t g_tls_cb[UCRT_MAX_TLS_CB];    /* _register_thread_local_exe_atexit_callback */
 static int g_tls_cb_n;
 static uint32_t g_cmdline_va;                 /* _get_narrow_winmain_command_line */
+/* _acmdln: the CRT's raw command-line string and the 4-byte `char *_acmdln`
+ * cell that points at it. Both the data import and __p__acmdln hand out this
+ * one real guest object. _adjust_fdiv is the legacy int the CRT used to decide
+ * whether to reset the FPU; modern CRTs ignore it, so its cell stays 0. */
+static uint32_t g_acmdln_str_va;
+static uint32_t g_acmdln_cell_va;
+static uint32_t g_adjust_fdiv_va;
 static uint32_t g_commode_va;                 /* int __p__commode */
 static uint32_t g_new_mode, g_thread_locale;  /* _set_new_mode, _configthreadlocale */
 static char **g_host_argv;                    /* this process's own arguments */
@@ -239,6 +250,29 @@ static void ms_build_ctype(void) {
 
 static void g_stream_init(void);   /* the std stream slots; defined with the table below */
 
+/* The raw process command line (what GetCommandLineA and `char *_acmdln`
+ * report): argv[0] verbatim, the remaining arguments quoted. Built once into
+ * a bounded 1 KiB guest string; the loops stop before the trailing NUL, so a
+ * longer line is truncated rather than overrunning the buffer. */
+static void ms_build_acmdln(void) {
+    char line[1024];
+    int n = 0;
+    for (int i = 0; i < g_host_argc && n < (int)sizeof line - 3; i++) {
+        if (i) line[n++] = ' ';
+        if (i == 0) {
+            for (const char *p = g_host_argv[i]; *p && n < (int)sizeof line - 2; p++)
+                line[n++] = *p;
+        } else {
+            line[n++] = '"';
+            for (const char *p = g_host_argv[i]; *p && n < (int)sizeof line - 3; p++)
+                line[n++] = *p;
+            line[n++] = '"';
+        }
+    }
+    line[n] = 0;
+    g_acmdln_str_va = hle_guest_strdup(line);
+}
+
 static void ms_init_once(void) {
     g_stream_init();
     /* _iob: three _iobufs the guest can take the address of. */
@@ -281,6 +315,17 @@ static void ms_init_once(void) {
     MEM32(g_environ_va) = g_envp_va;
     MEM32(g_argc_va) = g_argc;
     MEM32(g_argv_cell_va) = g_argv_va;
+
+    /* _acmdln / _adjust_fdiv data objects. Each is a bounded 4-byte cell in
+     * guest memory; a failed allocation leaves the VA 0 so the import stays
+     * unresolved rather than binding a lie. */
+    ms_build_acmdln();
+    void *acmdln_cell = hle_alloc(4);
+    g_acmdln_cell_va = acmdln_cell ? hle_va(acmdln_cell) : 0;
+    if (g_acmdln_cell_va) MEM32(g_acmdln_cell_va) = g_acmdln_str_va;
+    void *fdiv_cell = hle_alloc(4);
+    g_adjust_fdiv_va = fdiv_cell ? hle_va(fdiv_cell) : 0;
+    if (g_adjust_fdiv_va) MEM32(g_adjust_fdiv_va) = 0;
 }
 
 static pthread_once_t g_once = PTHREAD_ONCE_INIT;
@@ -655,6 +700,45 @@ static void c_sprintf(void) {                        /* (buf, fmt, ...) */
     int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, g_esp + 4u + 8u);
     memcpy(buf, t_fmt, (size_t)n + 1);
     RETC((uint32_t)n);
+}
+
+/* _snprintf is the MSVC bounded sibling of sprintf: it never writes more than
+ * count-1 bytes and always NUL-terminates when count > 0. */
+static void c__snprintf(void) {
+    ms_init();
+    char *buf = ASTR(0);
+    size_t count = (size_t)A32(1);
+    const char *fmt = ASTR(2);
+    if (!buf || !fmt || !count) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, count, fmt, g_esp + 16u);
+    memcpy(buf, t_fmt, (size_t)n + 1u);
+    RETC((uint32_t)n);
+}
+/* vprintf(fmt, ap): the guest va_list is an array of guest dwords. */
+static void c_vprintf(void) {
+    ms_init();
+    const char *fmt = ASTR(0);
+    uint32_t ap = A32(1);
+    FILE *out = ms_stdout();
+    if (!fmt || !ap || !out) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
+    int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, ap);
+    size_t w = fwrite(t_fmt, 1, (size_t)n, out);
+    RETC(w == (size_t)n ? (uint32_t)n : 0xFFFFFFFFu);
+}
+/* _flsbuf writes one character to a stream, flushing Guest FILE state. */
+static void c__flsbuf(void) {
+    ms_init();
+    ms_stream *s = ms_slot_of_va(A32(1));
+    if (!s) { ms_seterrno(EBADF); RETC(0xFFFFFFFFu); }
+    RETC(fputc((int)A32(0), s->fp) == EOF ? 0xFFFFFFFFu : (uint32_t)(unsigned char)A32(0));
+}
+/* fscanf's variadic destination pointers cannot be classified safely from a
+ * lifted va_list; fail explicitly instead of writing to guessed addresses. */
+static void c_fscanf(void) {
+    ms_init();
+    fprintf(stderr, "[msvcrt] fscanf: guest varargs scanning is unsupported\n");
+    ms_seterrno(ENOSYS);
+    RETC(0xFFFFFFFFu);
 }
 
 static void c_puts(void) {                           /* (s) */
@@ -1596,31 +1680,12 @@ static void u_getenv(void) {
     }
     RETC(0);
 }
-/* __p__acmdln: the address of the CRT's `char *_acmdln`. Build the command
- * line the same way _get_narrow_winmain_command_line does, but as the raw
- * process command line, and hand back a stable cell holding it. */
+/* __p__acmdln: the address of the CRT's `char *_acmdln`. Hand back the very
+ * cell the _acmdln data import binds to, so the two names cannot disagree on
+ * what the process command line is. */
 static void u_p_acmdln(void) {
     ms_init();
-    static uint32_t cell;
-    if (!g_cmdline_va) {
-        char line[1024];
-        int n = 0;
-        for (int i = 0; i < g_host_argc && n < (int)sizeof line - 3; i++) {
-            if (i) line[n++] = ' ';
-            if (i == 0) {
-                /* argv[0] is unquoted, as the process command line is */
-                for (const char *p = g_host_argv[i]; *p && n < (int)sizeof line - 2; p++) line[n++] = *p;
-            } else {
-                line[n++] = '"';
-                for (const char *p = g_host_argv[i]; *p && n < (int)sizeof line - 3; p++) line[n++] = *p;
-                line[n++] = '"';
-            }
-        }
-        line[n] = 0;
-        g_cmdline_va = hle_guest_strdup(line);
-    }
-    if (!cell) { cell = hle_va(hle_alloc(4)); MEM32(cell) = g_cmdline_va; }
-    RETC(cell);
+    RETC(g_acmdln_cell_va);
 }
 /* _set_invalid_parameter_handler(handler) -> the previous handler. The handler
  * is a guest function; it is recorded (and reported by the noinfo paths below
@@ -1749,25 +1814,37 @@ static void u_get_narrow_winmain_command_line(void) {
     }
     RETC(g_cmdline_va);
 }
-/* _controlfp_s(&current, new, mask): the FP control word.  The rounding bits
- * are applied to the host (fesetround), because that is the FP the lifted code
- * actually executes on; the x87 precision-control bits have no host equivalent
- * on SSE/ARM and are recorded in the returned word rather than applied - a
- * documented difference, not a claim that they took effect. */
+/* Record a new MSVC FP control word and apply its rounding bits to the host:
+ * that is the FP the lifted code actually executes on. The x87
+ * precision-control bits have no host equivalent on SSE/ARM and are recorded
+ * in g_fp_control rather than applied - a documented difference, not a claim
+ * that they took effect. Shared by _controlfp and _controlfp_s. */
+static void ms_fp_control(uint32_t newv, uint32_t mask) {
+    if (!mask) return;                              /* mask 0 is a pure query */
+    uint32_t v = (g_fp_control & ~mask) | (newv & mask);
+    g_fp_control = v;
+    int r = FE_TONEAREST;
+    if ((v & 0x300u) == 0x100u) r = FE_DOWNWARD;     /* _RC_DOWN */
+    else if ((v & 0x300u) == 0x200u) r = FE_UPWARD;  /* _RC_UP   */
+    else if ((v & 0x300u) == 0x300u) r = FE_TOWARDZERO; /* _RC_CHOP */
+    fesetround(r);                                  /* 0x000 is _RC_NEAR */
+}
+/* _controlfp(new, mask) -> the previous FP control word. The non-secure sibling
+ * of _controlfp_s: same real host-rounding effect, but returns the old word
+ * rather than an errno-style status. MSVCRT is cdecl, so RETC leaves the two
+ * argument words for the lifted caller. */
+static void u_controlfp(void) {
+    ms_init();
+    uint32_t prev = g_fp_control;
+    ms_fp_control(A32(0), A32(1));
+    RETC(prev);
+}
+/* _controlfp_s(&current, new, mask): the FP control word. */
 static void u_controlfp_s(void) {
     ms_init();
     uint32_t cur = A32(0), newv = A32(1), mask = A32(2);
     if (cur) MEM32(cur) = g_fp_control;
-    if (mask) {
-        uint32_t v = (g_fp_control & ~mask) | (newv & mask);
-        g_fp_control = v;
-        int r = FE_TONEAREST;
-        if ((v & 0x300u) == 0x000u) r = FE_TONEAREST;        /* _RC_NEAR */
-        else if ((v & 0x300u) == 0x100u) r = FE_DOWNWARD;    /* _RC_DOWN */
-        else if ((v & 0x300u) == 0x200u) r = FE_UPWARD;      /* _RC_UP   */
-        else r = FE_TOWARDZERO;                              /* _RC_CHOP */
-        fesetround(r);
-    }
+    ms_fp_control(newv, mask);
     RETC(0);
 }
 /* _seh_filter_exe: what the CRT's exception filter decides for an exception the
@@ -1775,6 +1852,12 @@ static void u_controlfp_s(void) {
  * run), so nothing routes an exception here; answering EXCEPTION_CONTINUE_SEARCH
  * (0) is what the UCRT does for a code it has no special case for. */
 static void u_seh_filter_exe(void) { RETC(0); }
+/* _XcptFilter(pointers): the CRT's unhandled-exception filter. No guest SEH
+ * dispatcher routes a second-chance exception here, but the CRT's documented
+ * policy for a code it has no special case for is EXCEPTION_EXECUTE_HANDLER
+ * (1): let the process terminate. Returning that value states the policy; it
+ * is not a claim that any guest exception was handled. cdecl. */
+static void u_xcpt_filter(void) { RETC(1u); }
 /* The UCRT's invalid-parameter handlers: with no handler installed (this layer
  * has no _set_invalid_parameter_handler) the default one reports and terminates
  * the process, so these do exactly that rather than returning as if the
@@ -1789,22 +1872,72 @@ static void u_terminate(void) {
     fprintf(stderr, "[msvcrt] std::terminate called\n");
     hle_exit(3);
 }
+/* Read a TypeDescriptor's mangled name out of guest memory, bounded so a bad
+ * RTTI pointer can only truncate the name, never run the read away. MSVC x86
+ * TypeDescriptor is { int nRTTIBase; void *pVFTable; void *spare; char name[]; }
+ * so the name begins at +12. A pointer below 64 KB is treated as null: guest
+ * code and data live above that, and the same test eh32.c uses for a plausible
+ * metadata pointer. */
+static size_t cxx_type_name(uint32_t td, char *buf, size_t cap) {
+    size_t k;
+    if (!cap) return 0;
+    buf[0] = '\0';
+    if (td < 0x10000u) return 0;
+    for (k = 0; k + 1 < cap; k++) {
+        uint8_t c = MEM8(td + 12u + (uint32_t)k);
+        if (!c) break;
+        buf[k] = (char)c;
+    }
+    buf[k] = '\0';
+    return k;
+}
 /* _CxxThrowException(exceptionObject, throwInfo): MSVC's `throw` entry point.
  *
- * Reached only when a guest actually throws. This layer has no guest SEH (the
- * README says so: RaiseException ends the run), so it cannot walk the guest's
- * frame chain and find a catch. Answering "success" would resume the guest at
- * whatever PC followed the throw, with the exception uncaught and its frames
- * never unwound -- silent corruption. Report and stop instead, naming the
- * throw, so a title that never throws (TrackEditor, GeneRally) is unaffected
- * and one that does fails where it threw rather than somewhere later. */
+ * Dispatch is owned by hle_eh_cxx_throw in eh32.c. When a lifted frame has a
+ * registered checkpoint and a compatible catch, that helper longjmps to the
+ * catch continuation and never returns here. Reaching the code below therefore
+ * means it declined the throw: no checkpoint/TIB, no compatible handler, or an
+ * unsupported frame. We must not fake a catch by returning "success" -- the
+ * guest would resume after its throw with the exception uncaught and none of
+ * its unwind funclets run, i.e. silent stack corruption. Stop at the throw and
+ * say what was thrown, decoded from the guest's own ThrowInfo, so a title that
+ * never throws is unaffected and one that does fails at the throw rather than
+ * later with a corrupted stack. */
 static void u_cxx_throw_exception(void) {
-    /* A caught exception resumes through its owning function's setjmp
-     * checkpoint and therefore never returns here. */
-    hle_eh_cxx_throw(A32(0), A32(1));
-    fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
-                    "0x%08X type 0x%08X, no compatible guest handler\n",
-            A32(0), A32(1));
+    uint32_t object = A32(0), info = A32(1);
+    uint32_t arr, ct, td;
+    unsigned ncat = 0;
+    char type[64];
+
+    /* On a match this dispatches via longjmp and does not return. */
+    hle_eh_cxx_throw(object, info);
+
+    /* Diagnostic only; it makes no dispatch decision. Decode ThrowInfo ->
+     * CatchableTypeArray -> first CatchableType -> TypeDescriptor purely to
+     * name the thrown type. An absent or unreadable field is reported as such
+     * instead of being guessed at. */
+    type[0] = '\0';
+    if (info >= 0x10000u) {
+        arr = MEM32(info + 12u);                      /* pCatchableTypeArray */
+        if (arr >= 0x10000u) {
+            ncat = MEM32(arr);                        /* nCatchableTypes */
+            if (ncat >= 1u && ncat <= 32u) {
+                ct = MEM32(arr + 4u);                 /* first CatchableType */
+                td = ct >= 0x10000u ? MEM32(ct + 4u) : 0u;  /* pType */
+                (void)cxx_type_name(td, type, sizeof type);
+            }
+        }
+    }
+    if (type[0])
+        fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
+                        "0x%08X ThrowInfo 0x%08X, no compatible guest handler: "
+                        "type %s (%u catchable type%s)\n",
+                object, info, type, ncat, ncat == 1u ? "" : "s");
+    else
+        fprintf(stderr, "[msvcrt] _CxxThrowException: guest C++ throw at object "
+                        "0x%08X ThrowInfo 0x%08X, no compatible guest handler: "
+                        "throw type unreadable\n",
+                object, info);
     hle_exit(3);
 }
 /* _except_handler4_common: every /GS-checked MSVC function's handler stub
@@ -1814,6 +1947,17 @@ static void u_cxx_throw_exception(void) {
 static void u_except_handler4_common(void) {
     fprintf(stderr, "[msvcrt] _except_handler4_common: guest SEH exception %d "
                     "with no guest unwind support\n", A32(1));
+    hle_exit(3);
+}
+/* _except_handler3: the older MSVC __try/__except frame handler. This layer's
+ * exception engine (eh32.c) dispatches frame-based C++ handlers only; both its
+ * header and the native32 port explicitly skip __try/__except frames because
+ * there is no SEH dispatcher. Map this to that same honest unsupported path
+ * rather than inventing a second exception engine. cdecl (4 arguments, no
+ * callee purge); it runs only when a guest exception actually reaches it. */
+static void u_except_handler3(void) {
+    fprintf(stderr, "[msvcrt] _except_handler3: guest SEH exception with no "
+                    "guest SEH dispatch support\n");
     hle_exit(3);
 }
 /* _register_thread_local_exe_atexit_callback(cb): the UCRT runs these when the
@@ -2180,6 +2324,57 @@ static void u_wcsnlen(void) {
     uint32_t max = A32(1), n = 0;
     if (w) while (n < max && w[n]) n++;
     RETC(n);
+}
+
+/* ---- more wide-string exports this table did not answer ----
+ * Guest wchar_t is 2 bytes (UTF-16 code units on x86 MSVC), so every routine
+ * here walks uint16_t cells in guest memory exactly like wcscpy/wcsncmp above;
+ * the host's 4-byte wchar_t is deliberately never used. Each returns a real
+ * guest address or a real comparison/termination result - a NULL input is
+ * never turned into a fake "success". All are cdecl: one RETC pops only the
+ * synthetic return address, the lifted caller drops its own arguments. */
+static void u_wcsdup(void) {                         /* (const wchar_t *s) -> wchar_t * */
+    ms_init();
+    const uint16_t *s = (const uint16_t *)APTR(0);
+    if (!s) { ms_seterrno(EINVAL); RETC(0); }
+    uint32_t n = 0;
+    while (s[n]) n++;
+    uint64_t bytes = ((uint64_t)n + 1u) * 2u;         /* the terminating NUL cell counts */
+    if (bytes > 0xFFFFFFFFull) { ms_seterrno(ENOMEM); RETC(0); }
+    uint16_t *p = (uint16_t *)hle_heap_alloc((uint32_t)bytes, 0);
+    if (!p) { ms_seterrno(ENOMEM); RETC(0); }
+    memcpy(p, s, (size_t)bytes);
+    RETC(hle_va(p));                                 /* guest-heap copy, free() can reclaim it */
+}
+static void u_wcscat(void) {                         /* (wchar_t *dst, const wchar_t *src) -> dst */
+    uint32_t dst_va = A32(0);
+    uint16_t *dst = (uint16_t *)hle_ptr(dst_va);
+    const uint16_t *src = (const uint16_t *)APTR(1);
+    if (!dst || !src) RETC(0);
+    uint32_t i = 0;
+    while (dst[i]) i++;
+    while ((dst[i++] = *src++) != 0) { }
+    RETC(dst_va);
+}
+static void u_wcsncat(void) {                        /* (wchar_t *dst, const wchar_t *src, size_t n) -> dst */
+    uint32_t dst_va = A32(0);
+    uint16_t *dst = (uint16_t *)hle_ptr(dst_va);
+    const uint16_t *src = (const uint16_t *)APTR(1);
+    uint32_t n = A32(2);
+    if (!dst || !src) RETC(0);
+    uint32_t i = 0;
+    while (dst[i]) i++;
+    for (uint32_t k = 0; k < n && src[k]; k++) dst[i++] = src[k];
+    dst[i] = 0;                                      /* wcsncat always terminates */
+    RETC(dst_va);
+}
+static void u_wcscmp(void) {                         /* (const wchar_t *a, const wchar_t *b) -> int */
+    const uint16_t *a = (const uint16_t *)APTR(0), *b = (const uint16_t *)APTR(1);
+    if (!a || !b) RETC((uint32_t)(int32_t)(a == b ? 0 : (a ? 1 : -1)));
+    for (size_t i = 0;; i++) {
+        if (a[i] != b[i]) RETC(a[i] < b[i] ? 0xFFFFFFFFu : 1u);
+        if (!a[i]) RETC(0);
+    }
 }
 static int utf8_next(const uint8_t *s, size_t n, uint32_t *cp) {
     if (!n) return -2;
@@ -2674,6 +2869,14 @@ uint32_t hle_msvcrt_data(const char *name) {
     if (!strcmp(name, "_ctype"))       return g_ctype_va;    /* the table itself */
     if (!strcmp(name, "_fmode"))       return g_fmode_va;
     if (!strcmp(name, "__mb_cur_max")) return g_mbmax_va;
+    /* _acmdln is a char* cell pointing at the guest command line; _adjust_fdiv
+     * is an int cell (0: the legacy FPU flag is ignored). Both are real guest
+     * objects, so a data import binds to the object and not to a shim VA. */
+    if (!strcmp(name, "_acmdln"))      return g_acmdln_cell_va;
+    if (!strcmp(name, "_adjust_fdiv")) return g_adjust_fdiv_va;
+    /* __initenv is a char **; the existing _environ cell already points at
+     * the guest environment vector, so share that real object. */
+    if (!strcmp(name, "__initenv"))   return g_environ_va;
     return 0;
 }
 
@@ -2729,8 +2932,10 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "_configure_narrow_argv",       u_configure_narrow_argv },
     { "_initialize_narrow_environment", u_initialize_narrow_environment },
     { "_get_narrow_winmain_command_line", u_get_narrow_winmain_command_line },
+    { "_controlfp",                   u_controlfp },
     { "_controlfp_s",                 u_controlfp_s },
     { "_seh_filter_exe",              u_seh_filter_exe },
+    { "_XcptFilter",                  u_xcpt_filter },
     { "_invalid_parameter_noinfo",    u_invalid_parameter_noinfo },
     { "_invalid_parameter_noinfo_noreturn", u_invalid_parameter_noinfo_noreturn },
     { "_register_thread_local_exe_atexit_callback", u_register_thread_local_exe_atexit_callback },
@@ -2738,6 +2943,7 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "_c_exit",                      c_cexit },
     { "terminate",                    u_terminate },
     { "_CxxThrowException",           u_cxx_throw_exception },
+    { "_except_handler3",             u_except_handler3 },
     { "_except_handler4_common",      u_except_handler4_common },
     { "__getmainargs",                c_getmainargs },
     { "__set_app_type",               c_set_app_type },
@@ -2776,6 +2982,10 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "setbuf",                       c_setbuf },
     { "setvbuf",                      c_setvbuf },
     { "printf",                       c_printf },
+    { "_snprintf",                    c__snprintf },
+    { "vprintf",                      c_vprintf },
+    { "_flsbuf",                      c__flsbuf },
+    { "fscanf",                       c_fscanf },
     { "fprintf",                      c_fprintf },
     { "sprintf",                      c_sprintf },
     { "puts",                         c_puts },
@@ -2867,8 +3077,12 @@ const win32hle_shim win32hle_msvcrt[] = {
     { "strtok",                       c_strtok },
     { "strerror",                     c_strerror },
     { "wcscpy",                       c_wcscpy },
+    { "wcscat",                       u_wcscat },
+    { "wcsncat",                      u_wcsncat },
     { "wcsncmp",                      c_wcsncmp },
+    { "wcscmp",                       u_wcscmp },
     { "wcsnlen",                      u_wcsnlen },
+    { "_wcsdup",                      u_wcsdup },
     { "_wcsicmp",                     c_wcsicmp },
     { "_wcsnicmp",                    c_wcsnicmp },
     { "mbrtowc",                      u_mbrtowc },

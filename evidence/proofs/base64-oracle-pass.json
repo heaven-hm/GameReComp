@@ -1,0 +1,258 @@
+{
+  "schema": 1,
+  "generated_at": "2026-11-24T01:08:02+00:00",
+  "tool": "tools.corpus_acceptance",
+  "reused_tools": [
+    "tools.corpus.inventory",
+    "tools.autorecomp",
+    "tools.game_runner",
+    "tools.frame_proof",
+    "tools.size_tier_report"
+  ],
+  "parameters": {
+    "timeout": 12,
+    "execute": true,
+    "small_max": 4194304,
+    "medium_max": 12582912,
+    "run_pipeline": false,
+    "pipeline_timeout": 60.0
+  },
+  "inputs": [
+    {
+      "kind": "original:base64",
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/base64.exe",
+      "status": "ok"
+    },
+    {
+      "kind": "native:base64",
+      "path": "/tmp/agent1-base64/build/base64",
+      "status": "ok"
+    },
+    {
+      "kind": "scenario:base64",
+      "path": "reports/oracle/base64-scenario.json",
+      "status": "ok"
+    }
+  ],
+  "games": [
+    {
+      "game": "base64",
+      "status": "PASS",
+      "reasons": [
+        "original SHA-256 d805661c60b0b99e... and PE metadata recorded (i386)",
+        "native SHA-256 caaa9bd8c53caf77... (1869336 bytes, source=cli)",
+        "native SHA-256 matches pipeline manifest (caaa9bd8c53caf77...)",
+        "launch exit 0 in 0.3s",
+        "CLI scenario args=[]: exit 0 vs declared 0, stdout/stderr sha256 6a5de47897f4dd74... vs declared 6a5de47897f4dd74..., log run.log",
+        "pipeline verification 'scenario-pass' matched",
+        "scope: declared CLI scenario + process-level oracle, not gameplay equivalence"
+      ],
+      "kind": "cli",
+      "scenario": {
+        "declared": true,
+        "complete": true,
+        "source": "reports/oracle/base64-scenario.json",
+        "args": [],
+        "expected_exit": 0,
+        "expected_output_sha256": "6a5de47897f4dd74c3673a4069843b67f9d357561ed1e7f57a36ba532048db03",
+        "reasons": []
+      },
+      "cli_evidence": {
+        "complete": true,
+        "evidence_present": true,
+        "exit_code": 0,
+        "expected_exit": 0,
+        "exit_matches": true,
+        "output_sha256": "6a5de47897f4dd74c3673a4069843b67f9d357561ed1e7f57a36ba532048db03",
+        "expected_output_sha256": "6a5de47897f4dd74c3673a4069843b67f9d357561ed1e7f57a36ba532048db03",
+        "output_matches": true,
+        "log": "/private/tmp/agent1-acceptance-base64c/base64/run.log",
+        "log_exists": true,
+        "command": [
+          "/tmp/agent1-base64/build/base64"
+        ],
+        "reproduced": true
+      },
+      "original": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/base64.exe",
+        "source": "cli",
+        "relative_path": "base64.exe",
+        "size": 136310,
+        "sha256": "d805661c60b0b99eab94ad0359ece9b91e7a79fecccc630e92ffdf217c48f879",
+        "status": "ok",
+        "md5": "edba6970993b9ed72682c051a689a5e6",
+        "architecture": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "is_dll": false,
+        "image_base": "0x00400000",
+        "entry_point_rva": "0x00001460",
+        "linker_version": "2.47",
+        "timestamp_str": "2026-10-27 22:43:57 UTC",
+        "code_start": "0x00401000",
+        "code_end": "0x00403200",
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll"
+        ],
+        "import_count": 44,
+        "reason": ""
+      },
+      "pipeline": {
+        "report": "/tmp/agent1-base64/reports/report.json",
+        "status": "ok",
+        "outcome": {
+          "schema": 1,
+          "generated_at": "2026-11-24T01:06:35Z",
+          "status": "scenario-pass",
+          "reason": "process-level oracle matched",
+          "scope": "process",
+          "game": "base64.exe",
+          "executable_sha256": "d805661c60b0b99eab94ad0359ece9b91e7a79fecccc630e92ffdf217c48f879",
+          "target": {
+            "os": "darwin",
+            "arch": "arm64",
+            "label": "Darwin arm64 (host build)"
+          },
+          "checks": [
+            {
+              "check": "exit_code",
+              "expected": 0,
+              "actual": 0,
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "========================================",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "C BASE64 ENCODER / DECODER",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "1. Base64 Encode String",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "2. Base64 Decode String",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "3. Exit",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "Choose (1-3):",
+              "ok": true
+            }
+          ],
+          "oracle_gaps": [
+            "oracle compares process observables only, not gameplay state",
+            "no frame, input or audio comparison",
+            "low-level register C is not high-level reconstructed source"
+          ],
+          "run": {
+            "command": [
+              "/private/tmp/agent1-base64/build/base64"
+            ],
+            "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps",
+            "headless": true,
+            "timeout_seconds": 8.0,
+            "timed_out": false,
+            "status": "exited",
+            "exit_code": 0,
+            "seconds": 0.9,
+            "booted": true,
+            "entry_point": "0x00401460",
+            "unresolved_import_count": 0,
+            "bound_imports": null,
+            "unresolved_imports": [],
+            "import_trace_enabled": false,
+            "import_profile": [],
+            "import_calls_total": 0,
+            "log_stdout": "/private/tmp/agent1-base64/logs/run.stdout.log",
+            "log_stderr": "/private/tmp/agent1-base64/logs/run.stderr.log",
+            "stdout_tail": "\n\u001b[36m\u001b[1m========================================\n        C BASE64 ENCODER / DECODER      \n========================================\u001b[0m\n1. Base64 Encode String\n2. Base64 Decode String\n3. Exit\nChoose (1-3): \nGoodbye!\n",
+            "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x23000\n[pe] static TLS: template 0x00408000..0x00408004 (+0 zero), index 0\n[pe] bound 44 imports (0 delay), 0 unresolved\n[host] C:\\base64.exe booted: entry 0x00401460, 0 unresolved imports",
+            "output_tail": "\n\u001b[36m\u001b[1m========================================\n        C BASE64 ENCODER / DECODER      \n========================================\u001b[0m\n1. Base64 Encode String\n2. Base64 Decode String\n3. Exit\nChoose (1-3): \nGoodbye!\n\n[pe] <embedded image> mapped at 0x00400000, span 0x23000\n[pe] static TLS: template 0x00408000..0x00408004 (+0 zero), index 0\n[pe] bound 44 imports (0 delay), 0 unresolved\n[host] C:\\base64.exe booted: entry 0x00401460, 0 unresolved imports"
+          }
+        },
+        "stage_failed": null,
+        "stage_status": {
+          "inspect": "ok",
+          "recover": "ok",
+          "translate": "ok",
+          "project": "ok",
+          "compile": "ok",
+          "run": "ok",
+          "verify": "ok"
+        },
+        "score": 100,
+        "verification_status": "scenario-pass",
+        "input_sha256": "d805661c60b0b99eab94ad0359ece9b91e7a79fecccc630e92ffdf217c48f879",
+        "native_path": "/private/tmp/agent1-base64/build/base64",
+        "native_sha256": "caaa9bd8c53caf77c94cff1f415f92d45f75d32af69607e1234858b7a1d93cd1",
+        "native_size": 1869336,
+        "reasons": [
+          "pipeline input SHA-256 matches original (d805661c60b0b99e...)",
+          "pipeline verification 'scenario-pass': process-level oracle matched"
+        ],
+        "blocking_reasons": [],
+        "claims_verified": true
+      },
+      "native": {
+        "path": "/tmp/agent1-base64/build/base64",
+        "sha256": "caaa9bd8c53caf77c94cff1f415f92d45f75d32af69607e1234858b7a1d93cd1",
+        "size": 1869336,
+        "source": "cli",
+        "reason": "native SHA-256 matches pipeline manifest (caaa9bd8c53caf77...)"
+      },
+      "launch": {
+        "executed": true,
+        "exit_code": 0,
+        "seconds": 0.3,
+        "evidence": "/private/tmp/agent1-acceptance-base64c/base64",
+        "log": "/private/tmp/agent1-acceptance-base64c/base64/run.log",
+        "command": [
+          "/tmp/agent1-base64/build/base64"
+        ],
+        "output_sha256": "6a5de47897f4dd74c3673a4069843b67f9d357561ed1e7f57a36ba532048db03",
+        "stdout_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x23000\n[pe] static TLS: template 0x00408000..0x00408004 (+0 zero), index 0\n[pe] bound 44 imports (0 delay), 0 unresolved\n[host] C:\\base64.exe booted: entry 0x00401460, 0 unresolved imports\n\n\u001b[36m\u001b[1m========================================\n        C BASE64 ENCODER / DECODER      \n========================================\u001b[0m\n1. Base64 Encode String\n2. Base64 Decode String\n3. Exit\nChoose (1-3): \nGoodbye!\n\n",
+        "mode": "cli",
+        "reason": ""
+      },
+      "frames": {
+        "runner_frame_count": null,
+        "joined_frame_count": 0,
+        "proven_frame_count": 0,
+        "blank_frame_count": 0,
+        "unproven_frame_count": 0,
+        "frames": [],
+        "example": null
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "by_status": {
+      "PASS": 1,
+      "PARTIAL": 0,
+      "BUILD ONLY": 0,
+      "FAIL": 0,
+      "BLOCKED": 0
+    }
+  }
+}

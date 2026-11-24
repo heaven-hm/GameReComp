@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "what_it_proves": "captured native frames have real pixel content (distinct colours + hashes); not a Windows oracle",
+  "frames": [
+    {
+      "width": 310,
+      "height": 418,
+      "bpp": 24,
+      "sha256": "cba72e1ad894ee6e663697e0ae648c8ffd17b872a8be89487de4ae7fce573c3f",
+      "distinct_colors": 4,
+      "blank": false,
+      "bytes": 389630,
+      "game": "tetris-jp-p8",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0000.bmp"
+    },
+    {
+      "width": 310,
+      "height": 418,
+      "bpp": 24,
+      "sha256": "337dc530ce189824bf2bd68a9d53731dd84c23937b506d3fea0f63a4250bb799",
+      "distinct_colors": 5,
+      "blank": false,
+      "bytes": 389630,
+      "game": "tetris-jp-p8",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0001.bmp"
+    },
+    {
+      "width": 310,
+      "height": 418,
+      "bpp": 24,
+      "sha256": "337dc530ce189824bf2bd68a9d53731dd84c23937b506d3fea0f63a4250bb799",
+      "distinct_colors": 5,
+      "blank": false,
+      "bytes": 389630,
+      "game": "tetris-jp-p8",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-jp-p8/screenshots/frame-0002.bmp"
+    },
+    {
+      "width": 310,
+      "height": 418,
+      "bpp": 24,
+      "sha256": "7d0615237cf71559fffe1920f0a5cd918344878597715243276909c7fe2929ef",
+      "distinct_colors": 4,
+      "blank": false,
+      "bytes": 389630,
+      "game": "tetris-ch-p8",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-ch-p8/screenshots/frame-0000.bmp"
+    },
+    {
+      "width": 310,
+      "height": 418,
+      "bpp": 24,
+      "sha256": "5b94c01b33aac7d33fe045bdb093a500f77e4a2feae3800989879042e99e0a45",
+      "distinct_colors": 5,
+      "blank": false,
+      "bytes": 389630,
+      "game": "tetris-ch-p8",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-ch-p8/screenshots/frame-0001.bmp"
+    },
+    {
+      "width": 310,
+      "height": 418,
+      "bpp": 24,
+      "sha256": "5b94c01b33aac7d33fe045bdb093a500f77e4a2feae3800989879042e99e0a45",
+      "distinct_colors": 5,
+      "blank": false,
+      "bytes": 389630,
+      "game": "tetris-ch-p8",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p8-verify/p8-frames-final/tetris-ch-p8/screenshots/frame-0002.bmp"
+    }
+  ]
+}

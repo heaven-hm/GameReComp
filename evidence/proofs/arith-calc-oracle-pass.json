@@ -1,0 +1,250 @@
+{
+  "schema": 1,
+  "generated_at": "2026-11-24T01:10:00+00:00",
+  "tool": "tools.corpus_acceptance",
+  "reused_tools": [
+    "tools.corpus.inventory",
+    "tools.autorecomp",
+    "tools.game_runner",
+    "tools.frame_proof",
+    "tools.size_tier_report"
+  ],
+  "parameters": {
+    "timeout": 12,
+    "execute": true,
+    "small_max": 4194304,
+    "medium_max": 12582912,
+    "run_pipeline": false,
+    "pipeline_timeout": 60.0
+  },
+  "inputs": [
+    {
+      "kind": "original:arith-calc",
+      "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+      "status": "ok"
+    },
+    {
+      "kind": "native:arith-calc",
+      "path": "/tmp/agent1-arith/build/arith_calc",
+      "status": "ok"
+    },
+    {
+      "kind": "scenario:arith-calc",
+      "path": "reports/oracle/arith-calc-scenario.json",
+      "status": "ok"
+    }
+  ],
+  "games": [
+    {
+      "game": "arith-calc",
+      "status": "PASS",
+      "reasons": [
+        "original SHA-256 9b59ee613acc7b5a... and PE metadata recorded (i386)",
+        "native SHA-256 5a8f405376928e02... (1132840 bytes, source=cli)",
+        "native SHA-256 matches pipeline manifest (5a8f405376928e02...)",
+        "launch exit 0",
+        "CLI scenario args=[]: exit 0 vs declared 0, stdout/stderr sha256 0fff5157dbe2309e... vs declared 0fff5157dbe2309e..., log run.log",
+        "pipeline verification 'scenario-pass' matched",
+        "scope: declared CLI scenario + process-level oracle, not gameplay equivalence"
+      ],
+      "kind": "cli",
+      "scenario": {
+        "declared": true,
+        "complete": true,
+        "source": "reports/oracle/arith-calc-scenario.json",
+        "args": [],
+        "expected_exit": 0,
+        "expected_output_sha256": "0fff5157dbe2309ec769abb9ee4973321930bec4aa68da9b7278a3b9298fbf0c",
+        "reasons": []
+      },
+      "cli_evidence": {
+        "complete": true,
+        "evidence_present": true,
+        "exit_code": 0,
+        "expected_exit": 0,
+        "exit_matches": true,
+        "output_sha256": "0fff5157dbe2309ec769abb9ee4973321930bec4aa68da9b7278a3b9298fbf0c",
+        "expected_output_sha256": "0fff5157dbe2309ec769abb9ee4973321930bec4aa68da9b7278a3b9298fbf0c",
+        "output_matches": true,
+        "log": "/private/tmp/agent1-acc-arith/arith-calc/run.log",
+        "log_exists": true,
+        "command": [
+          "/tmp/agent1-arith/build/arith_calc"
+        ],
+        "reproduced": true
+      },
+      "original": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+        "source": "cli",
+        "relative_path": "arith-calc.exe",
+        "size": 8972,
+        "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+        "status": "ok",
+        "md5": "5b6bc79af5281200b81b1e7e21a5aff8",
+        "architecture": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "is_dll": false,
+        "image_base": "0x00400000",
+        "entry_point_rva": "0x00001B00",
+        "linker_version": "2.47",
+        "timestamp_str": "1970-01-01 00:00:00 UTC",
+        "code_start": "0x00401000",
+        "code_end": "0x00401C00",
+        "import_dlls": [
+          "KERNEL32.dll"
+        ],
+        "import_count": 3,
+        "reason": ""
+      },
+      "pipeline": {
+        "report": "/tmp/agent1-arith/reports/report.json",
+        "status": "ok",
+        "outcome": {
+          "schema": 1,
+          "generated_at": "2026-11-24T01:09:48Z",
+          "status": "scenario-pass",
+          "reason": "process-level oracle matched",
+          "scope": "process",
+          "game": "arith-calc.exe",
+          "executable_sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+          "target": {
+            "os": "darwin",
+            "arch": "arm64",
+            "label": "Darwin arm64 (host build)"
+          },
+          "checks": [
+            {
+              "check": "exit_code",
+              "expected": 0,
+              "actual": 0,
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "arith:start",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "primes<200=46",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "fib(20)=6765",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "gcd(1071,462)=21",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "popcount(0xF0F0F0F0)=16",
+              "ok": true
+            },
+            {
+              "check": "stdout_contains",
+              "expected": "rotl(0x12345678,8)=878082066",
+              "ok": true
+            }
+          ],
+          "oracle_gaps": [
+            "oracle compares process observables only, not gameplay state",
+            "no frame, input or audio comparison",
+            "low-level register C is not high-level reconstructed source"
+          ],
+          "run": {
+            "command": [
+              "/private/tmp/agent1-arith/build/arith_calc"
+            ],
+            "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps",
+            "headless": true,
+            "timeout_seconds": 8.0,
+            "timed_out": false,
+            "status": "exited",
+            "exit_code": 0,
+            "seconds": 0.7,
+            "booted": true,
+            "entry_point": "0x00401B00",
+            "unresolved_import_count": 0,
+            "bound_imports": null,
+            "unresolved_imports": [],
+            "import_trace_enabled": false,
+            "import_profile": [],
+            "import_calls_total": 0,
+            "log_stdout": "/private/tmp/agent1-arith/logs/run.stdout.log",
+            "log_stderr": "/private/tmp/agent1-arith/logs/run.stderr.log",
+            "stdout_tail": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done",
+            "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x5000\n[pe] bound 3 imports (0 delay), 0 unresolved\n[host] C:\\arith-calc.exe booted: entry 0x00401B00, 0 unresolved imports\n[win32hle] ExitProcess(0) from guest 0x00401B00",
+            "output_tail": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\n[pe] <embedded image> mapped at 0x00400000, span 0x5000\n[pe] bound 3 imports (0 delay), 0 unresolved\n[host] C:\\arith-calc.exe booted: entry 0x00401B00, 0 unresolved imports\n[win32hle] ExitProcess(0) from guest 0x00401B00"
+          }
+        },
+        "stage_failed": null,
+        "stage_status": {
+          "inspect": "ok",
+          "recover": "ok",
+          "translate": "ok",
+          "project": "ok",
+          "compile": "ok",
+          "run": "ok",
+          "verify": "ok"
+        },
+        "score": 100,
+        "verification_status": "scenario-pass",
+        "input_sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+        "native_path": "/private/tmp/agent1-arith/build/arith_calc",
+        "native_sha256": "5a8f405376928e02a4b2ecc6488b3508295618ee0cb047f8d4d17c9852e413ed",
+        "native_size": 1132840,
+        "reasons": [
+          "pipeline input SHA-256 matches original (9b59ee613acc7b5a...)",
+          "pipeline verification 'scenario-pass': process-level oracle matched"
+        ],
+        "blocking_reasons": [],
+        "claims_verified": true
+      },
+      "native": {
+        "path": "/tmp/agent1-arith/build/arith_calc",
+        "sha256": "5a8f405376928e02a4b2ecc6488b3508295618ee0cb047f8d4d17c9852e413ed",
+        "size": 1132840,
+        "source": "cli",
+        "reason": "native SHA-256 matches pipeline manifest (5a8f405376928e02...)"
+      },
+      "launch": {
+        "executed": true,
+        "exit_code": 0,
+        "seconds": 0.0,
+        "evidence": "/private/tmp/agent1-acc-arith/arith-calc",
+        "log": "/private/tmp/agent1-acc-arith/arith-calc/run.log",
+        "command": [
+          "/tmp/agent1-arith/build/arith_calc"
+        ],
+        "output_sha256": "0fff5157dbe2309ec769abb9ee4973321930bec4aa68da9b7278a3b9298fbf0c",
+        "stdout_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x5000\n[pe] bound 3 imports (0 delay), 0 unresolved\n[host] C:\\arith-calc.exe booted: entry 0x00401B00, 0 unresolved imports\narith:start\r\nprimes<200=46\r\nfib(20)=6765\r\ngcd(1071,462)=21\r\npopcount(0xF0F0F0F0)=16\r\nrotl(0x12345678,8)=878082066\r\npoly=12512\r\nmul=-8369910\r\ndiv=-18\r\nmod=-141\r\narith:done\r\n[win32hle] ExitProcess(0) from guest 0x00401B00\n",
+        "mode": "cli",
+        "reason": ""
+      },
+      "frames": {
+        "runner_frame_count": null,
+        "joined_frame_count": 0,
+        "proven_frame_count": 0,
+        "blank_frame_count": 0,
+        "unproven_frame_count": 0,
+        "frames": [],
+        "example": null
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "by_status": {
+      "PASS": 1,
+      "PARTIAL": 0,
+      "BUILD ONLY": 0,
+      "FAIL": 0,
+      "BLOCKED": 0
+    }
+  }
+}

@@ -531,6 +531,8 @@ static void dev_set_clip(void);
 static void dev_get_clip(void);
 static void dev_get_caps(void);
 static void dev_enum_textures(void);
+static void dev_preload(void);
+static int upload_texture_surface(uint32_t surface, uint32_t fvf);
 static void d3d_enum_z(void);
 static void d3d_evict(void);
 static void dev_draw_strided(void);
@@ -542,7 +544,7 @@ static void release_surface_ref(uint32_t surface);
 
 #define UNIMPL(name, argc) static void name(void) { RET(D3DERR_NOTAVAILABLE, argc); }
 UNIMPL(dev_begin_state,1)
-UNIMPL(dev_end_state,2) UNIMPL(dev_preload,2)
+UNIMPL(dev_end_state,2)
 UNIMPL(dev_sphere,6)
 UNIMPL(dev_apply_state,2) UNIMPL(dev_capture_state,2) UNIMPL(dev_delete_state,2)
 UNIMPL(dev_create_state,3) UNIMPL(dev_load,6)
@@ -672,6 +674,97 @@ static uint32_t g_mt_tex[16]; static unsigned g_mt_n[16];
 static unsigned g_lit_draws,g_unlit_draws;
 static int diag_notex(void) { static int v=-1; if(v<0) v=getenv("RECOMP_D3D7_NOTEX")!=NULL; return v; }
 #define REJECT(n) do { g_draw_reject[n]++; return 0; } while(0)
+
+/* Copy one DirectDraw surface's pixels into the device's single GL texture.
+ * This is the one place a texture becomes resident in the shared context: the
+ * draw path and IDirect3DDevice7::PreLoad both go through it, so a preloaded
+ * texture is a real uploaded texture and not a successful-looking no-op.
+ * Returns 0 on success, otherwise the draw-reject code that explains why.
+ * load_gl() must have succeeded before this is called. */
+static int upload_texture_surface(uint32_t surface, uint32_t fvf) {
+    uint8_t *pixels; int w,h,pitch,bpp;
+    if(!hle_dd_surface_pixels(surface,&pixels,&w,&h,&pitch,&bpp) || w<=0 || h<=0) return 6;
+    { static unsigned mtlog;
+      if(getenv("RECOMP_D3D7_DIAG") && (fvf&0xF00)==0x200 && mtlog<24) {
+          mtlog++; uint32_t f=read_px(pixels,bpp), m=read_px(pixels+(size_t)(h/2)*(size_t)pitch+(size_t)(w/2)*(size_t)(bpp/8),bpp);
+          unsigned lk=0,nz=0; hle_dd_surface_stats(surface,&lk,&nz);
+          fprintf(stderr,"[d3d7] multi-draw %08x %dx%d bpp=%d first=%08x mid=%08x locks=%u nz=%u\n",surface,w,h,bpp,f,m,lk,nz);
+      } }
+    uint32_t rm,gm,bm,am;
+    if(!hle_dd_surface_format(surface,&bpp,&rm,&gm,&bm,&am)) return 7;
+    int bytes_per_pixel=bpp/8;
+    if(bytes_per_pixel<=0 || pitch<=0 || (size_t)w>SIZE_MAX/(size_t)bytes_per_pixel) return 7;
+    size_t row_bytes=(size_t)w*(size_t)bytes_per_pixel;
+    if((size_t)pitch<row_bytes) return 7;
+    uint8_t *packed=NULL;
+    const uint8_t *source=pixels;
+    if((size_t)pitch!=row_bytes) {
+        if((size_t)h>SIZE_MAX/row_bytes) return 7;
+        packed=(uint8_t *)malloc(row_bytes*(size_t)h);
+        if(!packed) return 7;
+        for(int y=0;y<h;y++)
+            memcpy(packed+(size_t)y*row_bytes,pixels+(size_t)y*(size_t)pitch,row_bytes);
+        source=packed;
+    }
+    unsigned format,type,internal;
+    uint8_t *converted=NULL;
+    if(!gl_pixel_format(bpp,rm,gm,bm,am,&format,&type,&internal)) {
+        converted=rgba8_from_pixels(source,w,h,(int)row_bytes,bpp,rm,gm,bm,am);
+        if(!converted) { free(packed); return 8; }
+        format=GL_RGBA; type=GL_UNSIGNED_BYTE; internal=GL_RGBA;
+    }
+    if(!g_gl_texture) p_gen_textures(1,&g_gl_texture);
+    if(!g_gl_texture) { free(converted); free(packed); return 8; }
+    p_enable(GL_TEXTURE_2D); p_bind_texture(GL_TEXTURE_2D,g_gl_texture);
+    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+    p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+    p_pixel_store_i(GL_UNPACK_ALIGNMENT,1);
+    p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0);
+    p_tex_image_2d(GL_TEXTURE_2D,0,internal,w,h,0,format,type,converted?converted:source);
+    if(getenv("RECOMP_D3D7_DIAG")) {
+        static uint32_t seen[64]; static unsigned nseen, tn;
+        unsigned known=0;
+        for(unsigned i=0;i<nseen;i++) if(seen[i]==surface) { known=1; break; }
+        if(!known && nseen<64) {
+            seen[nseen++]=surface;
+            tn++;
+            const uint8_t *sample=(const uint8_t *)(converted?converted:source);
+            size_t bpp2=(size_t)(bpp/8);
+            size_t sstride=(converted||packed)?row_bytes:(size_t)pitch;
+            uint32_t c0=0,c1=0; size_t mid=(size_t)(h/2)*sstride+(size_t)(w/2)*bpp2;
+            if(mid+bpp2<=(size_t)h*sstride) {
+                memcpy(&c0,sample+mid,bpp2<4?bpp2:4); memcpy(&c1,sample,4);
+            }
+            fprintf(stderr,"[d3d7] tex#%u %08x %dx%d bpp=%d fmt=%u,%u,%u,%u first=%08x mid=%08x\n",
+                    tn,surface,w,h,bpp,rm,gm,bm,am,c1,c0);
+        }
+    }
+    free(converted);
+    free(packed);
+    p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0); p_pixel_store_i(GL_UNPACK_ALIGNMENT,4);
+    return 0;
+}
+
+/* IDirect3DDevice7::PreLoad(IDirectDrawSurface7 *texture): make a texture's
+ * pixels resident in the shared GL context now rather than at the next draw.
+ * A null or non-surface argument is a real error; an upload failure is reported
+ * rather than hidden behind D3D_OK. No second context or texture object that
+ * the draw path does not know about is introduced. */
+static void dev_preload(void) {
+    uint32_t surface=A32(1);
+    if(!surface) RET(D3DERR_INVALIDCALL,2);
+    uint8_t *pixels; int w,h,pitch,bpp;
+    if(!hle_dd_surface_pixels(surface,&pixels,&w,&h,&pitch,&bpp) || w<=0 || h<=0)
+        RET(D3DERR_INVALIDCALL,2);
+    if(!load_gl()) RET(D3DERR_NOTAVAILABLE,2);
+    int rej=upload_texture_surface(surface,0);
+    if(rej==8) RET(D3DERR_NOTAVAILABLE,2);       /* no GL texture / no conversion */
+    if(rej) RET(D3DERR_INVALIDCALL,2);           /* bad surface geometry or format */
+    RET(D3D_OK,2);
+}
+
 static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
                          uint32_t vertex_count, uint32_t indices, uint32_t index_count) {
     unsigned mode=gl_primitive(primitive); uint32_t stride=vertex_stride(fvf);
@@ -708,65 +801,8 @@ static int draw_vertices(uint32_t primitive, uint32_t fvf, uint32_t vertices,
     int has_secondary=(fvf&0x080)!=0, color_sum_was_enabled=0;
     if(has_secondary && !p_secondary_color3ub) REJECT(5);
     if(g_texture_surface && stage0_texture_active() && !diag_notex() && ((fvf >> 8) & 15)) {
-        uint8_t *pixels; int w,h,pitch,bpp;
-        if(!hle_dd_surface_pixels(g_texture_surface,&pixels,&w,&h,&pitch,&bpp) || w<=0 || h<=0) REJECT(6);
-        { static unsigned mtlog;
-          if(getenv("RECOMP_D3D7_DIAG") && (fvf&0xF00)==0x200 && mtlog<24) {
-              mtlog++; uint32_t f=read_px(pixels,bpp), m=read_px(pixels+(size_t)(h/2)*(size_t)pitch+(size_t)(w/2)*(size_t)(bpp/8),bpp);
-              unsigned lk=0,nz=0; hle_dd_surface_stats(g_texture_surface,&lk,&nz);
-              fprintf(stderr,"[d3d7] multi-draw %08x %dx%d bpp=%d first=%08x mid=%08x locks=%u nz=%u\n",g_texture_surface,w,h,bpp,f,m,lk,nz);
-          } }
-        uint32_t rm,gm,bm,am;
-        if(!hle_dd_surface_format(g_texture_surface,&bpp,&rm,&gm,&bm,&am)) REJECT(7);
-        int bytes_per_pixel=bpp/8;
-        if(pitch<=0 || (size_t)w>SIZE_MAX/(size_t)bytes_per_pixel) REJECT(7);
-        size_t row_bytes=(size_t)w*(size_t)bytes_per_pixel;
-        if((size_t)pitch<row_bytes) REJECT(7);
-        uint8_t *packed=NULL;
-        const uint8_t *source=pixels;
-        if((size_t)pitch!=row_bytes) {
-            if((size_t)h>SIZE_MAX/row_bytes) REJECT(7);
-            packed=(uint8_t *)malloc(row_bytes*(size_t)h);
-            if(!packed) REJECT(7);
-            for(int y=0;y<h;y++)
-                memcpy(packed+(size_t)y*row_bytes,pixels+(size_t)y*(size_t)pitch,row_bytes);
-            source=packed;
-        }
-        unsigned format,type,internal;
-        uint8_t *converted=NULL;
-        if(!gl_pixel_format(bpp,rm,gm,bm,am,&format,&type,&internal)) {
-            converted=rgba8_from_pixels(source,w,h,(int)row_bytes,bpp,rm,gm,bm,am);
-            if(!converted) { free(packed); REJECT(8); }
-            format=GL_RGBA; type=GL_UNSIGNED_BYTE; internal=GL_RGBA;
-        }
-        if(!g_gl_texture) p_gen_textures(1,&g_gl_texture);
-        p_enable(GL_TEXTURE_2D); p_bind_texture(GL_TEXTURE_2D,g_gl_texture);
-        p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-        p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-        p_tex_parameter_i(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-        p_pixel_store_i(GL_UNPACK_ALIGNMENT,1);
-        p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0);
-        p_tex_image_2d(GL_TEXTURE_2D,0,internal,w,h,0,format,type,converted?converted:source);
-        if(getenv("RECOMP_D3D7_DIAG")) {
-            static uint32_t seen[64]; static unsigned nseen, tn;
-            unsigned known=0;
-            for(unsigned i=0;i<nseen;i++) if(seen[i]==g_texture_surface) { known=1; break; }
-            if(!known && nseen<64) {
-                seen[nseen++]=g_texture_surface;
-                tn++;
-                const uint8_t *sample=(const uint8_t *)(converted?converted:source);
-                size_t bpp2=(size_t)(bpp/8);
-                size_t sstride=(converted||packed)?row_bytes:(size_t)pitch;
-                uint32_t c0=0,c1=0; size_t mid=(size_t)(h/2)*sstride+(size_t)(w/2)*bpp2;
-                memcpy(&c0,sample+mid,bpp2<4?bpp2:4); memcpy(&c1,sample,4);
-                fprintf(stderr,"[d3d7] tex#%u %08x %dx%d bpp=%d fmt=%u,%u,%u,%u first=%08x mid=%08x\n",
-                        tn,g_texture_surface,w,h,bpp,rm,gm,bm,am,c1,c0);
-            }
-        }
-        free(converted);
-        free(packed);
-        p_pixel_store_i(GL_UNPACK_ROW_LENGTH,0); p_pixel_store_i(GL_UNPACK_ALIGNMENT,4);
+        int rej=upload_texture_surface(g_texture_surface,fvf);
+        if(rej) REJECT(rej);
         apply_stage0_state();
     } else if(stage0_factor_active() && !stage0_texture_active()) {
         static const uint8_t white[4]={255,255,255,255};
@@ -1047,20 +1083,42 @@ static void dev_enum_textures(void) {
     if(!hle_screen_gl_active()||!load_gl())RET(D3DERR_NOTAVAILABLE,3);
     uint32_t pf=hle_va(hle_alloc(32));
     if(!pf)RET(D3DERR_NOTAVAILABLE,3);
-    static const uint32_t formats[6][8]={
-        {32,0x40,0,16,0xF800,0x07E0,0x001F,0},
-        {32,0x41,0,16,0x7C00,0x03E0,0x001F,0x8000},
-        {32,0x41,0,16,0x0F00,0x00F0,0x000F,0xF000},
-        {32,0x40,0,16,0x7C00,0x03E0,0x001F,0},
-        {32,0x41,0,32,0x00FF0000,0x0000FF00,0x000000FF,0xFF000000},
-        {32,0x40,0,32,0x00FF0000,0x0000FF00,0x000000FF,0}
+    /* A real HAL driver enumerates several dozen formats; enumerate the
+     * standard D3D7 surface formats rather than the six we happened to need
+     * first. Titles (IGI) pick the first entry matching their own mask test
+     * and abort with "Invalid texture format" when it is missing. */
+    static const uint32_t formats[][8]={
+        {32,0x40,0,16,0xF800,0x07E0,0x001F,0},          /* RGB565 */
+        {32,0x41,0,16,0x7C00,0x03E0,0x001F,0x8000},    /* A1RGB555 */
+        {32,0x41,0,16,0x0F00,0x00F0,0x000F,0xF000},    /* ARGB4444 */
+        {32,0x40,0,16,0x7C00,0x03E0,0x001F,0},         /* RGB555 */
+        {32,0x41,0,32,0x00FF0000,0x0000FF00,0x000000FF,0xFF000000}, /* ARGB8888 */
+        {32,0x40,0,32,0x00FF0000,0x0000FF00,0x000000FF,0},         /* XRGB8888 */
+        {32,0x41,0,16,0xF800,0x07E0,0x001F,0x8000},    /* RGB565 + alpha bit */
+        {32,0x40,0,24,0x00FF0000,0x0000FF00,0x000000FF,0},
+        {32,0x20,0,8,0,0,0,0},                         /* DDPF_PALETTEINDEXED8 */
+        {32,0x20,0,4,0,0,0,0},                         /* DDPF_PALETTEINDEXED4 */
+        {32,0x40,0,8,0x000000E0,0x0000001C,0x00000003,0}, /* RGB332 */
+        {32,0x01,0,8,0,0,0,0x000000FF},                /* A8 */
+        {32,0x20000,0,8,0x000000FF,0,0,0},             /* L8 */
+        {32,0x40,0,16,0x0F00,0x00F0,0x000F,0},         /* RGB444 */
+        {32,0x41,0,32,0x000000FF,0x0000FF00,0x00FF0000,0xFF000000}, /* ABGR8888 */
+        {32,0x40,0,32,0x000000FF,0x0000FF00,0x00FF0000,0},         /* XBGR8888 */
+        {32,0x41,0,16,0x001F,0x03E0,0x7C00,0x8000},    /* ARGB555 reversed */
+        {32,0x40,0,16,0x001F,0x03E0,0x7C00,0},         /* BGR555 */
+        {32,0x41,0,16,0x000F,0x00F0,0x0F00,0xF000},    /* ABGR4444 */
+        {32,0x40,0,8,0x0000001C,0x000000E0,0x00000003,0} /* BGR332 */
     };
     unsigned delivered=0;
-    for(unsigned i=0;i<6;i++) {
+    for(unsigned i=0;i<sizeof formats/sizeof formats[0];i++) {
         memcpy(hle_ptr(pf),formats[i],sizeof formats[i]);
         uint32_t args[2]={pf,ctx};
         delivered++;
-        if(!hle_call_guest(cb,2,args))break;
+        uint32_t cb_rc = hle_call_guest(cb,2,args);
+        if (getenv("RECOMP_D3D7_DIAG"))
+            fprintf(stderr,"[d3d7] tex fmt %u flags=0x%X bpp=%u masks=%06X/%06X/%06X cb=%u\n",
+                    i, formats[i][1], formats[i][3], formats[i][4], formats[i][5], formats[i][6], cb_rc);
+        if(!cb_rc)break;
     }
     fprintf(stderr,"[d3d7] EnumTextureFormats: delivered %u formats\n",delivered);
     hle_free(hle_ptr(pf));

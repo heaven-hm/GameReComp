@@ -107,6 +107,48 @@ static void g_StretchDIBits(void) {
     RET((uint32_t)hab, 13);
 }
 
+/* CreateBitmapIndirect(lpbm): the one bitmap-*object* API the GDI subset was
+ * still missing (CreateBitmap/CreateCompatibleBitmap live in gdidc.c). A game
+ * builds a BITMAP on its stack and passes its address; we build a real,
+ * selectable bitmap in the shared GDI object table (hle_gdi_make_bitmap), so
+ * GetObjectA/SelectObject/DeleteObject in gdidc.c see it like any other
+ * bitmap, with real pixels behind it - never a phantom "success" handle.
+ *
+ * BITMAP is 24 bytes: bmType, bmWidth, bmHeight, bmWidthBytes, bmPlanes,
+ * bmBitsPixel, bmBits. A caller-supplied bmBits is used as-is (the caller
+ * keeps ownership, as on Windows); a NULL bmBits gets our own storage, which
+ * DeleteObject frees. Either way the pixels are real memory a DC can draw
+ * into. Bad geometry is an honest failure: 0, with no object allocated. */
+static void g_CreateBitmapIndirect(void) {
+    uint32_t lp = A32(0);
+    if (!lp || !APTR(0)) RET(0, 1);                       /* no BITMAP struct */
+    int w  = (int)MEM32(lp + 4);                          /* bmWidth  */
+    int h  = (int)MEM32(lp + 8);                          /* bmHeight */
+    int planes = (int)MEM16(lp + 16);                     /* bmPlanes */
+    int bpp = (int)MEM16(lp + 18);                        /* bmBitsPixel */
+    uint32_t given = MEM32(lp + 20);                      /* bmBits */
+    if (planes != 1 || w <= 0 || h <= 0) RET(0, 1);
+    if (bpp == 24) bpp = 32;                              /* as gdidc.c's CreateBitmap */
+    if (bpp != 8 && bpp != 16 && bpp != 32) RET(0, 1);    /* depths the blit path handles */
+    size_t bytes = (size_t)w * (size_t)h * (size_t)(bpp / 8);
+    if (bytes > (size_t)128 * 1024 * 1024) RET(0, 1);     /* absurd size: no allocation bomb */
+    uint8_t *px;
+    int owns;
+    if (given) {
+        px = (uint8_t *)hle_ptr(given);                   /* guest buffer; caller owns it */
+        owns = 0;
+    } else {
+        px = (uint8_t *)calloc(bytes, 1);                 /* our storage; DeleteObject frees it */
+        owns = 1;
+        if (!px) RET(0, 1);
+        /* A bitmap we allocate has no guest-visible bmBits (GetObjectA reports
+         * NULL), exactly as Windows reports for a DDB: reach it through a DC. */
+    }
+    uint32_t hbmp = hle_gdi_make_bitmap(w, h, bpp, px, owns);
+    if (!hbmp) { if (owns) free(px); RET(0, 1); }
+    RET(hbmp, 1);
+}
+
 /* CreateCompatibleDC/DeleteDC: handle bookkeeping; the DCs that draw text
  * are gdidc.c's. DeleteObject is gdidc.c's too, and hands DIBs back here. */
 static void g_CreateCompatibleDC(void){ RET(0x0DC00002u, 1); }
@@ -162,6 +204,7 @@ static void g_SetViewportExtEx(void) {
 const win32hle_shim win32hle_gdi32[] = {
     { "GetDeviceCaps",      g_GetDeviceCaps },
     { "CreateDIBSection",   g_CreateDIBSection },
+    { "CreateBitmapIndirect", g_CreateBitmapIndirect },
     { "StretchDIBits",      g_StretchDIBits },
     { "Arc",                g_draw_ok_8 }, { "Chord", g_draw_ok_8 },
     { "Pie",                g_draw_ok_8 }, { "RoundRect", g_draw_ok_8 },

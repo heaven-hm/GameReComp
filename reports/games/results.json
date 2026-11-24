@@ -2159,6 +2159,92 @@
       "project_dir": "projects/snake_windows_x86_64",
       "generated_at": "2026-10-30T19:04:09Z",
       "port_details": "inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing"
+    },
+    {
+      "game": "base64-cli-oracle",
+      "filename": "base64.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "d805661c60b0b99eab94ad0359ece9b91e7a79fecccc630e92ffdf217c48f879",
+      "evidence": "reports/acceptance/base64-oracle-pass.md",
+      "project_dir": "/tmp/agent1-base64",
+      "notes": "Original PE32 executed under Wine/CrossOver Highball; not retail Windows. CLI scenario exit+stdout hash reproduced by native build."
+    },
+    {
+      "game": "arith-calc-cli-oracle",
+      "filename": "arith-calc.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+      "evidence": "reports/acceptance/arith-calc-oracle-pass.md",
+      "project_dir": "/tmp/agent1-arith",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic arithmetic results (fib/gcd/popcount/rotl) reproduced by native build. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "busybox-cli-oracle",
+      "filename": "busybox.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f",
+      "evidence": "reports/oracle-sweep/busybox-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; sweep tool reproduced process observables. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "tictactoe-cli-oracle",
+      "filename": "tictactoe.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "f3e562679f04a722650cd2099e6fc690e5ed748a2328c18c4dc7a424e235dcb9",
+      "evidence": "reports/oracle-sweep/batch1/tictactoe-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "game2048-cli-oracle",
+      "filename": "game2048.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940",
+      "evidence": "reports/oracle-sweep/batch1/game2048-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "hangman_x86-cli-oracle",
+      "filename": "hangman_x86.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 100,
+      "verification": "scenario-pass",
+      "status": "process-level oracle matched (Wine original, CLI scenario)",
+      "sha256": "4a1d300a4f3125fd621861319a291d1b2d53b7744c56e62f21a497b30b014f82",
+      "evidence": "reports/oracle-sweep/batch1/hangman_x86-acceptance.json",
+      "notes": "Original PE32 under Wine/CrossOver; deterministic output reproduced by native build. Not retail Windows, not gameplay evidence."
+    },
+    {
+      "game": "Chocolate Doom 1.3.0 (downloaded)",
+      "filename": "chocolate-doom.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 93,
+      "verification": "partial",
+      "status": "process launched and booted, 0 unresolved imports; no WAD, no frames",
+      "sha256": "d1b9dabc567d0a79480a4b319850b69ea76e69a3b4be578586ae045b96af33cc",
+      "evidence": "reports/frames/chocolate-doom/evidence.json",
+      "notes": "166 EXE imports + 34 companion SDL_net.dll imports all bound. No gameplay oracle or WAD."
     }
   ]
 }

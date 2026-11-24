@@ -9,10 +9,18 @@
  *
  * The framebuffer is drawn with the window surface (not a GL/renderer texture)
  * so the exact same path works under the dummy driver as on a real display.
+ *
+ * Every blit that reaches this layer is published to screen.c's frame sink
+ * before it is drawn. That ordering matters: publishing does not depend on a
+ * window surface being available (the dummy driver and headless runs still
+ * record frames), and it is what turns a surface blit into observable frame
+ * evidence for the screenshot recorder. Previously a blit only went to the
+ * window surface, so a run could stay alive and write zero frames.
  */
 #define _GNU_SOURCE
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <SDL2/SDL.h>
 #include "win32hle.h"
 
@@ -25,6 +33,10 @@
 #define WM_LBUTTONUP    0x0202u
 #define WM_RBUTTONDOWN  0x0204u
 #define WM_RBUTTONUP    0x0205u
+
+/* screen.c owns the recorder hook; the shared header is deliberately left
+ * untouched for this fix. */
+extern void hle_screen_frame_publish(const uint8_t *px, int w, int h, int pitch, int bpp);
 
 static SDL_Window  *g_win;
 static SDL_Surface *g_winsurf;
@@ -42,15 +54,65 @@ int hle_present_open(const char *title, int w, int h) {
     return 0;
 }
 
-/* Blit a w*h ARGB8888 framebuffer to the window, scaled to the window size. */
-void hle_present_frame(const uint32_t *fb) {
-    if (!g_win || !fb) return;
+/* Blit a w*h ARGB8888 framebuffer to the window, scaled to the window size.
+ * Separate from publication so an available window surface is never a
+ * precondition for recording a frame. */
+static void blit_argb(const uint32_t *fb, int w, int h) {
+    if (!g_win || !fb || w <= 0 || h <= 0) return;
     if (!g_winsurf) g_winsurf = SDL_GetWindowSurface(g_win);
     if (!g_winsurf) return;
-    SDL_Surface *src = SDL_CreateRGBSurfaceWithFormatFrom((void *)fb, g_w, g_h, 32, g_w * 4,
+    SDL_Surface *src = SDL_CreateRGBSurfaceWithFormatFrom((void *)fb, w, h, 32,
+                                                          (size_t)w * 4,
                                                           SDL_PIXELFORMAT_ARGB8888);
     if (src) { SDL_BlitScaled(src, NULL, g_winsurf, NULL); SDL_FreeSurface(src); }
     SDL_UpdateWindowSurface(g_win);
+}
+
+void hle_present_frame(const uint32_t *fb) {
+    if (!fb) return;
+    /* Record first: the framebuffer is g_w*g_h ARGB8888 (4 bytes/pixel). */
+    hle_screen_frame_publish((const uint8_t *)fb, g_w, g_h, g_w * 4, 32);
+    blit_argb(fb, g_w, g_h);
+}
+
+/* Present a raw guest surface blit of any common pixel format. The pixels are
+ * published verbatim (so a recorder sees the game's real frame and pitch), and
+ * an ARGB copy is drawn in the window. SDL 1.2's presenter and any other
+ * surface-based path that needs a frame recorded should use this entry point. */
+void hle_present_surface(const uint8_t *px, int w, int h, int pitch, int bpp) {
+    if (!px || w <= 0 || h <= 0 || pitch <= 0) return;
+    int bytes = bpp / 8;
+    if (bytes < 1 || pitch < w * bytes) return;
+    hle_screen_frame_publish(px, w, h, pitch, bpp);
+    if (bpp == 32) { blit_argb((const uint32_t *)px, w, h); return; }
+
+    static uint32_t *conv;
+    static size_t conv_n;
+    if (conv_n < (size_t)w * h) {
+        free(conv);
+        conv_n = (size_t)w * h;
+        conv = (uint32_t *)malloc(conv_n * 4);
+    }
+    if (!conv) return;
+    for (int y = 0; y < h; y++) {
+        const uint8_t *src = px + (size_t)y * (size_t)pitch;
+        uint32_t *dst = conv + (size_t)y * (size_t)w;
+        for (int x = 0; x < w; x++) {
+            uint32_t r = 0, g = 0, b = 0;
+            if (bpp == 16) {
+                uint16_t v = (uint16_t)(src[x * 2] | (src[x * 2 + 1] << 8));
+                r = (uint32_t)((v >> 11) & 0x1F) * 255 / 31;
+                g = (uint32_t)((v >> 5) & 0x3F) * 255 / 63;
+                b = (uint32_t)(v & 0x1F) * 255 / 31;
+            } else if (bpp == 24) {
+                b = src[x * 3]; g = src[x * 3 + 1]; r = src[x * 3 + 2];
+            } else {                                    /* 8 bpp: grayscale without a palette */
+                r = g = b = src[x];
+            }
+            dst[x] = 0xFF000000u | (r << 16) | (g << 8) | b;
+        }
+    }
+    blit_argb(conv, w, h);
 }
 
 static uint32_t mouse_lparam(int x, int y) { return ((uint32_t)(y & 0xFFFF) << 16) | (uint32_t)(x & 0xFFFF); }
@@ -96,7 +158,12 @@ void hle_present_step(void) {
     hle_present_pump();
     int w, h;
     const uint32_t *fb = hle_gdi_framebuffer(&w, &h);
-    if (fb && w == g_w && h == g_h) hle_present_frame(fb);
+    if (fb && w > 0 && h > 0) {
+        /* No exact-size gate: whatever the guest drew is a frame, even when it
+         * differs from the window size (previously such frames were dropped). */
+        hle_screen_frame_publish((const uint8_t *)fb, w, h, w * 4, 32);
+        blit_argb(fb, w, h);
+    }
     SDL_Delay(1);
 }
 void hle_present_enable(void) { hle_set_pump_hook(hle_present_step); }

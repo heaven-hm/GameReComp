@@ -493,41 +493,126 @@ static void k_ReleaseMutex(void) {
     RET(1, 1);
 }
 static void k_CreateSemaphoreA(void) {                   /* (sa, initial, max, name) */
+    int32_t initial = (int32_t)A32(1), max = (int32_t)A32(2);
+    if (max <= 0 || initial < 0 || initial > max) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 4);
+    }
     hsem *s = (hsem *)calloc(1, sizeof *s);
-    s->count = (int32_t)A32(1), s->max = (int32_t)A32(2);
+    if (!s) { hle_set_last_error(8 /* ERROR_NOT_ENOUGH_MEMORY */); RET(0, 4); }
+    s->count = initial, s->max = max;
     RET(hle_handle_alloc(HLE_H_SEMAPHORE, s), 4);
 }
 static void k_ReleaseSemaphore(void) {
     hsem *s = (hsem *)hle_handle_obj(A32(0), HLE_H_SEMAPHORE);
-    if (!s) RET(0, 3);
+    int32_t add = (int32_t)A32(1);
+    if (!s || add < 0 || s->count + add > s->max) {
+        hle_set_last_error(s ? 298u /* ERROR_TOO_MANY_POSTS */ : 6u /* ERROR_INVALID_HANDLE */);
+        RET(0, 3);
+    }
     if (A32(2)) MEM32(A32(2)) = (uint32_t)s->count;
-    s->count += (int32_t)A32(1);
-    if (s->count > s->max) s->count = s->max;
+    s->count += add;
     RET(1, 3);
+}
+
+/* ---- waitable timers ----
+ * One object type in the existing handle table; no second wait manager. The
+ * timer's due time is a monotonic ticks_ms() deadline. A guest LARGE_INTEGER
+ * LONGLONG is 100ns units: negative means relative, positive an absolute
+ * FILETIME (microseconds since 1601-01-01). */
+typedef struct {
+    uint32_t due;                 /* ticks_ms deadline; 0 means inactive */
+    uint32_t period;              /* ms, 0 = one-shot */
+    int manual, signaled, cancelled;
+} htimer;
+
+static uint64_t filetime_now(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return (uint64_t)ts.tv_sec * 10000000ull + (uint64_t)ts.tv_nsec / 100ull +
+           116444736000000000ull;
+}
+
+static void free_timer(void *p) { free(p); }
+
+static uint32_t create_timer(int manual) {
+    static int closer;
+    if (!closer) hle_handle_set_closer(HLE_H_TIMER, free_timer), closer = 1;
+    htimer *t = (htimer *)calloc(1, sizeof *t);
+    if (!t) { hle_set_last_error(8 /* ERROR_NOT_ENOUGH_MEMORY */); return 0; }
+    t->manual = manual;
+    return hle_handle_alloc(HLE_H_TIMER, t);
+}
+static void k_CreateWaitableTimerA(void) { RET(create_timer(A32(1) != 0), 3); }
+static void k_CreateWaitableTimerW(void) { RET(create_timer(A32(1) != 0), 3); }
+static void k_SetWaitableTimer(void) {
+    htimer *t = (htimer *)hle_handle_obj(A32(0), HLE_H_TIMER);
+    uint32_t due_va = A32(1);
+    if (!t || !due_va) { hle_set_last_error(6 /* ERROR_INVALID_HANDLE */); RET(0, 6); }
+    /* Completion routines are APCs; this layer has no APC queue and must not
+     * pretend to deliver one. */
+    if (A32(3)) { hle_set_last_error(120u /* ERROR_CALL_NOT_IMPLEMENTED */); RET(0, 6); }
+    uint32_t lo = MEM32(due_va), hi = MEM32(due_va + 4u);
+    uint64_t due = ((uint64_t)hi << 32) | lo;
+    uint32_t ms;
+    if ((int64_t)due < 0) {
+        uint64_t magnitude = (uint64_t)(-(int64_t)due);
+        ms = (uint32_t)(magnitude / 10000u);
+    } else {
+        uint64_t now = filetime_now();
+        ms = due <= now ? 0u : (uint32_t)((due - now) / 10000u);
+    }
+    t->period = A32(2);
+    t->cancelled = 0;
+    t->signaled = 0;
+    t->due = ms ? ticks_ms() + ms : ticks_ms();
+    RET(1, 6);
+}
+static void k_CancelWaitableTimer(void) {
+    htimer *t = (htimer *)hle_handle_obj(A32(0), HLE_H_TIMER);
+    if (!t) { hle_set_last_error(6); RET(0, 1); }
+    t->cancelled = 1; t->signaled = 0; t->due = 0;
+    RET(1, 1);
 }
 
 /* Try to take one object: 1 if it is signalled (and consumed, as its type
  * says), 0 if not, -1 if it is not a waitable handle. */
 int (*hle_wait_hook)(uint32_t h);        /* a host's own objects (threads, sockets) */
-static int try_take(uint32_t h) {
+static int try_take(uint32_t h, int consume) {
     if (hle_wait_hook) { int r = hle_wait_hook(h); if (r >= 0) return r; }
     switch (hle_handle_type(h)) {
     case HLE_H_EVENT: {
         hevent *e = (hevent *)hle_handle_obj(h, HLE_H_EVENT);
         if (!e->signaled) return 0;
-        if (!e->manual) e->signaled = 0;
+        if (consume && !e->manual) e->signaled = 0;
         return 1;
     }
     case HLE_H_MUTEX: {
         hmutex *m = (hmutex *)hle_handle_obj(h, HLE_H_MUTEX);
         if (m->owner && m->owner != hle_thread_id()) return 0;
-        m->owner = hle_thread_id(), m->count++;
+        if (consume) m->owner = hle_thread_id(), m->count++;
         return 1;
     }
     case HLE_H_SEMAPHORE: {
         hsem *s = (hsem *)hle_handle_obj(h, HLE_H_SEMAPHORE);
         if (s->count <= 0) return 0;
-        s->count--;
+        if (consume) s->count--;
+        return 1;
+    }
+    case HLE_H_TIMER: {
+        htimer *t = (htimer *)hle_handle_obj(h, HLE_H_TIMER);
+        if (!t->signaled && !t->cancelled && t->due &&
+            (int32_t)(ticks_ms() - t->due) >= 0) t->signaled = 1;
+        if (!t->signaled) return 0;
+        if (consume) {
+            if (!t->manual) t->signaled = 0;
+            if (!t->cancelled && t->period) {
+                t->due = (uint32_t)(t->due + t->period);
+                if (t->due == 0) t->due = ticks_ms() + t->period;
+            } else {
+                t->due = 0;
+            }
+        }
         return 1;
     }
     case HLE_H_THREAD:
@@ -542,11 +627,18 @@ uint32_t hle_wait(int n, const uint32_t *h, int all, uint32_t timeout) {
     for (;;) {
         if (all) {
             int ready = 1;
-            for (int i = 0; i < n; i++) { int r = try_take(h[i]); if (r < 0) return WAIT_FAILED; if (!r) { ready = 0; break; } }
-            if (ready) return WAIT_OBJECT_0;           /* ponytail: takes as it checks; a partial take is not undone */
+            for (int i = 0; i < n; i++) {
+                int r = try_take(h[i], 0);
+                if (r < 0) { hle_set_last_error(ERROR_INVALID_HANDLE); return WAIT_FAILED; }
+                if (!r) { ready = 0; break; }
+            }
+            if (ready) {
+                for (int i = 0; i < n; i++) (void)try_take(h[i], 1);
+                return WAIT_OBJECT_0;
+            }
         } else {
             for (int i = 0; i < n; i++) {
-                int r = try_take(h[i]);
+                int r = try_take(h[i], 1);
                 if (r < 0) { g_last_error = ERROR_INVALID_HANDLE; return WAIT_FAILED; }
                 if (r) return WAIT_OBJECT_0 + (uint32_t)i;
             }
@@ -559,12 +651,24 @@ uint32_t hle_wait(int n, const uint32_t *h, int all, uint32_t timeout) {
     }
 }
 static void k_WaitForSingleObject(void) { uint32_t h = A32(0); RET(hle_wait(1, &h, 0, A32(1)), 2); }
+/* bAlertable is ignored: this layer has no APC queue. SleepEx/Wait*Ex return
+ * the normal wait result, never WAIT_IO_COMPLETION, and that limit is
+ * documented rather than faked. */
 static void k_WaitForSingleObjectEx(void) { uint32_t h = A32(0); RET(hle_wait(1, &h, 0, A32(1)), 3); }
 static void k_WaitForMultipleObjects(void) {             /* (n, handles, all, timeout) */
     uint32_t n = A32(0), hs[64];
-    if (n > 64) n = 64;
+    if (n == 0 || n > 64) {             /* MAXIMUM_WAIT_OBJECTS */
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(WAIT_FAILED, 4);
+    }
     for (uint32_t i = 0; i < n; i++) hs[i] = MEM32(A32(1) + 4 * i);
     RET(hle_wait((int)n, hs, A32(2) != 0, A32(3)), 4);
+}
+static void k_WaitForMultipleObjectsEx(void) {           /* (n, handles, all, timeout, alertable) */
+    uint32_t n = A32(0), hs[64];
+    if (n == 0 || n > 64) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(WAIT_FAILED, 5); }
+    for (uint32_t i = 0; i < n; i++) hs[i] = MEM32(A32(1) + 4 * i);
+    RET(hle_wait((int)n, hs, A32(2) != 0, A32(3)), 5);
 }
 
 /* --- critical sections: the spin-count form the CRT calls --- */
@@ -572,6 +676,18 @@ static void k_WaitForMultipleObjects(void) {             /* (n, handles, all, ti
  * CRITICAL_SECTION InitializeCriticalSection makes, with the count recorded
  * where Windows keeps it (+20).  This layer's own lock fields are the ones
  * hle_enter_cs/hle_leave_cs use; the spin count is the guest's to read. */
+/* InitializeCriticalSectionEx(cs, spinCount, flags): the Vista+ form. The
+ * only defined flag is CRITICAL_SECTION_NO_DEBUG_INFO (0x01000000); an
+ * unsupported flag is a real invalid-parameter failure, not a silent success. */
+static void k_InitializeCriticalSectionEx(void) {
+    uint32_t cs = A32(0), flags = A32(2);
+    if (!cs || (flags & ~0x01000000u)) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 3); }
+    memset(hle_ptr(cs), 0, 24);
+    MEM32(cs + 4) = 0xFFFFFFFFu;
+    MEM32(cs + 20) = A32(1);
+    g_last_error = 0;
+    RET(1, 3);
+}
 static void k_InitializeCriticalSectionAndSpinCount(void) {
     uint32_t cs = A32(0);
     if (!cs) { g_last_error = ERROR_INVALID_PARAMETER; RET(0, 2); }
@@ -589,9 +705,31 @@ static void k_TlsAlloc(void) {
     for (int i = 0; i < TLS_SLOTS; i++) if (!g_tls_used[i]) { g_tls_used[i] = 1; RET((uint32_t)i, 0); }
     RET(0xFFFFFFFFu, 0);
 }
-static void k_TlsFree(void) { uint32_t i = A32(0); if (i < TLS_SLOTS) g_tls_used[i] = 0; RET(1, 1); }
-static void k_TlsGetValue(void) { uint32_t i = A32(0); g_last_error = 0; RET(i < TLS_SLOTS ? g_tls[i] : 0u, 1); }
-static void k_TlsSetValue(void) { uint32_t i = A32(0); if (i < TLS_SLOTS) g_tls[i] = A32(1); RET(i < TLS_SLOTS ? 1u : 0u, 2); }
+static void k_TlsFree(void) {
+    uint32_t i = A32(0);
+    if (i >= TLS_SLOTS) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 1); }
+    g_tls_used[i] = 0;
+    g_tls[i] = 0;                       /* this thread's slot is cleared immediately */
+    RET(1, 1);
+}
+static void k_TlsGetValue(void) {
+    uint32_t i = A32(0);
+    if (i >= TLS_SLOTS || !g_tls_used[i]) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 1);
+    }
+    g_last_error = 0;
+    RET(g_tls[i], 1);
+}
+static void k_TlsSetValue(void) {
+    uint32_t i = A32(0);
+    if (i >= TLS_SLOTS || !g_tls_used[i]) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 2);
+    }
+    g_tls[i] = A32(1);
+    RET(1, 2);
+}
 
 /* --- fibre-local storage (FLS) ---
  * FLS is TLS with a destructor: when a thread that has a non-NULL value in a
@@ -826,6 +964,80 @@ static void k_CreateProcessW(void) {
 static void k_CreateRemoteThread(void) { hle_set_last_error(5u); RET(0, 7); }
 static void k_ReadProcessMemory(void) { hle_set_last_error(5u); RET(0, 5); }
 
+/* --- GetDriveTypeW / SystemTimeToTzSpecificLocalTime ---
+ * Both take guest pointers to fixed- or short-bounded data. Read through MEM16
+ * with an explicit cap instead of handing the guest pointer to a scanning
+ * helper: an unterminated or out-of-range pointer must not make the shim walk
+ * the whole guest block (the A variant can scan a C string, the W one cannot
+ * be allowed an unbounded WCHAR scan). */
+#define DRIVE_UNKNOWN     0u
+#define DRIVE_NO_ROOT_DIR 1u
+#define DRIVE_FIXED       3u
+#define SYSTEMTIME_WORDS  8                 /* 8 WORDs: year..milliseconds */
+
+/* Copy at most cap WCHARs into a host array, stopping at NUL. Returns 0 for a
+ * NULL pointer or no terminator inside the cap (the caller fails the call). */
+static int bounded_wide(uint32_t va, uint16_t *out, size_t cap) {
+    if (!va || !cap) return 0;
+    for (size_t i = 0; i + 1 < cap; i++) {
+        uint16_t c = MEM16(va + (uint32_t)i * 2u);
+        out[i] = c;
+        if (!c) return 1;
+    }
+    out[cap - 1] = 0;                       /* always NUL-terminated for the converter */
+    return 0;
+}
+
+/* Drive letters are the layer's host directories (hle_host_path; Z: is /), so
+ * any mapped letter is a fixed drive and an unmapped one has no root. This is
+ * the W twin of kernel32_ext.c's GetDriveTypeA and makes the same CD-ROM scan
+ * find nothing. A NULL/empty/unterminated name is DRIVE_UNKNOWN. */
+static void k_GetDriveTypeW(void) {         /* (LPCWSTR rootPathName) */
+    uint16_t w[16];
+    char path[16], host[1024];
+    if (!bounded_wide(A32(0), w, sizeof w / sizeof *w)) RET(DRIVE_UNKNOWN, 1);
+    if (!hle_wide_to_ansi(w, path, sizeof path) || !path[0]) RET(DRIVE_UNKNOWN, 1);
+    char root[4] = { path[0], ':', '\\', 0 };
+    RET(hle_host_path(root, host, sizeof host) && host[0] ? DRIVE_FIXED : DRIVE_NO_ROOT_DIR, 1);
+}
+
+/* SYSTEMTIME (UTC) -> SYSTEMTIME (local), using the host zone as GetLocalTime
+ * does. lpTimeZoneInformation is accepted but deliberately not consulted: this
+ * layer has one zone, the host's, and GetTimeZoneInformation reports that same
+ * one. Honouring a caller-supplied TZI here would make the two calls disagree.
+ * A bad pointer, an out-of-range field or a failed conversion returns FALSE
+ * with ERROR_INVALID_PARAMETER and leaves the output untouched. */
+static void k_SystemTimeToTzSpecificLocalTime(void) { /* (opt TZI, &utc, &local) */
+    uint32_t in = A32(1), out = A32(2);
+    (void)A32(0);
+    uint16_t w[SYSTEMTIME_WORDS];
+    if (!in || !out) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 3); }
+    for (int i = 0; i < SYSTEMTIME_WORDS; i++) w[i] = MEM16(in + (uint32_t)i * 2u);
+    if (w[0] < 1601u || w[0] > 30827u || w[1] < 1u || w[1] > 12u ||
+        w[3] < 1u || w[3] > 31u || w[4] > 23u || w[5] > 59u ||
+        w[6] > 59u || w[7] > 999u) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 3);
+    }
+    struct tm utc = { 0 };
+    utc.tm_year = w[0] - 1900, utc.tm_mon = w[1] - 1, utc.tm_mday = w[3];
+    utc.tm_hour = w[4], utc.tm_min = w[5], utc.tm_sec = w[6];
+    time_t s = timegm(&utc);
+    struct tm local;
+    if (s == (time_t)-1 || !localtime_r(&s, &local)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER);
+        RET(0, 3);
+    }
+    uint16_t result[SYSTEMTIME_WORDS] = {
+        (uint16_t)(local.tm_year + 1900), (uint16_t)(local.tm_mon + 1),
+        (uint16_t)local.tm_wday, (uint16_t)local.tm_mday,
+        (uint16_t)local.tm_hour, (uint16_t)local.tm_min,
+        (uint16_t)local.tm_sec, w[7]                    /* zone offsets are whole minutes */
+    };
+    for (int i = 0; i < SYSTEMTIME_WORDS; i++) MEM16(out + (uint32_t)i * 2u) = result[i];
+    RET(1, 3);
+}
+
 const win32hle_shim win32hle_kernel32[] = {
     { "GetProcessVersion",  k_GetProcessVersion },
     { "GlobalFlags",        k_GlobalFlags },
@@ -901,6 +1113,8 @@ const win32hle_shim win32hle_kernel32[] = {
     { "CreateProcessW",     k_CreateProcessW },
     { "CreateRemoteThread", k_CreateRemoteThread },
     { "ReadProcessMemory",  k_ReadProcessMemory },
+    { "GetDriveTypeW",      k_GetDriveTypeW },
+    { "SystemTimeToTzSpecificLocalTime", k_SystemTimeToTzSpecificLocalTime },
     { "SetSystemTime",      k_ret1_1 },
     { "lstrlenA",           k_lstrlenA },
     { "lstrlenW",           k_lstrlenW },
@@ -913,6 +1127,7 @@ const win32hle_shim win32hle_kernel32[] = {
     { "InitializeSListHead", k_InitializeSListHead }, { "IsDebuggerPresent", k_IsDebuggerPresent },
     { "WinExec",            k_WinExec },
     { "InitializeCriticalSection", k_InitializeCriticalSection },
+    { "InitializeCriticalSectionEx", k_InitializeCriticalSectionEx },
     { "DeleteCriticalSection",     k_DeleteCriticalSection },
     { "EnterCriticalSection",      k_EnterCriticalSection },
     { "LeaveCriticalSection",      k_LeaveCriticalSection },
@@ -934,6 +1149,11 @@ const win32hle_shim win32hle_kernel32[] = {
     { "WaitForSingleObject",   k_WaitForSingleObject },
     { "WaitForSingleObjectEx", k_WaitForSingleObjectEx },
     { "WaitForMultipleObjects", k_WaitForMultipleObjects },
+    { "WaitForMultipleObjectsEx", k_WaitForMultipleObjectsEx },
+    { "CreateWaitableTimerA", k_CreateWaitableTimerA },
+    { "CreateWaitableTimerW", k_CreateWaitableTimerW },
+    { "SetWaitableTimer", k_SetWaitableTimer },
+    { "CancelWaitableTimer", k_CancelWaitableTimer },
     { "InitializeCriticalSectionAndSpinCount", k_InitializeCriticalSectionAndSpinCount },
     { "FlsAlloc",           k_FlsAlloc }, { "FlsFree", k_FlsFree },
     { "FlsGetValue",        k_FlsGetValue }, { "FlsSetValue", k_FlsSetValue },

@@ -1,0 +1,556 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "acceptance_schema.json",
+  "title": "GameReComp machine-readable acceptance ledger",
+  "description": "Schema for docs/ACCEPTANCE_LEDGER.md. Describes the per-game A0-A10 evidence fields and the surrounding issue/verification records. Fail-closed: a record can only assert github_state OPEN and complete false; no field can express closure or issue completion. Gate names and stage mapping follow docs/GAME_MATRIX_METHODOLOGY.md and the Agent 3 addendum in docs/GAME_MATRIX.md.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "sources",
+    "verification",
+    "issues",
+    "games"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative reference to this file, e.g. tools/acceptance_schema.json."
+    },
+    "schema_version": {
+      "const": 1,
+      "description": "Ledger schema version."
+    },
+    "sources": {
+      "type": "object",
+      "required": [
+        "plan",
+        "matrix",
+        "methodology",
+        "base_commit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "plan": {
+          "const": "docs/ISSUE_EXECUTION_PLAN.md"
+        },
+        "matrix": {
+          "const": "docs/GAME_MATRIX.md"
+        },
+        "methodology": {
+          "const": "docs/GAME_MATRIX_METHODOLOGY.md"
+        },
+        "base_commit": {
+          "$ref": "#/$defs/commitHash"
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": [
+        "query",
+        "at_utc",
+        "all_open_count",
+        "in_scope_count",
+        "closure_count",
+        "complete_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "const": "gh issue list --state all --limit 200 --json number,title,state,stateReason,closedAt"
+        },
+        "at_utc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "all_open_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "in_scope_count": {
+          "const": 25
+        },
+        "closure_count": {
+          "const": 0
+        },
+        "complete_count": {
+          "const": 0
+        },
+        "out_of_scope_open": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Open issue numbers excluded from the 25-issue execution-plan scope."
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "minItems": 25,
+      "maxItems": 25,
+      "description": "The 25 issues enumerated in docs/ISSUE_EXECUTION_PLAN.md.",
+      "items": {
+        "$ref": "#/$defs/issueRecord"
+      }
+    },
+    "games": {
+      "type": "array",
+      "description": "Per-game acceptance records; every record validates against #/$defs/gameRecord.",
+      "items": {
+        "$ref": "#/$defs/gameRecord"
+      }
+    }
+  },
+  "$defs": {
+    "level": {
+      "type": "string",
+      "enum": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6",
+        "A7",
+        "A8",
+        "A9",
+        "A10"
+      ],
+      "description": "Acceptance level identifier. Definitions are in x-gate-definitions at the schema root."
+    },
+    "gateStatus": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "PARTIAL",
+        "FAIL",
+        "BLOCKED",
+        "NOT TESTED",
+        "NOT_TESTED",
+        "UNTESTABLE",
+        "NOT_EVIDENCED"
+      ],
+      "description": "Verdict vocabulary copied from docs/GAME_MATRIX.md. Only PASS can satisfy a gate; every other value is fail-closed."
+    },
+    "commitHash": {
+      "type": "string",
+      "minLength": 7,
+      "description": "Full 40-hex git SHA, or an abbreviated SHA preserved verbatim from the source doc with a trailing ellipsis."
+    },
+    "commitOrNull": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Quoted commit hash, or null when the source doc records no commit (pending agent / pending build / no verified work)."
+    },
+    "planStatus": {
+      "type": "string",
+      "enum": [
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "IN_PROGRESS (audit only)",
+        "IMPLEMENTED",
+        "BUILD_VERIFIED",
+        "TEST_VERIFIED",
+        "INTEGRATION_VERIFIED",
+        "PARTIALLY VERIFIED",
+        "COMPLETED",
+        "BLOCKED",
+        "DEFERRED"
+      ],
+      "description": "Plan label copied from docs/ISSUE_EXECUTION_PLAN.md. It is not a GitHub state and does not imply closure."
+    },
+    "gate": {
+      "type": "object",
+      "required": [
+        "level",
+        "name",
+        "status",
+        "evidence",
+        "evidence_path",
+        "commit",
+        "missing_gate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "$ref": "#/$defs/level"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "$ref": "#/$defs/gateStatus"
+        },
+        "evidence": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Exact evidence text quoted from a source doc, or null when no evidence exists."
+        },
+        "evidence_path": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Repo-relative path to the referenced evidence (docs file or gitignored test-results dir), or null."
+        },
+        "commit": {
+          "$ref": "#/$defs/commitOrNull"
+        },
+        "missing_gate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The specific unmet requirement for this level, or null only when the level is PASS."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "PASS"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "string",
+                "minLength": 1
+              },
+              "missing_gate": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "PARTIAL",
+                  "FAIL",
+                  "BLOCKED",
+                  "NOT TESTED",
+                  "NOT_TESTED",
+                  "UNTESTABLE",
+                  "NOT_EVIDENCED"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "missing_gate": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "acceptance": {
+      "type": "object",
+      "description": "Per-game evidence for levels A0 through A10. A bare compile or process exit never satisfies A5-A10.",
+      "required": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6",
+        "A7",
+        "A8",
+        "A9",
+        "A10"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "A0": {
+          "$ref": "#/$defs/gate"
+        },
+        "A1": {
+          "$ref": "#/$defs/gate"
+        },
+        "A2": {
+          "$ref": "#/$defs/gate"
+        },
+        "A3": {
+          "$ref": "#/$defs/gate"
+        },
+        "A4": {
+          "$ref": "#/$defs/gate"
+        },
+        "A5": {
+          "$ref": "#/$defs/gate"
+        },
+        "A6": {
+          "$ref": "#/$defs/gate"
+        },
+        "A7": {
+          "$ref": "#/$defs/gate"
+        },
+        "A8": {
+          "$ref": "#/$defs/gate"
+        },
+        "A9": {
+          "$ref": "#/$defs/gate"
+        },
+        "A10": {
+          "$ref": "#/$defs/gate"
+        }
+      }
+    },
+    "gameRecord": {
+      "type": "object",
+      "description": "One per-game acceptance record. github_state is always OPEN and complete is always false in this ledger.",
+      "required": [
+        "issue_number",
+        "game",
+        "original_executable",
+        "sha256",
+        "arch",
+        "github_state",
+        "complete",
+        "plan_status",
+        "evidence_dir",
+        "branch",
+        "verified_commit",
+        "blockers",
+        "notes",
+        "acceptance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "issue_number": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 24,
+          "description": "GitHub issue number for this game target."
+        },
+        "game": {
+          "type": "string",
+          "minLength": 1
+        },
+        "original_executable": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Original Windows executable name, or null when the file is absent. No name is invented."
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the original executable, or null when absent/not quoted in a source doc."
+        },
+        "arch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "github_state": {
+          "const": "OPEN"
+        },
+        "complete": {
+          "const": false
+        },
+        "plan_status": {
+          "$ref": "#/$defs/planStatus"
+        },
+        "evidence_dir": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Gitignored test-results directory referenced by the source doc, or null."
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verified_commit": {
+          "$ref": "#/$defs/commitOrNull"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "string"
+        },
+        "acceptance": {
+          "$ref": "#/$defs/acceptance"
+        }
+      }
+    },
+    "issueRecord": {
+      "type": "object",
+      "description": "One issue from the 25-row execution plan.",
+      "required": [
+        "number",
+        "title",
+        "github_state",
+        "complete",
+        "plan_status",
+        "branches",
+        "commits",
+        "evidence",
+        "highest_gate",
+        "unit_only",
+        "missing_gate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact issue title from gh issue list --state all."
+        },
+        "github_state": {
+          "const": "OPEN"
+        },
+        "complete": {
+          "const": false
+        },
+        "plan_status": {
+          "$ref": "#/$defs/planStatus"
+        },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/commitHash"
+          }
+        },
+        "evidence": {
+          "type": "string",
+          "description": "Exact evidence text quoted from docs/ISSUE_EXECUTION_PLAN.md."
+        },
+        "highest_gate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "A0",
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5",
+            "A6",
+            "A7",
+            "A8",
+            "A9",
+            "A10",
+            null
+          ]
+        },
+        "unit_only": {
+          "type": "boolean",
+          "description": "True when highest_gate rests only on build/unit-test evidence, not a game runtime acceptance."
+        },
+        "missing_gate": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The specific unmet acceptance gate that keeps this issue OPEN."
+        }
+      }
+    }
+  },
+  "x-gate-definitions": {
+    "A0": {
+      "name": "Inspect",
+      "source": "docs/GAME_MATRIX_METHODOLOGY.md#acceptance-mapping",
+      "requirement": "Input identity: PE32 x86 detection from file bytes and SHA-256 keying."
+    },
+    "A1": {
+      "name": "Recover",
+      "source": "docs/GAME_MATRIX_METHODOLOGY.md#acceptance-mapping",
+      "requirement": "Function recovery stage result."
+    },
+    "A2": {
+      "name": "Translate + project",
+      "source": "docs/GAME_MATRIX_METHODOLOGY.md#acceptance-mapping",
+      "requirement": "Generated C and project creation stage result."
+    },
+    "A3": {
+      "name": "Compile",
+      "source": "docs/GAME_MATRIX_METHODOLOGY.md#acceptance-mapping",
+      "requirement": "Native build stage result (rebuilt binary produced)."
+    },
+    "A4": {
+      "name": "Runtime",
+      "source": "docs/GAME_MATRIX_METHODOLOGY.md#acceptance-mapping",
+      "requirement": "Process launches and stays alive (or exits cleanly) in the run stage."
+    },
+    "A5": {
+      "name": "Menu",
+      "source": "docs/GAME_MATRIX.md Agent 3 addendum (menu evidence)",
+      "requirement": "Menu is reached and renders."
+    },
+    "A6": {
+      "name": "Graphics",
+      "source": "docs/GAME_MATRIX.md Agent 3 addendum (graphics column)",
+      "requirement": "Graphics/frame evidence from the renderer."
+    },
+    "A7": {
+      "name": "Input",
+      "source": "docs/GAME_MATRIX.md Agent 3 addendum (input column)",
+      "requirement": "Input/controls verified with an independent scenario."
+    },
+    "A8": {
+      "name": "Audio",
+      "source": "docs/GAME_MATRIX.md Agent 3 addendum (audio column)",
+      "requirement": "Audio verified with a real output path; a dummy device is only PARTIAL."
+    },
+    "A9": {
+      "name": "Save/load",
+      "source": "docs/GAME_MATRIX_METHODOLOGY.md#acceptance-mapping (save/load)",
+      "requirement": "Persistence (save/load) verified with a scenario."
+    },
+    "A10": {
+      "name": "Original-vs-native comparison",
+      "source": "docs/GAME_MATRIX_METHODOLOGY.md#acceptance-mapping (original-vs-native comparison)",
+      "requirement": "Differential comparison against an original Windows oracle."
+    }
+  }
+}

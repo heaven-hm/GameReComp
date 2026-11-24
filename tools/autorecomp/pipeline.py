@@ -5,6 +5,7 @@ status and evidence; a failure stops dependent stages, but the report stage
 still runs so the failure is inspectable.
 """
 
+import concurrent.futures
 import contextlib
 from collections import Counter
 import hashlib
@@ -33,8 +34,113 @@ from pe_analyze import analyze_pe, build_iat_map  # noqa: E402
 from translator import (MAX_UNIT_BYTES, discover_functions,  # noqa: E402
                         generate_recomp_files, make_read_va)
 
+from . import build_cache as _build_cache  # noqa: E402
 from . import highlevel  # noqa: E402
 from . import projectgen  # noqa: E402
+from .lift_cache import (LiftCache, enabled as lift_cache_enabled,  # noqa: E402
+                         fingerprint as lift_cache_fingerprint)
+
+# Resource accounting for the report (issue #26). POSIX-only, like the rest of
+# this host-side pipeline; the import is optional so importing the module never
+# fails on a platform without `resource`. Tests monkeypatch `_resource`.
+try:
+    import resource as _resource
+except ImportError:                                  # pragma: no cover - non-POSIX
+    _resource = None
+
+
+def _rusage_domain(name):
+    """A rusage domain constant, or None when the platform has no `resource`."""
+    return getattr(_resource, name, None) if _resource is not None else None
+
+
+def peak_rss_bytes(who=None):
+    """Peak resident set size in bytes for a rusage domain, or None.
+
+    ``RUSAGE_SELF`` is the orchestrator, ``RUSAGE_CHILDREN`` the compiler and
+    linker processes the pipeline spawns -- the memory that actually scales
+    with a large build. macOS reports ``ru_maxrss`` in bytes, Linux in KiB;
+    both are normalised to bytes here. Any measurement failure returns None
+    (an absent measurement is never presented as a zero/estimated value).
+    """
+    if _resource is None:
+        return None
+    if who is None:
+        who = _rusage_domain("RUSAGE_SELF")
+    try:
+        raw = int(_resource.getrusage(who).ru_maxrss)
+    except (AttributeError, ValueError, OSError, TypeError):
+        return None
+    return raw if sys.platform == "darwin" else raw * 1024
+
+
+# Disk guard. A build on a nearly-full volume produces a truncated project and
+# a misleading report; the guard makes the refusal explicit. It is opt-in via
+# RECOMP_MIN_FREE_DISK_BYTES (0/unset = off), so ordinary runs are unchanged and
+# no guest behaviour is affected -- only host-side preflight.
+DISK_GUARD_ENV = "RECOMP_MIN_FREE_DISK_BYTES"
+
+
+def _format_bytes(n):
+    """Human-readable byte count for diagnostics only."""
+    n = int(n)
+    if abs(n) >= (1 << 30):
+        return f"{n / (1 << 30):.2f} GiB"
+    if abs(n) >= (1 << 20):
+        return f"{n / (1 << 20):.1f} MiB"
+    return f"{n} B"
+
+
+def min_free_disk_bytes(value=None):
+    """Parse the opt-in threshold; 0 (including unset/invalid) disables it."""
+    if value is None:
+        value = os.environ.get(DISK_GUARD_ENV)
+    if value is None or value == "":
+        return 0
+    try:
+        return max(0, int(str(value).strip()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def check_build_disk_space(path, min_free_bytes=None):
+    """Measure free disk on the volume holding *path*; never estimate it.
+
+    Returns a JSON-serialisable dict with an explicit ``diagnostic``. ``ok``
+    is True only when a real measurement succeeded and ``free >= minimum``.
+    Measurement errors fail closed, so a build never starts without a known
+    good reading. The returned dict is safe to put straight in report.json.
+    """
+    required = min_free_disk_bytes(min_free_bytes)
+    result = {
+        "path": str(path),
+        "total_bytes": None,
+        "free_bytes": None,
+        "min_free_bytes": required,
+        "ok": required <= 0,
+    }
+    if required <= 0:
+        result["diagnostic"] = "DISK GUARD: disabled (no minimum free space set)"
+        return result
+    try:
+        usage = shutil.disk_usage(str(path))
+    except OSError as exc:
+        result["error"] = f"{type(exc).__name__}: {exc}"
+        result["diagnostic"] = (
+            f"DISK GUARD: cannot measure free space on {path} "
+            f"({result['error']}); refusing to build -- a truncated project "
+            f"is not an acceptable result.")
+        return result
+    free = int(usage.free)
+    ok = free >= required
+    result.update(total_bytes=int(usage.total), free_bytes=free, ok=ok)
+    result["diagnostic"] = (
+        f"DISK GUARD: {'only ' if not ok else ''}{_format_bytes(free)} free on "
+        f"{path} (minimum {_format_bytes(required)}); "
+        + ("refusing to build -- output would be silently truncated."
+           if not ok else "free-space check passed."))
+    return result
+
 
 STAGES = ["inspect", "recover", "translate", "project", "compile",
           "run", "verify", "report"]
@@ -62,6 +168,290 @@ BUILD_TIMEOUT_CAP = 3600.0
 def default_build_timeout(source_bytes):
     return min(BUILD_TIMEOUT_CAP,
                BUILD_TIMEOUT_BASE + BUILD_TIMEOUT_PER_MB * (source_bytes / (1 << 20)))
+
+
+# Memory guard, alongside the disk guard above. Each parallel compiler holds one
+# generated translation unit (plus its -O2 working set) in RAM; a 273 MB unit can
+# peak well over a GiB. `--parallel = cpu_count` therefore OOMs on hosts with less
+# RAM than cores. Measure *available* RAM (not total) and cap jobs by it. Like the
+# disk policy this is deliberately conservative: with ample RAM the requested
+# jobs are returned unchanged, so normal builds are not slowed down. A missing
+# measurement is never treated as zero RAM -- it simply applies no memory cap.
+BUILD_MEM_PER_JOB = 1 << 30           # ~1 GiB budget per concurrent compiler job
+BUILD_MEM_FLOOR = 1 << 30             # keep 1 GiB for the OS/linker; below it, 1 job
+
+
+def available_memory_bytes():
+    """Best-effort *available* (free + reclaimable) RAM in bytes, or None.
+
+    Portable across the two hosts GameReComp builds on, and dependent only on
+    the stdlib so importing this module never needs a third-party package:
+
+    * Linux: /proc/meminfo ``MemAvailable`` -- the kernel's own estimate of RAM
+      usable without swapping, so it already accounts for reclaimable cache.
+    * macOS: ``vm_stat`` free + inactive pages times the VM page size. ``vm_stat``
+      is the userland equivalent of the vm_statistics64 mach API; parsing it is
+      the portable way to get this number without ctypes.
+    * Fallback: ``sysconf(SC_AVPHYS_PAGES)`` (unsupported on macOS, hence last)
+      or ``SC_PHYS_PAGES`` when nothing more precise is available.
+
+    Any failure returns None. Kept as its own function so tests monkeypatch the
+    measurement while the policy in ``effective_build_jobs`` stays pure.
+    """
+    # Linux: MemAvailable is authoritative and avoids spawning a subprocess.
+    try:
+        with open("/proc/meminfo", "r") as fh:
+            for line in fh:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) * 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    # macOS: `vm_stat` reports free + inactive pages (both reclaimable).
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.run(["vm_stat"], capture_output=True, text=True,
+                                 timeout=5, check=False).stdout
+            page_size = int(os.sysconf("SC_PAGE_SIZE"))
+            pages = 0
+            for line in out.splitlines():
+                if "Pages free:" in line or "Pages inactive:" in line:
+                    value = line.split(":", 1)[1].strip().split(".", 1)[0]
+                    pages += int(value.replace(",", ""))
+            if pages > 0:
+                return pages * page_size
+        except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+            pass
+    # Portable last resort: physical pages when an available figure is absent.
+    for name in ("SC_AVPHYS_PAGES", "SC_PHYS_PAGES"):
+        try:
+            pages = int(os.sysconf(name))
+            page_size = int(os.sysconf("SC_PAGE_SIZE"))
+            if pages > 0 and page_size > 0:
+                return pages * page_size
+        except (ValueError, OSError, AttributeError):
+            continue
+    return None
+
+
+def memory_limited_jobs(requested_jobs, available_bytes):
+    """Cap parallel compile jobs by measured available RAM (pure policy).
+
+    ``available_bytes`` of None means "could not measure" and never reduces the
+    count. Below ``BUILD_MEM_FLOOR`` even one compiler is unsafe, so the single
+    job is the explicit refusal to run a memory-hungry parallel build.
+    """
+    jobs = max(1, int(requested_jobs or 1))
+    if jobs == 1 or available_bytes is None:
+        return jobs
+    usable = int(available_bytes) - BUILD_MEM_FLOOR
+    if usable <= 0:
+        return 1
+    return max(1, min(jobs, usable // BUILD_MEM_PER_JOB))
+
+
+# Issue #26: a parallel compile of a multi-hundred-MiB generated tree writes one
+# object per concurrent job. On a nearly full volume that fills the disk mid-build
+# and leaves a half-written tree, which looks like a compiler error. Keep a safety
+# margin and scale --parallel down to what the volume can actually hold. The
+# policy is deliberately conservative: with ample space the requested jobs are
+# returned unchanged, so normal builds are not slowed down.
+BUILD_FREE_MARGIN = 1 << 30          # 1 GiB left for the linker, OS and other agents
+BUILD_MIN_FREE = 256 << 20           # below this, even one job is risky
+
+
+def effective_build_jobs(requested_jobs, source_bytes, path=None,
+                         available_bytes=None):
+    """Return a safe --parallel value for `source_bytes` of generated C.
+
+    Pure policy: statvfs is consulted once (and available RAM measured once) and
+    the result is deterministic for a given (requested, source_bytes, free disk,
+    available RAM) tuple, which makes it unit-testable. ``available_bytes`` lets
+    callers/tests supply a measurement explicitly; None means measure it. The
+    tighter of the disk and memory caps wins. A filesystem or memory measurement
+    failure leaves that particular cap unapplied rather than guessing.
+    """
+    jobs = max(1, int(requested_jobs or 1))
+    if jobs == 1:
+        return 1
+    # Disk cap.
+    disk_jobs = jobs
+    try:
+        st = os.statvfs(str(path) if path is not None else ".")
+        free = st.f_bavail * st.f_frsize
+    except (OSError, AttributeError):
+        free = None
+    if free is not None:
+        source_bytes = max(0, int(source_bytes or 0))
+        # Each job holds roughly one unit's source in an object plus temp files;
+        # use a 2x factor and a floor so tiny fixtures still get a meaningful
+        # estimate.
+        per_job = max(source_bytes // jobs, 8 << 20) * 2
+        usable = free - BUILD_FREE_MARGIN
+        disk_jobs = (1 if usable <= BUILD_MIN_FREE
+                     else max(1, min(jobs, usable // per_job)))
+    # Memory cap.
+    if available_bytes is None:
+        available_bytes = available_memory_bytes()
+    return max(1, min(disk_jobs, memory_limited_jobs(jobs, available_bytes)))
+
+
+# The host cmake path gets incremental rebuilds from make/ninja. The wasm32
+# path has no such step: it recompiles every generated unit on every run.
+# Wire the opt-in content-addressed object cache (build_cache.py) into that
+# path so repeated builds can skip unchanged units. The cache is strictly
+# opt-in (RECOMP_BUILD_CACHE=1); with it off, the compile commands are exactly
+# what they were before this hookup.
+def wasm_include_identity(cflags):
+    """Content digest of the headers visible through -I/-isystem in cflags.
+
+    The object cache keys on source bytes, compiler and flags, but a generated
+    unit pulls declarations in through #include. A changed recomp_types.h (or
+    a regenerated recomp_funcs.h) leaves the unit's own bytes and the flags
+    untouched, so binding only those would reuse an object compiled against
+    the old declarations. Fold the bytes of every header under every include
+    directory into an extra identity. The digest depends on content only:
+    paths are walked in sorted order and each file is length-prefixed.
+    """
+    h = hashlib.sha256()
+    dirs = []
+    i = 0
+    flags = [str(f) for f in cflags]
+    while i < len(flags):
+        if flags[i] in ("-I", "-isystem") and i + 1 < len(flags):
+            dirs.append(flags[i + 1])
+            i += 2
+        else:
+            i += 1
+    seen = set()
+    for directory in dirs:
+        root = Path(directory)
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*.h")):
+            if not path.is_file():
+                continue
+            real = str(path.resolve())
+            if real in seen:
+                continue
+            seen.add(real)
+            try:
+                data = path.read_bytes()
+            except OSError:
+                continue
+            h.update(len(data).to_bytes(8, "big"))
+            h.update(data)
+    return h.hexdigest()
+
+
+def compile_units_with_cache(sources, objs, cflags, env=None, *, jobs=4,
+                             run=None, cache_enabled=None):
+    """Compile generated units to objects, optionally via the object cache.
+
+    Returns (errors, stats). ``errors`` is a list of human-readable compile
+    failures; ``stats`` is a JSON-serialisable record of what happened
+    (enabled, units, compiled, hits, include_identity). ``run`` is injectable
+    for tests; it defaults to subprocess.run. With the cache disabled the
+    command and behaviour are identical to a plain cc -c invocation.
+    """
+    enabled = _build_cache.enabled() if cache_enabled is None else bool(cache_enabled)
+    stats = {
+        "enabled": enabled,
+        "units": len(sources),
+        "compiled": 0,
+        "hits": 0,
+        "include_identity": None,
+    }
+    compiler = str(cflags[0])
+    flags = [str(f) for f in cflags[1:]]  # compile_cached adds -c/-o itself
+    if enabled:
+        stats["include_identity"] = wasm_include_identity(cflags)
+    jobs = int(jobs or os.cpu_count() or 4)
+
+    def compile_one(pair):
+        src, obj = pair
+        if enabled:
+            res = _build_cache.compile_cached(
+                src, compiler, flags, obj, extra_identity=stats["include_identity"],
+                env=env, run=run)
+            # compile_cached leaves returncode=None on a cache hit (no process
+            # was run); only a real non-zero return value is a failure.
+            rc = res["returncode"]
+            if rc is not None and rc != 0:
+                cmd = [compiler, *flags, "-c", str(src), "-o", str(obj)]
+                return (f"$ {' '.join(cmd)}\n{res['stderr']}",
+                        bool(res["hit"]), bool(res["compiled"]))
+            return (None, bool(res["hit"]), bool(res["compiled"]))
+        cmd = [str(f) for f in cflags] + ["-c", str(src), "-o", str(obj)]
+        try:
+            proc = (run or subprocess.run)(cmd, env=env,
+                                           capture_output=True, text=True)
+        except OSError as exc:
+            return (f"$ {' '.join(cmd)}\n{exc}", False, False)
+        if proc.returncode != 0:
+            return (f"$ {' '.join(cmd)}\n{proc.stderr or proc.stdout}", False, True)
+        return (None, False, True)
+
+    errors = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        for error, hit, compiled in pool.map(compile_one, zip(sources, objs)):
+            if error:
+                errors.append(error)
+            if hit:
+                stats["hits"] += 1
+            if compiled:
+                stats["compiled"] += 1
+    return errors, stats
+
+
+def resource_footprint(project_dir: Path, stages: list, binary: Path | None) -> dict:
+    """Measured build resources for one autorecomp run (issue #26).
+
+    Every value is observed, never estimated: generated C bytes come from the
+    translate stage, binary bytes from the compiled file, project disk bytes
+    from a walk of the project tree, and peak RSS from the host's resource
+    accounting (the compiler children as well as the orchestrator, since that
+    is the memory that scales with a build). Per-stage durations and the
+    compile-stage duration are published alongside the total so a slow stage
+    can be identified without re-parsing the raw stage records.
+    """
+    generated = 0
+    stage_seconds = {}
+    stage_rss = {}
+    build_seconds = 0.0
+    for stage in stages:
+        name = stage.get("name")
+        seconds = float(stage.get("seconds") or 0)
+        if name:
+            stage_seconds[name] = round(seconds, 2)
+            rss = stage.get("peak_rss_bytes")
+            if rss is not None:
+                stage_rss[name] = int(rss)
+        if name == "translate":
+            generated = int((stage.get("data") or {}).get("source_bytes", 0))
+        if name == "compile" and not (stage.get("data") or {}).get("skipped"):
+            build_seconds = seconds
+    disk = 0
+    try:
+        for path in project_dir.rglob("*"):
+            if path.is_file() and not path.is_symlink():
+                disk += path.stat().st_size
+    except (OSError, ValueError):
+        pass
+    self_rss = peak_rss_bytes(_rusage_domain("RUSAGE_SELF"))
+    children_rss = peak_rss_bytes(_rusage_domain("RUSAGE_CHILDREN"))
+    observed = [v for v in (self_rss, children_rss) if v is not None]
+    return {
+        "generated_source_bytes": generated,
+        "binary_bytes": int(binary.stat().st_size) if binary and binary.exists() else 0,
+        "project_disk_bytes": disk,
+        "peak_rss_bytes": max(observed) if observed else None,
+        "peak_rss_bytes_self": self_rss,
+        "peak_rss_bytes_children": children_rss,
+        "stage_seconds": stage_seconds,
+        "stage_seconds_total": round(sum(float(s.get("seconds") or 0) for s in stages), 2),
+        "stage_peak_rss_bytes": stage_rss,
+        "build_seconds": round(build_seconds, 2),
+    }
 
 CATEGORIES = ("HIGH_LEVEL_VERIFIED", "HIGH_LEVEL_UNVERIFIED",
               "LOW_LEVEL_FALLBACK", "UNRESOLVED")
@@ -226,7 +616,8 @@ class Pipeline:
     def __init__(self, pe_path, project_dir=None, assets_dir=None,
                  timeout=30.0, headless=True, oracle=None, jobs=None,
                  split=1000, build=True, run_binary=True, on_event=None,
-                 split_bytes=MAX_UNIT_BYTES, build_timeout=None,
+                 min_free_disk_bytes=None, split_bytes=MAX_UNIT_BYTES,
+                 build_timeout=None,
                  reuse_build=False, fresh_build=False, import_trace=False,
                  highlevel_dir=None, target=None):
         self.pe_path = Path(pe_path).expanduser().resolve()
@@ -245,6 +636,10 @@ class Pipeline:
         self.fresh_build = fresh_build
         self.import_trace = import_trace
         self.target = target
+        # Opt-in disk guard (None = read DISK_GUARD_ENV at stage time). The
+        # last measured guard is kept so the report can publish its diagnostic.
+        self.min_free_disk_bytes = min_free_disk_bytes
+        self.disk_guard = None
         # Where the typed replacements live. None means the default
         # highlevel/ directory, which is empty in a fresh checkout.
         self.highlevel_dir = highlevel_dir
@@ -279,6 +674,28 @@ class Pipeline:
 
     def _stage(self, name):
         return _StageRun(self, name)
+
+    def _guard_build_disk(self):
+        """Opt-in preflight: a full volume yields a diagnostic, not truncation.
+
+        Called before the stages that write large trees (translate, compile).
+        With the guard off this is a no-op and touches no filesystem; a failed
+        measurement or insufficient space raises StageFailure whose data carries
+        the same explicit diagnostic the report publishes.
+        """
+        threshold = (self.min_free_disk_bytes if self.min_free_disk_bytes is not None
+                     else os.environ.get(DISK_GUARD_ENV))
+        minimum = min_free_disk_bytes(threshold)
+        if minimum <= 0:
+            return None
+        previous = self.disk_guard
+        if previous and previous.get("ok") and previous.get("min_free_bytes") == minimum:
+            return previous
+        guard = check_build_disk_space(self.project_dir, minimum)
+        self.disk_guard = guard
+        if not guard["ok"]:
+            raise StageFailure(guard["diagnostic"], {"disk_guard": guard})
+        return guard
 
     # ------------------------------------------------------------------
     # stages
@@ -343,10 +760,24 @@ class Pipeline:
             "code_range": [f"0x{info.code_start:08X}", f"0x{info.code_end:08X}"],
             "import_dlls": list(info.import_dlls),
             "import_count": len(info.imports),
+            # Delay imports are folded into the ordinary import list/IAT map,
+            # so a game that binds them only on first use is visible here too.
+            "delay_import_count": sum(1 for i in info.imports
+                                      if getattr(i, 'is_delayed', False)),
             "iat_entries": len(self.iat_map),
         }
         self._write_json("reports/inspect.json", data)
         return f"{info.machine} {info.pe_type}, {len(info.imports)} imports, entry {data['entry_point']}", data
+
+    def _lift_cache(self):
+        """Return a fingerprinted cache when explicitly enabled."""
+        if not lift_cache_enabled():
+            return None
+        root = Path(self.highlevel_dir) if self.highlevel_dir else (_ROOT / "highlevel")
+        key = lift_cache_fingerprint(
+            self.pe_path, self.companions, self.split, self.split_bytes,
+            root, _ROOT)
+        return LiftCache(key)
 
     def stage_recover(self):
         # The disassembler narrates its recovery on stdout. Capture that
@@ -356,23 +787,43 @@ class Pipeline:
         log_path = self.project_dir / "logs" / "recover.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            functions = discover_functions(self.pe_data, self.info,
-                                           self.iat_map)
-            # Bundled DLLs are reconstructed into the same table. Their VAs are
-            # distinct from the exe's (the collision check in stage_inspect saw
-            # to that), so a plain merge is safe; merging their IAT maps lets
-            # their own imports resolve through the same lifter.
-            for comp in self.companions:
-                dll_data = comp["path"].read_bytes()
-                dll_iat = build_iat_map(comp["info"])
-                dll_fns = discover_functions(dll_data, comp["info"], dll_iat)
-                for addr, fn in dll_fns.items():
-                    functions.setdefault(addr, fn)
-                self.iat_map.update(dll_iat)
-                comp["function_count"] = len(dll_fns)
+        cache = self._lift_cache()
+        cached = cache.get('recover') if cache else None
+        if isinstance(cached, dict) and 'functions' in cached:
+            self.functions = cached['functions']
+            self.iat_map = cached['iat_map']
+            for comp, count in zip(self.companions,
+                                   cached.get('companion_counts', [])):
+                comp['function_count'] = count
+            buf.write('recover: cache hit (fingerprint matched)\n')
+            functions = self.functions
+            used_cache = True
+        else:
+            used_cache = False
+            with contextlib.redirect_stdout(buf):
+                functions = discover_functions(self.pe_data, self.info,
+                                               self.iat_map)
+                # Bundled DLLs are reconstructed into the same table. Their VAs are
+                # distinct from the exe's (the collision check in stage_inspect saw
+                # to that), so a plain merge is safe; merging their IAT maps lets
+                # their own imports resolve through the same lifter.
+                for comp in self.companions:
+                    dll_data = comp["path"].read_bytes()
+                    dll_iat = build_iat_map(comp["info"])
+                    dll_fns = discover_functions(dll_data, comp["info"], dll_iat)
+                    for addr, fn in dll_fns.items():
+                        functions.setdefault(addr, fn)
+                    self.iat_map.update(dll_iat)
+                    comp["function_count"] = len(dll_fns)
+            self.functions = functions
+            if cache:
+                cache.put('recover', {
+                    'functions': self.functions,
+                    'iat_map': self.iat_map,
+                    'companion_counts': [c.get('function_count', 0)
+                                         for c in self.companions],
+                })
         log_path.write_text(buf.getvalue())
-        self.functions = functions
         ordered = sorted(functions.values(), key=lambda f: f.address)
         entries = []
         for i, func in enumerate(ordered):
@@ -394,9 +845,13 @@ class Pipeline:
             "functions": entries,
         }
         self._write_json("reports/functions.json", data)
-        return f"{len(entries)} functions, {data['instructions']} instructions", {"count": len(entries), "instructions": data["instructions"]}
+        data['cache'] = 'hit' if used_cache else 'miss'
+        return f"{len(entries)} functions, {data['instructions']} instructions", {"count": len(entries), "instructions": data["instructions"], "cache": data['cache']}
 
     def stage_translate(self):
+        # Measure before deleting/rewriting anything: a refusal must leave the
+        # previous project intact and name the volume that failed the guard.
+        self._guard_build_disk()
         gen_dir = self.project_dir / "src" / "recomp" / "gen"
         # Re-translation must not leave stale units behind: the dispatch table
         # and recomp_funcs.h are regenerated together, but an old recomp_0007.c
@@ -439,14 +894,31 @@ class Pipeline:
                     return data
             return b""
 
-        with contextlib.redirect_stdout(buf):
-            lifted = generate_recomp_files(
-                self.functions, self.iat_map, str(gen_dir),
-                split_size=self.split, max_unit_bytes=self.split_bytes,
-                highlevel={a: self.highlevel_by_address[a] for a in replaced},
-                read_va=combined_read_va)
+        cache = self._lift_cache()
+        cached = cache.get('translate') if cache else None
+        if isinstance(cached, dict) and 'files' in cached and isinstance(
+                cached.get('lifted'), list):
+            cache.copy_gen_dir(gen_dir)
+            self.lifted = cached['lifted']
+            lifted = self.lifted
+            used_cache = True
+            buf.write('translate: cache hit (fingerprint matched)\n')
+        else:
+            used_cache = False
+            with contextlib.redirect_stdout(buf):
+                lifted = generate_recomp_files(
+                    self.functions, self.iat_map, str(gen_dir),
+                    split_size=self.split, max_unit_bytes=self.split_bytes,
+                    highlevel={a: self.highlevel_by_address[a] for a in replaced},
+                    read_va=combined_read_va)
+            self.lifted = lifted
+            if cache:
+                cache.put('translate', {
+                    'files': {p.name: p.read_bytes() for p in sorted(gen_dir.iterdir())
+                              if p.is_file()},
+                    'lifted': lifted,
+                })
         log_path.write_text(buf.getvalue())
-        self.lifted = lifted
 
         # stage_recover guesses the unit from the function count; by-size
         # chunking makes that guess wrong, so use the generator's own manifest.
@@ -494,6 +966,7 @@ class Pipeline:
             "source_bytes": total_bytes,
             "lift_errors": errors,
             "seconds": round(time.time() - t0, 1),
+            "cache": 'hit' if used_cache else 'miss',
         }
         if errors:
             data["warning"] = (f"{errors} function(s) failed to lift; they are "
@@ -548,12 +1021,15 @@ class Pipeline:
             lines.append(f"static const recomp_export_t recomp_exports_{i}[] = {{")
             seen = set()
             for e in ci.exports:
-                if not e.name or not e.rva or e.name in seen:
+                # Ordinal-only exports have no name; keep them because the
+                # IAT binder asks for "dll#N" when an import is by ordinal.
+                if not e.rva or (e.name and e.name in seen):
                     continue
-                seen.add(e.name)
+                if e.name:
+                    seen.add(e.name)
                 va = ci.image_base + e.rva
-                esc = e.name.replace('\\', '\\\\').replace('"', '\\"')
-                lines.append(f'    {{ "{esc}", 0x{va:08X}u }},')
+                esc = (e.name or "").replace('\\', '\\\\').replace('"', '\\"')
+                lines.append(f'    {{ "{esc}", 0x{va:08X}u, 0x{e.ordinal:04X}u }},')
             lines.append("};")
         lines.append("")
         lines.append("const recomp_companion_t recomp_companion_array[] = {")
@@ -625,6 +1101,7 @@ class Pipeline:
     def stage_compile(self):
         if not self.do_build:
             return "build skipped (--no-build)", {"skipped": True}
+        self._guard_build_disk()
         build_dir = self.project_dir / "build"
         # A cached CMakeCache.txt pins absolute paths from whatever was
         # installed when it was written. Homebrew moving a keg (ffmpeg 9.0.2
@@ -665,8 +1142,15 @@ class Pipeline:
             raise StageFailure("cmake not found on PATH")
         configure = [cmake, "-S", str(self.project_dir), "-B", str(build_dir),
                      "-DCMAKE_BUILD_TYPE=Release"]
-        build = [cmake, "--build", str(build_dir), "--parallel",
-                 str(self.jobs or os.cpu_count() or 4)]
+        requested_jobs = self.jobs or os.cpu_count() or 4
+        jobs = effective_build_jobs(requested_jobs, source_bytes, build_dir)
+        if jobs != requested_jobs:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(log_path, "a") as note:
+                note.write(f"# build parallelism reduced {requested_jobs} -> {jobs} "
+                           f"(low disk or available memory for {source_bytes} "
+                           f"bytes of generated C)\n")
+        build = [cmake, "--build", str(build_dir), "--parallel", str(jobs)]
 
         adaptive = self.build_timeout is None
         timeout = (default_build_timeout(source_bytes)
@@ -814,24 +1298,14 @@ class Pipeline:
 
         t0 = time.time()
         objs = [obj_dir / f"{s.stem}.o" for s in sources]
-        errors = []
         jobs = int(self.jobs or os.cpu_count() or 4)
-
-        def compile_one(pair):
-            src, obj = pair
-            cmd = [*cflags, "-c", str(src), "-o", str(obj)]
-            res = subprocess.run(cmd, env=env, capture_output=True, text=True)
-            if res.returncode != 0:
-                return f"$ {' '.join(cmd)}\n{res.stderr or res.stdout}"
-            return None
 
         with open(log_path, "w") as log:
             log.write(f"# wasm32 compile: {len(sources)} units -> {wasm_path}\n")
-            with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-                for err in pool.map(compile_one, zip(sources, objs)):
-                    if err:
-                        errors.append(err)
-                        log.write(err + "\n")
+            errors, cache_stats = compile_units_with_cache(
+                sources, objs, cflags, env, jobs=jobs)
+            for err in errors:
+                log.write(err + "\n")
             if errors:
                 raise StageFailure(
                     f"wasm32 compile failed (see {log_path})\n{_tail(log_path)}",
@@ -868,6 +1342,7 @@ class Pipeline:
             "source_bytes": source_bytes,
             "target": "web/wasm32",
             "web_entry": str(build_dir / "index.html"),
+            "compile_cache": cache_stats,
         }
 
     def _adopt_reused_binary(self, binary, source_digest, log_path):
@@ -1145,6 +1620,8 @@ class Pipeline:
             "input": str(self.pe_path),
             "project": str(self.project_dir),
             "stages": self.stages,
+            "resources": resource_footprint(self.project_dir, self.stages, self.binary),
+            "disk_guard": self.disk_guard,
             "outcome": self.verification or {"status": "not-run", "reason": "verification did not run"},
             "score": self.score(include_report=True),
             "manifest": "manifest.json",
@@ -1249,6 +1726,25 @@ class Pipeline:
             f"<tr><td>{esc(c.get('check'))}</td><td>{esc(c.get('expected',''))}</td>"
             f"<td>{esc(c.get('actual',''))}</td><td>{'PASS' if c.get('ok') else 'FAIL'}</td></tr>"
             for c in v.get("checks", []))
+        res = report.get("resources") or {}
+        guard = report.get("disk_guard") or {}
+
+        def _rss_label(key):
+            value = res.get(key)
+            return _format_bytes(value) if value is not None else "n/a"
+
+        res_rows = "".join(
+            f"<tr><td>{esc(k)}</td><td>{esc(val)}</td></tr>"
+            for k, val in (
+                ("Generated source", _format_bytes(res.get("generated_source_bytes", 0))),
+                ("Binary", _format_bytes(res.get("binary_bytes", 0))),
+                ("Project on disk", _format_bytes(res.get("project_disk_bytes", 0))),
+                ("Peak RSS (self / children)",
+                 f"{_rss_label('peak_rss_bytes_self')} / {_rss_label('peak_rss_bytes_children')}"),
+                ("Build seconds", res.get("build_seconds", 0)),
+                ("Stage seconds total", res.get("stage_seconds_total", 0)),
+                ("Disk guard", guard.get("diagnostic") or "not enabled"),
+            ))
         return f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>autorecomp report - {esc(self.pe_path.name)}</title>
 <style>
@@ -1265,6 +1761,8 @@ Score: <strong>{report['score']}/100</strong>.
 Verification: <strong>{esc(v.get('status','not-run'))}</strong> - {esc(v.get('reason',''))}</p>
 <h2>Stages</h2>
 <table><tr><th>Stage</th><th>Status</th><th>Time</th><th>Detail</th></tr>{''.join(rows)}</table>
+<h2>Measured resources</h2>
+<table><tr><th>Metric</th><th>Observed value</th></tr>{res_rows}</table>
 <h2>Source provenance</h2>
 <table><tr><th>Category</th><th>Functions</th></tr>{cat_rows}</table>
 <p>Source digest: <code>{esc((self.manifest or {}).get('source_digest_sha256',''))}</code></p>
@@ -1288,7 +1786,15 @@ class _StageRun:
 
     def __exit__(self, exc_type, exc, tb):
         seconds = time.time() - self.t0
-        record = {"name": self.name, "seconds": round(seconds, 2)}
+        # ru_maxrss is a high-water mark over reaped children, so this is the
+        # peak observed by the end of this stage (monotonic across stages),
+        # not a per-stage allocation delta. Self is the fallback when the
+        # stage spawned no child process.
+        child_rss = peak_rss_bytes(_rusage_domain("RUSAGE_CHILDREN"))
+        self_rss = peak_rss_bytes(_rusage_domain("RUSAGE_SELF"))
+        stage_rss = child_rss if child_rss is not None else self_rss
+        record = {"name": self.name, "seconds": round(seconds, 2),
+                  "peak_rss_bytes": stage_rss}
         if exc_type is None:
             record.update(status="ok", message=self.message, data=self.data)
         elif issubclass(exc_type, StageFailure):

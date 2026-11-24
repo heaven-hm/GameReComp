@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "game": "Cave Story (Doukutsu.exe)",
+  "filename": "Doukutsu.exe",
+  "native_source": "dist/macos/CaveStory-Native.app/Contents/MacOS/CaveStoryNative",
+  "command": "python3 -m tools.game_runner --game cavestory-app --binary <app launcher> --folder <app Resources> --out /tmp/agent2-app-frames --timeout 20 && python3 -m tools.frame_proof --summary /tmp/agent2-app-frames/summary.json --out /tmp/agent2-app-proof",
+  "what_it_proves": "captured native frames have real pixel content (distinct colours + hashes); not a Windows oracle",
+  "frames": [
+    {
+      "game": "cavestory-doukutsu",
+      "path": "docs/screenshots/native/cavestory-native-01.png",
+      "source_bmp_sha256": "39adc1bc7a975e791eb4415930ad7da582b4f710aa7676e8e9f401990bd9df44",
+      "committed_screenshot_sha256": "794f41936012a114ac95b9e700ff4345b9ef1e165cdd446dfbc7582d4604345d",
+      "width": 640,
+      "height": 480,
+      "distinct_colors": 5,
+      "blank": false,
+      "note": "frame 0001 of the app run; converted from the captured 24-bpp BMP with sips"
+    },
+    {
+      "game": "cavestory-doukutsu",
+      "path": "docs/screenshots/native/cavestory-native-02.png",
+      "source_bmp_sha256": "39adc1bc7a975e791eb4415930ad7da582b4f710aa7676e8e9f401990bd9df44",
+      "committed_screenshot_sha256": "794f41936012a114ac95b9e700ff4345b9ef1e165cdd446dfbc7582d4604345d",
+      "width": 640,
+      "height": 480,
+      "distinct_colors": 5,
+      "blank": false,
+      "note": "frame 0002; byte-identical to frame 0001 because the scene did not change"
+    },
+    {
+      "game": "cavestory-doukutsu",
+      "path": "-",
+      "source_bmp_sha256": "a6ff748a2c1b386844bf8afd790540cf5f4642a1251d2958196f2b25ae413a12",
+      "width": 640,
+      "height": 480,
+      "distinct_colors": 1,
+      "blank": true,
+      "note": "frame 0000, startup clear; deliberately not counted as render evidence"
+    }
+  ],
+  "classification": "PARTIAL - native render evidence; no Windows oracle, no gameplay/input verification"
+}
