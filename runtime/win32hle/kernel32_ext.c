@@ -961,6 +961,225 @@ static void k_GetFullPathNameW(void) {
     if (A32(3)) MEM32(A32(3)) = 0;
     RET(needed, 4);
 }
+
+/* ---- GetShortPathNameW / GetLongPathNameW ----
+ * The POSIX host has no 8.3 names, so these shims do real, deterministic path
+ * text work rather than pretending a Windows filesystem exists:
+ *   - Short: each component that is not already a valid 8.3 name is mangled to
+ *     BASE~N.EXT (six base chars, a tilde index, three extension chars).
+ *   - Long: a path with no ~N component is already long and is returned as-is.
+ *     A ~N component is resolved by scanning that directory through
+ *     hle_host_path() for an entry whose predicted 8.3 form matches; if none
+ *     is found the call fails with ERROR_FILE_NOT_FOUND rather than returning
+ *     the short text as if it had been expanded.
+ * Both read the guest UTF-16 input through u16_len(), so a NULL, unterminated
+ * or huge pointer fails closed instead of walking the guest address space. */
+#define PATH_ANSI_MAX 1024
+
+static int path_83_char(char c) {
+    c = (char)toupper((unsigned char)c);
+    return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+           c == '$' || c == '%' || c == '\'' || c == '-' || c == '_' ||
+           c == '@' || c == '~' || c == '`' || c == '!' || c == '(' ||
+           c == ')' || c == '{' || c == '}' || c == '^' || c == '#' || c == '&';
+}
+
+/* Bounded copy of a NUL-terminated guest WCHAR path into an ANSI buffer. */
+static int path_wide_to_ansi(uint32_t va, char *out, size_t cap) {
+    uint32_t n, i;
+    if (!va || !u16_len(va, &n) || n == 0 || n + 1u > cap) return 0;
+    for (i = 0; i < n; i++) {
+        uint16_t c = MEM16(va + i * 2u);
+        if (c > 0x7Fu) return 0;               /* no honest 8.3 form for non-ASCII */
+        out[i] = (char)c;
+    }
+    out[n] = 0;
+    return 1;
+}
+
+/* Win32 size-probe / insufficient-buffer contract for a WCHAR output buffer.
+ * Returns the text length (excluding NUL) on success (*wrote=1), or the
+ * required size (including NUL) when out is NULL or cap is too small. */
+static uint32_t path_write_wide(const char *s, uint32_t out, uint32_t cap, int *wrote) {
+    uint32_t n = (uint32_t)strlen(s), need = n + 1u, i;
+    *wrote = 0;
+    if (!out || cap == 0) return need;
+    if (cap < need) { hle_set_last_error(ERROR_INSUFFICIENT_BUFFER); return need; }
+    for (i = 0; i < n; i++) MEM16(out + i * 2u) = (uint16_t)(unsigned char)s[i];
+    MEM16(out + n * 2u) = 0;
+    hle_set_last_error(0);
+    *wrote = 1;
+    return n;
+}
+
+/* Short 8.3 form of one component. *seq supplies the tilde index for mangled
+ * components and advances for each one. out needs at least 16 bytes. */
+static void path_short_component(const char *comp, size_t len, char *out, unsigned *seq) {
+    size_t i, dot = len, nb = 0, ne = 0;
+    char base[8], ext[4];
+    int ok;
+    if (len == 0) { out[0] = 0; return; }
+    if ((len == 1 && comp[0] == '.') || (len == 2 && comp[0] == '.' && comp[1] == '.') ||
+        (len == 2 && comp[1] == ':')) {        /* ".", "..", drive designator */
+        memcpy(out, comp, len); out[len] = 0; return;
+    }
+    for (i = 1; i < len; i++) if (comp[i] == '.') dot = i;
+    if (dot == len - 1) dot = len;             /* trailing dot: no extension */
+    ok = (dot == len) ? (len <= 8)
+                      : (dot >= 1 && dot <= 8 && len - dot - 1 >= 1 && len - dot - 1 <= 3);
+    if (ok) {
+        for (i = 0; i < dot; i++) if (!path_83_char(comp[i])) { ok = 0; break; }
+        for (i = dot + 1; ok && i < len; i++) if (!path_83_char(comp[i])) ok = 0;
+        if (ok) { memcpy(out, comp, len); out[len] = 0; return; }
+    }
+    for (i = 0; i < dot && nb < 6; i++) {
+        char c = (char)toupper((unsigned char)comp[i]);
+        if (path_83_char(c) && c != '~') base[nb++] = c;
+    }
+    for (i = dot + 1; i < len && ne < 3; i++) {
+        char c = (char)toupper((unsigned char)comp[i]);
+        if (path_83_char(c) && c != '~') ext[ne++] = c;
+    }
+    {
+        unsigned n = *seq ? *seq : 1;
+        if (n > 9) n = 9;
+        (*seq)++;
+        memcpy(out, base, nb); out[nb++] = '~'; out[nb++] = (char)('0' + n);
+        if (ne) { out[nb++] = '.'; memcpy(out + nb, ext, ne); nb += ne; }
+        out[nb] = 0;
+    }
+}
+
+static void path_make_short(const char *in, char *out, size_t cap) {
+    char comp[PATH_ANSI_MAX];
+    size_t clen = 0, o = 0;
+    unsigned seq = 0;
+    const char *p = in;
+    for (;;) {
+        char c = *p++;
+        if (c == '\\' || c == '/' || c == 0) {
+            if (clen) {
+                char sh[16];
+                size_t sl;
+                path_short_component(comp, clen, sh, &seq);
+                sl = strlen(sh);
+                if (sl && o + sl < cap) { memcpy(out + o, sh, sl); o += sl; }
+                clen = 0;
+            }
+            if (c == 0) break;
+            if (o + 1 < cap) out[o++] = '\\';
+        } else if (clen + 1 < sizeof comp) {
+            comp[clen++] = c;
+        }
+    }
+    out[o] = 0;
+}
+
+static void k_GetShortPathNameW(void) {
+    char in[PATH_ANSI_MAX], shortp[PATH_ANSI_MAX];
+    int wrote;
+    uint32_t r;
+    if (!path_wide_to_ansi(A32(0), in, sizeof in)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 3);
+    }
+    path_make_short(in, shortp, sizeof shortp);
+    r = path_write_wide(shortp, A32(1), A32(2), &wrote);
+    RET(r, 3);
+}
+
+/* Resolve one ~N component against the real entries of its guest directory. */
+static int resolve_short_component(const char *dir_guest, const char *shortcomp,
+                                   char *out, size_t cap) {
+    char host[PATH_ANSI_MAX], pfx[8], ext[4];
+    size_t np = 0, nx = 0;
+    const char *dot, *q;
+    DIR *d;
+    struct dirent *e;
+    int found = 0;
+    if (!hle_host_path(dir_guest, host, sizeof host)) return 0;
+    if (!host[0]) snprintf(host, sizeof host, "%s", "."); /* relative cwd */
+    for (q = shortcomp; *q && *q != '~'; q++)
+        if (np < 6 && path_83_char(*q)) pfx[np++] = (char)toupper((unsigned char)*q);
+    dot = strrchr(shortcomp, '.');
+    if (dot) for (q = dot + 1; *q && nx < 3; q++)
+        if (path_83_char(*q)) ext[nx++] = (char)toupper((unsigned char)*q);
+    d = opendir(host);
+    if (!d) return 0;
+    while ((e = readdir(d))) {
+        char epfx[8], eext[4];
+        const char *edot, *r;
+        size_t k = 0, m = 0;
+        if (e->d_name[0] == '.') continue;
+        for (r = e->d_name; *r && *r != '.' && k < 6; r++)
+            if (path_83_char(*r)) epfx[k++] = (char)toupper((unsigned char)*r);
+        if (k != np || memcmp(epfx, pfx, np)) continue;
+        edot = strrchr(e->d_name, '.');
+        if (edot) for (r = edot + 1; *r && m < 3; r++)
+            if (path_83_char(*r)) eext[m++] = (char)toupper((unsigned char)*r);
+        if (nx && (m != nx || memcmp(eext, ext, nx))) continue;
+        snprintf(out, cap, "%s", e->d_name);
+        found = 1;
+        break;
+    }
+    closedir(d);
+    return found;
+}
+
+static int path_expand_long(const char *in, char *out, size_t cap) {
+    char dir[PATH_ANSI_MAX], comp[PATH_ANSI_MAX];
+    size_t clen = 0, o = 0, dlen;
+    const char *p = in;
+    if (!strchr(in, '~')) { snprintf(out, cap, "%s", in); return 1; }
+    dir[0] = 0;
+    for (;;) {
+        char c = *p++;
+        if (c == '\\' || c == '/' || c == 0) {
+            if (clen) {
+                char resolved[PATH_ANSI_MAX];
+                size_t sl;
+                if (memchr(comp, '~', clen)) {
+                    comp[clen] = 0;
+                    if (!resolve_short_component(dir, comp, resolved, sizeof resolved)) return 0;
+                } else {
+                    memcpy(resolved, comp, clen); resolved[clen] = 0;
+                }
+                sl = strlen(resolved);
+                if (o + sl >= cap) return 0;
+                memcpy(out + o, resolved, sl); o += sl; out[o] = 0;
+                dlen = strlen(dir);
+                if (dlen && dir[dlen - 1] != '\\' && dir[dlen - 1] != '/' &&
+                    dlen + 1 < sizeof dir) dir[dlen++] = '\\';
+                if (dlen + sl < sizeof dir) {
+                    memcpy(dir + dlen, resolved, sl); dir[dlen + sl] = 0;
+                }
+                clen = 0;
+            }
+            if (c == 0) break;
+            if (o + 1 < cap) out[o++] = '\\';
+            out[o] = 0;
+            dlen = strlen(dir);
+            if (dlen + 1 < sizeof dir) { dir[dlen++] = '\\'; dir[dlen] = 0; }
+        } else if (clen + 1 < sizeof comp) {
+            comp[clen++] = c;
+        }
+    }
+    return 1;
+}
+
+static void k_GetLongPathNameW(void) {
+    char in[PATH_ANSI_MAX], longp[PATH_ANSI_MAX];
+    int wrote;
+    uint32_t r;
+    if (!path_wide_to_ansi(A32(0), in, sizeof in)) {
+        hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 3);
+    }
+    if (!path_expand_long(in, longp, sizeof longp)) {
+        hle_set_last_error(ERROR_FILE_NOT_FOUND); RET(0, 3);
+    }
+    r = path_write_wide(longp, A32(1), A32(2), &wrote);
+    RET(r, 3);
+}
+
 /* SearchPathA(path, file, ext, buflen, buf, &filePart): find a file on a search
  * path (NULL means the default: the current directory, then the Windows
  * directories). Each `;`-separated directory (or `\`-terminated run) is tried
@@ -2103,6 +2322,7 @@ const win32hle_shim win32hle_kernel32_ext[] = {
     { "ConnectNamedPipe", k_ConnectNamedPipe }, { "WaitNamedPipeA", k_WaitNamedPipeA },
     { "PeekNamedPipe", k_PeekNamedPipe },
     { "GetFullPathNameA", k_GetFullPathNameA }, { "GetFullPathNameW", k_GetFullPathNameW },
+    { "GetShortPathNameW", k_GetShortPathNameW }, { "GetLongPathNameW", k_GetLongPathNameW },
     { "SearchPathA", k_SearchPathA },
     { "OpenFile", k_OpenFile }, { "_hread", k__lread }, { "_hwrite", k__lwrite },
     { "_lopen", k__lopen }, { "_lcreat", k__lcreat }, { "_lread", k__lread },
