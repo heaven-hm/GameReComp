@@ -2,14 +2,12 @@
  * ddraw7_lock_rect_selftest.c - IDirectDrawSurface::Lock with a non-NULL
  * lpDestRect, driven through the real ddraw.c guest ABI.
  *
- * ddraw.c's put_desc() knows the two descriptor shapes: for DDSURFACEDESC2
- * (dwSize >= 124) lpSurface lives at +40, while the legacy DDSURFACEDESC puts
- * it at +36. sf_Lock() then adjusted lpSurface to the locked rectangle, but
- * always wrote that adjustment to +36. A DirectDraw7 caller that locks a
- * sub-rectangle therefore read back the *whole surface* pointer from +40 and
- * drew through it at the wrong address; its +36 colour-key slot was clobbered
- * with a pointer at the same time. Legacy callers were unaffected, which is
- * why the existing whole-surface Lock test never saw it.
+ * ddraw.c's put_desc() writes a 124-byte DDSURFACEDESC2 with the same field
+ * offsets as the 108-byte DDSURFACEDESC (mingw-w64 ddraw.h): lpSurface +36,
+ * ddpfPixelFormat +72, ddsCaps +104. sf_Lock() adjusts lpSurface to the
+ * locked rectangle. A DirectDraw7 caller that locks a sub-rectangle must read
+ * that adjusted pointer back from +36; the +40 colour-key slot must remain a
+ * colour key. The legacy 108-byte shape is checked alongside it.
  *
  * This test locks a sub-rect of a primary surface with a 124-byte descriptor
  * and of an offscreen surface with a 108-byte descriptor, checks the exact
@@ -89,16 +87,17 @@ static uint32_t mcall(const char *name, uint32_t obj, int argc, uint32_t *a) {
     return hle_call_guest(hle_resolve(name), argc, v);
 }
 
-/* DDSURFACEDESC2 word layout used throughout ddraw.c: pf at 76 (word 19),
- * ddsCaps at 108 (word 27), lpSurface at 40 (word 10). */
+/* Real 124-byte DDSURFACEDESC2 layout: pf at 72 (word 18), ddsCaps at 104
+ * (word 26), lpSurface at 36 (word 9). Only dwSize and the trailing
+ * dwTextureStage differ from the 108-byte DDSURFACEDESC. */
 static void fill_desc2(uint32_t *p, int w, int h, int bpp, uint32_t caps) {
     memset(p, 0, 128 * sizeof *p);
     p[0] = 124;
     p[1] = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PITCH | DDSD_PIXELFORMAT;
     p[2] = (uint32_t)h; p[3] = (uint32_t)w; p[4] = (uint32_t)(w * bpp / 8);
-    p[19] = 32; p[20] = DDPF_RGB; p[22] = (uint32_t)bpp;
-    p[23] = 0xF800u; p[24] = 0x07E0u; p[25] = 0x001Fu;
-    p[27] = caps;
+    p[18] = 32; p[19] = DDPF_RGB; p[21] = (uint32_t)bpp;
+    p[22] = 0xF800u; p[23] = 0x07E0u; p[24] = 0x001Fu;
+    p[26] = caps;
 }
 /* The 108-byte DDSURFACEDESC: pf at 72 (word 18), caps at 104 (word 26),
  * lpSurface at 36 (word 9). */
@@ -167,13 +166,13 @@ int main(void) {
         f->rc_lock2 = mcall("IDirectDrawSurface::Lock", f->primary, 5, a);
     }
     ok("Lock(rect, DDSURFACEDESC2) -> DD_OK", f->rc_lock2 == DD_OK);
-    f->got2 = MEM32(hle_va(f->lock2) + 40);
-    ok("DDSURFACEDESC2 lpSurface(+40) is the sub-rectangle address", f->got2 == f->expected2);
+    f->got2 = MEM32(hle_va(f->lock2) + 36);
+    ok("DDSURFACEDESC2 lpSurface(+36) is the sub-rectangle address", f->got2 == f->expected2);
     ok("... not the whole-surface address", f->got2 != f->base);
     ok("... descriptor size and pitch survive the Lock",
        MEM32(hle_va(f->lock2)) == 124 && MEM32(hle_va(f->lock2) + 16) == (uint32_t)f->pitch);
-    ok("... the +36 colour-key slot is not clobbered by a pointer",
-       MEM32(hle_va(f->lock2) + 36) == 0);
+    ok("... the +40 colour-key slot is not clobbered by a pointer",
+       MEM32(hle_va(f->lock2) + 40) == 0);
     if (f->got2) MEM16(f->got2) = 0xF800u;               /* red, through the returned pointer */
     f->rc_unlock2 = mcall("IDirectDrawSurface::Unlock", f->primary, 1, 0);
     ok("Unlock -> DD_OK", f->rc_unlock2 == DD_OK);

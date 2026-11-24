@@ -1,0 +1,2 @@
+frida.spawn(/bin/sleep) -> PermissionDeniedError unable to access process with pid 99569 from the current user account
+frida.attach(pid 1) -> PermissionDeniedError unable to access process with pid 1 from the current user account

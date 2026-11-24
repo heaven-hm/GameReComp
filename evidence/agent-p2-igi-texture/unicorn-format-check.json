@@ -1,0 +1,373 @@
+{
+  "engine": "unicorn",
+  "unicorn_bytes_source": "/Users/haseeb-mir/Downloads/IGI/igi.exe",
+  "image_base": "0x400000",
+  "callbacks": {
+    "enum_texture_formats_callback": "0x50bc00",
+    "check_region": "0x50b6e5-0x50b6fb",
+    "error_string": "Invalid texture format (0x54EAD8, pushed at 0x50B6EC / 0x50BB62)"
+  },
+  "game_formats_from": "/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/p2-igi/runtime/win32hle/d3d7.c",
+  "results": [
+    {
+      "index": 0,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0xf800",
+        "dwGBitMask": "0x7e0",
+        "dwBBitMask": "0x1f",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "2000000040000000000000001000000000f80000e00700001f00000000000000000000000b00000005000000000000000000000005000000060000000500000010000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 1,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x41",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0x7c00",
+        "dwGBitMask": "0x3e0",
+        "dwBBitMask": "0x1f",
+        "dwRGBAlphaBitMask": "0x8000"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "20000000410000000000000010000000007c0000e00300001f000000008000000f0000000a0000000500000000000000010000000500000005000000050000000f000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 2,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x41",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0xf00",
+        "dwGBitMask": "0xf0",
+        "dwBBitMask": "0xf",
+        "dwRGBAlphaBitMask": "0xf000"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "20000000410000000000000010000000000f0000f00000000f00000000f000000c000000080000000400000000000000040000000400000004000000040000000c000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 3,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0x7c00",
+        "dwGBitMask": "0x3e0",
+        "dwBBitMask": "0x1f",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "20000000400000000000000010000000007c0000e00300001f00000000000000000000000a0000000500000000000000000000000500000005000000050000000f000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 4,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x41",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 32,
+        "dwRBitMask": "0xff0000",
+        "dwGBitMask": "0xff00",
+        "dwBBitMask": "0xff",
+        "dwRGBAlphaBitMask": "0xff000000"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 5,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 32,
+        "dwRBitMask": "0xff0000",
+        "dwGBitMask": "0xff00",
+        "dwBBitMask": "0xff",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 6,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x41",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0xf800",
+        "dwGBitMask": "0x7e0",
+        "dwBBitMask": "0x1f",
+        "dwRGBAlphaBitMask": "0x8000"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "2000000041000000000000001000000000f80000e00700001f000000008000000f0000000b00000005000000000000000100000005000000060000000500000010000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 7,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 24,
+        "dwRBitMask": "0xff0000",
+        "dwGBitMask": "0xff00",
+        "dwBBitMask": "0xff",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 8,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x20",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 8,
+        "dwRBitMask": "0x0",
+        "dwGBitMask": "0x0",
+        "dwBBitMask": "0x0",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "FAIL"
+    },
+    {
+      "index": 9,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x20",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 4,
+        "dwRBitMask": "0x0",
+        "dwGBitMask": "0x0",
+        "dwBBitMask": "0x0",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "FAIL"
+    },
+    {
+      "index": 10,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 8,
+        "dwRBitMask": "0xe0",
+        "dwGBitMask": "0x1c",
+        "dwBBitMask": "0x3",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "20000000400000000000000008000000e00000001c0000000300000000000000000000000500000002000000000000000000000003000000030000000200000008000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 11,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x1",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 8,
+        "dwRBitMask": "0x0",
+        "dwGBitMask": "0x0",
+        "dwBBitMask": "0x0",
+        "dwRGBAlphaBitMask": "0xff"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "FAIL"
+    },
+    {
+      "index": 12,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x20000",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 8,
+        "dwRBitMask": "0xff",
+        "dwGBitMask": "0x0",
+        "dwBBitMask": "0x0",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "FAIL"
+    },
+    {
+      "index": 13,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0xf00",
+        "dwGBitMask": "0xf0",
+        "dwBBitMask": "0xf",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "20000000400000000000000010000000000f0000f00000000f0000000000000000000000080000000400000000000000000000000400000004000000040000000c000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 14,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x41",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 32,
+        "dwRBitMask": "0xff",
+        "dwGBitMask": "0xff00",
+        "dwBBitMask": "0xff0000",
+        "dwRGBAlphaBitMask": "0xff000000"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 15,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 32,
+        "dwRBitMask": "0xff",
+        "dwGBitMask": "0xff00",
+        "dwBBitMask": "0xff0000",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": false,
+      "format_table_count_before": 0,
+      "format_table_count_after": 0,
+      "format_table_record_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 16,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x41",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0x1f",
+        "dwGBitMask": "0x3e0",
+        "dwBBitMask": "0x7c00",
+        "dwRGBAlphaBitMask": "0x8000"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "200000004100000000000000100000001f000000e0030000007c0000008000000f00000000000000050000000a000000010000000500000005000000050000000f000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 17,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0x1f",
+        "dwGBitMask": "0x3e0",
+        "dwBBitMask": "0x7c00",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "200000004000000000000000100000001f000000e0030000007c0000000000000000000000000000050000000a000000000000000500000005000000050000000f000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 18,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x41",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 16,
+        "dwRBitMask": "0xf",
+        "dwGBitMask": "0xf0",
+        "dwBBitMask": "0xf00",
+        "dwRGBAlphaBitMask": "0xf000"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "200000004100000000000000100000000f000000f0000000000f000000f000000c000000000000000400000008000000040000000400000004000000040000000c000000",
+      "guest_ddpf_check": "PASS"
+    },
+    {
+      "index": 19,
+      "ddpf": {
+        "dwSize": 32,
+        "dwFlags": "0x40",
+        "dwFourCC": 0,
+        "dwRGBBitCount": 8,
+        "dwRBitMask": "0x1c",
+        "dwGBitMask": "0xe0",
+        "dwBBitMask": "0x3",
+        "dwRGBAlphaBitMask": "0x0"
+      },
+      "guest_callback_accepted": true,
+      "format_table_count_before": 0,
+      "format_table_count_after": 1,
+      "format_table_record_hex": "200000004000000000000000080000001c000000e00000000300000000000000000000000200000005000000000000000000000003000000030000000200000008000000",
+      "guest_ddpf_check": "PASS"
+    }
+  ]
+}

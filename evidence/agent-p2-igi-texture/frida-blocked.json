@@ -1,0 +1,43 @@
+{
+  "engine": "frida",
+  "tool": "tools/frida_probe.py (origin/develop)",
+  "status": "BLOCKED",
+  "not_claimed": "No Frida observation was obtained. Nothing below is treated as a passing oracle result.",
+  "target": "/Users/haseeb-mir/Downloads/IGI/igi.exe under Highball Games bottle (x64-crossover26.3-r27, dxvk)",
+  "environment": {
+    "sip": "System Integrity Protection status: enabled",
+    "consumer": "frida 17.24.3 (python), frida CLI 17.24.0",
+    "wine_pid_example": 5634,
+    "wine_command": "highball run --dir /Users/haseeb-mir/Downloads/IGI /Users/haseeb-mir/Downloads/IGI/igi.exe"
+  },
+  "attempts": [
+    {
+      "command": "python3 tools/frida_probe.py --spawn '<Highball>/engine/bin/wine' /Users/haseeb-mir/Downloads/IGI/igi.exe --hook MessageBoxA --hook MessageBoxW --hook ExitProcess --timeout 8",
+      "exit_code": 3,
+      "stderr": "frida probe failed: unexpected error while probing dyld of target process",
+      "evidence_file": "frida-spawn-blocked.txt"
+    },
+    {
+      "command": "python3 -c 'import frida; d=frida.get_local_device(); d.attach(<running igi.exe wine pid 5634>)'",
+      "error": "NotSupportedError: unable to read from process memory",
+      "evidence_file": "frida-attach-blocked.txt"
+    },
+    {
+      "command": "python3 -c 'import frida; frida.spawn([\"/bin/sleep\",\"5\"])'",
+      "error": "PermissionDeniedError: unable to access process with pid 99569 from the current user account",
+      "evidence_file": "frida-attach-blocked.txt"
+    },
+    {
+      "command": "python3 -c 'import frida; frida.get_local_device().attach(1)'",
+      "error": "PermissionDeniedError: unable to access process with pid 1 from the current user account",
+      "evidence_file": "frida-attach-blocked.txt"
+    }
+  ],
+  "root_cause_of_block": "macOS ARM64 with SIP enabled; Frida cannot obtain task_for_pid for Highball's Wine process (or any other process) from this user account. Disabling SIP or installing a privileged frida-server is out of scope for this change.",
+  "substitute_oracle": {
+    "engine": "Highball Wine (real retail igi.exe, real assets in ~/Downloads/IGI)",
+    "status": "RAN",
+    "observation": "The real game ran for the full observation window with no 'Invalid texture format' MessageBox and no fatal exit; see wine-original-run.log. This is a process-level oracle only: it establishes that the check is passable on real DirectDraw, not byte-for-byte format equality.",
+    "evidence_file": "wine-original-run.log"
+  }
+}
