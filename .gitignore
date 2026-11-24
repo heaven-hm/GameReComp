@@ -141,10 +141,11 @@ gui/build/
 # Command Code agent state (taste, session scratch); not part of the project.
 .commandcode/
 
-# generated sweep projects (regenerable build artifacts)
-reports/oracle-sweep/*-project/
-
-# generated sweep projects (any depth)
+# Generated autorecomp project trees (multi-GB, regenerable; never commit).
+# Covers the default `projects/<game>` layout at any directory depth and the
+# `<name>-project` layout written by tools/{full_corpus_sweep,oracle_sweep}.py
+# wherever --out points, so a generated tree can never leak into git.
+**/projects/
 **/*-project/
 
 # local generated build trees (regenerable; never commit)
