@@ -9,8 +9,21 @@
  * (hle_com_register_class), and otherwise answers REGDB_E_CLASSNOTREG, as for
  * a COM server that is not installed.
  *
- * Structured storage, OLE embedding and type libraries are not here: they
- * fail with E_NOTIMPL.
+ * Structured storage itself lives in storage.c (compound files on disk and
+ * on an ILockBytes); the in-memory byte-array object that storages are built
+ * on, and a bind context for moniker binding, are here. OLE embedding and
+ * type libraries are not here: they fail with E_NOTIMPL.
+ *
+ * CreateBindCtx follows Wine's dlls/ole32/bindctx.c (LGPL-2.1+): a NULL out
+ * or a non-zero reserved value is E_INVALIDARG, the context starts with
+ * BIND_OPTS {cbStruct=32, grfMode=STGM_READWRITE, CLSCTX_SERVER, locale},
+ * IBindCtx::EnumObjectParam is E_NOTIMPL (as in native OLE), and a missing
+ * key is E_FAIL. CreateILockBytesOnHGlobal follows the Microsoft API contract
+ * (coml2api.h): hGlobal==NULL allocates a fresh guest-heap byte array, a
+ * supplied handle is used in place, fDeleteOnRelease controls ownership, and
+ * region locking is refused (STG_E_INVALIDFUNCTION). OleGetIconOfClass returns
+ * NULL, the documented "no icon" answer and exactly what Wine/ReactOS's
+ * ole2stubs.c do in a headless build. See docs/MAXCOMP_B_PROVENANCE.md.
  *
  * The DirectMusic COM class and method table below adapt HenryKun55's
  * igi-recomp shim/src/ole32.c (commit 278eaf6394f7f42c7de6cffef2cf982154f59899),
@@ -25,11 +38,19 @@
 #include "win32hle.h"
 
 #define S_OK                 0u
+#define S_FALSE              1u
 #define E_NOTIMPL            0x80004001u
 #define E_NOINTERFACE        0x80004002u
+#define E_POINTER            0x80004003u
+#define E_INVALIDARG         0x80070057u
 #define E_FAIL               0x80004005u
 #define REGDB_E_CLASSNOTREG  0x80040154u
 #define CO_E_CLASSSTRING     0x800401F3u
+#define MK_E_NOTBOUND        0x800401E9u
+#define STGM_READWRITE       0x2u
+#define CLSCTX_SERVER        0x7u                   /* inproc | local | handler */
+#define STG_E_INVALIDFUNCTION 0x80030001u
+#define STG_E_INVALIDPOINTER  0x80030009u
 
 /* DirectMusic's COM class is part of DirectX 7.  A headless runtime can
  * expose its interface for capability checks while reporting playback and
@@ -592,6 +613,344 @@ static void a_GetActiveObject(void) {
     RET(0x800401E3u /* MK_E_UNAVAILABLE */, 3);
 }
 
+/* ---- COM objects built here: ILockBytes and IBindCtx ----
+ * Both are ordinary COM objects in guest memory (vt + refcount + host state at
+ * +8), so storage.c can call their methods through the very same vtable a
+ * lifted guest would use. All method shims use the guest stack, never a host
+ * pointer as a guest address. */
+static uint32_t com_vcall(uint32_t obj, int slot, int nargs, const uint32_t *args) {
+    uint32_t a[8] = { obj };
+    for (int i = 0; i < nargs && i < 7; i++) a[1 + i] = args[i];
+    /* obj[0] is the vtable pointer; vtable[slot] is the method's import VA. */
+    return hle_call_guest(MEM32(MEM32(obj) + 4u * (uint32_t)slot), nargs + 1, a);
+}
+static uint32_t iid_data1(uint32_t iid) {
+    if (!iid) return 0xFFFFFFFFu;
+    static const uint8_t tail[8] = { 0xC0, 0, 0, 0, 0, 0, 0, 0x46 };
+    const uint8_t *g = (const uint8_t *)hle_ptr(iid);
+    if (!g || *(const uint32_t *)(g + 4) || memcmp(g + 8, tail, 8)) return 0xFFFFFFFFu;
+    return *(const uint32_t *)g;
+}
+static uint32_t wstr_len(uint32_t s) {
+    uint32_t n = 0;
+    if (!s) return 0;
+    while (MEM16(s + 2u * n)) n++;
+    return n;
+}
+static int wstr_eq(uint32_t a, uint32_t b) {
+    uint32_t n = wstr_len(a);
+    if (n != wstr_len(b)) return 0;
+    for (uint32_t i = 0; i < n; i++) if (MEM16(a + 2u * i) != MEM16(b + 2u * i)) return 0;
+    return 1;
+}
+static uint32_t wstr_dup(uint32_t s) {
+    uint32_t n = wstr_len(s), va = hle_va(hle_alloc(2u * (n + 1u)));
+    if (!va) return 0;
+    for (uint32_t i = 0; i < n; i++) MEM16(va + 2u * i) = MEM16(s + 2u * i);
+    return va;
+}
+
+/* ---- ILockBytes on a guest HGLOBAL ----
+ * Vtable order is IUnknown (0-2) then ReadAt, WriteAt, Flush, SetSize,
+ * LockRegion, UnlockRegion, Stat (3-9). ULARGE_INTEGER arguments are two
+ * little-endian dwords on x86, low first. */
+typedef struct { uint8_t *buf; uint32_t size, cap, hglobal, del; } lb_t;
+#define LB(self) ((lb_t *)hle_ptr(MEM32((self) + 8)))
+
+static void lb_QueryInterface(void) {
+    uint32_t d1 = iid_data1(A32(1)), out = A32(2);
+    if (!out) { RET(E_POINTER, 3); }
+    MEM32(out) = 0;
+    if (d1 == 0 || d1 == 0x0Au) {                    /* IUnknown / ILockBytes */
+        MEM32(out) = A32(0);
+        MEM32(A32(0) + 4)++;
+        RET(S_OK, 3);
+    }
+    RET(E_NOINTERFACE, 3);
+}
+static void lb_AddRef(void) { RET(++MEM32(A32(0) + 4), 1); }
+static void lb_Release(void) {
+    uint32_t self = A32(0), n = --MEM32(self + 4);
+    if (!n) {
+        lb_t *s = LB(self);
+        if (s) {
+            if (s->del && s->buf) hle_free(s->buf);
+            hle_free(hle_ptr(MEM32(self + 8)));
+        }
+        hle_com_free(self);
+    }
+    RET(n, 1);
+}
+static void lb_ReadAt(void) {                       /* (this, off.lo, off.hi, pv, cb, &read) */
+    lb_t *s = LB(A32(0));
+    uint64_t off = (uint64_t)A32(2) << 32 | A32(1);
+    uint32_t cb = A32(4), n = 0;
+    if (A32(5)) MEM32(A32(5)) = 0;
+    if (s && off < s->size) {
+        uint64_t avail = s->size - off;
+        n = cb < avail ? cb : (uint32_t)avail;
+        if (n && A32(3)) memcpy(hle_ptr(A32(3)), s->buf + (size_t)off, n);
+    }
+    if (A32(5)) MEM32(A32(5)) = n;
+    RET(n < cb ? S_FALSE : S_OK, 6);
+}
+static void lb_WriteAt(void) {                      /* (this, off.lo, off.hi, pv, cb, &written) */
+    lb_t *s = LB(A32(0));
+    uint64_t off = (uint64_t)A32(2) << 32 | A32(1);
+    uint32_t cb = A32(4), n = cb;
+    if (A32(5)) MEM32(A32(5)) = 0;
+    if (!s) { RET(STG_E_INVALIDPOINTER, 6); }
+    if (off > 0xFFFFFFFFull || off + cb > 0xFFFFFFFEull) { RET(STG_E_INVALIDFUNCTION, 6); }
+    if (off + cb > s->cap) {
+        uint32_t cap = (uint32_t)(off + cb);
+            uint8_t *b = (uint8_t *)hle_heap_realloc(s->buf, cap, 1);
+            if (!b) RET(0x80030070u /* STG_E_MEDIUMFULL */, 6);
+        s->buf = b, s->cap = cap;
+    }
+    if (n && A32(3)) memcpy(s->buf + (size_t)off, hle_ptr(A32(3)), n);
+    if (off + cb > s->size) s->size = (uint32_t)(off + cb);
+    if (A32(5)) MEM32(A32(5)) = n;
+    RET(S_OK, 6);
+}
+static void lb_Flush(void) { RET(S_OK, 1); }
+static void lb_SetSize(void) {                      /* (this, cb.lo, cb.hi) */
+    lb_t *s = LB(A32(0));
+    if (!s || A32(2)) { RET(E_INVALIDARG, 3); }
+    if (A32(1) > s->cap) {
+        uint8_t *b = (uint8_t *)hle_heap_realloc(s->buf, A32(1), 1);
+        if (!b) RET(0x80030070u /* STG_E_MEDIUMFULL */, 3);
+        s->buf = b, s->cap = A32(1);
+    }
+    s->size = A32(1);
+    RET(S_OK, 3);
+}
+static void lb_no_lock(void) { RET(STG_E_INVALIDFUNCTION, 6); }  /* LockRegion/UnlockRegion */
+static void lb_Stat(void) {                         /* (this, STATSTG, flag) */
+    lb_t *s = LB(A32(0));
+    uint32_t st = A32(1);
+    if (!st) { RET(E_POINTER, 3); }
+    memset(hle_ptr(st), 0, 72);
+    MEM32(st + 4) = 3u;                              /* STGTY_LOCKBYTES */
+    MEM32(st + 8) = s ? s->size : 0;
+    MEM32(st + 12) = 0;
+    MEM32(st + 40) = STGM_READWRITE;                 /* grfMode */
+    MEM32(st + 44) = 0;                              /* no region locking */
+    RET(S_OK, 3);
+}
+static uint32_t lockbytes_vtable(void) {
+    static uint32_t vt;
+    static const win32hle_shim methods[] = {
+        { "ILockBytes::QueryInterface", lb_QueryInterface },
+        { "ILockBytes::AddRef", lb_AddRef }, { "ILockBytes::Release", lb_Release },
+        { "ILockBytes::ReadAt", lb_ReadAt }, { "ILockBytes::WriteAt", lb_WriteAt },
+        { "ILockBytes::Flush", lb_Flush }, { "ILockBytes::SetSize", lb_SetSize },
+        { "ILockBytes::LockRegion", lb_no_lock }, { "ILockBytes::UnlockRegion", lb_no_lock },
+        { "ILockBytes::Stat", lb_Stat }, { 0, 0 }
+    };
+    if (!vt) vt = hle_com_vtable(methods);
+    return vt;
+}
+static void o_CreateILockBytesOnHGlobal(void) {     /* (hglobal, delete_on_release, &out) */
+    uint32_t out = A32(2), hg = A32(0), st_va, obj;
+    if (!out) { RET(E_INVALIDARG, 3); }
+    MEM32(out) = 0;
+    st_va = hle_va(hle_alloc(sizeof(lb_t)));   /* 20 bytes: buf, size, cap, hglobal, del */
+    lb_t *s = (lb_t *)hle_ptr(st_va);
+    if (hg) {
+        uint32_t szva = hle_resolve("GlobalSize");
+        uint8_t *p = (uint8_t *)hle_ptr(hg);
+        s->buf = p, s->hglobal = hg;
+        s->size = s->cap = szva ? hle_call_guest(szva, 1, &hg) : 0;
+    } else {
+        s->buf = (uint8_t *)hle_alloc(1);            /* empty byte array */
+        s->size = s->cap = 0;
+    }
+    s->del = A32(1) ? 1u : 0u;
+    obj = hle_com_new(lockbytes_vtable(), 12);
+    MEM32(obj + 8) = st_va;
+    MEM32(out) = obj;
+    RET(S_OK, 3);
+}
+
+/* ---- IBindCtx ----
+ * Wine's bind context keeps a table of bound objects and named parameters.
+ * We keep the same two notions (bound object / named parameter) in a fixed
+ * table in guest memory; BIND_OPTS is BIND_OPTS3-sized (32 bytes) as in Wine's
+ * CreateBindCtx. Nothing is fabricated: an unknown key is E_FAIL, an
+ * unsupported interface is E_NOINTERFACE, and enumeration is E_NOTIMPL. */
+#define BC_MAX 24
+typedef struct { uint32_t ref, opts[8], n; struct { uint32_t obj, key; } e[BC_MAX]; } bc_t;
+#define BC(self) ((bc_t *)hle_ptr(MEM32((self) + 8)))
+
+static void bc_QueryInterface(void) {
+    uint32_t d1 = iid_data1(A32(1)), out = A32(2);
+    if (!out) { RET(E_POINTER, 3); }
+    MEM32(out) = 0;
+    if (d1 == 0 || d1 == 0x0Eu) {                    /* IUnknown / IBindCtx */
+        MEM32(out) = A32(0);
+        MEM32(A32(0) + 4)++;
+        RET(S_OK, 3);
+    }
+    RET(E_NOINTERFACE, 3);
+}
+static void bc_AddRef(void) { RET(++MEM32(A32(0) + 4), 1); }
+static void bc_Release(void) {
+    uint32_t self = A32(0), n = --MEM32(self + 4);
+    if (!n) {
+        bc_t *c = BC(self);
+        if (c) {
+            for (uint32_t i = 0; i < c->n; i++) {
+                if (c->e[i].obj) com_vcall(c->e[i].obj, 2, 0, NULL);   /* Release */
+                if (c->e[i].key) hle_free(hle_ptr(c->e[i].key));
+            }
+            hle_free(hle_ptr(MEM32(self + 8)));
+        }
+        hle_com_free(self);
+    }
+    RET(n, 1);
+}
+static void bc_RegisterObjectBound(void) {          /* (this, punk) */
+    bc_t *c = BC(A32(0));
+    if (!A32(1)) { RET(S_OK, 2); }
+    if (c && c->n < BC_MAX) {
+        c->e[c->n].obj = A32(1), c->e[c->n++].key = 0;
+        com_vcall(A32(1), 1, 0, NULL);               /* AddRef */
+        RET(S_OK, 2);
+    }
+    RET(0x8007000Eu /* E_OUTOFMEMORY */, 2);
+}
+static void bc_RevokeObjectBound(void) {
+    bc_t *c = BC(A32(0));
+    if (!A32(1)) { RET(E_INVALIDARG, 2); }
+    if (c) for (uint32_t i = 0; i < c->n; i++) if (c->e[i].obj == A32(1) && !c->e[i].key) {
+        com_vcall(A32(1), 2, 0, NULL);
+        for (uint32_t j = i; j + 1 < c->n; j++) c->e[j] = c->e[j + 1];
+        c->n--;
+        RET(S_OK, 2);
+    }
+    RET(MK_E_NOTBOUND, 2);
+}
+static void bc_ReleaseBoundObjects(void) {
+    bc_t *c = BC(A32(0));
+    if (c) {
+        for (uint32_t i = 0; i < c->n; i++) {
+            if (c->e[i].obj) com_vcall(c->e[i].obj, 2, 0, NULL);
+            if (c->e[i].key) hle_free(hle_ptr(c->e[i].key));
+        }
+        c->n = 0;
+    }
+    RET(S_OK, 1);
+}
+static void bc_SetBindOptions(void) {               /* (this, BIND_OPTS*) */
+    bc_t *c = BC(A32(0));
+    uint32_t p = A32(1), cb;
+    if (!p) { RET(E_POINTER, 2); }
+    cb = MEM32(p);
+    if (cb > 32) { RET(E_INVALIDARG, 2); }
+    if (c) for (uint32_t i = 0; i < cb; i++) ((uint8_t *)c->opts)[i] = (uint8_t)MEM8(p + i);
+    RET(S_OK, 2);
+}
+static void bc_GetBindOptions(void) {
+    bc_t *c = BC(A32(0));
+    uint32_t p = A32(1), cb;
+    if (!p) { RET(E_POINTER, 2); }
+    cb = MEM32(p);
+    if (cb > 32) cb = 32;
+    if (c) for (uint32_t i = 0; i < cb; i++) MEM8(p + i) = ((uint8_t *)c->opts)[i];
+    MEM32(p) = cb;
+    RET(S_OK, 2);
+}
+static void bc_GetRunningObjectTable(void) {
+    if (A32(1)) MEM32(A32(1)) = 0;
+    RET(E_NOTIMPL, 2);
+}
+static void bc_RegisterObjectParam(void) {          /* (this, wide key, punk) */
+    bc_t *c = BC(A32(0));
+    if (!A32(2)) { RET(E_INVALIDARG, 3); }
+    if (c) {
+        for (uint32_t i = 0; i < c->n; i++) if (c->e[i].key && wstr_eq(c->e[i].key, A32(1))) {
+            if (c->e[i].obj) com_vcall(c->e[i].obj, 2, 0, NULL);
+            c->e[i].obj = A32(2);
+            com_vcall(A32(2), 1, 0, NULL);
+            RET(S_OK, 3);
+        }
+        if (c->n < BC_MAX) {
+            c->e[c->n].key = wstr_dup(A32(1));
+            c->e[c->n].obj = A32(2);
+            c->n++;
+            com_vcall(A32(2), 1, 0, NULL);
+            RET(S_OK, 3);
+        }
+    }
+    RET(0x8007000Eu /* E_OUTOFMEMORY */, 3);
+}
+static void bc_GetObjectParam(void) {               /* (this, wide key, &punk) */
+    bc_t *c = BC(A32(0));
+    if (!A32(2)) { RET(E_POINTER, 3); }
+    MEM32(A32(2)) = 0;
+    if (c) for (uint32_t i = 0; i < c->n; i++) if (c->e[i].key && wstr_eq(c->e[i].key, A32(1))) {
+        com_vcall(c->e[i].obj, 1, 0, NULL);
+        MEM32(A32(2)) = c->e[i].obj;
+        RET(S_OK, 3);
+    }
+    RET(E_FAIL, 3);
+}
+static void bc_EnumObjectParam(void) {              /* E_NOTIMPL in native OLE too (Wine) */
+    if (A32(1)) MEM32(A32(1)) = 0;
+    RET(E_NOTIMPL, 2);
+}
+static void bc_RevokeObjectParam(void) {
+    bc_t *c = BC(A32(0));
+    if (c) for (uint32_t i = 0; i < c->n; i++) if (c->e[i].key && wstr_eq(c->e[i].key, A32(1))) {
+        if (c->e[i].obj) com_vcall(c->e[i].obj, 2, 0, NULL);
+        hle_free(hle_ptr(c->e[i].key));
+        for (uint32_t j = i; j + 1 < c->n; j++) c->e[j] = c->e[j + 1];
+        c->n--;
+        RET(S_OK, 2);
+    }
+    RET(E_FAIL, 2);
+}
+static uint32_t bindctx_vtable(void) {
+    static uint32_t vt;
+    static const win32hle_shim methods[] = {
+        { "IBindCtx::QueryInterface", bc_QueryInterface },
+        { "IBindCtx::AddRef", bc_AddRef }, { "IBindCtx::Release", bc_Release },
+        { "IBindCtx::RegisterObjectBound", bc_RegisterObjectBound },
+        { "IBindCtx::RevokeObjectBound", bc_RevokeObjectBound },
+        { "IBindCtx::ReleaseBoundObjects", bc_ReleaseBoundObjects },
+        { "IBindCtx::SetBindOptions", bc_SetBindOptions },
+        { "IBindCtx::GetBindOptions", bc_GetBindOptions },
+        { "IBindCtx::GetRunningObjectTable", bc_GetRunningObjectTable },
+        { "IBindCtx::RegisterObjectParam", bc_RegisterObjectParam },
+        { "IBindCtx::GetObjectParam", bc_GetObjectParam },
+        { "IBindCtx::EnumObjectParam", bc_EnumObjectParam },
+        { "IBindCtx::RevokeObjectParam", bc_RevokeObjectParam }, { 0, 0 }
+    };
+    if (!vt) vt = hle_com_vtable(methods);
+    return vt;
+}
+static void o_CreateBindCtx(void) {                 /* (reserved, &out) */
+    uint32_t out = A32(1), st_va, obj;
+    if (!out) { RET(E_INVALIDARG, 2); }             /* Wine: E_INVALIDARG, not E_POINTER */
+    MEM32(out) = 0;
+    if (A32(0)) { RET(E_INVALIDARG, 2); }
+    st_va = hle_va(hle_alloc(sizeof(bc_t)));
+    bc_t *c = (bc_t *)hle_ptr(st_va);
+    c->opts[0] = 32;                                /* cbStruct (BIND_OPTS3) */
+    c->opts[1] = 0;                                 /* grfFlags */
+    c->opts[2] = STGM_READWRITE;                    /* grfMode */
+    c->opts[5] = CLSCTX_SERVER;                     /* dwClassContext */
+    c->opts[6] = 0x409u;                            /* LOCALE_USER_DEFAULT */
+    obj = hle_com_new(bindctx_vtable(), 12);
+    MEM32(obj + 8) = st_va;
+    MEM32(out) = obj;
+    RET(S_OK, 2);
+}
+
+/* No icons in a headless host. Windows returns NULL when no class icon can
+ * be found; Wine and ReactOS do the same in ole2stubs.c. */
+static void o_OleGetIconOfClass(void) { (void)A32(0); (void)A32(1); (void)A32(2); RET(0, 3); }
+
 const win32hle_shim win32hle_ole32[] = {
     { "CoCreateGuid",          o_CoCreateGuid },
     { "CoCreateInstance",      o_CoCreateInstance },
@@ -600,6 +959,9 @@ const win32hle_shim win32hle_ole32[] = {
     { "CoTaskMemRealloc",      o_CoTaskMemRealloc },
     { "CoTaskMemFree",         o_CoTaskMemFree },
     { "CreateStreamOnHGlobal", o_CreateStreamOnHGlobal },
+    { "CreateBindCtx",            o_CreateBindCtx },
+    { "CreateILockBytesOnHGlobal", o_CreateILockBytesOnHGlobal },
+    { "OleGetIconOfClass",        o_OleGetIconOfClass },
     { "OleInitialize",         o_OleInitialize },
     { "OleUninitialize",       o_OleUninitialize },
     { "CoInitialize",          o_CoInitialize }, { "CoInitializeEx", o_CoInitializeEx },

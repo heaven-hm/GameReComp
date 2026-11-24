@@ -1434,6 +1434,18 @@ static void il_ReplaceIcon(void) {
     if (idx < 0) idx = e->count++;
     RET((uint32_t)idx, 3);
 }
+/* ImageList_Replace(himl, i, hbmImage, hbmMask) -> BOOL. ReactOS's
+ * comctl32/imagelist.c refuses an invalid handle, an index outside the list
+ * and a bitmap GetObject fails on; a successful replace returns TRUE. This
+ * host's image lists track geometry and count, not pixels, so the bitmap
+ * handles are checked for non-NULL but no pixels are copied. See
+ * docs/MAXCOMP_B_PROVENANCE.md. */
+static void il_Replace(void) {
+    il_entry_t *e = il_find(A32(0));
+    int idx = (int)A32(1);
+    if (!e || idx < 0 || idx >= e->count || !A32(2)) { RET(0, 4); }
+    RET(1, 4);
+}
 static void il_GetImageCount(void) {
     il_entry_t *e = il_find(A32(0));
     RET(e ? (uint32_t)e->count : 0u, 1);
@@ -1506,6 +1518,7 @@ const win32hle_shim win32hle_advapi32[] = {
     { "InitCommonControlsEx", c_InitCommonControlsEx }, { "DllGetVersion", c_DllGetVersion },
     { "ImageList_Create", il_Create }, { "ImageList_Destroy", il_Destroy },
     { "ImageList_Add", il_Add }, { "ImageList_ReplaceIcon", il_ReplaceIcon },
+    { "ImageList_Replace", il_Replace },
     { "ImageList_GetImageCount", il_GetImageCount }, { "ImageList_GetIconSize", il_GetIconSize },
     { "ImageList_SetIconSize", il_SetIconSize }, { "ImageList_GetBkColor", il_GetBkColor },
     { "ImageList_SetBkColor", il_SetBkColor }, { "ImageList_Draw", il_Draw },
