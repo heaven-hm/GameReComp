@@ -334,6 +334,32 @@ int main(void) {
         if (f->out) mcall("IDirectDrawSurface::Release", f->out, 1, one);
     }
 
+    /* DDSCAPS_ZBUFFER (0x20000, from the MIT-licensed igi-recomp shim) is an
+     * attached depth surface; IGI asks for it in the same GetAttachedSurface
+     * caps word as the back buffer. */
+    memset(f->desc2, 0, sizeof f->desc2);
+    f->desc2[0] = 128;
+    f->desc2[1] = DDSD_CAPS;
+    f->desc2[27] = 0x20000u;                   /* DDSCAPS_ZBUFFER */
+    f->out = 0;
+    {
+        uint32_t a[3] = { hle_va(f->desc2), hle_va(&f->out), 0 };
+        f->rc_create_surface = vcall(f->dd7, 6, 4, a);
+    }
+    ok("CreateSurface(DDSCAPS_ZBUFFER) -> DD_OK",
+       f->rc_create_surface == DD_OK && f->out != 0);
+    if (f->out) {
+        f->want_back = 0x20004u;               /* back buffer + depth buffer */
+        f->out = 0;
+        {
+            uint32_t a[2] = { hle_va(&f->want_back), hle_va(&f->out) };
+            f->rc_attach = mcall("IDirectDrawSurface::GetAttachedSurface", f->primary, 3, a);
+        }
+        ok("depth buffer attached to the primary", f->rc_attach == DD_OK && f->out != 0);
+        uint32_t one[1] = { 0 };
+        if (f->out) mcall("IDirectDrawSurface::Release", f->out, 1, one);
+    }
+
     /* The legacy DDSURFACEDESC (108-byte) shape must still work. */
     memset(f->desc1, 0, sizeof f->desc1);
     f->desc1[0]  = 108;

@@ -6,14 +6,16 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-24T00:07:47Z by `python -m tools.gamesdb`. Measured 120; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-24T01:10:13Z by `python -m tools.gamesdb`. Measured 122; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
-Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process launched and exited 0; no oracle supplied.
+Best measured result: **arith-calc-cli-oracle** (arith-calc.exe) at 100/100, scenario-pass: process-level oracle matched (Wine original, CLI scenario).
 
 ## Measured by this repository
 
 | Game | Filename | Arch | OS | PASS /100 | Status | Evidence |
 | --- | --- | --- | --- | ---: | --- | --- |
+| arith-calc-cli-oracle | arith-calc.exe | i386 (PE32) | Windows | 100 | scenario-pass: process-level oracle matched (Wine original, CLI scenario) | reports/acceptance/arith-calc-oracle-pass.md |
+| base64-cli-oracle | base64.exe | i386 (PE32) | Windows | 100 | scenario-pass: process-level oracle matched (Wine original, CLI scenario) | reports/acceptance/base64-oracle-pass.md |
 | BusyBox | busybox-w32.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/busybox_w32/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | DoConfig.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/DoConfig/reports/report.html (host: Darwin arm64 (host build)) |
 | Cave Story | Doukutsu.exe | i386 (PE32) | Windows | 93 | partial: process launched and stayed alive until the 10s timeout; no crash observed, no oracle | projects/Doukutsu/reports/report.html (host: Darwin arm64 (host build)) |

@@ -43,6 +43,8 @@
 #define DDSD_PIXELFORMAT 0x00001000u
 #define DDSD_CKSRCBLT    0x00010000u
 #define DDSD_REFRESHRATE 0x00040000u
+#define DDSCAPS_ZBUFFER        0x00020000u
+#define DDPF_ZBUFFER           0x00000400u
 #define DDSCAPS_BACKBUFFER     0x00000004u
 #define DDSCAPS_COMPLEX        0x00000008u
 #define DDSCAPS_FLIP           0x00000010u
@@ -80,6 +82,7 @@ typedef struct surf {
     uint32_t caps;
     int primary, locks;
     struct surf *back;                   /* the flip chain's next */
+    struct surf *zbuf;                   /* attached depth buffer (igi-recomp model) */
     struct surf *mip;                    /* the texture's next mip level */
     uint32_t mipcount;                   /* levels in the chain from here down, itself included */
     uint32_t palette, clipper;
@@ -371,6 +374,13 @@ static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDES
     int w = (primary || !(fl & DDSD_WIDTH)) ? g_mode_w : (int)MEM32(d + 12);
     int h = (primary || !(fl & DDSD_HEIGHT)) ? g_mode_h : (int)MEM32(d + 8);
     int bpp = !primary && (fl & DDSD_PIXELFORMAT) ? (int)MEM32(d + sh.pf + 12) : g_mode_bpp;
+    /* DDSCAPS_ZBUFFER: a real depth surface. Behaviour ported from the
+     * MIT-licensed igi-recomp shim (Copyright (c) 2026 HenryKun55),
+     * shim/src/ddraw.c: CreateSurface. */
+    if (!primary && (caps & DDSCAPS_ZBUFFER)) {
+        int zbits = (fl & DDSD_PIXELFORMAT) ? (int)MEM32(d + sh.pf + 12) : (int)MEM32(d + 20);
+        bpp = zbits ? zbits : 16;
+    }
     if (w <= 0 || h <= 0 || w > 8192 || h > 8192) {
         fprintf(stderr, "[ddraw] CreateSurface %dx%d flags=0x%X caps=0x%X size=%u: "
                         "DDERR_INVALIDPARAMS\n", w, h, fl, caps, MEM32(d));
@@ -396,6 +406,11 @@ static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDES
     if (!primary && !(caps & 0x1000u)) caps |= DDSCAPS_OFFSCREENPLAIN;
     uint32_t o = new_surface(w, h, bpp, primary ? caps | DDSCAPS_VISIBLE | DDSCAPS_FRONTBUFFER : caps, primary);
     surf_t *s = S(o);
+    if (!primary && (caps & DDSCAPS_ZBUFFER)) {
+        s->rmask = bpp == 16 ? 0xFFFFu : 0xFFFFFFu;  /* DDPF_ZBUFFER depth mask */
+        s->gmask = s->bmask = s->amask = 0;
+        if (g_primary) g_primary->zbuf = s;
+    }
     /* A separately created DDSCAPS_BACKBUFFER belongs to the primary's flip
      * chain. Games (IGI) create the back buffer in its own CreateSurface call
      * and then ask the primary for it with GetAttachedSurface; without this
@@ -793,9 +808,19 @@ static void sf_Flip(void) {                              /* (this, target, flags
 static void sf_GetAttachedSurface(void) {                /* (this, &caps, &out) */
     surf_t *s = S(A32(0));
     uint32_t want = A32(1) ? MEM32(A32(1)) : 0;
-    surf_t *got = (want & DDSCAPS_MIPMAP) ? s->mip
+    surf_t *got = (want & DDSCAPS_ZBUFFER) ? s->zbuf
+                : (want & DDSCAPS_MIPMAP) ? s->mip
                 : (want & DDSCAPS_BACKBUFFER) ? s->back
                 : s->back ? s->back : s->mip;
+    if (!got && (want & DDSCAPS_ZBUFFER) && s) {
+        /* Lazy depth buffer with the surface's geometry (igi-recomp model). */
+        uint32_t z = new_surface(s->w, s->h, 16,
+                                 DDSCAPS_ZBUFFER | DDSCAPS_SYSTEMMEMORY, 0);
+        s->zbuf = S(z);
+        S(z)->zbuf = s;
+        S(z)->rmask = 0xFFFFu;
+        got = S(z);
+    }
     if (trace()) fprintf(stderr, "[ddraw] GetAttachedSurface %dx%d caps=0x%X -> %dx%d\n",
                          s->w, s->h, want, got ? got->w : 0, got ? got->h : 0);
     if (!got && (want & DDSCAPS_BACKBUFFER) && s) {
