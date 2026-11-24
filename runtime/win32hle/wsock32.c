@@ -533,19 +533,44 @@ static void w_getpeername(void) {
     RET(0, 3);
 }
 
+/* FD_SET(), but returns 1 only when the socket was newly added. Winsock's
+ * select lets the three fd_set pointers alias; results are a union (Wine's
+ * add_fd_to_set), not a last-set-wins overwrite. */
+static int select_add(uint32_t set, uint32_t sock) {
+    if (!set) return 0;
+    uint32_t n = MEM32(set);
+    if (n >= 64) return 0;                       /* FD_SETSIZE */
+    for (uint32_t i = 0; i < n; i++)
+        if (MEM32(set + 4u + 4u * i) == sock) return 0;
+    MEM32(set + 4u + 4u * n) = sock;
+    MEM32(set) = n + 1;
+    return 1;
+}
 static void w_select(void) {
     uint32_t sets[3] = { A32(1), A32(2), A32(3) };
     uint32_t tv_va = A32(4);
+    /* Snapshot the input sets before touching any guest memory: the output
+     * pass clears fd_count, and two arguments may point at the same fd_set. */
+    uint32_t in[3][64];
+    unsigned cnt[3] = { 0, 0, 0 };
+    for (int s = 0; s < 3; s++) {
+        if (!sets[s]) continue;
+        cnt[s] = MEM32(sets[s]);
+        if (cnt[s] > 64) cnt[s] = 64;
+        for (unsigned i = 0; i < cnt[s]; i++) in[s][i] = MEM32(sets[s] + 4u + 4u * i);
+    }
+    unsigned total_in = cnt[0] + cnt[1] + cnt[2];
+    /* Wine's ws2_32 select (wine-10.0 socket.c:2783) returns WSAEINVAL when
+     * all three sets are empty or NULL. The old shim returned 0 at once. */
+    if (!total_in) { g_wsa_error = 10022u /* WSAEINVAL */; RET(SOCKET_ERROR, 5); }
+
     struct pollfd pfds[192];
     nfds_t np = 0;
     for (int s = 0; s < 3; s++) {
-        if (!sets[s]) continue;
-        uint32_t cnt = MEM32(sets[s]);
-        if (cnt > 64) cnt = 64;
         short ev = (s == 0) ? POLLIN : (s == 1) ? POLLOUT : POLLPRI;
-        for (uint32_t i = 0; i < cnt; i++) {
-            int fd = fd_of(MEM32(sets[s] + 4u + 4u * i));
-            if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 5); return; }
+        for (unsigned i = 0; i < cnt[s]; i++) {
+            int fd = fd_of(in[s][i]);
+            if (fd < 0) { g_wsa_error = WSAENOTSOCK; RET(SOCKET_ERROR, 5); }
             nfds_t k = 0;
             while (k < np && pfds[k].fd != fd) k++;
             if (k == np && np < 192) { pfds[np].fd = fd; pfds[np].events = 0; pfds[np].revents = 0; np++; }
@@ -559,26 +584,23 @@ static void w_select(void) {
         else if (sec > 2000000) ms = 2000000000;
         else ms = sec * 1000 + (usec + 999) / 1000;
     }
-    int rc = np > 0 ? poll(pfds, np, ms) : 0;
+    int rc = poll(pfds, np, ms);
     if (rc < 0) FAIL(5);
+
+    /* Clear every count before appending anything, as Wine does. */
+    for (int s = 0; s < 3; s++) if (sets[s]) MEM32(sets[s]) = 0;
     uint32_t total = 0;
     for (int s = 0; s < 3; s++) {
-        if (!sets[s]) continue;
-        uint32_t cnt = MEM32(sets[s]);
-        if (cnt > 64) cnt = 64;
-        uint32_t out = 0;
         short want = (s == 0) ? (POLLIN | POLLHUP | POLLERR) : (s == 1) ? (POLLOUT | POLLERR) : POLLPRI;
-        for (uint32_t i = 0; i < cnt; i++) {
-            uint32_t gsock = MEM32(sets[s] + 4u + 4u * i);
-            int fd = fd_of(gsock);
-            int hit = 0;
+        for (unsigned i = 0; i < cnt[s]; i++) {
+            int fd = fd_of(in[s][i]);
             for (nfds_t k = 0; k < np; k++) {
-                if (pfds[k].fd == fd && (pfds[k].revents & want)) { hit = 1; break; }
+                if (pfds[k].fd == fd && (pfds[k].revents & want)) {
+                    total += select_add(sets[s], in[s][i]);
+                    break;
+                }
             }
-            if (hit) MEM32(sets[s] + 4u + 4u * out++) = gsock;
         }
-        MEM32(sets[s]) = out;
-        total += out;
     }
     RET(total, 5);
 }

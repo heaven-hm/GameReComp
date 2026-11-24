@@ -102,6 +102,23 @@ Wine links, all at the pinned commit:
   `dsound_capture_selftest.c` exercises all three ordinals through guest COM
   vtables.
 
+## Winsock: `select()` on fd_set (wsock32.c)
+
+- Wine's pinned `dlls/ws2_32/socket.c:2783` (`select`) sums the three sets'
+  `fd_count`s and fails with `WSAEINVAL` when the total is zero. The previous
+  shim returned 0 immediately for empty/NULL sets.
+- Wine snapshots the read set before clearing anything because "pointers may
+  alias, so clear them all first", and appends hits with `add_fd_to_set`, i.e.
+  a socket already present is not added twice. The old shim compacted each set
+  in place, which dropped sockets needed by a later aliased set. The new shim
+  snapshots all three sets, clears all counts, then appends via `select_add`.
+- A socket handle outside the shim's SOCK_BASE range is `WSAENOTSOCK`; the
+  event mapping (read = POLLIN/HUP/ERR, write = POLLOUT/ERR, except = POLLPRI)
+  and the 64-entry FD_SETSIZE clamp are unchanged.
+- `winsock_select_selftest.c` exercises empty sets, aliased read/write sets
+  over a real loopback socket pair, the read-only case and invalid handles.
+  No Wine code was ported.
+
 ## Verification policy
 
 A C selftest linked with the complete HLE core and a targeted pytest run are
