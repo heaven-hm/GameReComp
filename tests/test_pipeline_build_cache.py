@@ -15,10 +15,13 @@ made -- the measurement is the number of compiler invocations.
 """
 from __future__ import annotations
 
+import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from tools.autorecomp import build_cache as bc
@@ -163,6 +166,154 @@ class PipelineBuildCacheTest(unittest.TestCase):
         self.assertEqual(stats["hits"], 0)
         self.assertFalse(self.objs[1].exists())
         self.assertEqual(len(list(self.cache_root.rglob("manifest.json"))), 2)
+
+
+class _FakeResource:
+    """A drop-in for the optional `resource` module with fixed high-water marks."""
+
+    RUSAGE_SELF = 0
+    RUSAGE_CHILDREN = 1
+
+    def __init__(self, self_bytes, children_bytes):
+        self.values = {self.RUSAGE_SELF: self_bytes,
+                       self.RUSAGE_CHILDREN: children_bytes}
+
+    def getrusage(self, who):
+        return SimpleNamespace(ru_maxrss=self.values[who])
+
+
+class _BrokenResource(_FakeResource):
+    def getrusage(self, who):
+        raise OSError("resource accounting unavailable")
+
+
+def _rss_scale():
+    """macOS reports ru_maxrss in bytes, Linux in KiB."""
+    return 1 if sys.platform == "darwin" else 1024
+
+
+class PipelineBuildResourcesTest(unittest.TestCase):
+    """Issue #26: build resources are measured, and the disk guard is explicit."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+
+    def test_resource_footprint_publishes_per_stage_and_build_duration(self):
+        stages = [
+            {"name": "translate", "seconds": 2.5, "data": {"source_bytes": 4096}},
+            {"name": "compile", "seconds": 7.25, "data": {"seconds": 7.0}},
+            {"name": "run", "seconds": 1.0, "data": {}},
+        ]
+        r = pl.resource_footprint(self.root, stages, None)
+        self.assertEqual(r["stage_seconds"],
+                         {"translate": 2.5, "compile": 7.25, "run": 1.0})
+        self.assertEqual(r["stage_seconds_total"], 10.75)
+        self.assertEqual(r["build_seconds"], 7.25)
+
+        skipped = [{"name": "compile", "seconds": 0.0,
+                    "data": {"skipped": True}}]
+        self.assertEqual(pl.resource_footprint(self.root, skipped, None)
+                         ["build_seconds"], 0.0)
+
+    def test_peak_rss_measures_children_and_normalises_units(self):
+        fake = _FakeResource(self_bytes=1024, children_bytes=2048)
+        with patch.object(pl, "_resource", fake):
+            r = pl.resource_footprint(self.root, [], None)
+        scale = _rss_scale()
+        self.assertEqual(r["peak_rss_bytes_self"], 1024 * scale)
+        self.assertEqual(r["peak_rss_bytes_children"], 2048 * scale)
+        # The children are the build's real memory cost, and win over self.
+        self.assertEqual(r["peak_rss_bytes"], 2048 * scale)
+
+    def test_peak_rss_measurement_failure_is_absent_not_zero(self):
+        with patch.object(pl, "_resource", _BrokenResource(0, 0)):
+            r = pl.resource_footprint(self.root, [], None)
+        for key in ("peak_rss_bytes", "peak_rss_bytes_self",
+                    "peak_rss_bytes_children"):
+            self.assertIsNone(r[key])
+        with patch.object(pl, "_resource", None):
+            r = pl.resource_footprint(self.root, [], None)
+        self.assertIsNone(r["peak_rss_bytes"])
+
+    def test_stage_records_carry_peak_rss(self):
+        pipeline = SimpleNamespace(stages=[], stage_status={}, _emit=lambda **_kw: None)
+        with patch.object(pl, "_resource", _FakeResource(1024, 2048)):
+            with pl._StageRun(pipeline, "compile") as stage:
+                stage.message, stage.data = "ok", {}
+        self.assertEqual(len(pipeline.stages), 1)
+        self.assertEqual(pipeline.stages[0]["peak_rss_bytes"], 2048 * _rss_scale())
+
+    def test_disk_guard_is_opt_in(self):
+        with patch.dict(os.environ, {pl.DISK_GUARD_ENV: ""}):
+            pipeline = pl.Pipeline("fake.exe", project_dir=self.root)
+            # With the guard off, not even a disk query happens.
+            with patch.object(pl.shutil, "disk_usage",
+                              side_effect=AssertionError("must not query")):
+                self.assertIsNone(pipeline._guard_build_disk())
+        self.assertEqual(pl.min_free_disk_bytes(""), 0)
+        self.assertEqual(pl.min_free_disk_bytes("not-a-number"), 0)
+        guard = pl.check_build_disk_space(self.root, 0)
+        self.assertTrue(guard["ok"])
+        self.assertIn("disabled", guard["diagnostic"])
+
+    def test_low_disk_produces_diagnostic_and_refuses_before_deleting(self):
+        usage = SimpleNamespace(total=10_000, free=100)
+        with patch.object(pl.shutil, "disk_usage", return_value=usage):
+            guard = pl.check_build_disk_space(self.root, 1000)
+        self.assertFalse(guard["ok"])
+        self.assertEqual(guard["free_bytes"], 100)
+        self.assertIn("DISK GUARD", guard["diagnostic"])
+        self.assertIn("truncated", guard["diagnostic"])
+
+        pipeline = pl.Pipeline("fake.exe", project_dir=self.root,
+                               min_free_disk_bytes=1000)
+        with patch.object(pl.shutil, "disk_usage", return_value=usage):
+            with self.assertRaises(pl.StageFailure) as ctx:
+                pipeline.stage_compile()
+        self.assertIn("DISK GUARD", str(ctx.exception))
+        self.assertFalse(ctx.exception.data["disk_guard"]["ok"])
+        self.assertEqual(pipeline.disk_guard["free_bytes"], 100)
+
+        # The translate guard runs before the old generated tree is removed.
+        sentinel = self.root / "src" / "recomp" / "gen" / "keep.c"
+        sentinel.parent.mkdir(parents=True)
+        sentinel.write_text("keep me")
+        with patch.object(pl.shutil, "disk_usage", return_value=usage):
+            with self.assertRaises(pl.StageFailure):
+                pipeline.stage_translate()
+        self.assertEqual(sentinel.read_text(), "keep me")
+
+    def test_disk_measurement_error_fails_closed(self):
+        with patch.object(pl.shutil, "disk_usage",
+                          side_effect=OSError("no such volume")):
+            guard = pl.check_build_disk_space(self.root, 1000)
+        self.assertFalse(guard["ok"])
+        self.assertIsNone(guard["free_bytes"])
+        self.assertIn("cannot measure", guard["diagnostic"])
+
+        pipeline = pl.Pipeline("fake.exe", project_dir=self.root,
+                               min_free_disk_bytes=1000)
+        with patch.object(pl.shutil, "disk_usage",
+                          side_effect=OSError("no such volume")):
+            with self.assertRaises(pl.StageFailure):
+                pipeline.stage_compile()
+        self.assertFalse(pipeline.disk_guard["ok"])
+
+    def test_report_publishes_resources_and_guard(self):
+        pipeline = pl.Pipeline("fake.exe", project_dir=self.root)
+        pipeline.stages = [{"name": "compile", "seconds": 3.0, "status": "ok",
+                            "message": "built", "data": {}, "peak_rss_bytes": 123}]
+        pipeline.disk_guard = pl.check_build_disk_space(self.root, 1000)
+        pipeline.stage_report()
+        report = json.loads((self.root / "reports" / "report.json").read_text())
+        self.assertEqual(report["resources"]["build_seconds"], 3.0)
+        self.assertEqual(report["resources"]["stage_seconds"], {"compile": 3.0})
+        self.assertEqual(report["disk_guard"]["min_free_bytes"], 1000)
+        html = (self.root / "reports" / "report.html").read_text()
+        self.assertIn("Measured resources", html)
+        self.assertIn("DISK GUARD", html)
 
 
 if __name__ == "__main__":

@@ -40,6 +40,108 @@ from . import projectgen  # noqa: E402
 from .lift_cache import (LiftCache, enabled as lift_cache_enabled,  # noqa: E402
                          fingerprint as lift_cache_fingerprint)
 
+# Resource accounting for the report (issue #26). POSIX-only, like the rest of
+# this host-side pipeline; the import is optional so importing the module never
+# fails on a platform without `resource`. Tests monkeypatch `_resource`.
+try:
+    import resource as _resource
+except ImportError:                                  # pragma: no cover - non-POSIX
+    _resource = None
+
+
+def _rusage_domain(name):
+    """A rusage domain constant, or None when the platform has no `resource`."""
+    return getattr(_resource, name, None) if _resource is not None else None
+
+
+def peak_rss_bytes(who=None):
+    """Peak resident set size in bytes for a rusage domain, or None.
+
+    ``RUSAGE_SELF`` is the orchestrator, ``RUSAGE_CHILDREN`` the compiler and
+    linker processes the pipeline spawns -- the memory that actually scales
+    with a large build. macOS reports ``ru_maxrss`` in bytes, Linux in KiB;
+    both are normalised to bytes here. Any measurement failure returns None
+    (an absent measurement is never presented as a zero/estimated value).
+    """
+    if _resource is None:
+        return None
+    if who is None:
+        who = _rusage_domain("RUSAGE_SELF")
+    try:
+        raw = int(_resource.getrusage(who).ru_maxrss)
+    except (AttributeError, ValueError, OSError, TypeError):
+        return None
+    return raw if sys.platform == "darwin" else raw * 1024
+
+
+# Disk guard. A build on a nearly-full volume produces a truncated project and
+# a misleading report; the guard makes the refusal explicit. It is opt-in via
+# RECOMP_MIN_FREE_DISK_BYTES (0/unset = off), so ordinary runs are unchanged and
+# no guest behaviour is affected -- only host-side preflight.
+DISK_GUARD_ENV = "RECOMP_MIN_FREE_DISK_BYTES"
+
+
+def _format_bytes(n):
+    """Human-readable byte count for diagnostics only."""
+    n = int(n)
+    if abs(n) >= (1 << 30):
+        return f"{n / (1 << 30):.2f} GiB"
+    if abs(n) >= (1 << 20):
+        return f"{n / (1 << 20):.1f} MiB"
+    return f"{n} B"
+
+
+def min_free_disk_bytes(value=None):
+    """Parse the opt-in threshold; 0 (including unset/invalid) disables it."""
+    if value is None:
+        value = os.environ.get(DISK_GUARD_ENV)
+    if value is None or value == "":
+        return 0
+    try:
+        return max(0, int(str(value).strip()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def check_build_disk_space(path, min_free_bytes=None):
+    """Measure free disk on the volume holding *path*; never estimate it.
+
+    Returns a JSON-serialisable dict with an explicit ``diagnostic``. ``ok``
+    is True only when a real measurement succeeded and ``free >= minimum``.
+    Measurement errors fail closed, so a build never starts without a known
+    good reading. The returned dict is safe to put straight in report.json.
+    """
+    required = min_free_disk_bytes(min_free_bytes)
+    result = {
+        "path": str(path),
+        "total_bytes": None,
+        "free_bytes": None,
+        "min_free_bytes": required,
+        "ok": required <= 0,
+    }
+    if required <= 0:
+        result["diagnostic"] = "DISK GUARD: disabled (no minimum free space set)"
+        return result
+    try:
+        usage = shutil.disk_usage(str(path))
+    except OSError as exc:
+        result["error"] = f"{type(exc).__name__}: {exc}"
+        result["diagnostic"] = (
+            f"DISK GUARD: cannot measure free space on {path} "
+            f"({result['error']}); refusing to build -- a truncated project "
+            f"is not an acceptable result.")
+        return result
+    free = int(usage.free)
+    ok = free >= required
+    result.update(total_bytes=int(usage.total), free_bytes=free, ok=ok)
+    result["diagnostic"] = (
+        f"DISK GUARD: {'only ' if not ok else ''}{_format_bytes(free)} free on "
+        f"{path} (minimum {_format_bytes(required)}); "
+        + ("refusing to build -- output would be silently truncated."
+           if not ok else "free-space check passed."))
+    return result
+
+
 STAGES = ["inspect", "recover", "translate", "project", "compile",
           "run", "verify", "report"]
 
@@ -182,13 +284,27 @@ def resource_footprint(project_dir: Path, stages: list, binary: Path | None) -> 
     Every value is observed, never estimated: generated C bytes come from the
     translate stage, binary bytes from the compiled file, project disk bytes
     from a walk of the project tree, and peak RSS from the host's resource
-    accounting. macOS reports ru_maxrss in bytes, Linux in KiB; both are
-    normalised to bytes here.
+    accounting (the compiler children as well as the orchestrator, since that
+    is the memory that scales with a build). Per-stage durations and the
+    compile-stage duration are published alongside the total so a slow stage
+    can be identified without re-parsing the raw stage records.
     """
     generated = 0
+    stage_seconds = {}
+    stage_rss = {}
+    build_seconds = 0.0
     for stage in stages:
-        if stage.get("name") == "translate":
+        name = stage.get("name")
+        seconds = float(stage.get("seconds") or 0)
+        if name:
+            stage_seconds[name] = round(seconds, 2)
+            rss = stage.get("peak_rss_bytes")
+            if rss is not None:
+                stage_rss[name] = int(rss)
+        if name == "translate":
             generated = int((stage.get("data") or {}).get("source_bytes", 0))
+        if name == "compile" and not (stage.get("data") or {}).get("skipped"):
+            build_seconds = seconds
     disk = 0
     try:
         for path in project_dir.rglob("*"):
@@ -196,19 +312,20 @@ def resource_footprint(project_dir: Path, stages: list, binary: Path | None) -> 
                 disk += path.stat().st_size
     except (OSError, ValueError):
         pass
-    peak_rss = None
-    try:
-        import resource  # POSIX; the pipeline already targets macOS/Linux
-        raw = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-        peak_rss = raw if sys.platform == "darwin" else raw * 1024
-    except (ImportError, ValueError, OSError):
-        pass
+    self_rss = peak_rss_bytes(_rusage_domain("RUSAGE_SELF"))
+    children_rss = peak_rss_bytes(_rusage_domain("RUSAGE_CHILDREN"))
+    observed = [v for v in (self_rss, children_rss) if v is not None]
     return {
         "generated_source_bytes": generated,
         "binary_bytes": int(binary.stat().st_size) if binary and binary.exists() else 0,
         "project_disk_bytes": disk,
-        "peak_rss_bytes": peak_rss,
+        "peak_rss_bytes": max(observed) if observed else None,
+        "peak_rss_bytes_self": self_rss,
+        "peak_rss_bytes_children": children_rss,
+        "stage_seconds": stage_seconds,
         "stage_seconds_total": round(sum(float(s.get("seconds") or 0) for s in stages), 2),
+        "stage_peak_rss_bytes": stage_rss,
+        "build_seconds": round(build_seconds, 2),
     }
 
 CATEGORIES = ("HIGH_LEVEL_VERIFIED", "HIGH_LEVEL_UNVERIFIED",
@@ -374,7 +491,8 @@ class Pipeline:
     def __init__(self, pe_path, project_dir=None, assets_dir=None,
                  timeout=30.0, headless=True, oracle=None, jobs=None,
                  split=1000, build=True, run_binary=True, on_event=None,
-                 split_bytes=MAX_UNIT_BYTES, build_timeout=None,
+                 min_free_disk_bytes=None, split_bytes=MAX_UNIT_BYTES,
+                 build_timeout=None,
                  reuse_build=False, fresh_build=False, import_trace=False,
                  highlevel_dir=None, target=None):
         self.pe_path = Path(pe_path).expanduser().resolve()
@@ -393,6 +511,10 @@ class Pipeline:
         self.fresh_build = fresh_build
         self.import_trace = import_trace
         self.target = target
+        # Opt-in disk guard (None = read DISK_GUARD_ENV at stage time). The
+        # last measured guard is kept so the report can publish its diagnostic.
+        self.min_free_disk_bytes = min_free_disk_bytes
+        self.disk_guard = None
         # Where the typed replacements live. None means the default
         # highlevel/ directory, which is empty in a fresh checkout.
         self.highlevel_dir = highlevel_dir
@@ -427,6 +549,28 @@ class Pipeline:
 
     def _stage(self, name):
         return _StageRun(self, name)
+
+    def _guard_build_disk(self):
+        """Opt-in preflight: a full volume yields a diagnostic, not truncation.
+
+        Called before the stages that write large trees (translate, compile).
+        With the guard off this is a no-op and touches no filesystem; a failed
+        measurement or insufficient space raises StageFailure whose data carries
+        the same explicit diagnostic the report publishes.
+        """
+        threshold = (self.min_free_disk_bytes if self.min_free_disk_bytes is not None
+                     else os.environ.get(DISK_GUARD_ENV))
+        minimum = min_free_disk_bytes(threshold)
+        if minimum <= 0:
+            return None
+        previous = self.disk_guard
+        if previous and previous.get("ok") and previous.get("min_free_bytes") == minimum:
+            return previous
+        guard = check_build_disk_space(self.project_dir, minimum)
+        self.disk_guard = guard
+        if not guard["ok"]:
+            raise StageFailure(guard["diagnostic"], {"disk_guard": guard})
+        return guard
 
     # ------------------------------------------------------------------
     # stages
@@ -580,6 +724,9 @@ class Pipeline:
         return f"{len(entries)} functions, {data['instructions']} instructions", {"count": len(entries), "instructions": data["instructions"], "cache": data['cache']}
 
     def stage_translate(self):
+        # Measure before deleting/rewriting anything: a refusal must leave the
+        # previous project intact and name the volume that failed the guard.
+        self._guard_build_disk()
         gen_dir = self.project_dir / "src" / "recomp" / "gen"
         # Re-translation must not leave stale units behind: the dispatch table
         # and recomp_funcs.h are regenerated together, but an old recomp_0007.c
@@ -829,6 +976,7 @@ class Pipeline:
     def stage_compile(self):
         if not self.do_build:
             return "build skipped (--no-build)", {"skipped": True}
+        self._guard_build_disk()
         build_dir = self.project_dir / "build"
         # A cached CMakeCache.txt pins absolute paths from whatever was
         # installed when it was written. Homebrew moving a keg (ffmpeg 9.0.2
@@ -1341,6 +1489,7 @@ class Pipeline:
             "project": str(self.project_dir),
             "stages": self.stages,
             "resources": resource_footprint(self.project_dir, self.stages, self.binary),
+            "disk_guard": self.disk_guard,
             "outcome": self.verification or {"status": "not-run", "reason": "verification did not run"},
             "score": self.score(include_report=True),
             "manifest": "manifest.json",
@@ -1445,6 +1594,25 @@ class Pipeline:
             f"<tr><td>{esc(c.get('check'))}</td><td>{esc(c.get('expected',''))}</td>"
             f"<td>{esc(c.get('actual',''))}</td><td>{'PASS' if c.get('ok') else 'FAIL'}</td></tr>"
             for c in v.get("checks", []))
+        res = report.get("resources") or {}
+        guard = report.get("disk_guard") or {}
+
+        def _rss_label(key):
+            value = res.get(key)
+            return _format_bytes(value) if value is not None else "n/a"
+
+        res_rows = "".join(
+            f"<tr><td>{esc(k)}</td><td>{esc(val)}</td></tr>"
+            for k, val in (
+                ("Generated source", _format_bytes(res.get("generated_source_bytes", 0))),
+                ("Binary", _format_bytes(res.get("binary_bytes", 0))),
+                ("Project on disk", _format_bytes(res.get("project_disk_bytes", 0))),
+                ("Peak RSS (self / children)",
+                 f"{_rss_label('peak_rss_bytes_self')} / {_rss_label('peak_rss_bytes_children')}"),
+                ("Build seconds", res.get("build_seconds", 0)),
+                ("Stage seconds total", res.get("stage_seconds_total", 0)),
+                ("Disk guard", guard.get("diagnostic") or "not enabled"),
+            ))
         return f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>autorecomp report - {esc(self.pe_path.name)}</title>
 <style>
@@ -1461,6 +1629,8 @@ Score: <strong>{report['score']}/100</strong>.
 Verification: <strong>{esc(v.get('status','not-run'))}</strong> - {esc(v.get('reason',''))}</p>
 <h2>Stages</h2>
 <table><tr><th>Stage</th><th>Status</th><th>Time</th><th>Detail</th></tr>{''.join(rows)}</table>
+<h2>Measured resources</h2>
+<table><tr><th>Metric</th><th>Observed value</th></tr>{res_rows}</table>
 <h2>Source provenance</h2>
 <table><tr><th>Category</th><th>Functions</th></tr>{cat_rows}</table>
 <p>Source digest: <code>{esc((self.manifest or {}).get('source_digest_sha256',''))}</code></p>
@@ -1484,7 +1654,15 @@ class _StageRun:
 
     def __exit__(self, exc_type, exc, tb):
         seconds = time.time() - self.t0
-        record = {"name": self.name, "seconds": round(seconds, 2)}
+        # ru_maxrss is a high-water mark over reaped children, so this is the
+        # peak observed by the end of this stage (monotonic across stages),
+        # not a per-stage allocation delta. Self is the fallback when the
+        # stage spawned no child process.
+        child_rss = peak_rss_bytes(_rusage_domain("RUSAGE_CHILDREN"))
+        self_rss = peak_rss_bytes(_rusage_domain("RUSAGE_SELF"))
+        stage_rss = child_rss if child_rss is not None else self_rss
+        record = {"name": self.name, "seconds": round(seconds, 2),
+                  "peak_rss_bytes": stage_rss}
         if exc_type is None:
             record.update(status="ok", message=self.message, data=self.data)
         elif issubclass(exc_type, StageFailure):
