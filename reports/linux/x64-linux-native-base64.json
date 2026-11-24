@@ -1,0 +1,234 @@
+{
+  "schema": 1,
+  "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+  "work": "/Users/haseeb-mir/l64-proof",
+  "pipeline": [
+    {
+      "stage": "disasm64",
+      "cmd": [
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        "-m",
+        "tools.disasm.disasm64",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+        "-o",
+        "/Users/haseeb-mir/l64-proof/base64.json",
+        "--funcs-txt",
+        "/Users/haseeb-mir/l64-proof/base64.funcs.txt"
+      ],
+      "rc": 0,
+      "stdout": "[*] base64.exe: base=0x140000000, 1 exec sections, 8,720 code bytes\n[*] seeds: pdata=48, guard_cf=0, exports=0, entry=1, reloc=8, thunk=0, funclet=1, chunks=0\n[*] functions: 81 (33 thunks)\n",
+      "stderr": "",
+      "seconds": 0.08
+    },
+    {
+      "stage": "generate64",
+      "cmd": [
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        "-m",
+        "tools.lift.generate64",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+        "/Users/haseeb-mir/l64-proof/base64.funcs.txt",
+        "/Users/haseeb-mir/l64-proof/base64-gen"
+      ],
+      "rc": 0,
+      "stdout": "[*] image base 0x140000000, entry 0x140001440, 18 sections\n[*] catalog: 81 functions\n[*] imports: 45 IAT slots\n[*] closure round 1: +10 dispatch targets not in the catalog\n[*] closure round 2: +7 dispatch targets not in the catalog\n[*] closure round 3: +2 dispatch targets not in the catalog\n[*] catalog closed after 4 rounds, 19 entries added (100 total)\n\n[*] === COMPLETE in 0s ===\n[*] image_base           0x140000000\n[*] entry_point          0x140001440\n[*] size_of_image        163840\n[*] functions            100\n[*] translation_units    1\n[*] lift_errors          0\n[*] recomp_todo_sites    3\n[*] imports              45\n",
+      "stderr": "",
+      "seconds": 0.09
+    },
+    {
+      "stage": "x64_project",
+      "cmd": [
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        "-m",
+        "tools.x64_project",
+        "--exe",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+        "--gen",
+        "/Users/haseeb-mir/l64-proof/base64-gen",
+        "--out",
+        "/Users/haseeb-mir/l64-proof/proj-base64"
+      ],
+      "rc": 0,
+      "stdout": "[*] base64_x64: 153210 guest bytes, base 0x140000000, entry 0x140001440 -> /Users/haseeb-mir/l64-proof/proj-base64\n",
+      "stderr": "",
+      "seconds": 0.09
+    },
+    {
+      "stage": "linux_matrix",
+      "cmd": [
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        "-m",
+        "tools.linux_matrix",
+        "--project",
+        "/Users/haseeb-mir/l64-proof/proj-base64",
+        "--out",
+        "/Users/haseeb-mir/l64-proof/results-base64",
+        "--original",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+        "--provision",
+        "prebuilt"
+      ],
+      "rc": 0,
+      "stdout": "base64_x64               build=      0 run=     97 elf=OK 1.5s\nsummary: /Users/haseeb-mir/l64-proof/results-base64/linux-summary.json\n",
+      "stderr": "",
+      "seconds": 1.88
+    }
+  ],
+  "verdict": "BLOCKED",
+  "linux_summary": {
+    "schema": 1,
+    "results": [
+      {
+        "project": "/Users/haseeb-mir/l64-proof/proj-base64",
+        "name": "base64_x64",
+        "image": "gamerecomp/linux-runner:local",
+        "original": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+        "resources": null,
+        "toolchain": {
+          "CMAKE": "cmake version 3.28.3",
+          "CC": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+          "PKG": "1.8.1",
+          "SDL": "2.30.0 2.22.0",
+          "UNAME": "Linux 6.8.0-117-generic"
+        },
+        "provision": "prebuilt",
+        "network": "none",
+        "build_started": true,
+        "incbin_rewritten": [],
+        "build_cmd": [
+          "docker",
+          "run",
+          "--rm",
+          "-v",
+          "/Users/haseeb-mir/l64-proof/results-base64/staging/base64_x64:/work",
+          "-w",
+          "/work",
+          "--network",
+          "none",
+          "gamerecomp/linux-runner:local",
+          "sh",
+          "-c",
+          "cmake -S /work -B /work/build -DCMAKE_BUILD_TYPE=Release > /dev/null && cmake --build /work/build -j 4"
+        ],
+        "build_rc": 0,
+        "build_log": "[ 16%] Building C object CMakeFiles/base64_x64.dir/src/main.c.o\n[ 33%] Building C object CMakeFiles/base64_x64.dir/src/guest_image.c.o\n[ 50%] Building C object CMakeFiles/base64_x64.dir/src/recomp_funcs_0000.c.o\n[ 66%] Building C object CMakeFiles/base64_x64.dir/src/recomp_dispatch.c.o\n[ 83%] Building C object CMakeFiles/base64_x64.dir/src/recomp_imports.c.o\n[100%] Linking C executable base64_x64\n[100%] Built target base64_x64\n",
+        "elf": {
+          "status": "OK",
+          "path": "/Users/haseeb-mir/l64-proof/results-base64/staging/base64_x64/build/base64_x64",
+          "class": "ELF64",
+          "data": "LSB",
+          "machine": "0xb7",
+          "machine_name": "aarch64",
+          "size": 272968,
+          "sha256": "e9f82cd1476f28db3a54e90b2349b6d762d7501aa3dfb2566abd7b9c5fba2bc5"
+        },
+        "run_cmd": [
+          "docker",
+          "run",
+          "--rm",
+          "-v",
+          "/Users/haseeb-mir/l64-proof/results-base64/staging/base64_x64:/work",
+          "-w",
+          "/work",
+          "--network",
+          "none",
+          "-v",
+          "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe:/original:ro",
+          "gamerecomp/linux-runner:local",
+          "sh",
+          "-c",
+          "cd /work && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 8 ./build/base64_x64 /original"
+        ],
+        "run_rc": 97,
+        "run_log": "host64: unimplemented import __acrt_iob_func (rcx=0x2 rdx=0)\n",
+        "seconds": 1.5
+      }
+    ],
+    "image_probe": {
+      "image": "gamerecomp/linux-runner:local",
+      "status": "OK",
+      "rc": 0,
+      "raw": "CMAKE=cmake version 3.28.3\nCC=cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nPKG=1.8.1\nSDL=2.30.0 2.22.0 \nAPK=\nAPT=/usr/bin/apt-get\nUNAME=Linux 6.8.0-117-generic\n",
+      "CMAKE": "cmake version 3.28.3",
+      "CC": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "PKG": "1.8.1",
+      "SDL": "2.30.0 2.22.0",
+      "APK": "",
+      "APT": "/usr/bin/apt-get",
+      "UNAME": "Linux 6.8.0-117-generic",
+      "toolchain_ok": true
+    },
+    "provision": "prebuilt",
+    "disk_guard": {
+      "scratch": "/Users/haseeb-mir/l64-proof/results-base64",
+      "min_free_bytes": 4294967296,
+      "blocked_inputs": []
+    }
+  },
+  "linux_row": {
+    "project": "/Users/haseeb-mir/l64-proof/proj-base64",
+    "name": "base64_x64",
+    "image": "gamerecomp/linux-runner:local",
+    "original": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+    "resources": null,
+    "toolchain": {
+      "CMAKE": "cmake version 3.28.3",
+      "CC": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "PKG": "1.8.1",
+      "SDL": "2.30.0 2.22.0",
+      "UNAME": "Linux 6.8.0-117-generic"
+    },
+    "provision": "prebuilt",
+    "network": "none",
+    "build_started": true,
+    "incbin_rewritten": [],
+    "build_cmd": [
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      "/Users/haseeb-mir/l64-proof/results-base64/staging/base64_x64:/work",
+      "-w",
+      "/work",
+      "--network",
+      "none",
+      "gamerecomp/linux-runner:local",
+      "sh",
+      "-c",
+      "cmake -S /work -B /work/build -DCMAKE_BUILD_TYPE=Release > /dev/null && cmake --build /work/build -j 4"
+    ],
+    "build_rc": 0,
+    "build_log": "[ 16%] Building C object CMakeFiles/base64_x64.dir/src/main.c.o\n[ 33%] Building C object CMakeFiles/base64_x64.dir/src/guest_image.c.o\n[ 50%] Building C object CMakeFiles/base64_x64.dir/src/recomp_funcs_0000.c.o\n[ 66%] Building C object CMakeFiles/base64_x64.dir/src/recomp_dispatch.c.o\n[ 83%] Building C object CMakeFiles/base64_x64.dir/src/recomp_imports.c.o\n[100%] Linking C executable base64_x64\n[100%] Built target base64_x64\n",
+    "elf": {
+      "status": "OK",
+      "path": "/Users/haseeb-mir/l64-proof/results-base64/staging/base64_x64/build/base64_x64",
+      "class": "ELF64",
+      "data": "LSB",
+      "machine": "0xb7",
+      "machine_name": "aarch64",
+      "size": 272968,
+      "sha256": "e9f82cd1476f28db3a54e90b2349b6d762d7501aa3dfb2566abd7b9c5fba2bc5"
+    },
+    "run_cmd": [
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      "/Users/haseeb-mir/l64-proof/results-base64/staging/base64_x64:/work",
+      "-w",
+      "/work",
+      "--network",
+      "none",
+      "-v",
+      "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe:/original:ro",
+      "gamerecomp/linux-runner:local",
+      "sh",
+      "-c",
+      "cd /work && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 8 ./build/base64_x64 /original"
+    ],
+    "run_rc": 97,
+    "run_log": "host64: unimplemented import __acrt_iob_func (rcx=0x2 rdx=0)\n",
+    "seconds": 1.5
+  },
+  "blocker": "linux_matrix row did not build and run"
+}

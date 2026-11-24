@@ -1,0 +1,268 @@
+{
+  "schema": 1,
+  "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+  "work": "/Users/haseeb-mir/l64-proof",
+  "pipeline": [
+    {
+      "stage": "disasm64",
+      "cmd": [
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        "-m",
+        "tools.disasm.disasm64",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+        "-o",
+        "/Users/haseeb-mir/l64-proof/arith-calc.json",
+        "--funcs-txt",
+        "/Users/haseeb-mir/l64-proof/arith-calc.funcs.txt"
+      ],
+      "rc": 0,
+      "stdout": "[*] arith-calc.exe: base=0x140000000, 1 exec sections, 3,104 code bytes\n[*] seeds: pdata=0, guard_cf=0, exports=0, entry=1, reloc=0, thunk=0, funclet=0, chunks=0\n[*] functions: 5 (0 thunks)\n",
+      "stderr": "",
+      "seconds": 0.09
+    },
+    {
+      "stage": "generate64",
+      "cmd": [
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        "-m",
+        "tools.lift.generate64",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+        "/Users/haseeb-mir/l64-proof/arith-calc.funcs.txt",
+        "/Users/haseeb-mir/l64-proof/arith-calc-gen"
+      ],
+      "rc": 0,
+      "stdout": "[*] image base 0x140000000, entry 0x140001bc0, 3 sections\n[*] catalog: 5 functions\n[*] imports: 3 IAT slots\n\n[*] === COMPLETE in 0s ===\n[*] image_base           0x140000000\n[*] entry_point          0x140001bc0\n[*] size_of_image        16384\n[*] functions            5\n[*] translation_units    1\n[*] lift_errors          0\n[*] recomp_todo_sites    0\n[*] imports              3\n",
+      "stderr": "",
+      "seconds": 0.1
+    },
+    {
+      "stage": "x64_project",
+      "cmd": [
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        "-m",
+        "tools.x64_project",
+        "--exe",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+        "--gen",
+        "/Users/haseeb-mir/l64-proof/arith-calc-gen",
+        "--out",
+        "/Users/haseeb-mir/l64-proof/proj-arith-calc"
+      ],
+      "rc": 0,
+      "stdout": "[*] arith-calc_x64: 8844 guest bytes, base 0x140000000, entry 0x140001bc0 -> /Users/haseeb-mir/l64-proof/proj-arith-calc\n",
+      "stderr": "",
+      "seconds": 0.04
+    },
+    {
+      "stage": "linux_matrix",
+      "cmd": [
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        "-m",
+        "tools.linux_matrix",
+        "--project",
+        "/Users/haseeb-mir/l64-proof/proj-arith-calc",
+        "--out",
+        "/Users/haseeb-mir/l64-proof/results-arith-calc",
+        "--original",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+        "--provision",
+        "prebuilt"
+      ],
+      "rc": 0,
+      "stdout": "arith-calc_x64           build=      0 run=      0 elf=OK 1.1s\nsummary: /Users/haseeb-mir/l64-proof/results-arith-calc/linux-summary.json\n",
+      "stderr": "",
+      "seconds": 1.82
+    },
+    {
+      "stage": "highball_original",
+      "attempt": 1,
+      "cmd": [
+        "highball",
+        "run",
+        "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe"
+      ],
+      "rc": 0,
+      "stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\nLaunching arith-calc.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=0 after 4s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T085704Z-Games-arith-calc.exe.log\n",
+      "stderr": "msync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n002c:err:wineboot:process_run_key Error running cmd L\"C:\\\\windows\\\\system32\\\\winemenubuilder.exe -a -r\" (126).\n0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L\"C:\\\\windows\\\\system32\\\\drivers\\\\idmwfp.sys\") not found\n0074:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\IDMWFP\": c0000142\n",
+      "seconds": 6.85
+    }
+  ],
+  "verdict": "BUILT_AND_RAN",
+  "linux_summary": {
+    "schema": 1,
+    "results": [
+      {
+        "project": "/Users/haseeb-mir/l64-proof/proj-arith-calc",
+        "name": "arith-calc_x64",
+        "image": "gamerecomp/linux-runner:local",
+        "original": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+        "resources": null,
+        "toolchain": {
+          "CMAKE": "cmake version 3.28.3",
+          "CC": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+          "PKG": "1.8.1",
+          "SDL": "2.30.0 2.22.0",
+          "UNAME": "Linux 6.8.0-117-generic"
+        },
+        "provision": "prebuilt",
+        "network": "none",
+        "build_started": true,
+        "incbin_rewritten": [],
+        "build_cmd": [
+          "docker",
+          "run",
+          "--rm",
+          "-v",
+          "/Users/haseeb-mir/l64-proof/results-arith-calc/staging/arith-calc_x64:/work",
+          "-w",
+          "/work",
+          "--network",
+          "none",
+          "gamerecomp/linux-runner:local",
+          "sh",
+          "-c",
+          "cmake -S /work -B /work/build -DCMAKE_BUILD_TYPE=Release > /dev/null && cmake --build /work/build -j 4"
+        ],
+        "build_rc": 0,
+        "build_log": "[ 16%] Building C object CMakeFiles/arith-calc_x64.dir/src/main.c.o\n[ 66%] Building C object CMakeFiles/arith-calc_x64.dir/src/guest_image.c.o\n[ 66%] Building C object CMakeFiles/arith-calc_x64.dir/src/recomp_funcs_0000.c.o\n[ 66%] Building C object CMakeFiles/arith-calc_x64.dir/src/recomp_dispatch.c.o\n[ 83%] Building C object CMakeFiles/arith-calc_x64.dir/src/recomp_imports.c.o\n[100%] Linking C executable arith-calc_x64\n[100%] Built target arith-calc_x64\n",
+        "elf": {
+          "status": "OK",
+          "path": "/Users/haseeb-mir/l64-proof/results-arith-calc/staging/arith-calc_x64/build/arith-calc_x64",
+          "class": "ELF64",
+          "data": "LSB",
+          "machine": "0xb7",
+          "machine_name": "aarch64",
+          "size": 72160,
+          "sha256": "34e2c20aab45b2c7623ff5de91ac2ccd6528be6f635875205ee3627093508fc8"
+        },
+        "run_cmd": [
+          "docker",
+          "run",
+          "--rm",
+          "-v",
+          "/Users/haseeb-mir/l64-proof/results-arith-calc/staging/arith-calc_x64:/work",
+          "-w",
+          "/work",
+          "--network",
+          "none",
+          "-v",
+          "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe:/original:ro",
+          "gamerecomp/linux-runner:local",
+          "sh",
+          "-c",
+          "cd /work && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 8 ./build/arith-calc_x64 /original"
+        ],
+        "run_rc": 0,
+        "run_log": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\n",
+        "seconds": 1.1
+      }
+    ],
+    "image_probe": {
+      "image": "gamerecomp/linux-runner:local",
+      "status": "OK",
+      "rc": 0,
+      "raw": "CMAKE=cmake version 3.28.3\nCC=cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nPKG=1.8.1\nSDL=2.30.0 2.22.0 \nAPK=\nAPT=/usr/bin/apt-get\nUNAME=Linux 6.8.0-117-generic\n",
+      "CMAKE": "cmake version 3.28.3",
+      "CC": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "PKG": "1.8.1",
+      "SDL": "2.30.0 2.22.0",
+      "APK": "",
+      "APT": "/usr/bin/apt-get",
+      "UNAME": "Linux 6.8.0-117-generic",
+      "toolchain_ok": true
+    },
+    "provision": "prebuilt",
+    "disk_guard": {
+      "scratch": "/Users/haseeb-mir/l64-proof/results-arith-calc",
+      "min_free_bytes": 4294967296,
+      "blocked_inputs": []
+    }
+  },
+  "linux_row": {
+    "project": "/Users/haseeb-mir/l64-proof/proj-arith-calc",
+    "name": "arith-calc_x64",
+    "image": "gamerecomp/linux-runner:local",
+    "original": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+    "resources": null,
+    "toolchain": {
+      "CMAKE": "cmake version 3.28.3",
+      "CC": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "PKG": "1.8.1",
+      "SDL": "2.30.0 2.22.0",
+      "UNAME": "Linux 6.8.0-117-generic"
+    },
+    "provision": "prebuilt",
+    "network": "none",
+    "build_started": true,
+    "incbin_rewritten": [],
+    "build_cmd": [
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      "/Users/haseeb-mir/l64-proof/results-arith-calc/staging/arith-calc_x64:/work",
+      "-w",
+      "/work",
+      "--network",
+      "none",
+      "gamerecomp/linux-runner:local",
+      "sh",
+      "-c",
+      "cmake -S /work -B /work/build -DCMAKE_BUILD_TYPE=Release > /dev/null && cmake --build /work/build -j 4"
+    ],
+    "build_rc": 0,
+    "build_log": "[ 16%] Building C object CMakeFiles/arith-calc_x64.dir/src/main.c.o\n[ 66%] Building C object CMakeFiles/arith-calc_x64.dir/src/guest_image.c.o\n[ 66%] Building C object CMakeFiles/arith-calc_x64.dir/src/recomp_funcs_0000.c.o\n[ 66%] Building C object CMakeFiles/arith-calc_x64.dir/src/recomp_dispatch.c.o\n[ 83%] Building C object CMakeFiles/arith-calc_x64.dir/src/recomp_imports.c.o\n[100%] Linking C executable arith-calc_x64\n[100%] Built target arith-calc_x64\n",
+    "elf": {
+      "status": "OK",
+      "path": "/Users/haseeb-mir/l64-proof/results-arith-calc/staging/arith-calc_x64/build/arith-calc_x64",
+      "class": "ELF64",
+      "data": "LSB",
+      "machine": "0xb7",
+      "machine_name": "aarch64",
+      "size": 72160,
+      "sha256": "34e2c20aab45b2c7623ff5de91ac2ccd6528be6f635875205ee3627093508fc8"
+    },
+    "run_cmd": [
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      "/Users/haseeb-mir/l64-proof/results-arith-calc/staging/arith-calc_x64:/work",
+      "-w",
+      "/work",
+      "--network",
+      "none",
+      "-v",
+      "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe:/original:ro",
+      "gamerecomp/linux-runner:local",
+      "sh",
+      "-c",
+      "cd /work && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 8 ./build/arith-calc_x64 /original"
+    ],
+    "run_rc": 0,
+    "run_log": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\n",
+    "seconds": 1.1
+  },
+  "highball_attempts": [
+    {
+      "attempt": 1,
+      "rc": 0,
+      "stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\nLaunching arith-calc.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=0 after 4s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T085704Z-Games-arith-calc.exe.log\n"
+    }
+  ],
+  "highball": {
+    "rc": 0,
+    "stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\nLaunching arith-calc.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=0 after 4s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T085704Z-Games-arith-calc.exe.log",
+    "guest_stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done"
+  },
+  "comparison": {
+    "stdout_exact_match": true,
+    "exit_code_match": true,
+    "normalisation": "drop Highball launcher lines: \"Launching ...\" and \"exit=N after ...\"",
+    "lifted_stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done",
+    "lifted_exit_code": 0,
+    "original_stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done",
+    "original_raw_stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\nLaunching arith-calc.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=0 after 4s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T085704Z-Games-arith-calc.exe.log",
+    "original_exit_code": 0
+  }
+}

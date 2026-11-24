@@ -197,7 +197,7 @@ directory` and `poll.h: No such file or directory` from the POSIX win32hle
 runtime. No PE was produced and no Windows execution is claimed. Full compiler
 output is in `reports/linux/win32-crossbuild.json`.
 
-## x64 (PE32+) to Linux — attempted, BLOCKED
+## x64 (PE32+) to Linux — originally BLOCKED, now smoke-tested (see update below)
 
 Real x64 PEs under `~/Downloads/recomp-apps/win64` were used; no synthetic
 input. Function-catalog recovery with `tools/disasm/disasm64.py`:
@@ -226,12 +226,21 @@ images are cached locally and pulling another image was outside this bounded
 attempt. No PE32+ Linux build or run is claimed. Logs:
 `reports/linux/x64-*.log`.
 
+**Update (2026-11-24, branch `agent-l64/linux-x64`):** the assembly blocker was
+fixed by modelling the GS/TEB base instead of emitting x86 inline asm, and a
+native x64 Linux host was added. The real `arith-calc.exe` now builds as an
+aarch64 ELF in the same container, runs with exit 0, and its stdout matches the
+Highball original byte-for-byte. `base64.exe` builds (exercising a `rd_gs64`
+site) but stops at an unimplemented CRT import (`__acrt_iob_func`). Full
+commands, evidence JSON and limits: `docs/X64_LINUX_NATIVE_EVIDENCE.md`.
+
 ## Status
 
 * Linux **runner**: works — real generated PE32 x86 project built in a Linux
   container and the resulting ELF launched; exact log/hash in the summary.
-* Linux **x64 runner**: BLOCKED — x86-64 inline asm cannot be assembled on the
-  locally available aarch64 Linux image; no amd64 runner provisioned.
+* Linux **x64 runner**: console smoke proven for `arith-calc.exe`
+  (build=0, run=0, stdout identical to the Highball original); broader CRT/GUI
+  coverage remains BLOCKED at named unimplemented imports.
 * Linux **game-level** status remains PARTIAL/NOT TESTED for a Windows oracle:
   no Windows original was executed as a Linux oracle here, and the dual-engine
   evidence is BLOCKED/inconclusive. No Linux PASS row is claimed.
