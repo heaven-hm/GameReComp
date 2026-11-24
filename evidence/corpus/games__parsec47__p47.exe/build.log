@@ -1,0 +1,8 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/games/parsec47/p47.exe
+arch=pe32_i386 sha256=41b2f77d2d7ac96821a85a38be3ee7f0f95b4e5096588e38f0c9092e224e520b
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/games/parsec47/p47.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__parsec47__p47.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/games/parsec47 --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+
+[LAUNCH ERROR: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli']

@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "what_it_proves": "captured native frames have real pixel content (distinct colours + hashes); not a Windows oracle",
+  "frames": []
+}

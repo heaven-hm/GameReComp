@@ -1,0 +1,10 @@
+{
+  "game": "win32__samegame.exe",
+  "status": "BLOCKED",
+  "reason": "no native binary found in build dir yet (B1 status: timeout after 900s)",
+  "b1_status_detail": "timeout after 900s",
+  "native_binary": null,
+  "exit": null,
+  "frames": 0,
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__samegame.exe"
+}

@@ -1,0 +1,153 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win32/unrulysolver.exe
+arch=pe32_i386 sha256=6d1cd7e7cc732b84086e30dd8a280132216804b69f33c075c51881bfffa0d0ed
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/win32/unrulysolver.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/win32 --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+==> inspect
+    ok         0.1s  inspect: i386 PE32, 61 imports, entry 0x00401460
+==> recover
+    ok         2.5s  recover: 501 functions, 46796 instructions
+==> translate
+    ok         0.3s  translate: 2 source files, 5252153 bytes, 0 lift errors
+==> project
+    ok         0.0s  project: project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project
+==> compile
+    ok        12.2s  compile: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project/build/unrulysolver (1966992 bytes, 12.2s)
+==> report
+    ok         0.1s  report: reports in /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project/reports
+
+project:      /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project
+input:        windows/x86 (unrulysolver.exe)
+output:       macos/arm64 native
+source code:  /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project/src/recomp/gen
+binary:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project/build/unrulysolver
+stages:       inspect(ok), recover(ok), translate(ok), project(ok), compile(ok), report(ok)
+score:        70/100
+verification: not-run
+report:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project/reports/report.html
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:26:21Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unrulysolver.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.05,
+      "status": "ok",
+      "message": "i386 PE32, 61 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unrulysolver.exe",
+        "size": 188640,
+        "sha256": "6d1cd7e7cc732b84086e30dd8a280132216804b69f33c075c51881bfffa0d0ed",
+        "md5": "0ad465bc376dd17f77984714c093f009",
+        "sha1": "e01390b94cbb98e52887e7e635fa97f084b3fffe",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x0040A400"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-convert-l1-1-0.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll"
+        ],
+        "import_count": 61,
+        "iat_entries": 61
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 2.47,
+      "status": "ok",
+      "message": "501 functions, 46796 instructions",
+      "data": {
+        "count": 501,
+        "instructions": 46796
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.31,
+      "status": "ok",
+      "message": "2 source files, 5252153 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 5252153,
+        "lift_errors": 0,
+        "seconds": 0.3
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.03,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project",
+        "name": "unrulysolver",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 501,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "6d1cd7e7cc732b84086e30dd8a280132216804b69f33c075c51881bfffa0d0ed"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "6d1cd7e7cc732b84086e30dd8a280132216804b69f33c075c51881bfffa0d0ed"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 12.24,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project/build/unrulysolver (1966992 bytes, 12.2s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unrulysolver.exe/project/build/unrulysolver",
+        "sha256": "70c13e19f40f790bb076abc537c59667b2b01b7ec4e049ed11516bbcb7df3382",
+        "seconds": 12.2,
+        "source_bytes": 6818891,
+        "build_timeout_seconds": 632.5150060653687,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}
+
+[exit 0 in 15.5s]

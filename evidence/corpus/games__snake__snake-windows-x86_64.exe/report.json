@@ -1,0 +1,31 @@
+{
+  "target": "/Users/haseeb-mir/Downloads/recomp-apps/games/snake/snake-windows-x86_64.exe",
+  "arch": "pe32plus_x64",
+  "host": {
+    "platform": "darwin",
+    "machine": "arm64"
+  },
+  "pipeline": {
+    "disassembler": "disasm64.py",
+    "lifter": "generate64.py",
+    "meta": {
+      "image_base": 5368709120,
+      "entry_point": 5368739296,
+      "size_of_image": 73728,
+      "functions": 283,
+      "translation_units": 1,
+      "lift_errors": 0,
+      "recomp_todo_sites": 9,
+      "imports": 152
+    }
+  },
+  "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__snake__snake-windows-x86_64.exe/snake-windows-x86_64",
+  "binary_format": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__snake__snake-windows-x86_64.exe/snake-windows-x86_64: Mach-O 64-bit executable arm64",
+  "native_run": {
+    "exit": -11,
+    "stdout_hex": "",
+    "stderr": "[cpu64] image loaded: entry 0x1400075e0, delta 0, imports 152\n"
+  },
+  "imports": 152,
+  "translation_units": 1
+}

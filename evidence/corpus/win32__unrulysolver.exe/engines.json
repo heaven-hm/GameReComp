@@ -1,0 +1,42 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: OracleFault: the ORIGINAL's bytes at 0x00401460 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED); frida: NotSupportedError: unexpected error while probing dyld of target process; exit 1 vs 0",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "OracleFault: the ORIGINAL's bytes at 0x00401460 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": 1,
+      "sha256": "6d1cd7e7cc732b84086e30dd8a280132216804b69f33c075c51881bfffa0d0ed",
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native": {
+      "exit_code": 0,
+      "stdout_hash": "f73ee31da8cc47118358c7c8cd73d2b345a0dc426dc61f276dd4157f6065a5ef"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [],
+    "native_lines": [
+      "Generating puzzle with parameters 8x8dt",
+      ". . 1 . . . 0 .",
+      "0 . . . . . 0 .",
+      "0 . . 0 . 1 . .",
+      ". . 1 . . . . 0",
+      ". 1 . 1 1 . . .",
+      "0 . . . 1 . . 1",
+      ". 1 . 1 . 1 . .",
+      ". . . . 1 . 1 .",
+      "Game ID: CdbfbcBEeBBAdDCBBBGBb"
+    ],
+    "status": "DIVERGED",
+    "reason": "exit 1 vs 0"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

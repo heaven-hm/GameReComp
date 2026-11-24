@@ -1,0 +1,16 @@
+{
+  "slug": "win32__trackssolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/trackssolver.exe",
+  "sha256": "4d8eb5178bf0f5cd84f816e585765aa41d02768efd92cad15b393bbd1aa173bd",
+  "size": 218160,
+  "is_game": true,
+  "started": 1795505486.6584792,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__trackssolver.exe/bin_trackssolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__trackssolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__trackssolver.exe/report.json",
+  "seconds": 29.9
+}

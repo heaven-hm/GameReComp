@@ -1,0 +1,55 @@
+{
+  "game": "windows__x86__games__snake.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__snake.exe/bin_snake",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/snake.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__snake.exe",
+  "native": {
+    "game": "windows__x86__games__snake.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__snake.exe/bin_snake",
+    "binary_sha256": "cb0be5d7f1a21f15d97bc5d43fb06c43566656b7e1eee4e5778f1de30557d8d7",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__snake.exe/bin_snake"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__snake.exe/screenshots"
+    },
+    "exit_code": 0,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__snake.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x22000\n[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0\n[pe] bound 46 imports, 0 unresolved\n[host] C:\\snake.exe booted: entry 0x00401460, 0 unresolved imports\n\n=== Retro Snake (Score: 0) ===\n######################\n#                    #\n#        @           #\n#                    #\n#                    #\n#                    #\n#          O         #\n#                    #\n#                    #\n#                    #\n#                    #\n######################\nMove: W (Up), A (Left), S (Down), D (Right), Q (Quit): ",
+    "seconds": 0.5,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__snake.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "windows__x86__games__snake.exe exit=      0 frames=0 0.5s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 0,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__snake.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run snake.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__snake.exe/highball.log",
+    "bytes": 284,
+    "seconds": 1.1,
+    "tail": "Launching snake.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T072921Z-Games-snake.exe.log\n\n0144:err:sync:msync_init Failed bootstrap_look_up for wine-12ba06b9-msync\n"
+  }
+}

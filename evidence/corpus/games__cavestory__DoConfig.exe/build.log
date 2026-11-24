@@ -1,0 +1,145 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe
+arch=pe32_i386 sha256=03f3c73a36920e8148a7d683f2f9ef0e5d6a14f32ab6ec59446919228012324f
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/games/cavestory --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+==> inspect
+    ok         0.0s  inspect: i386 PE32, 90 imports, entry 0x004032C1
+==> recover
+    ok         1.5s  recover: 458 functions, 38204 instructions
+==> translate
+    ok         0.2s  translate: 2 source files, 4437568 bytes, 0 lift errors
+==> project
+    ok         0.0s  project: project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project
+==> compile
+    ok        11.8s  compile: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/build/DoConfig (1998136 bytes, 11.8s)
+==> report
+    ok         0.2s  report: reports in /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/reports
+
+project:      /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project
+input:        windows/x86 (DoConfig.exe)
+output:       macos/arm64 native
+source code:  /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/recomp/gen
+binary:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/build/DoConfig
+stages:       inspect(ok), recover(ok), translate(ok), project(ok), compile(ok), report(ok)
+score:        70/100
+verification: not-run
+report:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/reports/report.html
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:24:30Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.03,
+      "status": "ok",
+      "message": "i386 PE32, 90 imports, entry 0x004032C1",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe",
+        "size": 98304,
+        "sha256": "03f3c73a36920e8148a7d683f2f9ef0e5d6a14f32ab6ec59446919228012324f",
+        "md5": "dac6abe8a7ca8217d653adf78d2b89a1",
+        "sha1": "fedb0cada0700f91a56aaf9c7a956acf2c0eff2a",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows GUI",
+        "image_base": "0x00400000",
+        "entry_point": "0x004032C1",
+        "linker_version": "7.10",
+        "code_range": [
+          "0x00401000",
+          "0x0040A000"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "USER32.dll",
+          "GDI32.dll"
+        ],
+        "import_count": 90,
+        "iat_entries": 90
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 1.48,
+      "status": "ok",
+      "message": "458 functions, 38204 instructions",
+      "data": {
+        "count": 458,
+        "instructions": 38204
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.22,
+      "status": "ok",
+      "message": "2 source files, 4437568 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 4437568,
+        "lift_errors": 0,
+        "seconds": 0.2
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.02,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project",
+        "name": "DoConfig",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 458,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "03f3c73a36920e8148a7d683f2f9ef0e5d6a14f32ab6ec59446919228012324f"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "03f3c73a36920e8148a7d683f2f9ef0e5d6a14f32ab6ec59446919228012324f"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 11.8,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/build/DoConfig (1998136 bytes, 11.8s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/build/DoConfig",
+        "sha256": "ecd62f9a1c54c1330858a4d58bec7a9dd57d18398946d0cbbb83ddc19f02fc43",
+        "seconds": 11.8,
+        "source_bytes": 5912123,
+        "build_timeout_seconds": 628.1911993026733,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}
+
+[exit 0 in 14.0s]

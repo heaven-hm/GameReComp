@@ -1,0 +1,42 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: OracleFault: the ORIGINAL's bytes at 0x00401460 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED); frida: NotSupportedError: unexpected error while probing dyld of target process; native: one side timed out",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "OracleFault: the ORIGINAL's bytes at 0x00401460 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": 1,
+      "sha256": "830447211f443524c0ac228c3550631a36b2becf4def1a74c7f4c7d1b830faea",
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native": {
+      "exit_code": "TIMEOUT",
+      "stdout_hash": "9da636692a2110230ce40fc99513e6060996944cb8aba3896bfcbaf130653b6f"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [],
+    "native_lines": [
+      "Generating a 17x14 Normal puzzle.",
+      "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+",
+      "|        o   o  o       o         |",
+      "+ + o + + + + + + + o + + +o+ + o +",
+      "|        o                   o    |",
+      "+o+ + + + + + + + + + + + + + + + +",
+      "|    o                            |",
+      "+ + + + + + + + o + + + + + + + + +",
+      "|                                 |",
+      "+ + + + + + + + + + + + + +o+ + + +"
+    ],
+    "status": "BLOCKED",
+    "reason": "one side timed out"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

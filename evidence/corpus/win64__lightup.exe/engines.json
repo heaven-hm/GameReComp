@@ -1,0 +1,18 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/win64/lightup.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; native: TimeoutExpired: Command '['/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine', 'C:\\\\recomp-oracle\\\\lightup.exe']' timed out after 10 seconds",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/win64/lightup.exe: not PE32 (magic 0x20B)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "status": "BLOCKED",
+    "reason": "TimeoutExpired: Command '['/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine', 'C:\\\\recomp-oracle\\\\lightup.exe']' timed out after 10 seconds"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:25:45Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/snake.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__snake.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.04,
+      "status": "ok",
+      "message": "i386 PE32, 46 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/snake.exe",
+        "size": 137640,
+        "sha256": "2bc4bcea3e18edb9ba1c64161c7656e2822e361b196553c6b5183a5d53fc7ee4",
+        "md5": "57fcd1db4e6f61298b2bb62b34a53971",
+        "sha1": "c040b7b379779fd9a98e53ab993fa9d3d880bc79",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x00403000"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll",
+          "api-ms-win-crt-utility-l1-1-0.dll"
+        ],
+        "import_count": 46,
+        "iat_entries": 46
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 0.59,
+      "status": "ok",
+      "message": "223 functions, 13448 instructions",
+      "data": {
+        "count": 223,
+        "instructions": 13448
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.06,
+      "status": "ok",
+      "message": "2 source files, 1420577 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 1420577,
+        "lift_errors": 0,
+        "seconds": 0.1
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.02,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__snake.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__snake.exe/project",
+        "name": "snake",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 223,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "2bc4bcea3e18edb9ba1c64161c7656e2822e361b196553c6b5183a5d53fc7ee4"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "2bc4bcea3e18edb9ba1c64161c7656e2822e361b196553c6b5183a5d53fc7ee4"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 6.05,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__snake.exe/project/build/snake (1359944 bytes, 6.0s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__snake.exe/project/build/snake",
+        "sha256": "cb0be5d7f1a21f15d97bc5d43fb06c43566656b7e1eee4e5778f1de30557d8d7",
+        "seconds": 6.0,
+        "source_bytes": 2924361,
+        "build_timeout_seconds": 613.9444398880005,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}

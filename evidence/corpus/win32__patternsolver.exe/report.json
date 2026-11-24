@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:27:32Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/win32/patternsolver.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.05,
+      "status": "ok",
+      "message": "i386 PE32, 61 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/patternsolver.exe",
+        "size": 191139,
+        "sha256": "0aa0bacc9e5b561d83afc6b278e4937e55eb0c620f23ad15dfcc940ddcc5d02f",
+        "md5": "0e7472f911faa30c69001289d81792ed",
+        "sha1": "29d6b16c7c5d81a5f558afe822ed44fb32b48aaa",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x0040B400"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-convert-l1-1-0.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-utility-l1-1-0.dll"
+        ],
+        "import_count": 61,
+        "iat_entries": 61
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 3.77,
+      "status": "ok",
+      "message": "585 functions, 79733 instructions",
+      "data": {
+        "count": 585,
+        "instructions": 79733
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.58,
+      "status": "ok",
+      "message": "3 source files, 8848177 bytes, 0 lift errors",
+      "data": {
+        "source_units": 3,
+        "source_bytes": 8848177,
+        "lift_errors": 0,
+        "seconds": 0.6
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.05,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/project",
+        "name": "patternsolver",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 585,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "0aa0bacc9e5b561d83afc6b278e4937e55eb0c620f23ad15dfcc940ddcc5d02f"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "0aa0bacc9e5b561d83afc6b278e4937e55eb0c620f23ad15dfcc940ddcc5d02f"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 17.94,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/project/build/patternsolver (2317552 bytes, 17.9s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__patternsolver.exe/project/build/patternsolver",
+        "sha256": "4133ed29c3e5593e80f497fd5f58674f4323fd397b6569defded7d5b84da10eb",
+        "seconds": 17.9,
+        "source_bytes": 10421260,
+        "build_timeout_seconds": 649.692440032959,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}

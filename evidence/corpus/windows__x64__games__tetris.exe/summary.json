@@ -1,0 +1,55 @@
+{
+  "game": "windows__x64__games__tetris.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tetris.exe/bin_tetris",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tetris.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+  "arch": "PE32+ x64",
+  "match_reason": "path partial match",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tetris.exe",
+  "native": {
+    "game": "windows__x64__games__tetris.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tetris.exe/bin_tetris",
+    "binary_sha256": "169d2b4dfbd9439e954d912f30b444ea60cc3394ac2940083b0046616a585636",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tetris.exe/bin_tetris"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tetris.exe/screenshots"
+    },
+    "exit_code": 2,
+    "stdout_tail": "usage: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tetris.exe/bin_tetris <pe32plus.exe>\n",
+    "seconds": 0.4,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tetris.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "windows__x64__games__tetris.exe exit=      2 frames=0 0.4s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 2,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tetris.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run tetris.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+    "exit": 0,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__tetris.exe/highball.log",
+    "bytes": 973,
+    "seconds": 6.1,
+    "tail": "\n=== Minimalist Tetris (Score: 0) ===\n############\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n#          #\n############\nControls: Choose column (0-9) to drop block, Q to quit: Launching tetris.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=0 after 2s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T074237Z-Games-tetris.exe.log\n\nmsync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n002c:err:wineboot:process_run_key Error running cmd L\"C:\\\\windows\\\\system32\\\\winemenubuilder.exe -a -r\" (126).\n0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L\"C:\\\\windows\\\\system32\\\\drivers\\\\idmwfp.sys\") not found\n0074:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\IDMWFP\": c0000142\n"
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/bin_tentssolver",
+    "sha256": "c1682d2e7b3b0ca33abf77bc40de020b29fc5e4d2e0a31e24c40dce4d3e172d3",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "FAIL",
+  "copied": [
+    "evidence/corpus/win32__tentssolver.exe/status.json",
+    "evidence/corpus/win32__tentssolver.exe/report.json",
+    "evidence/corpus/win32__tentssolver.exe/build.log",
+    "evidence/corpus/win32__tentssolver.exe/frame-proof.json",
+    "evidence/corpus/win32__tentssolver.exe/summary.json",
+    "evidence/corpus/win32__tentssolver.exe/run.log",
+    "evidence/corpus/win32__tentssolver.exe/highball.log",
+    "evidence/corpus/win32__tentssolver.exe/native-frames.html"
+  ],
+  "cross_os_paths": {
+    "linux_to_windows_shared": {
+      "citation": "PR #176: evidence/corpus/_cross_os/PR176_LINUX_TO_WINDOWS_SOURCE_BUILD.md",
+      "status": "SHARED PROOF (PR #176)"
+    },
+    "windows_to_linux": {
+      "citation": "PR #175: evidence/corpus/_cross_os/PR175_LINUX_RUNNER_EVIDENCE.md (real ELF build+run of a generated project on a Linux host)",
+      "status": "NOT TESTED per target"
+    },
+    "x64_to_macos": {
+      "citation": "PR #174: evidence/corpus/_cross_os/PR174_X64_CORPUS_EVIDENCE.md",
+      "status": "N/A (x86 target)"
+    }
+  },
+  "engines": {
+    "frida": {
+      "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+      "script_sha256": "e95a6e07c56ce886",
+      "status": "BLOCKED"
+    },
+    "native": {
+      "args": [],
+      "native": {
+        "exit_code": 1,
+        "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_lines": [],
+      "original": {
+        "exit_code": 1,
+        "sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581",
+        "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "original_lines": [],
+      "status": "MATCH",
+      "stdin_bytes": 0
+    },
+    "note": "CPU/process-level evidence only; BLOCKED is never MATCH",
+    "reason": "unicorn: OracleFault: the ORIGINAL's bytes at 0x00401460 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED); frida: NotSupportedError: unexpected error while probing dyld of target process",
+    "status": "BLOCKED",
+    "unicorn": {
+      "reason": "OracleFault: the ORIGINAL's bytes at 0x00401460 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED)",
+      "status": "BLOCKED"
+    }
+  },
+  "exit": 1,
+  "frame_proof_ok": true,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "linux_to_windows": {
+    "code": "NO_REAL_SOURCE",
+    "reason": "no real C source found; refusing to synthesise a source (source-level cross-build only, no ELF/Mach-O binary conversion)",
+    "roots": [
+      "/Users/haseeb-mir/Downloads/Other/gitHub_C/FloatMemory.c",
+      "/Users/haseeb-mir/Downloads/recomp-apps/win32"
+    ],
+    "status": "BLOCKED"
+  },
+  "macos_to_windows": {
+    "command": [
+      "/opt/homebrew/bin/i686-w64-mingw32-gcc",
+      "-O2",
+      "-o",
+      "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/tmprlbo9gyp/tentssolver.exe",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/main.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/recomp/gen/recomp_0000.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/recomp/gen/recomp_0001.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/recomp/gen/recomp_0002.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/recomp/gen/recomp_0003.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/recomp/gen/recomp_dispatch.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/recomp/gen/recomp_image.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/advapi32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/avifil32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/bink.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/clock.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/d3d7.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/ddraw.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/dinput.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/dsound.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/eh32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/gdi32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/gdidc.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/gl32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/guest_mem.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/hle_path.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/host.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/host_lite.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/input_rec.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/kernel32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/kernel32_atom.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/kernel32_crt.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/kernel32_ext.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/lz32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/module.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/mss.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/msvcrt.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/ole32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/pe_loader.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/present.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/screen.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/screenshot.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/sdl12.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/sdlmix.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/storage.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/user32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/wininet.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/winmm.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/wsock32.c"
+    ],
+    "compiler_output": "unc_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/sdl12.c:15:10: fatal error: SDL2/SDL.h: No such file or directory\n   15 | #include <SDL2/SDL.h>\n      |          ^~~~~~~~~~~~\ncompilation terminated.\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/sdlmix.c:34:10: fatal error: SDL2/SDL.h: No such file or directory\n   34 | #include <SDL2/SDL.h>\n      |          ^~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/storage.c:17:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/user32.c:31:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/wininet.c:26:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/winmm.c:17:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/runtime/win32hle/wsock32.c:26:10: fatal error: poll.h: No such file or directory\n   26 | #include <poll.h>\n      |          ^~~~~~~~\ncompilation terminated.\n",
+    "reason": "cross-compilation failed",
+    "status": "FAIL"
+  },
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/bin_tentssolver",
+    "sha256": "c1682d2e7b3b0ca33abf77bc40de020b29fc5e4d2e0a31e24c40dce4d3e172d3",
+    "valid": true
+  },
+  "nonblank_verified": 0,
+  "rationale": "launched but no proven non-blank frame and non-zero/timeout exit",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__tentssolver.exe",
+  "snapshot": "2026-11-24T13:39:05",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tentssolver.exe",
+  "source_rejected": false
+}

@@ -1,0 +1,16 @@
+{
+  "slug": "win32__mines.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/mines.exe",
+  "sha256": "5c955baaa154bfec9eac34c93946f0de415774ee2f47594fa024c9b32a146284",
+  "size": 558986,
+  "is_game": true,
+  "started": 1795505784.732631,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__mines.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

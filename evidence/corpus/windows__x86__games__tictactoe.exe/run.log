@@ -1,0 +1,14 @@
+[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x86__games__tictactoe.exe/screenshots, at most one every 500 ms
+[pe] <embedded image> mapped at 0x00400000, span 0x22000
+[pe] static TLS: template 0x00407000..0x00407004 (+0 zero), index 0
+[pe] bound 43 imports, 0 unresolved
+[host] C:\tictactoe.exe booted: entry 0x00401460, 0 unresolved imports
+=== Tic-Tac-Toe AI (You: X, AI: O) ===
+
+ 1 | 2 | 3 
+---|---|---
+ 4 | 5 | 6 
+---|---|---
+ 7 | 8 | 9 
+
+Enter move (1-9): Game ended in a Draw!

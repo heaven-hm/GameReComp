@@ -1,0 +1,16 @@
+{
+  "slug": "windows__cli-games__3-tictactoe-cpp__build__tictactoe_x86.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/cli-games/3-tictactoe-cpp/build/tictactoe_x86.exe",
+  "sha256": "c9ef98aefc7a58cb207f0fd1fe5ef5781fae542a49093ed5ef0d17b96129a482",
+  "size": 11285297,
+  "is_game": true,
+  "started": 1795505784.767659,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__cli-games__3-tictactoe-cpp__build__tictactoe_x86.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

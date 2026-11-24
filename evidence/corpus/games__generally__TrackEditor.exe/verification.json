@@ -1,0 +1,208 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/bin_TrackEditor",
+    "sha256": "3a23036d0d9ddadbf725830c76fb1edd73ecf6815818559509c003bafd508ae4",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "PARTIAL",
+  "copied": [
+    "evidence/corpus/games__generally__TrackEditor.exe/status.json",
+    "evidence/corpus/games__generally__TrackEditor.exe/report.json",
+    "evidence/corpus/games__generally__TrackEditor.exe/build.log",
+    "evidence/corpus/games__generally__TrackEditor.exe/frame-proof.json",
+    "evidence/corpus/games__generally__TrackEditor.exe/summary.json",
+    "evidence/corpus/games__generally__TrackEditor.exe/run.log",
+    "evidence/corpus/games__generally__TrackEditor.exe/highball.log",
+    "evidence/corpus/games__generally__TrackEditor.exe/native-frames.html"
+  ],
+  "cross_os_paths": {
+    "linux_to_windows_shared": {
+      "citation": "PR #176: evidence/corpus/_cross_os/PR176_LINUX_TO_WINDOWS_SOURCE_BUILD.md",
+      "status": "SHARED PROOF (PR #176)"
+    },
+    "windows_to_linux": {
+      "citation": "PR #175: evidence/corpus/_cross_os/PR175_LINUX_RUNNER_EVIDENCE.md (real ELF build+run of a generated project on a Linux host)",
+      "status": "NOT TESTED per target"
+    },
+    "x64_to_macos": {
+      "citation": "PR #174: evidence/corpus/_cross_os/PR174_X64_CORPUS_EVIDENCE.md",
+      "status": "N/A (x86 target)"
+    }
+  },
+  "engines": {
+    "frida": {
+      "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+      "script_sha256": "e95a6e07c56ce886",
+      "status": "BLOCKED"
+    },
+    "native": {
+      "args": [],
+      "native": {
+        "exit_code": "TIMEOUT",
+        "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_lines": [],
+      "original": {
+        "exit_code": 1,
+        "sha256": "ced9e54e6578a0e10fae997dcf23889cba323c9df926bafe1a455aa014876410",
+        "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "original_lines": [],
+      "reason": "one side timed out",
+      "status": "BLOCKED",
+      "stdin_bytes": 0
+    },
+    "note": "CPU/process-level evidence only; BLOCKED is never MATCH",
+    "reason": "unicorn: no named guest addresses at entry; frida: NotSupportedError: unexpected error while probing dyld of target process; native: one side timed out",
+    "status": "BLOCKED",
+    "unicorn": {
+      "reason": "no named guest addresses at entry",
+      "status": "BLOCKED"
+    }
+  },
+  "exit": "TIMEOUT",
+  "frame_proof_ok": true,
+  "frames": [
+    {
+      "actual_blank": true,
+      "actual_distinct_colours": 1,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0000.png",
+      "actual_sha256": "e5e07a6042ead6e62ab3ed5a9f20467b3b6d63979b6cc1052b880d9f42d7b92e",
+      "blank_match": true,
+      "claimed_blank": true,
+      "claimed_distinct_colours": 1,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0000.bmp",
+      "claimed_sha256": "4a054497c844bd10c9729033e8f344af46fd38c3ea7a2c936a07d313c00aec49",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    },
+    {
+      "actual_blank": false,
+      "actual_distinct_colours": 8,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0001.png",
+      "actual_sha256": "bb6286164c4373e1155f9d19bb7b9eb2179c47ff54f79d37f2585144e11ea7ff",
+      "blank_match": true,
+      "claimed_blank": false,
+      "claimed_distinct_colours": 2,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0001.bmp",
+      "claimed_sha256": "f75f3e90df06aa13b78cf4b52a092f300405d29a7a49e5de805069a45748781c",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    },
+    {
+      "actual_blank": false,
+      "actual_distinct_colours": 8,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0002.png",
+      "actual_sha256": "bb6286164c4373e1155f9d19bb7b9eb2179c47ff54f79d37f2585144e11ea7ff",
+      "blank_match": true,
+      "claimed_blank": false,
+      "claimed_distinct_colours": 2,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__generally__TrackEditor.exe/screenshots/frame-0002.bmp",
+      "claimed_sha256": "f75f3e90df06aa13b78cf4b52a092f300405d29a7a49e5de805069a45748781c",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    }
+  ],
+  "frames_claimed": 3,
+  "frames_verified": 3,
+  "linux_to_windows": {
+    "code": "NO_REAL_SOURCE",
+    "reason": "no real C source found; refusing to synthesise a source (source-level cross-build only, no ELF/Mach-O binary conversion)",
+    "roots": [
+      "/Users/haseeb-mir/Downloads/Other/gitHub_C/FloatMemory.c",
+      "/Users/haseeb-mir/Downloads/recomp-apps/games/generally"
+    ],
+    "status": "BLOCKED"
+  },
+  "macos_to_windows": {
+    "command": [
+      "/opt/homebrew/bin/i686-w64-mingw32-gcc",
+      "-O2",
+      "-o",
+      "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/tmpyyz9igbv/TrackEditor.exe",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/main.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/recomp/gen/recomp_0000.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/recomp/gen/recomp_dispatch.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/recomp/gen/recomp_image.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/advapi32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/avifil32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/bink.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/clock.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/d3d7.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/ddraw.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/dinput.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/dsound.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/eh32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/gdi32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/gdidc.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/gl32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/guest_mem.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/hle_path.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/host.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/host_lite.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/input_rec.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/kernel32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/kernel32_atom.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/kernel32_crt.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/kernel32_ext.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/lz32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/module.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/mss.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/msvcrt.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/ole32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/pe_loader.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/present.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/screen.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/screenshot.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/sdl12.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/sdlmix.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/storage.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/user32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/wininet.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/winmm.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/wsock32.c"
+    ],
+    "compiler_output": "n28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/sdl12.c:15:10: fatal error: SDL2/SDL.h: No such file or directory\n   15 | #include <SDL2/SDL.h>\n      |          ^~~~~~~~~~~~\ncompilation terminated.\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/sdlmix.c:34:10: fatal error: SDL2/SDL.h: No such file or directory\n   34 | #include <SDL2/SDL.h>\n      |          ^~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/storage.c:17:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/user32.c:31:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/wininet.c:26:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/winmm.c:17:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/project/src/runtime/win32hle/wsock32.c:26:10: fatal error: poll.h: No such file or directory\n   26 | #include <poll.h>\n      |          ^~~~~~~~\ncompilation terminated.\n",
+    "reason": "cross-compilation failed",
+    "status": "FAIL"
+  },
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/bin_TrackEditor",
+    "sha256": "3a23036d0d9ddadbf725830c76fb1edd73ecf6815818559509c003bafd508ae4",
+    "valid": true
+  },
+  "nonblank_verified": 2,
+  "rationale": "2 independently verified non-blank frame(s); launch exit=TIMEOUT, no Windows oracle",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [
+    "evidence/corpus/games__generally__TrackEditor.exe/frame-0000.png",
+    "evidence/corpus/games__generally__TrackEditor.exe/frame-0001.png",
+    "evidence/corpus/games__generally__TrackEditor.exe/frame-0002.png"
+  ],
+  "slug": "games__generally__TrackEditor.exe",
+  "snapshot": "2026-11-24T13:39:05",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "ced9e54e6578a0e10fae997dcf23889cba323c9df926bafe1a455aa014876410",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/games/generally/TrackEditor.exe",
+  "source_rejected": false
+}

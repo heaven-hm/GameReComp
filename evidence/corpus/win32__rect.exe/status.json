@@ -1,0 +1,16 @@
+{
+  "slug": "win32__rect.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/rect.exe",
+  "sha256": "594da8d3528208fe35746a050d1b55fdc269e05f64b91f61a3f52d6d615f6834",
+  "size": 328633,
+  "is_game": true,
+  "started": 1795505784.629022,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__rect.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

@@ -1,0 +1,55 @@
+{
+  "game": "tetris__Tetris.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/bin_Tetris",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/tetris/Tetris.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/tetris",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/tetris__Tetris.exe",
+  "native": {
+    "game": "tetris__Tetris.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/bin_Tetris",
+    "binary_sha256": "dcddf3cde91dd2f3ece0ebeeb1eb3ca125d32a824663614e4e707bc03a6214b7",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/tetris",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/tetris__Tetris.exe/bin_Tetris"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/tetris__Tetris.exe/screenshots"
+    },
+    "exit_code": 2,
+    "stdout_tail": " one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x1D000\n[pe] static TLS: template 0x00416001..0x0041601C (+0 zero), index 0\n[pe] unresolved import msvcrt.dll!system\n[pe] unresolved import libgcc_s_dw2-1.dll!_Unwind_Resume\n[pe] unresolved import libgcc_s_dw2-1.dll!__deregister_frame_info\n[pe] unresolved import libgcc_s_dw2-1.dll!__register_frame_info\n[pe] unresolved import libstdc++-6.dll!_ZNSaIcEC1Ev\n[pe] unresolved import libstdc++-6.dll!_ZNSaIcED1Ev\n[pe] unresolved import libstdc++-6.dll!_ZNSirsERi\n[pe] unresolved import libstdc++-6.dll!_ZNSolsEi\n[pe] unresolved import libstdc++-6.dll!_ZNSt14basic_ifstreamIcSt11char_traitsIcEE5closeEv\n[pe] unresolved import libstdc++-6.dll!_ZNSt14basic_ifstreamIcSt11char_traitsIcEE7is_openEv\n[pe] unresolved import libstdc++-6.dll!_ZNSt14basic_ifstreamIcSt11char_traitsIcEEC1EPKcSt13_Ios_Openmode\n[pe] unresolved import libstdc++-6.dll!_ZNSt14basic_ifstreamIcSt11char_traitsIcEED1Ev\n[pe] unresolved import libstdc++-6.dll!_ZNSt14basic_ofstreamIcSt11char_traitsIcEE5closeEv\n[pe] unresolved import libstdc++-6.dll!_ZNSt14basic_ofstreamIcSt11char_traitsIcEE7is_openEv\n[pe] unresolved import libstdc++-6.dll!_ZNSt14basic_ofstreamIcSt11char_traitsIcEEC1EPKcSt13_Ios_Openmode\n[pe] unresolved import libstdc++-6.dll!_ZNSt14basic_ofstreamIcSt11char_traitsIcEED1Ev\n[pe] unresolved import libstdc++-6.dll!_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1EPKcRKS3_\n[pe] unresolved import libstdc++-6.dll!_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1ERKS4_\n[pe] unresolved import libstdc++-6.dll!_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1Ev\n[pe] unresolved import libstdc++-6.dll!_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEED1Ev\n[pe] unresolved import libstdc++-6.dll!_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEaSERKS4_\n[pe] unresolved import libstdc++-6.dll!_ZNSt8ios_base4InitC1Ev\n[pe] unresolved import libstdc++-6.dll!_ZNSt8ios_base4InitD1Ev\n[pe] unresolved import libstdc++-6.dll!_ZSt17__throw_bad_allocv\n[pe] unresolved import libstdc++-6.dll!_ZSt3cin\n[pe] unresolved import libstdc++-6.dll!_ZSt4cout\n[pe] unresolved import libstdc++-6.dll!_ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc\n[pe] unresolved import libstdc++-6.dll!_ZStlsIcSt11char_traitsIcESaIcEERSt13basic_ostreamIT_T0_ES7_RKNSt7__cxx1112basic_stringIS4_S5_T1_EE\n[pe] unresolved import libstdc++-6.dll!_ZStrsIcSt11char_traitsIcEERSt13basic_istreamIT_T0_ES6_RS3_\n[pe] unresolved import libstdc++-6.dll!_ZStrsIcSt11char_traitsIcESaIcEERSt13basic_istreamIT_T0_ES7_RNSt7__cxx1112basic_stringIS4_S5_T1_EE\n[pe] unresolved import libstdc++-6.dll!_ZdlPv\n[pe] unresolved import libstdc++-6.dll!_Znwj\n[pe] unresolved import libstdc++-6.dll!__cxa_begin_catch\n[pe] unresolved import libstdc++-6.dll!__cxa_end_catch\n[pe] unresolved import libstdc++-6.dll!__cxa_rethrow\n[pe] unresolved import libstdc++-6.dll!__gxx_personality_v0\n[pe] bound 63 imports, 36 unresolved\n[host] C:\\Tetris.exe booted: entry 0x004012E0, 36 unresolved imports\n",
+    "seconds": 2.9,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/tetris__Tetris.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "tetris__Tetris.exe   exit=      2 frames=0 2.9s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 2,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/tetris__Tetris.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run Tetris.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/tetris",
+    "exit": 53,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/tetris__Tetris.exe/highball.log",
+    "bytes": 658,
+    "seconds": 0.9,
+    "tail": "Launching Tetris.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=53 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T073437Z-Games-Tetris.exe.log\n\n0158:err:module:import_dll Library libgcc_s_dw2-1.dll (which is needed by L\"Z:\\\\Users\\\\haseeb-mir\\\\Downloads\\\\recomp-apps\\\\tetris\\\\Tetris.exe\") not found\n0158:err:module:import_dll Library libstdc++-6.dll (which is needed by L\"Z:\\\\Users\\\\haseeb-mir\\\\Downloads\\\\recomp-apps\\\\tetris\\\\Tetris.exe\") not found\n0158:err:module:loader_init Importing dlls for L\"Z:\\\\Users\\\\haseeb-mir\\\\Downloads\\\\recomp-apps\\\\tetris\\\\Tetris.exe\" failed, status c0000135\n"
+  }
+}

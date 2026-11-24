@@ -1,0 +1,55 @@
+{
+  "game": "win32__mapsolver.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__mapsolver.exe/bin_mapsolver",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/mapsolver.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__mapsolver.exe",
+  "native": {
+    "game": "win32__mapsolver.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__mapsolver.exe/bin_mapsolver",
+    "binary_sha256": "09bf1ea937e0786cf06f2c01320be0d9c2238596a5c1af9da15044aaec9e8d1c",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__mapsolver.exe/bin_mapsolver"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__mapsolver.exe/screenshots"
+    },
+    "exit_code": 1,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__mapsolver.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x30000\n[pe] static TLS: template 0x00413000..0x00413004 (+0 zero), index 0\n[pe] bound 58 imports, 0 unresolved\n[host] C:\\mapsolver.exe booted: entry 0x00401460, 0 unresolved imports\nusage: C:\\mapsolver.exe [-g | -v] <game_id>\n",
+    "seconds": 0.3,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__mapsolver.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win32__mapsolver.exe exit=      1 frames=0 0.3s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 1,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__mapsolver.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run mapsolver.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "exit": 1,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__mapsolver.exe/highball.log",
+    "bytes": 753,
+    "seconds": 10.3,
+    "tail": "Launching mapsolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 6s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T073842Z-Games-mapsolver.exe.log\n\nmsync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n002c:err:wineboot:process_run_key Error running cmd L\"C:\\\\windows\\\\system32\\\\winemenubuilder.exe -a -r\" (126).\n0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L\"C:\\\\windows\\\\system32\\\\drivers\\\\idmwfp.sys\") not found\n0074:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\IDMWFP\": c0000142\nusage: Z:\\Users\\haseeb-mir\\Downloads\\recomp-apps\\win32\\mapsolver.exe [-g | -v] <game_id>\n"
+  }
+}

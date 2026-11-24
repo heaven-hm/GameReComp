@@ -1,0 +1,42 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/guess_game_x64.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; native: one side timed out",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/guess_game_x64.exe: not PE32 (magic 0x20B)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": "TIMEOUT",
+      "sha256": "7863f61a93b15a9ac7b525ad22a1d9cf96c6d5332fd8c2e73e8bcc0dbbd04d96",
+      "stdout_hash": "9744294c435dd2b42334a72e47cf6b644bcdc41b973e3681c226defa1583c813"
+    },
+    "native": {
+      "exit_code": 2,
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [
+      "========================================",
+      "C99 NUMBER GUESS CLI GAME",
+      "========================================",
+      "----------------------------------------",
+      "I have picked a number between 1 and 100.",
+      "----------------------------------------",
+      "Enter guess: Invalid input! Enter an integer.",
+      "Enter guess: Invalid input! Enter an integer.",
+      "Enter guess: Invalid input! Enter an integer.",
+      "Enter guess: Invalid input! Enter an integer."
+    ],
+    "native_lines": [],
+    "status": "BLOCKED",
+    "reason": "one side timed out"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

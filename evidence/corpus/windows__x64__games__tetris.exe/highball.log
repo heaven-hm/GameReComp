@@ -1,0 +1,27 @@
+
+=== Minimalist Tetris (Score: 0) ===
+############
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+#          #
+############
+Controls: Choose column (0-9) to drop block, Q to quit: Launching tetris.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...
+exit=0 after 2s — log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T074237Z-Games-tetris.exe.log
+
+msync: bootstrapped mach port on wine-12ba06b9-msync.
+msync: up and running.
+002c:err:wineboot:process_run_key Error running cmd L"C:\\windows\\system32\\winemenubuilder.exe -a -r" (126).
+0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L"C:\\windows\\system32\\drivers\\idmwfp.sys") not found
+0074:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\IDMWFP": c0000142

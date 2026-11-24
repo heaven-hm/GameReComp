@@ -1,0 +1,55 @@
+{
+  "game": "games__snake__snake-windows-x86_64.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__snake__snake-windows-x86_64.exe/bin_snake-windows-x86_64",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/games/snake/snake-windows-x86_64.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/games/snake",
+  "arch": "PE32+ x64",
+  "match_reason": "path partial match",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__snake__snake-windows-x86_64.exe",
+  "native": {
+    "game": "games__snake__snake-windows-x86_64.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__snake__snake-windows-x86_64.exe/bin_snake-windows-x86_64",
+    "binary_sha256": "dde5be031d016e93be2ff42295f32deaf5fdf4261d265cfabc5927cc33631d00",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/games/snake",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__snake__snake-windows-x86_64.exe/bin_snake-windows-x86_64"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__snake__snake-windows-x86_64.exe/screenshots"
+    },
+    "exit_code": 2,
+    "stdout_tail": "usage: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__snake__snake-windows-x86_64.exe/bin_snake-windows-x86_64 <pe32plus.exe>\n",
+    "seconds": 0.1,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__snake__snake-windows-x86_64.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "games__snake__snake-windows-x86_64.exe exit=      2 frames=0 0.1s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 2,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__snake__snake-windows-x86_64.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run snake-windows-x86_64.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/games/snake",
+    "exit": 124,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__snake__snake-windows-x86_64.exe/highball.log",
+    "bytes": 4543,
+    "seconds": 23.3,
+    "tail": "D to move, Q to quit\n\u001b[H######################\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#              OOO   #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#              *     #\n#                    #\n######################\nScore: 0\nBest: 0\nControls: WASD to move, Q to quit\n\u001b[H######################\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#                    #\n#       \nmsync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n002c:err:wineboot:process_run_key Error running cmd L\"C:\\\\windows\\\\system32\\\\winemenubuilder.exe -a -r\" (126).\n0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L\"C:\\\\windows\\\\system32\\\\drivers\\\\idmwfp.sys\") not found\n0074:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\IDMWFP\": c0000142\n"
+  }
+}
