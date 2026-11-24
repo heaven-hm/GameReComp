@@ -147,7 +147,9 @@ def run_unicorn_x64(pe_path, stdin=b'', limit=20_000_000):
     """
     import unicorn
 
-    data, base, soi, entry_rva, secs, imp_rva, _, _ = read_pe(pe_path)
+    # read_pe() also returns executable sections (9th value); older callers
+    # unpacked only 8 and failed with ValueError before any oracle could run.
+    data, base, soi, entry_rva, secs, imp_rva, _, _, _ = read_pe(pe_path)
     iat = parse_imports(data, base, secs, imp_rva)
     if not iat:
         raise RuntimeError('the PE has no imports; this oracle needs IAT slots')

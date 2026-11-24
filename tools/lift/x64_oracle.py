@@ -37,7 +37,8 @@ THUNK = 0x000000030000000    # scratch page for the import thunks
 
 def run_unicorn_x64(pe_path, limit=5_000_000):
     """Execute the original PE and return its WriteFile bytes + exit status."""
-    data, base, soi, entry_rva, secs, imp_rva, _, _ = read_pe(pe_path)
+    # read_pe() now also returns executable sections as its 9th value.
+    data, base, soi, entry_rva, secs, imp_rva, _, _, _ = read_pe(pe_path)
     iat = parse_imports(data, base, secs, imp_rva)
     if not iat:
         raise RuntimeError("the PE has no imports; this oracle needs IAT slots")
