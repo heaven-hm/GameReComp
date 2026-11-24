@@ -793,14 +793,22 @@ static void k_RtlUnwindEx(void) {
 }
 
 static void k_RaiseException(void) {
-    if (A32(0) == 0xE0440001u) {
+    uint32_t code = A32(0);
+    if (code == 0xE0440001u) {
         const char *reason = "no diagnostic";
-        int dispatched = hle_eh_d_throw(A32(0), A32(2), A32(3), &reason);
+        int dispatched = hle_eh_d_throw(code, A32(2), A32(3), &reason);
+        /* A caught throw never returns here: hle_eh_d_throw longjmps into the
+         * guest catch.  Every path that does return is a refusal, and must
+         * say why instead of hiding behind the generic "not handled" line. */
         fprintf(stderr, "[win32hle] DMD throw dispatch=%d reason=%s from guest 0x%08X\n",
                 dispatched, reason, g_cur_func);
+        fprintf(stderr, "[win32hle] DMD throw NOT dispatched: %s "
+                        "(guest 0x%08X); no guest catch was resumed\n",
+                reason, g_cur_func);
+    } else {
+        fprintf(stderr, "[win32hle] RaiseException(0x%08X) from guest 0x%08X: guest exceptions are not handled\n",
+                code, g_cur_func);
     }
-    fprintf(stderr, "[win32hle] RaiseException(0x%08X) from guest 0x%08X: guest exceptions are not handled\n",
-            A32(0), g_cur_func);
     hle_exit(3);
 }
 static void k_LoadModule(void)    { RET(2u, 2); }               /* file not found */
