@@ -1635,7 +1635,7 @@ class Pipeline:
         report = {
             "schema": 1,
             "tool": "GameReComp autorecomp",
-            "version": "0.0.1",
+            "version": "0.3.0",
             "generated_at": _now(),
             "input": str(self.pe_path),
             "project": str(self.project_dir),
