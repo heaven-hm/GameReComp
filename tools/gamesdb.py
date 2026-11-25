@@ -719,6 +719,11 @@ def render_matrix(inventory_path=INVENTORY_PATH, results_path=RESULTS_PATH):
 def write_matrix(matrix_path=MATRIX_PATH, **kwargs):
     matrix_path = Path(matrix_path)
     text = render_matrix(**kwargs)
+    marker = "## Captured frames"
+    if matrix_path.exists():
+        existing = matrix_path.read_text()
+        if marker in existing:
+            text = text.rstrip() + "\n\n---\n\n" + existing[existing.index(marker):].rstrip() + "\n"
     fd, tmp = tempfile.mkstemp(dir=str(matrix_path.parent), prefix=".matrix-",
                                suffix=".md")
     try:
