@@ -76,7 +76,7 @@ pub fn sha256(data: &[u8]) -> String {
 
 /// Replace environment-specific .exe paths with a stable placeholder.
 fn normalize_exe_paths(line: &str) -> String {
-    let mut s = line.to_string();
+    let mut s = line.replace("C:\\original", "<exe>").replace("/original", "<exe>");
     while let Some(i) = s.to_lowercase().find(".exe") {
         let end = i + 4;
         let mut start = i;
