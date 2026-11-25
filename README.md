@@ -39,7 +39,7 @@ The goal is to build a general-purpose toolchain that enables developers and res
 These are the largest/most requested targets. Every row records the exact input
 hash and the strongest evidence we actually have. A native screenshot is proof
 only that the rebuilt process rendered a frame; it is **not** gameplay
-equivalence. See [game screenshots](docs/GAME_SCREENSHOTS.md) for all captured
+equivalence. See [game screenshots](docs/GAME_MATRIX.md) for all captured
 frames with dimensions, colour counts and SHA-256.
 
 | Title | Input (SHA-256 prefix) | Windows original under Highball | Native port | Screenshot evidence | Verdict |
@@ -110,7 +110,7 @@ Windows game.exe → recover & lift → generate C → compile → run → verif
 
 ## Proof & gameplay
 
-Game-specific screenshots and their verification status are kept in the separate [game screenshots page](docs/GAME_SCREENSHOTS.md).
+Game-specific screenshots and their verification status are kept in the separate [game screenshots page](docs/GAME_MATRIX.md).
 
 | Evidence | Current result |
 | --- | --- |
