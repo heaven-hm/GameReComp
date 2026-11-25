@@ -24,6 +24,12 @@
    "sha256": "21576d0738639c104726ec2bae957f08fa08238b78297a618327e894fbefce8b",
    "size": 793494,
    "description": "Native macOS frame from DoConfig, measured non-blank"
+  },
+  {
+   "path": "igi/igi-linux-build.json",
+   "sha256": "2d587b161a3f8aafd3b9f652b6a7917e85b6ef97495dfde41910a547ae765347",
+   "size": 1930,
+   "description": "Machine-readable IGI PE32 -> Linux aarch64 ELF build proof (PARTIAL)"
   }
  ]
 }
