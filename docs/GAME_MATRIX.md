@@ -256,3 +256,159 @@ failure, no native binary, or no build); no screenshot can be shown for them.
 - **New downloads** (Chocolate Strife, Crispy Strife, VCMI): controls BLOCKED.
 
 See [verification methodology](VERIFICATION.md) and [game matrix](GAME_MATRIX.md).
+
+## Full screenshot inventory (all captured frames)
+
+Every captured frame from the local corpus, grouped by source. A 1-colour frame is recorded as FAIL and is never evidence of rendering.
+
+| File | Size | Distinct colours | SHA-256 | Source |
+|---|---|---|---|---|
+| `screenshots-frame-0000.bmp` | 580×456 | 1 | `21576d0738639c104726ec2bae957f08fa08238b78297a618327e894fbefce8b` | `END_TO_END_PROOF/batch1/DoConfig/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 580×456 | 2 | `d9721780e216364aace0fcf69123d243c4c41d98d4dacc2882409d09737a40a4` | `END_TO_END_PROOF/batch1/DoConfig/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 580×456 | 2 | `d9721780e216364aace0fcf69123d243c4c41d98d4dacc2882409d09737a40a4` | `END_TO_END_PROOF/batch1/DoConfig/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 320×343 | 4 | `2577f5f3ba97c11dfb70b8996e3fe75aa830edd6874f272eeb4fc5c82a2f19b0` | `END_TO_END_PROOF/batch10/grapheditor/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 320×343 | 5 | `1f069260415075308c03144c26be744ef77c615a81774c9e33e2b100feedc0d8` | `END_TO_END_PROOF/batch10/grapheditor/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 320×343 | 5 | `1f069260415075308c03144c26be744ef77c615a81774c9e33e2b100feedc0d8` | `END_TO_END_PROOF/batch10/grapheditor/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 460×483 | 4 | `2b0b458920f03e475c7259e0ff7e01ce7f2b8735ef838391acd5a4b8916ac831` | `END_TO_END_PROOF/batch10/pattern/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 460×483 | 144 | `519aa0dd48624c1b5b8ebfbd4e83643c6d473ed512ef706f75faceb2df8ae5a2` | `END_TO_END_PROOF/batch10/pattern/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 460×483 | 144 | `519aa0dd48624c1b5b8ebfbd4e83643c6d473ed512ef706f75faceb2df8ae5a2` | `END_TO_END_PROOF/batch10/pattern/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 263×286 | 4 | `5b6e506ef1a9255cff0d8165589798f04a461e6632fd228afb3d8ac3c1e00112` | `END_TO_END_PROOF/batch10/pegs/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 263×286 | 6 | `fe87268f84553bae8b3af0ca32360787e8f7eee9de2a89b3ff41681c579e5ce0` | `END_TO_END_PROOF/batch10/pegs/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 263×286 | 6 | `fe87268f84553bae8b3af0ca32360787e8f7eee9de2a89b3ff41681c579e5ce0` | `END_TO_END_PROOF/batch10/pegs/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 320×247 | 4 | `471a1674c40efbbe93a155a683fcde66b905c6e0670057a516a81b96075ae78f` | `END_TO_END_PROOF/batch10/range/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 320×247 | 158 | `799827b2347edb7fbac61a59f22d5a59b74b49b9d11997105936ed240300dc2f` | `END_TO_END_PROOF/batch10/range/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 320×247 | 158 | `799827b2347edb7fbac61a59f22d5a59b74b49b9d11997105936ed240300dc2f` | `END_TO_END_PROOF/batch10/range/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 288×311 | 4 | `6c16d3c3d307edf1d1e23fd1d521e77b9f831398a6e68a166de90a24233b8fd1` | `END_TO_END_PROOF/batch10/unruly/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 288×311 | 11 | `4d0ce9f966e7f672199e49854ce9a3cd8989f0ad5615a59ccc1727dd5ed8acfb` | `END_TO_END_PROOF/batch10/unruly/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 288×311 | 11 | `4d0ce9f966e7f672199e49854ce9a3cd8989f0ad5615a59ccc1727dd5ed8acfb` | `END_TO_END_PROOF/batch10/unruly/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 758×514 | 1 | `4a054497c844bd10c9729033e8f344af46fd38c3ea7a2c936a07d313c00aec49` | `END_TO_END_PROOF/batch2/trackeditor/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 758×514 | 2 | `f75f3e90df06aa13b78cf4b52a092f300405d29a7a49e5de805069a45748781c` | `END_TO_END_PROOF/batch2/trackeditor/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 758×514 | 2 | `f75f3e90df06aa13b78cf4b52a092f300405d29a7a49e5de805069a45748781c` | `END_TO_END_PROOF/batch2/trackeditor/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 351×238 | 1 | `95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349` | `END_TO_END_PROOF/batch5/dxIka/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 351×238 | 1 | `95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349` | `END_TO_END_PROOF/batch5/dxIka/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 351×238 | 1 | `95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349` | `END_TO_END_PROOF/batch5/dxIka/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 240×263 | 4 | `1bb345a93da8a6945f16feec9f30a1203e4f4ba874a26c0628db1e1ff77e6b1b` | `END_TO_END_PROOF/batch8/fifteen/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 240×263 | 165 | `7bc74859535b2f557b66950701b75062fb9dc008bee9879671749f9c423e0baa` | `END_TO_END_PROOF/batch8/fifteen/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 240×263 | 165 | `7bc74859535b2f557b66950701b75062fb9dc008bee9879671749f9c423e0baa` | `END_TO_END_PROOF/batch8/fifteen/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 416×439 | 4 | `43f52e0a94bc5bf86c4187d7f3eed37834043380c61a25ed761f7aa86e51335f` | `END_TO_END_PROOF/batch8/flood/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 416×439 | 11 | `23abb25a5877abd89990fd4574493333d447d903fd2857d2d6c38b05e594b649` | `END_TO_END_PROOF/batch8/flood/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 416×439 | 11 | `23abb25a5877abd89990fd4574493333d447d903fd2857d2d6c38b05e594b649` | `END_TO_END_PROOF/batch8/flood/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 200×223 | 4 | `84896a2966269176396db4c41326e64d71aa6dfa32f43346f89e9ecb243a590e` | `END_TO_END_PROOF/batch8/nullgame/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 200×223 | 3 | `1373ba87a9683cf22a7a935dbf33f990bb8b59b60bc20bedb1823ba7df07406a` | `END_TO_END_PROOF/batch8/nullgame/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 200×223 | 3 | `1373ba87a9683cf22a7a935dbf33f990bb8b59b60bc20bedb1823ba7df07406a` | `END_TO_END_PROOF/batch8/nullgame/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 288×311 | 4 | `6c16d3c3d307edf1d1e23fd1d521e77b9f831398a6e68a166de90a24233b8fd1` | `END_TO_END_PROOF/batch8/sixteen/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 288×311 | 165 | `70d3bf61ddf15cbf1678d8033b90074ad5519e273d36e1cea94af0b1fb5c54c1` | `END_TO_END_PROOF/batch8/sixteen/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 288×311 | 165 | `70d3bf61ddf15cbf1678d8033b90074ad5519e273d36e1cea94af0b1fb5c54c1` | `END_TO_END_PROOF/batch8/sixteen/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 352×375 | 4 | `3f510dae647d14820b5d3d605e0fef87a6183232e3e937cd137c86d747a33b47` | `END_TO_END_PROOF/batch9/blackbox/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 352×375 | 7 | `add0d0d783e1ecf1b018758eec949c4169f9fc58116ccc92d45a441ada669b20` | `END_TO_END_PROOF/batch9/blackbox/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 352×375 | 7 | `add0d0d783e1ecf1b018758eec949c4169f9fc58116ccc92d45a441ada669b20` | `END_TO_END_PROOF/batch9/blackbox/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 263×443 | 4 | `703b699d9e8616809858774ffd9e56f11ceff77a3ad5a502de93752db7a61335` | `END_TO_END_PROOF/batch9/guess/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 263×443 | 11 | `6a2e825a7d2bc9e59af4c6de3de32a66437cbf743b7276f5f54649e245b5a0e4` | `END_TO_END_PROOF/batch9/guess/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 263×443 | 11 | `6a2e825a7d2bc9e59af4c6de3de32a66437cbf743b7276f5f54649e245b5a0e4` | `END_TO_END_PROOF/batch9/guess/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 352×375 | 4 | `3f510dae647d14820b5d3d605e0fef87a6183232e3e937cd137c86d747a33b47` | `END_TO_END_PROOF/batch9/mosaic/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 352×375 | 197 | `46583ca535d9ba185d6088e890b23e6e4f625cbe8692161db763fa2cd3b9e82b` | `END_TO_END_PROOF/batch9/mosaic/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 352×375 | 197 | `46583ca535d9ba185d6088e890b23e6e4f625cbe8692161db763fa2cd3b9e82b` | `END_TO_END_PROOF/batch9/mosaic/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 190×213 | 4 | `df3af9edbbf6261b239c446650c8f436804815370ecfa6e5a1e60c42a499e8ca` | `END_TO_END_PROOF/batch9/samegame/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 190×213 | 8 | `ec87b61912caf40414d4b199300198773af7924e677b264f4f69f01216a7389b` | `END_TO_END_PROOF/batch9/samegame/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 190×213 | 8 | `ec87b61912caf40414d4b199300198773af7924e677b264f4f69f01216a7389b` | `END_TO_END_PROOF/batch9/samegame/screenshots/frame-0002.bmp` |
+| `screenshots-frame-0000.bmp` | 192×215 | 4 | `0d4fd700bae05056c558f44a80610b9b04e24bf18d208069dffa04935bffa79a` | `END_TO_END_PROOF/batch9/twiddle/screenshots/frame-0000.bmp` |
+| `screenshots-frame-0001.bmp` | 192×215 | 162 | `d697b41de3377b5ad7b0e9c2df06c7c3861cd3dd1ba18e7873fde69dbb59a8a8` | `END_TO_END_PROOF/batch9/twiddle/screenshots/frame-0001.bmp` |
+| `screenshots-frame-0002.bmp` | 192×215 | 162 | `d697b41de3377b5ad7b0e9c2df06c7c3861cd3dd1ba18e7873fde69dbb59a8a8` | `END_TO_END_PROOF/batch9/twiddle/screenshots/frame-0002.bmp` |
+| `screenshots-000-Doukutsu-frame-0000.bmp` | 640×480 | 1 | `a6ff748a2c1b386844bf8afd790540cf5f4642a1251d2958196f2b25ae413a12` | `MACOS_PORTS/screenshots/000-Doukutsu-frame-0000.bmp` |
+| `screenshots-000-Doukutsu-frame-0001.bmp` | 640×480 | 5 | `39adc1bc7a975e791eb4415930ad7da582b4f710aa7676e8e9f401990bd9df44` | `MACOS_PORTS/screenshots/000-Doukutsu-frame-0001.bmp` |
+| `screenshots-005-dxIka-frame-0000.bmp` | 351×238 | 1 | `95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349` | `MACOS_PORTS/screenshots/005-dxIka-frame-0000.bmp` |
+| `screenshots-005-dxIka-frame-0001.bmp` | 351×238 | 1 | `95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349` | `MACOS_PORTS/screenshots/005-dxIka-frame-0001.bmp` |
+| `screenshots-cavestory-doukutsu-01-intro.png` | 640×480 | 47 | `2bb1b42e7cd652851b5fd909eee365fb4a6d0c2db39c5e4d9f60c5e66f277204` | `PROOF/screenshots/cavestory-doukutsu-01-intro.png` |
+| `screenshots-cavestory-doukutsu-02-intro.png` | 640×480 | 46 | `503559ab2e1b95963dacbe03b6533012e3ed852a18a339925a058ccfb1d59ba0` | `PROOF/screenshots/cavestory-doukutsu-02-intro.png` |
+| `screenshots-cavestory-doukutsu-03-screen.png` | 640×480 | 16 | `8c9a36bf692ba0cd4fc20fc7802b2c4eeccb9464625d82dce01e236cc48d86d0` | `PROOF/screenshots/cavestory-doukutsu-03-screen.png` |
+| `screenshots-cube-native-frame-0000.bmp` | 240×263 | 4 | `1bb345a93da8a6945f16feec9f30a1203e4f4ba874a26c0628db1e1ff77e6b1b` | `PROOF/screenshots/cube-native-frame-0000.bmp` |
+| `screenshots-cube-native-frame-0000.png` | 240×263 | 4 | `9d9354563483299a037f5d2b05d0f27e4f7b08c6b54c2c2abda6c88ba9b574d6` | `PROOF/screenshots/cube-native-frame-0000.png` |
+| `screenshots-cube-native-frame-0001.bmp` | 240×263 | 4 | `22909349b96f928ff7c7fa2de60cc1f21ca3e21f55d5e53b4e92fe6245ad5937` | `PROOF/screenshots/cube-native-frame-0001.bmp` |
+| `screenshots-cube-native-frame-0001.png` | 240×263 | 4 | `6ee0fb77087fee263d49efae690a2b26eb0e69af5201e91462640fc10457c8e5` | `PROOF/screenshots/cube-native-frame-0001.png` |
+| `screenshots-cube-native-frame-0002.bmp` | 240×263 | 4 | `22909349b96f928ff7c7fa2de60cc1f21ca3e21f55d5e53b4e92fe6245ad5937` | `PROOF/screenshots/cube-native-frame-0002.bmp` |
+| `screenshots-cube-native-frame-0002.png` | 240×263 | 4 | `6ee0fb77087fee263d49efae690a2b26eb0e69af5201e91462640fc10457c8e5` | `PROOF/screenshots/cube-native-frame-0002.png` |
+| `screenshots-igi-window-level5-splash.png` | 640×480 | 6814 | `02500b672883205a89c27388c8505cfb6efb6cd5824eccf5e5da3bcac04fde01` | `PROOF/screenshots/igi-window-level5-splash.png` |
+| `screenshots-ikachan-native-frame-0000.bmp` | 351×238 | 1 | `95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349` | `PROOF/screenshots/ikachan-native-frame-0000.bmp` |
+| `screenshots-ikachan-native-frame-0000.png` | 351×238 | 1 | `967db05021e1d219c3ad2e5ff91deab9e3a5499983820115f856a224b8392581` | `PROOF/screenshots/ikachan-native-frame-0000.png` |
+| `screenshots-tm-forever-original-desktop-no-window.png` | 3360×2100 | 3257 | `8fb8df33a567d0509cf33276aefec98ee189f6ca005328720a9350c972e00847` | `PROOF/screenshots/tm-forever-original-desktop-no-window.png` |
+| `macos-cube-native.bmp` | 240×263 | 4 | `1bb345a93da8a6945f16feec9f30a1203e4f4ba874a26c0628db1e1ff77e6b1b` | `SIDE_BY_SIDE_EVIDENCE/screenshots/macos/cube-native.bmp` |
+| `macos-ikachan-blank.bmp` | 351×238 | 1 | `95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349` | `SIDE_BY_SIDE_EVIDENCE/screenshots/macos/ikachan-blank.bmp` |
+| `frame-0000-frame-0000.bmp` | 240×263 | 4 | `1bb345a93da8a6945f16feec9f30a1203e4f4ba874a26c0628db1e1ff77e6b1b` | `evidence/cube/frame-0000.bmp` |
+| `frame-0000-frame-0000.bmp` | 351×238 | 1 | `95078c6514ce49bbfd597a09919465ccd54e87891db5ae7bb86ed7f6cee02349` | `evidence/ikachan/frame-0000.bmp` |
+
+### Gallery
+
+<table>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>580×456<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>580×456<br>2 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>580×456<br>2 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>320×343<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>320×343<br>5 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>320×343<br>5 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>460×483<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>460×483<br>144 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>460×483<br>144 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>263×286<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>263×286<br>6 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>263×286<br>6 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>320×247<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>320×247<br>158 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>320×247<br>158 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>288×311<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>288×311<br>11 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>288×311<br>11 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>758×514<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>758×514<br>2 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>758×514<br>2 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>240×263<br>165 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>240×263<br>165 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>416×439<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>416×439<br>11 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>416×439<br>11 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>200×223<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>200×223<br>3 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>200×223<br>3 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>288×311<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>288×311<br>165 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>288×311<br>165 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>352×375<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>352×375<br>7 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>352×375<br>7 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>263×443<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>263×443<br>11 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>263×443<br>11 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>352×375<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>352×375<br>197 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>352×375<br>197 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>190×213<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>190×213<br>8 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>190×213<br>8 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>192×215<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>192×215<br>162 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0002.bmp" alt="screenshots-frame-0002.bmp" width="160"><br><sub>screenshots-frame-0002.bmp</sub></td><td>192×215<br>162 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0000.bmp" alt="screenshots-000-Doukutsu-frame-0000.bmp" width="160"><br><sub>screenshots-000-Doukutsu-frame-0000.bmp</sub></td><td>640×480<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0001.bmp" alt="screenshots-000-Doukutsu-frame-0001.bmp" width="160"><br><sub>screenshots-000-Doukutsu-frame-0001.bmp</sub></td><td>640×480<br>5 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-005-dxIka-frame-0000.bmp" alt="screenshots-005-dxIka-frame-0000.bmp" width="160"><br><sub>screenshots-005-dxIka-frame-0000.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-005-dxIka-frame-0001.bmp" alt="screenshots-005-dxIka-frame-0001.bmp" width="160"><br><sub>screenshots-005-dxIka-frame-0001.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cavestory-doukutsu-01-intro.png" alt="screenshots-cavestory-doukutsu-01-intro.png" width="160"><br><sub>screenshots-cavestory-doukutsu-01-intro.png</sub></td><td>640×480<br>47 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cavestory-doukutsu-02-intro.png" alt="screenshots-cavestory-doukutsu-02-intro.png" width="160"><br><sub>screenshots-cavestory-doukutsu-02-intro.png</sub></td><td>640×480<br>46 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cavestory-doukutsu-03-screen.png" alt="screenshots-cavestory-doukutsu-03-screen.png" width="160"><br><sub>screenshots-cavestory-doukutsu-03-screen.png</sub></td><td>640×480<br>16 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0000.bmp" alt="screenshots-cube-native-frame-0000.bmp" width="160"><br><sub>screenshots-cube-native-frame-0000.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0000.png" alt="screenshots-cube-native-frame-0000.png" width="160"><br><sub>screenshots-cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.bmp" alt="screenshots-cube-native-frame-0001.bmp" width="160"><br><sub>screenshots-cube-native-frame-0001.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.png" alt="screenshots-cube-native-frame-0001.png" width="160"><br><sub>screenshots-cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0002.bmp" alt="screenshots-cube-native-frame-0002.bmp" width="160"><br><sub>screenshots-cube-native-frame-0002.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0002.png" alt="screenshots-cube-native-frame-0002.png" width="160"><br><sub>screenshots-cube-native-frame-0002.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-igi-window-level5-splash.png" alt="screenshots-igi-window-level5-splash.png" width="160"><br><sub>screenshots-igi-window-level5-splash.png</sub></td><td>640×480<br>6814 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-ikachan-native-frame-0000.bmp" alt="screenshots-ikachan-native-frame-0000.bmp" width="160"><br><sub>screenshots-ikachan-native-frame-0000.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-ikachan-native-frame-0000.png" alt="screenshots-ikachan-native-frame-0000.png" width="160"><br><sub>screenshots-ikachan-native-frame-0000.png</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-tm-forever-original-desktop-no-window.png" alt="screenshots-tm-forever-original-desktop-no-window.png" width="160"><br><sub>screenshots-tm-forever-original-desktop-no-window.png</sub></td><td>3360×2100<br>3257 colours</td></tr>
+<tr><td align="center"><img src="screenshots/macos-cube-native.bmp" alt="macos-cube-native.bmp" width="160"><br><sub>macos-cube-native.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/macos-ikachan-blank.bmp" alt="macos-ikachan-blank.bmp" width="160"><br><sub>macos-ikachan-blank.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/frame-0000-frame-0000.bmp" alt="frame-0000-frame-0000.bmp" width="160"><br><sub>frame-0000-frame-0000.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/frame-0000-frame-0000.bmp" alt="frame-0000-frame-0000.bmp" width="160"><br><sub>frame-0000-frame-0000.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+</table>
