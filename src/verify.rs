@@ -303,18 +303,26 @@ pub fn run_command_with(template: &str, timeout: Duration, stdin: &[u8],
                                          seconds: t0.elapsed().as_secs_f64(), error: Some(e.to_string()) },
         }
     }
-    let out = child.wait_with_output().ok();
     let secs = t0.elapsed().as_secs_f64();
-    match out {
-        Some(o) => RunResult {
+    // On timeout, Wine/Highball descendants can keep stdout/stderr pipes open:
+    // wait_with_output() would block forever. Kill, reap the direct child, and
+    // return a bounded result without trying to drain inherited pipes.
+    if timed_out {
+        let _ = child.kill();
+        let _ = child.wait();
+        return RunResult { rc: Some(124), stdout: String::new(), stderr: String::new(),
+                           seconds: secs, error: Some("timeout".to_string()) };
+    }
+    match child.wait_with_output() {
+        Ok(o) => RunResult {
             rc: o.status.code(),
             stdout: String::from_utf8_lossy(&o.stdout).to_string(),
             stderr: String::from_utf8_lossy(&o.stderr).to_string(),
             seconds: secs,
-            error: if timed_out { Some("timeout".to_string()) } else { None },
+            error: None,
         },
-        None => RunResult { rc: None, stdout: String::new(), stderr: String::new(), seconds: secs,
-                            error: Some("wait failed".to_string()) },
+        Err(e) => RunResult { rc: None, stdout: String::new(), stderr: String::new(), seconds: secs,
+                              error: Some(e.to_string()) },
     }
 }
 
