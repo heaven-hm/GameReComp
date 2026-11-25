@@ -5,7 +5,7 @@
 //! core is portable (the comparison functions compile to wasm); process execution
 //! is gated off on wasm targets.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -74,7 +74,7 @@ pub fn sha256(data: &[u8]) -> String {
 /// Strip launcher/Wine/GameReComp runtime chatter; keep only guest output.
 pub fn normalize(text: &str) -> String {
     let prefixes = [
-        "Launching ", "exit=", "msync:", "wine: failed to open", "[pe] ", "[host] ",
+        "Launching ", "exit=", "Arguments: ", "msync:", "wine: failed to open", "[pe] ", "[host] ",
         "[win32hle] ", "[screen] ", "[screenshot] ",
     ];
     let mut out = Vec::new();
@@ -270,6 +270,12 @@ fn split_args(s: &str) -> Vec<String> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run_command(template: &str, timeout: Duration, stdin: &[u8]) -> RunResult {
+    run_command_with(template, timeout, stdin, &BTreeMap::new())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_command_with(template: &str, timeout: Duration, stdin: &[u8],
+                        env: &BTreeMap<String, String>) -> RunResult {
     let args = split_args(template);
     if args.is_empty() {
         return RunResult { rc: None, stdout: String::new(), stderr: String::new(), seconds: 0.0,
@@ -278,7 +284,7 @@ pub fn run_command(template: &str, timeout: Duration, stdin: &[u8]) -> RunResult
     let t0 = Instant::now();
     use std::io::Write;
     use std::process::{Command, Stdio};
-    let mut child = match Command::new(&args[0]).args(&args[1..])
+    let mut child = match Command::new(&args[0]).args(&args[1..]).envs(env)
         .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
         Ok(c) => c,
         Err(e) => return RunResult { rc: None, stdout: String::new(), stderr: String::new(),
@@ -310,6 +316,170 @@ pub fn run_command(template: &str, timeout: Duration, stdin: &[u8]) -> RunResult
         None => RunResult { rc: None, stdout: String::new(), stderr: String::new(), seconds: secs,
                             error: Some("wait failed".to_string()) },
     }
+}
+
+/// One deterministic verification scenario: identical input to both sides.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Scenario {
+    pub name: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    /// Hex-encoded stdin bytes (empty when absent).
+    #[serde(default)]
+    pub stdin_hex: String,
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
+    #[serde(default = "default_timeout")]
+    pub timeout: f64,
+    #[serde(default = "default_retries")]
+    pub retries: u8,
+}
+
+fn default_timeout() -> f64 { 30.0 }
+fn default_retries() -> u8 { 2 }
+
+impl Scenario {
+    pub fn stdin(&self) -> Vec<u8> {
+        let h = self.stdin_hex.as_bytes();
+        let mut out = Vec::new();
+        for pair in h.chunks(2) {
+            if pair.len() == 2 {
+                if let Ok(v) = u8::from_str_radix(std::str::from_utf8(pair).unwrap_or("00"), 16) {
+                    out.push(v);
+                }
+            }
+        }
+        out
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ScenarioEvidence {
+    pub name: String,
+    pub input_sha256: String,
+    pub args_sha256: String,
+    pub attempts: u8,
+    pub evidence: Evidence,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AdapterReport {
+    pub name: String,
+    pub verdict: Verdict,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MatrixReport {
+    pub schema: u32,
+    pub kind: &'static str,
+    pub aggregate: Verdict,
+    pub scenarios: Vec<ScenarioEvidence>,
+    pub adapters: Vec<AdapterReport>,
+    pub coverage: BTreeMap<String, usize>,
+    pub limits: String,
+}
+
+/// Fail-closed aggregation: one FAIL wins; otherwise any BLOCKED wins;
+/// PASS only when every scenario and every adapter passed.
+pub fn aggregate_verdict(v: &[Verdict]) -> Verdict {
+    if v.iter().any(|x| *x == Verdict::Fail) { Verdict::Fail }
+    else if v.iter().any(|x| *x == Verdict::Blocked) || v.is_empty() { Verdict::Blocked }
+    else { Verdict::Pass }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn verify_matrix(original: &Path, rebuilt: &Path, original_cmd: &str,
+                     rebuilt_cmd: &str, scenarios: &[Scenario]) -> MatrixReport {
+    let mut rows = Vec::new();
+    for s in scenarios {
+        let stdin = s.stdin();
+        let a_cmd = format!("{} {}", original_cmd.replace("{exe}", &original.to_string_lossy()), s.args.join(" "));
+        let b_cmd = format!("{} {}", rebuilt_cmd.replace("{exe}", &rebuilt.to_string_lossy()), s.args.join(" "));
+        let t = Duration::from_secs_f64(s.timeout.max(0.1));
+        let mut a = run_command_with(&a_cmd, t, &stdin, &s.env);
+        let mut attempts = 1u8;
+        while attempts <= s.retries.max(1) && (a.rc != Some(0) || (a.stdout.is_empty() && a.stderr.is_empty())) {
+            a = run_command_with(&a_cmd, t, &stdin, &s.env);
+            attempts += 1;
+        }
+        let b = run_command_with(&b_cmd, t, &stdin, &s.env);
+        let mut e = compare_runs(&a, &b);
+        e.kind = format!("scenario/{}", s.name);
+        e.limits = "Per-scenario input bytes are identical on both sides; no scope beyond that scenario".into();
+        rows.push(ScenarioEvidence {
+            name: s.name.clone(),
+            input_sha256: sha256(&stdin),
+            args_sha256: sha256(s.args.join(" ").as_bytes()),
+            attempts,
+            evidence: e,
+        });
+    }
+    let mut coverage = BTreeMap::new();
+    coverage.insert("scenarios".into(), rows.len());
+    coverage.insert("passed".into(), rows.iter().filter(|r| r.evidence.verdict == Verdict::Pass).count());
+    coverage.insert("failed".into(), rows.iter().filter(|r| r.evidence.verdict == Verdict::Fail).count());
+    coverage.insert("blocked".into(), rows.iter().filter(|r| r.evidence.verdict == Verdict::Blocked).count());
+    let all: Vec<Verdict> = rows.iter().map(|r| r.evidence.verdict).collect();
+    MatrixReport {
+        schema: SCHEMA,
+        kind: "matrix",
+        aggregate: aggregate_verdict(&all),
+        scenarios: rows,
+        adapters: Vec::new(),
+        coverage,
+        limits: "Multi-input process parity; adapters add Unicorn/Frida evidence where available".into(),
+    }
+}
+
+/// Unicorn adapter: reads tools/lift/difftest.py --json and classifies verdicts.
+pub fn unicorn_adapter(report_path: &Path) -> AdapterReport {
+    let text = std::fs::read_to_string(report_path).unwrap_or_default();
+    let json: serde_json::Value = match serde_json::from_str(&text) {
+        Ok(v) => v,
+        Err(_) => return AdapterReport { name: "unicorn".into(), verdict: Verdict::Blocked,
+                                         detail: "difftest report missing or unparseable".into() },
+    };
+    let rows = json.get("addresses").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+    if rows.is_empty() {
+        return AdapterReport { name: "unicorn".into(), verdict: Verdict::Blocked,
+                               detail: "no per-function oracle results".into() };
+    }
+    let ok = rows.iter().filter(|r| matches!(r.get("verdict").and_then(|v| v.as_str()),
+        Some("agree") | Some("agree-return") | Some("PASS") | Some("ok"))).count();
+    let fault = rows.iter().filter(|r| matches!(r.get("verdict").and_then(|v| v.as_str()),
+        Some("original-faulted") | Some("unmapped") | Some("error"))).count();
+    let verdict = if ok == rows.len() { Verdict::Pass }
+        else if fault > 0 && ok + fault == rows.len() { Verdict::Blocked }
+        else { Verdict::Fail };
+    AdapterReport { name: "unicorn".into(), verdict,
+        detail: format!("{} agree, {} oracle-fault, {} disagree of {} addresses", ok, fault, rows.len() - ok - fault, rows.len()) }
+}
+
+/// Frida adapter: live attach is attempted by the supplied probe command.
+/// On this macOS host it is expected to be BLOCKED (SIP/dyld); the exact
+/// error text is preserved verbatim. No synthetic traces are ever produced.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn frida_adapter(probe_cmd: &str) -> AdapterReport {
+    let r = run_command(probe_cmd, Duration::from_secs(40), b"");
+    let text = format!("{}{}", r.stdout, r.stderr);
+    let dry_run_only = probe_cmd.contains("--dry-run");
+    let blocked = dry_run_only || text.contains("PermissionDenied") || text.contains("NotSupported")
+        || text.contains("unable to access") || text.contains("probing dyld")
+        || r.error.is_some();
+    let verdict = if blocked { Verdict::Blocked }
+        else if r.rc == Some(0) && text.contains("frida") { Verdict::Pass }
+        else { Verdict::Blocked };
+    let detail = if dry_run_only {
+        "dry-run probe only — no live Frida attach evidence (never synthesized)".to_string()
+    } else {
+        text.lines().find(|l| l.contains("PermissionDenied") || l.contains("NotSupported")
+            || l.contains("unable to access") || l.contains("dyld") || l.contains("frida"))
+            .unwrap_or_else(|| text.lines().find(|l| !l.trim().is_empty()).unwrap_or("no probe output"))
+            .to_string()
+            .chars().take(600).collect()
+    };
+    AdapterReport { name: "frida".into(), verdict, detail }
 }
 
 #[cfg(test)]
@@ -352,5 +522,28 @@ mod tests {
         let e = compare_traces(a, b, 0.001);
         assert_eq!(e.verdict, Verdict::Fail);
         assert_eq!(e.checks.get("numeric_tolerance"), Some(&false));
+    }
+
+    #[test]
+    fn fail_closed_aggregation() {
+        assert_eq!(aggregate_verdict(&[]), Verdict::Blocked);
+        assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Blocked]), Verdict::Blocked);
+        assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Fail]), Verdict::Fail);
+        assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Pass]), Verdict::Pass);
+    }
+
+    #[test]
+    fn scenario_hex_stdin_decodes() {
+        let s: Scenario = serde_json::from_str(r#"{"name":"x","stdin_hex":"330a","args":["--v"]}"#).unwrap();
+        assert_eq!(s.stdin(), b"3\n");
+        assert_eq!(s.args, vec!["--v"]);
+    }
+
+    #[test]
+    fn unicorn_adapter_classifies_oracle_faults() {
+        let d = std::env::temp_dir().join("verify-unicorn-test.json");
+        std::fs::write(&d, r#"{"addresses":[{"address":"0x1","verdict":"agree"},{"address":"0x2","verdict":"original-faulted"}]}"#).unwrap();
+        assert_eq!(unicorn_adapter(&d).verdict, Verdict::Blocked);
+        std::fs::remove_file(d).ok();
     }
 }

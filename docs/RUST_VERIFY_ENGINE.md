@@ -49,6 +49,31 @@ per-check booleans, first differing line, and a `verdict` of `pass`/`fail`/
   both stdout SHA-256 `b6674fd6da06bc9dd36a49a5697efdeb8af7bd354f00b9c6d77359533b572d8f`,
   exit codes equal — identical to the Python engine's result.
 
+## Advanced matrix engine (multi-input, Unicorn + Frida adapters)
+
+`game-recomp-verify matrix ORIGINAL REBUILT scenarios.json` runs a **scenario
+matrix**: each scenario carries distinct hex-encoded stdin, argv, environment,
+timeout and bounded retries. For every scenario the engine hashes the exact
+input bytes, runs both sides with identical input, retries the original on the
+known Highball flaky-startup (empty output / non-zero rc), and compares exit
+code plus normalized stdout/stderr. Aggregation is fail-closed: any FAIL wins;
+otherwise any BLOCKED wins; PASS only if every scenario and adapter passed.
+
+Adapters (`--adapters unicorn,frida`):
+- **Unicorn** reads a `tools/lift/difftest.py --json` report and classifies each
+  function verdict: agree / oracle-faulted / disagree. Oracle faults are BLOCKED,
+  never PASS (the original's bytes could not be driven).
+- **Frida** runs a supplied probe command and preserves the exact error text;
+  `--dry-run` is explicitly BLOCKED ("no live attach evidence"). No synthetic
+  traces are produced. On this macOS host live Frida is blocked by SIP/dyld
+  (`PermissionDeniedError` / `NotSupportedError`) — recorded verbatim.
+
+Measured on `arith-calc.exe` (Windows Highball vs Linux ELF):
+4 scenarios (empty / menu-1 / menu-2 / quit) → **4 PASS**, identical stdout SHA
+`b6674fd6…`; with Unicorn (1 oracle-fault) and Frida (dry-run) adapters the
+aggregate is **BLOCKED** — the advanced engine refuses to call a partial oracle
+a success.
+
 ## Limits
 
 Same as the Python engine: process-level parity only. A `pass` for a console
