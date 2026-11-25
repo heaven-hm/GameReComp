@@ -74,7 +74,14 @@ Measured on `arith-calc.exe` (Windows Highball vs Linux ELF):
 aggregate is **BLOCKED** — the advanced engine refuses to call a partial oracle
 a success.
 
-## Limits
+## Backbone role and hardening
+
+This engine is a core GameReComp module (`game_recomp::verify`), also shipped
+as a standalone crate in `verify-engine/`. Output capture is bounded to 512 KiB
+head + tail via temp files (no multi-GB logs, no Wine pipe hangs), scenarios are
+validated before execution (1 MiB stdin, capped args/env, no NUL/newline), and
+all missing-evidence paths resolve to `blocked`. 40 core tests / 10 standalone
+tests pass, including a real oversized-output regression.
 
 Same as the Python engine: process-level parity only. A `pass` for a console
 scenario does not prove GUI gameplay, audio, frame timing, or whole-game
