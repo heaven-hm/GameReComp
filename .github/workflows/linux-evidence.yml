@@ -1,0 +1,280 @@
+name: linux-evidence
+
+# Active Linux-host evidence job for issue #144. The canonical definition in
+# docs/ci/github-workflows-ci.yml is documentation; this file is the job that
+# actually executes on ubuntu-latest.
+#
+# Every stage records its own measured return code. The summary at
+# reports/linux-matrix/linux-summary.json is assembled from those files at run
+# time. No Linux PASS is written in advance: a non-Linux host, a missing rc file
+# or a non-zero stage leaves that stage explicitly NOT TESTED, and the job fails
+# closed. A macOS run is never substituted for a Linux result.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-evidence:
+    name: Linux host pipeline + refusals (PE32 fixture)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Record Linux host, toolchain and hashes
+        shell: bash
+        run: |
+          set -eu
+          host_os="$(uname -s)"
+          runner_os="${RUNNER_OS:-}"
+          if [ "$host_os" != "Linux" ] || [ "$runner_os" != "Linux" ]; then
+            echo "FAIL: a real Linux runner is required (host=$host_os runner=$runner_os)" >&2
+            exit 1
+          fi
+          evidence="$RUNNER_TEMP/linux-evidence"
+          mkdir -p "$evidence" reports/linux-matrix
+          {
+            echo "linux_status: RUNNING (Linux runner only; no macOS substitution)"
+            echo "host_os: $host_os"
+            echo "host_arch: $(uname -m)"
+            echo "host_uname: $(uname -a)"
+            echo "runner_os: $runner_os"
+            echo "runner_arch: ${RUNNER_ARCH:-}"
+            echo "git_head: $(git rev-parse HEAD)"
+            echo "python: $(python3 --version 2>&1)"
+            echo "cc: $(cc --version 2>&1 | head -n 1)"
+            echo "cmake: $(cmake --version 2>&1 | head -n 1)"
+            echo "rustc: $(rustc --version 2>&1)"
+            echo "fixture_sha256: $(sha256sum tests/fixtures/pe32-minimal.exe | cut -d' ' -f1)"
+          } | tee "$evidence/environment.txt"
+
+      - name: Install python deps
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/linux-evidence"
+          python3 -m pip install --upgrade pytest pefile pyyaml > "$evidence/deps.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/deps.rc"
+          cat "$evidence/deps.log"
+          echo "python_deps rc=$rc"
+          exit "$rc"
+
+      - name: ELF/Mach-O/.NET refusal tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/linux-evidence"
+          python3 -m pytest tests/test_cli.py::InputFormatRefusal -q > "$evidence/refusals.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/refusals.rc"
+          cat "$evidence/refusals.log"
+          echo "refusal_tests rc=$rc"
+          exit "$rc"
+
+      - name: Native build of a small PE32 fixture (Linux host)
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/linux-evidence"
+          fixture="$evidence/pe32-minimal.exe"
+          (
+            set -e
+            python3 tests/fixtures/make_pe32_fixture.py --out "$fixture"
+            python3 tests/fixtures/make_pe32_fixture.py --check --out "$fixture"
+            python3 - "$fixture" <<'PY'
+          import hashlib
+          import pathlib
+          import struct
+          import sys
+
+          data = pathlib.Path(sys.argv[1]).read_bytes()
+          if data[:2] != b'MZ':
+              raise SystemExit('fixture is not a DOS/PE image')
+          pe = struct.unpack_from('<I', data, 0x3C)[0]
+          if data[pe:pe + 4] != b'PE\x00\x00':
+              raise SystemExit('fixture has no PE signature')
+          if struct.unpack_from('<H', data, pe + 4)[0] != 0x014C:
+              raise SystemExit('fixture is not i386')
+          if struct.unpack_from('<H', data, pe + 24)[0] != 0x010B:
+              raise SystemExit('fixture is not PE32')
+          print('fixture_sha256: ' + hashlib.sha256(data).hexdigest())
+          PY
+          ) > "$evidence/native_build.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/native_build.rc"
+          cat "$evidence/native_build.log"
+          echo "native_build rc=$rc"
+          exit "$rc"
+
+      - name: Full PE32 pipeline on the Linux host
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/linux-evidence"
+          (
+            set -e
+            cargo build --release --bin game-recomp-cli --no-default-features --features cli
+            ./target/release/game-recomp-cli "$evidence/pe32-minimal.exe" \
+              --project-dir "$evidence/pe32-minimal" \
+              --input-os windows --input-arch x86 \
+              --target-os host --target-arch host \
+              --timeout 10 --no-table
+          ) > "$evidence/pipeline.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/pipeline.rc"
+          tail -n 200 "$evidence/pipeline.log"
+          echo "pipeline rc=$rc"
+          exit "$rc"
+
+      - name: Verify native Linux binary, record hash and show stage logs
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/linux-evidence"
+          (
+            set -e
+            python3 - "$evidence/pe32-minimal" "$evidence/native-binary.txt" tests/fixtures/pe32-minimal.exe <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+
+          project = pathlib.Path(sys.argv[1])
+          out = pathlib.Path(sys.argv[2])
+          fixture = pathlib.Path(sys.argv[3])
+          manifest = json.loads((project / 'manifest.json').read_text(encoding='utf-8'))
+          fixture_hash = hashlib.sha256(fixture.read_bytes()).hexdigest()
+          recorded = manifest.get('input_sha256')
+          if recorded != fixture_hash:
+              raise SystemExit('fixture hash mismatch: manifest=%s actual=%s' % (recorded, fixture_hash))
+          binary = pathlib.Path(manifest['binary']['path'])
+          if not binary.is_absolute():
+              binary = project / binary
+          data = binary.read_bytes()
+          if not data.startswith(b'\x7fELF'):
+              raise SystemExit('native binary is not ELF: %s' % binary)
+          digest = hashlib.sha256(data).hexdigest()
+          out.write_text(
+              'native_binary: %s\nnative_format: ELF\nnative_sha256: %s\n' % (binary, digest),
+              encoding='utf-8',
+          )
+          print(out.read_text(encoding='utf-8'), end='')
+          PY
+            for log in "$evidence/pe32-minimal"/logs/*.log; do
+              [ -e "$log" ] || continue
+              echo "===== $log ====="
+              cat "$log"
+            done
+          ) > "$evidence/native_binary.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/native_binary.rc"
+          cat "$evidence/native_binary.log"
+          echo "native_binary rc=$rc"
+          exit "$rc"
+
+      - name: Emit Linux summary from measured return codes (fail closed)
+        if: always()
+        shell: bash
+        run: |
+          python3 - "$RUNNER_TEMP/linux-evidence" <<'PY'
+          import json
+          import os
+          import platform
+          import sys
+          from pathlib import Path
+
+          evidence = Path(sys.argv[1])
+          report = Path('reports/linux-matrix/linux-summary.json')
+          report.parent.mkdir(parents=True, exist_ok=True)
+
+          stages = (
+              ('python_deps', 'deps'),
+              ('refusal_tests', 'refusals'),
+              ('native_build', 'native_build'),
+              ('pipeline', 'pipeline'),
+              ('native_binary', 'native_binary'),
+          )
+          rows = []
+          for name, stem in stages:
+              try:
+                  rc = int((evidence / (stem + '.rc')).read_text(encoding='utf-8').strip())
+              except (OSError, ValueError):
+                  rc = 'NOT TESTED'
+              try:
+                  log = (evidence / (stem + '.log')).read_text(encoding='utf-8')[-4000:]
+              except OSError:
+                  log = 'NOT TESTED'
+              rows.append({'name': name, 'rc': rc, 'log': log})
+          by_name = {row['name']: row['rc'] for row in rows}
+
+          host = {}
+          try:
+              for line in (evidence / 'environment.txt').read_text(encoding='utf-8').splitlines():
+                  if ':' in line:
+                      key, value = line.split(':', 1)
+                      host[key.strip()] = value.strip()
+          except OSError:
+              pass
+
+          measured = all(row['rc'] == 0 for row in rows)
+          linux_host = (platform.system() == 'Linux'
+                        and os.environ.get('RUNNER_OS') == 'Linux'
+                        and host.get('host_os') == 'Linux'
+                        and host.get('runner_os') == 'Linux')
+          status = 'PASS' if (measured and linux_host) else 'NOT TESTED'
+
+          try:
+              native = (evidence / 'native-binary.txt').read_text(encoding='utf-8')
+          except OSError:
+              native = 'NOT TESTED'
+
+          payload = {
+              'schema': 1,
+              'issue': 144,
+              'workflow': 'linux-evidence',
+              'status': status,
+              'linux_pass_claimed': status == 'PASS',
+              'not_tested_reason': None if status == 'PASS' else (
+                  'host is not Linux or at least one stage has no measured rc=0'),
+              'host': host,
+              'stages': rows,
+              'build_rc': by_name['native_build'],
+              'run_rc': by_name['pipeline'],
+              'native_binary': native,
+              'report_path': 'reports/linux-matrix/linux-summary.json',
+          }
+          report.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
+          print('emitted %s: status=%s' % (report, status))
+          for row in rows:
+              print('  %s rc=%s' % (row['name'], row['rc']))
+          raise SystemExit(0 if status == 'PASS' else 1)
+          PY
+
+      - name: Upload Linux evidence (summary, logs, native binary, host facts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-evidence-summary
+          if-no-files-found: warn
+          path: |
+            reports/linux-matrix/linux-summary.json
+            ${{ runner.temp }}/linux-evidence/
