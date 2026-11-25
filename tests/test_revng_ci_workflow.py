@@ -221,6 +221,29 @@ def test_real_fixture_difftest_multilifter_and_source_quality_steps():
     assert count >= 5, "fixture, hash, revng C, adapter and emitter scripts must be present"
 
 
+def test_adapter_consumes_revng_generated_suffix_and_compile_includes():
+    compile_step = _step(
+        "Build the canonical-ABI adapter and compile both candidates")["run"]
+    for token in ("guest_memory", "rstrip('uU')", "MEM32({address}U)",
+                  "void_return", "src/recomp/gen",
+                  "baseline.compile.rc", "revng.compile.rc"):
+        assert token in compile_step, f"adapter/compile step missing {token!r}"
+    assert 'test "$(cat "$evidence/baseline.compile.rc")"' not in compile_step
+
+
+def test_artifact_upload_excludes_the_large_archive_and_tool_tree():
+    upload = _step(UPLOAD_STEP)["head"]
+    assert "${{ runner.temp }}/revng-evidence/" in upload
+    for exclusion in ("!${{ runner.temp }}/revng-evidence/revng-distributable.tar.xz",
+                      "!${{ runner.temp }}/revng-evidence/revng/",
+                      "!${{ runner.temp }}/revng-evidence/project/build/"):
+        assert exclusion in upload, f"artifact exclusion missing: {exclusion!r}"
+    difftest = _step(
+        "Drive PCRecomp and revng against the original bytes (difftest)")["run"]
+    assert "baseline-difftest.rc" in difftest and "revng-difftest.rc" in difftest
+    assert "A divergence is real evidence" in difftest
+
+
 def test_summary_path_and_no_fake_pass():
     text = _text()
     emitter = _step(EMIT_STEP)["run"]
