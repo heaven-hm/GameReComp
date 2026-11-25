@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "capability": "audio",
+  "capture_id": "host-macos-descript-loopback",
+  "source": "Descript Loopback Recorder (host macOS capture tool)",
+  "measured": {
+    "wav": "host loopback recording",
+    "sample_frames": 254872,
+    "all_zero": true,
+    "non_silent": false,
+    "endpoint": "host-macos-loopback (not a Windows guest endpoint)"
+  },
+  "artifact": {
+    "name": "descript-loopback.wav",
+    "sha256": null
+  },
+  "audio": {
+    "frames": 254872,
+    "peak": 0,
+    "non_silent": false,
+    "all_zero": true
+  },
+  "sha256_status": "WAV was captured and measured; byte artifact and per-capture SHA-256 are not committed with this proof set, so no hash can be recomputed here.",
+  "note": "All 254872 sample frames are zero: a silent host loopback capture, not in-game Windows audio. Silence is a hard blocker for the audio capability."
+}

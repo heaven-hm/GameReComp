@@ -1,0 +1,178 @@
+{
+  "blockers": [
+    "windows-endpoint:EMULATED_ENDPOINT",
+    "windows-endpoint:ENDPOINT_CONSOLE_SCOPE",
+    "gui-frames:FRAME_NO_BYTES",
+    "gui-frames:FRAMES_INCOMPLETE",
+    "audio:AUDIO_NO_HASH",
+    "audio:AUDIO_NO_BYTES",
+    "audio:AUDIO_SILENT",
+    "native-hash:NATIVE_HASH_NULL"
+  ],
+  "capabilities": {
+    "audio": {
+      "capability": "audio",
+      "capture_id": "host-macos-descript-loopback",
+      "codes": [
+        "AUDIO_NO_HASH",
+        "AUDIO_NO_BYTES",
+        "AUDIO_SILENT"
+      ],
+      "detail": {
+        "claimed_frames": 254872,
+        "claimed_non_silent": false,
+        "claimed_sha256": null,
+        "frames": null,
+        "non_silent": null,
+        "peak": null,
+        "sha256_computed": null,
+        "sha256_status": "WAV was captured and measured; byte artifact and per-capture SHA-256 are not committed with this proof set, so no hash can be recomputed here.",
+        "source": "Descript Loopback Recorder (host macOS capture tool)"
+      },
+      "error": null,
+      "reasons": [
+        "audio capture has no usable 64-hex SHA-256 claim",
+        "audio capture has no CLI-supplied WAV to verify",
+        "audio is all-zero/silent or constant; non-silent samples are required"
+      ],
+      "source_record": "proof/capture-blockers/audio-descript-loopback.json",
+      "source_record_sha256": "e05d2b94acedf13c5b04657b89023f6075222a6087d1cd334c67c089358d4af7",
+      "verdict": "BLOCKED"
+    },
+    "gui-frames": {
+      "capability": "gui-frames",
+      "capture_id": "native-macos-gui-cua",
+      "codes": [
+        "FRAME_NO_BYTES",
+        "FRAMES_INCOMPLETE"
+      ],
+      "detail": {
+        "clicks": {
+          "completed": 4,
+          "expected": 9
+        },
+        "frames": [
+          {
+            "actual_sha256": null,
+            "claimed_sha256": null,
+            "name": "click-01.png",
+            "status": "NO_BYTES"
+          },
+          {
+            "actual_sha256": null,
+            "claimed_sha256": null,
+            "name": "click-02.png",
+            "status": "NO_BYTES"
+          },
+          {
+            "actual_sha256": null,
+            "claimed_sha256": null,
+            "name": "click-03.png",
+            "status": "NO_BYTES"
+          },
+          {
+            "actual_sha256": null,
+            "claimed_sha256": null,
+            "name": "click-04.png",
+            "status": "NO_BYTES"
+          }
+        ],
+        "scope": "native-gui",
+        "sha256_status": "The harness recorded SHA-256 digests for the four screenshots, but the byte artifacts and their digest values are not committed with this proof set, so no hash can be recomputed here.",
+        "source": "tools.gui_cua_test (CUA driver, native macOS GUI)"
+      },
+      "error": null,
+      "reasons": [
+        "a GUI frame has no CLI-supplied byte file to verify",
+        "the GUI click run completed fewer clicks than expected"
+      ],
+      "source_record": "proof/capture-blockers/gui-cua-clicks.json",
+      "source_record_sha256": "e25d2e01b14951fb796896d7aa98fdeb7a39e1a4824f7bca93d967a06039f5ca",
+      "verdict": "PARTIAL"
+    },
+    "native-hash": {
+      "capability": "native-hash",
+      "capture_id": "arith-calc-highball-console",
+      "codes": [
+        "NATIVE_HASH_NULL"
+      ],
+      "detail": {
+        "expected_sha256": null,
+        "sha256": null,
+        "source": "tools.highball_oracle_capture (real Highball/Wine run)",
+        "status": "not available at a stable path; no matching original/native pair"
+      },
+      "error": null,
+      "reasons": [
+        "no rebuilt native SHA-256 is available (native hash is null)"
+      ],
+      "source_record": "proof/capture-blockers/native-unavailable.json",
+      "source_record_sha256": "c36d4e4d530b36f2085a2136f0313a04c61628ca8aae6f869c6b96244b590ad1",
+      "verdict": "BLOCKED"
+    },
+    "windows-endpoint": {
+      "capability": "windows-endpoint",
+      "capture_id": "arith-calc-highball-console",
+      "codes": [
+        "EMULATED_ENDPOINT",
+        "ENDPOINT_CONSOLE_SCOPE"
+      ],
+      "detail": {
+        "guest_output_sha256": "b6674fd6da06bc9dd36a49a5697efdeb8af7bd354f00b9c6d77359533b572d8f",
+        "kind": "highball-wine",
+        "label": "highball-wine-console",
+        "native_sha256": null,
+        "scope": "console-only",
+        "verified": true
+      },
+      "error": null,
+      "reasons": [
+        "endpoint is Wine/Highball emulation, not the original Windows host",
+        "endpoint capture is console-only; no GUI scope was captured"
+      ],
+      "source_record": "proof/capture-blockers/windows-console-captured.json",
+      "source_record_sha256": "dcdce5087893fdf6f9aca51a92982f18d926e53e296c4e7764dfffbc98d65a8b",
+      "verdict": "BLOCKED"
+    }
+  },
+  "generator": "tools/capture_blocker_evidence.py",
+  "inputs": {
+    "frames": [],
+    "native_sha256": null,
+    "records": [
+      {
+        "path": "proof/capture-blockers/windows-console-captured.json",
+        "sha256": "dcdce5087893fdf6f9aca51a92982f18d926e53e296c4e7764dfffbc98d65a8b"
+      },
+      {
+        "path": "proof/capture-blockers/audio-descript-loopback.json",
+        "sha256": "e05d2b94acedf13c5b04657b89023f6075222a6087d1cd334c67c089358d4af7"
+      },
+      {
+        "path": "proof/capture-blockers/audio-screencapturekit.json",
+        "sha256": "af0e73db717c060dda475fcf2cc2009d53c343c4eee176dc4213693b8ab7754f"
+      },
+      {
+        "path": "proof/capture-blockers/gui-cua-clicks.json",
+        "sha256": "e25d2e01b14951fb796896d7aa98fdeb7a39e1a4824f7bca93d967a06039f5ca"
+      },
+      {
+        "path": "proof/capture-blockers/native-unavailable.json",
+        "sha256": "c36d4e4d530b36f2085a2136f0313a04c61628ca8aae6f869c6b96244b590ad1"
+      }
+    ],
+    "wavs": []
+  },
+  "note": "Byte-level, fail-closed evidence join only. No game or capture process is run here; a PASS means the supplied bytes survived these checks and share one capture session. No gameplay, graphics, audio correctness or 100% compatibility claim is made.",
+  "requirements": [
+    "windows-endpoint",
+    "gui-frames",
+    "audio",
+    "native-hash"
+  ],
+  "schema": 1,
+  "session_codes": [],
+  "tool": "capture_blocker_evidence",
+  "verdict": "PARTIAL",
+  "what_it_proves": "Only verified retail-Windows bytes, non-blank GUI frames, non-silent audio and a matching native hash can yield PASS; console-only and silent captures are never promoted."
+}

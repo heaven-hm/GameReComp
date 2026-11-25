@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "capability": "gui-frames",
+  "capture_id": "native-macos-gui-cua",
+  "source": "tools.gui_cua_test (CUA driver, native macOS GUI)",
+  "scope": "native-gui",
+  "measured": {
+    "clicks_completed": 4,
+    "clicks_expected": 9,
+    "screenshots_with_sha256": 4,
+    "target": "GameReComp GUI on the host macOS desktop (not a Windows guest)"
+  },
+  "frames": [
+    {"name": "click-01.png", "sha256": null},
+    {"name": "click-02.png", "sha256": null},
+    {"name": "click-03.png", "sha256": null},
+    {"name": "click-04.png", "sha256": null}
+  ],
+  "clicks": {
+    "completed": 4,
+    "expected": 9
+  },
+  "sha256_status": "The harness recorded SHA-256 digests for the four screenshots, but the byte artifacts and their digest values are not committed with this proof set, so no hash can be recomputed here.",
+  "note": "Only 4 of 9 scripted CUA clicks ran. The target is the host GUI, not a retail-Windows guest. Incomplete click coverage plus unavailable bytes means this cannot satisfy the GUI-frame capability."
+}
