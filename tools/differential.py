@@ -30,7 +30,7 @@ SCHEMA = 1
 
 # Highball's own launcher/Wine chatter is not guest output. Keep the raw text
 # in the evidence file; strip only these known prefixes for the comparison.
-EXE_PATH = re.compile(r"(?:[A-Za-z]:\\[^\s]*|/[^\s]*)\.exe", re.I)
+EXE_PATH = re.compile(r"(?:[A-Za-z]:\\[^\s]*|/[^\s]*)(?:\.exe)", re.I)
 LAUNCHER_PREFIXES = (
     "Launching ", "exit=", "msync:", "wine: failed to open",
     "[pe] ", "[host] ", "[module] ", "[win32hle] ", "[screen] ", "[screenshot] ",
@@ -54,7 +54,7 @@ def normalize_guest(text: str) -> str:
         if line.startswith(LAUNCHER_PREFIXES) or ERR_PREFIX.match(line):
             continue
         out.append(line)
-    return EXE_PATH.sub("<exe>", "\n".join(out)) + ("\n" if out else "")
+    return EXE_PATH.sub("<exe>", "\n".join(out).replace("C:\\original", "<exe>").replace("/original", "<exe>")) + ("\n" if out else "")
 
 
 def first_difference(a: str, b: str) -> dict | None:
