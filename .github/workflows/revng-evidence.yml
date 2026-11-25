@@ -1,0 +1,444 @@
+name: revng-evidence
+
+# Active real rev.ng evidence job for issue #25. The distributable is the pinned
+# native Linux x86-64 archive recorded in docs/REVNG_ACQUISITION.md; ubuntu-latest
+# is x86-64, so no container emulation is involved. Every stage writes its own
+# measured return code and exact hashes under $RUNNER_TEMP/revng-evidence.
+# The final summary is derived from those measurements: a download failure, a
+# byte-count/hash mismatch, a missing C file, a compile failure, a difftest
+# divergence or a readability regression all leave the verdict NOT PROVEN and
+# fail the job. No PASS is written in advance and issue #25 is never changed.
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  revng-evidence:
+    name: Real rev.ng C + difftest + source quality (Linux x86-64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install native build and oracle dependencies
+        shell: bash
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo apt-get install -y xz-utils libsdl2-dev libsdl2-ttf-dev
+          python3 -m pip install --upgrade pytest pefile pyyaml unicorn capstone
+
+      - name: Record Linux runner, pins and commands
+        shell: bash
+        run: |
+          set -eu
+          evidence="$RUNNER_TEMP/revng-evidence"
+          mkdir -p "$evidence" reports/revng proof/revng
+          {
+            echo "# commands executed by this job (appended by each stage)"
+            echo '$ uname -s; echo "$RUNNER_OS"; uname -m; git rev-parse HEAD'
+          } | tee "$evidence/commands.txt"
+          {
+            echo "host_os: $(uname -s)"
+            echo "host_arch: $(uname -m)"
+            echo "host_uname: $(uname -a)"
+            echo "runner_os: ${RUNNER_OS:-}"
+            echo "runner_arch: ${RUNNER_ARCH:-}"
+            echo "git_head: $(git rev-parse HEAD)"
+            echo "python: $(python3 --version 2>&1)"
+            echo "archive_url: https://revng-website-downloads.s3.fr-par.scw.cloud/binary-archives/public/linux-x86-64/revng-distributable-public-demo/default/none_7361e00740573e8990d13651cedd5314e89e5adc.tar.xz"
+            echo "archive_bytes_pin: 564214476"
+            echo "archive_sha256_pin: f19060db47165388df24343c6c7abc824742ac9063beeb614d474f3c6b764238"
+          } | tee "$evidence/environment.txt"
+          if [ "$(uname -s)" != "Linux" ] || [ "${RUNNER_OS:-}" != "Linux" ]; then
+            echo "FAIL: a real Linux runner is required; no macOS/emulated substitution" >&2
+            exit 1
+          fi
+
+      - name: Download pinned native rev.ng archive
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          url='https://revng-website-downloads.s3.fr-par.scw.cloud/binary-archives/public/linux-x86-64/revng-distributable-public-demo/default/none_7361e00740573e8990d13651cedd5314e89e5adc.tar.xz'
+          printf '$ curl -fL --retry 3 --connect-timeout 30 -o "$RUNNER_TEMP/revng-evidence/revng-distributable.tar.xz" %s\n' "$url" | tee -a "$evidence/commands.txt"
+          curl -fL --retry 3 --connect-timeout 30 \
+            -o "$evidence/revng-distributable.tar.xz" "$url" \
+            > "$evidence/download.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/download.rc"
+          tail -n 5 "$evidence/download.log"
+          echo "download rc=$rc"
+          exit "$rc"
+
+      - name: Verify exact byte count and SHA-256 pin (fail closed)
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          cat > "$evidence/checksums.sha256" <<'EOF'
+          f19060db47165388df24343c6c7abc824742ac9063beeb614d474f3c6b764238  revng-distributable.tar.xz
+          EOF
+          printf '$ stat -c %%s revng-distributable.tar.xz; sha256sum -c checksums.sha256\n' | tee -a "$evidence/commands.txt"
+          (
+            set -e
+            actual="$(stat -c %s "$evidence/revng-distributable.tar.xz")"
+            echo "archive_bytes: $actual" | tee "$evidence/hashes.txt"
+            if [ "$actual" != "564214476" ]; then
+              echo "FAIL: byte count $actual != pinned 564214476" >&2
+              exit 1
+            fi
+            (cd "$evidence" && sha256sum -c checksums.sha256) | tee -a "$evidence/hashes.txt"
+            sha256sum "$evidence/revng-distributable.tar.xz" >> "$evidence/hashes.txt"
+          ) > "$evidence/verify.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/verify.rc"
+          cat "$evidence/verify.log"
+          echo "verify rc=$rc"
+          exit "$rc"
+
+      - name: Extract pinned archive and record revng --version
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          mkdir -p "$evidence/revng"
+          printf '$ tar -xJf revng-distributable.tar.xz --strip-components=1 -C revng; source ./environment; revng --version\n' | tee -a "$evidence/commands.txt"
+          (
+            set -e
+            tar -xJf "$evidence/revng-distributable.tar.xz" --strip-components=1 -C "$evidence/revng"
+            test -f "$evidence/revng/environment"
+            cd "$evidence/revng"
+            . ./environment
+            revng --version | tee "$evidence/revng-version.txt"
+            command -v revng > "$evidence/revng-path.txt"
+          ) > "$evidence/extract.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/extract.rc"
+          tail -n 40 "$evidence/extract.log"
+          echo "extract rc=$rc"
+          exit "$rc"
+
+      - name: Build the real PE32 fixture and the PCRecomp project
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          printf '$ python3 tests/diff/differential_gate.py build_gate_pe > gate.exe; cargo build --release --bin game-recomp-cli --no-default-features --features cli; game-recomp-cli gate.exe --project-dir project --no-table\n' | tee -a "$evidence/commands.txt"
+          (
+            set -e
+            python3 - "$evidence/gate.exe" <<'PY'
+          import pathlib
+          import sys
+          from tests.diff.differential_gate import build_gate_pe
+
+          image = build_gate_pe()
+          pathlib.Path(sys.argv[1]).write_bytes(image)
+          print(f'gate bytes={len(image)}')
+          PY
+            python3 - "$evidence/gate.exe" "$evidence/hashes.txt" <<'PY'
+          import hashlib
+          import pathlib
+          import sys
+
+          data = pathlib.Path(sys.argv[1]).read_bytes()
+          assert data[:2] == b'MZ' and data[0x3C:0x40], 'not a PE image'
+          with open(sys.argv[2], 'a', encoding='utf-8') as out:
+              out.write('fixture_sha256: ' + hashlib.sha256(data).hexdigest() + '\n')
+              out.write('fixture_bytes: ' + str(len(data)) + '\n')
+          PY
+            cargo build --release --bin game-recomp-cli --no-default-features --features cli
+            set +e
+            ./target/release/game-recomp-cli "$evidence/gate.exe" \
+              --project-dir "$evidence/project" \
+              --input-os windows --input-arch x86 \
+              --target-os host --target-arch host \
+              --timeout 10 --no-table
+            cli_rc=$?
+            set -e
+            echo "game-recomp-cli rc=$cli_rc"
+            case "$cli_rc" in 0|3) ;; *) exit "$cli_rc" ;; esac
+            test -f "$evidence/project/manifest.json"
+            grep -rl 'sub_00401000' "$evidence/project/src/recomp/gen"/*.c | head -n 1 \
+              > "$evidence/baseline-source-path.txt"
+            test -s "$evidence/baseline-source-path.txt"
+            cp "$(cat "$evidence/baseline-source-path.txt")" "$evidence/baseline.c"
+          ) > "$evidence/fixture.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/fixture.rc"
+          tail -n 60 "$evidence/fixture.log"
+          echo "fixture rc=$rc"
+          exit "$rc"
+
+      - name: Emit real revng C for the fixture
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          printf '$ revng quick artifact emit-c-as-single-file gate.exe > revng.ptml\n' | tee -a "$evidence/commands.txt"
+          (
+            set -e
+            cd "$evidence/revng"
+            . ./environment
+            revng quick artifact emit-c-as-single-file "$evidence/gate.exe" \
+              > "$evidence/revng.ptml" 2> "$evidence/revng-decompile.err"
+            test -s "$evidence/revng.ptml"
+          ) > "$evidence/revng-decompile.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/revng-decompile.rc"
+          tail -n 40 "$evidence/revng-decompile.log"
+          echo "revng-decompile rc=$rc"
+          [ "$rc" -eq 0 ] || exit "$rc"
+          python3 - "$evidence/revng.ptml" "$evidence/revng-full.c" "$evidence/revng-function.c" <<'PY'
+          import pathlib
+          import sys
+          from tools.autorecomp import revng
+
+          ptml = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
+          plain = revng.ptml_to_c(ptml)
+          pathlib.Path(sys.argv[2]).write_text(plain, encoding='utf-8')
+          fn = revng.function_source(plain, 0x401000)
+          if not fn:
+              raise SystemExit('revng emitted no function at 0x00401000')
+          pathlib.Path(sys.argv[3]).write_text(fn, encoding='utf-8')
+          print(f'revng C bytes={len(plain.encode())} function bytes={len(fn.encode())}')
+          PY
+
+      - name: Build the canonical-ABI adapter and compile both candidates
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          printf '$ python3 adapter builder; cc -fsyntax-only baseline.c revng-adapter.c\n' | tee -a "$evidence/commands.txt"
+          (
+            set -e
+            python3 - "$evidence/revng-function.c" "$evidence/revng-adapter.c" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          fn = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
+          body = re.sub(r'^_ABI\([^)]*\)\s*\n', '', fn, count=1)
+          body = body.replace('generic32_t', 'uint32_t')
+          body = body.replace('generic64_t', 'uint64_t')
+          body = body.replace('generic16_t', 'uint16_t')
+          body = body.replace('generic8_t', 'uint8_t')
+          # Guest absolute addresses become the repo's canonical guest-memory
+          # accessor; a raw host dereference of a guest VA is not comparable.
+          body = re.sub(
+              r'\*\s*\(\s*(?:uint(?:8|16|32|64)_t|generic\d+_t)\s*\*\s*\)\s*'
+              r'(0x[0-9A-Fa-f]{6,8})',
+              r'MEM32(\1U)', body)
+          name = re.search(r'\b(function_0x[0-9A-Fa-f]+_Code_\w+)\s*\(', body)
+          if not name:
+              raise SystemExit('no revng function definition to adapt')
+          body = body.replace(name.group(1), 'revng_function_0x401000', 1)
+          source = (
+              '#include <stdint.h>\n'
+              '#include "win32hle.h"\n'
+              '#include "recomp_funcs.h"\n'
+              + body + '\n'
+              + 'void sub_00401000(void) {\n'
+              + '    uint32_t result = (uint32_t)revng_function_0x401000();\n'
+              + '    RETC(result);\n'
+              + '}\n')
+          pathlib.Path(sys.argv[2]).write_text(source, encoding='utf-8')
+          print(f'adapter bytes={len(source.encode())}')
+          PY
+            cc -fsyntax-only -I"$evidence/project/src/runtime/win32hle" \
+              -I"$evidence/project/src/runtime/recomp32" \
+              "$evidence/baseline.c" > "$evidence/baseline-compile.log" 2>&1
+            echo "$?" > "$evidence/baseline.compile.rc"
+            cc -fsyntax-only -I"$evidence/project/src/runtime/win32hle" \
+              -I"$evidence/project/src/runtime/recomp32" \
+              "$evidence/revng-adapter.c" > "$evidence/revng-compile.log" 2>&1
+            echo "$?" > "$evidence/revng.compile.rc"
+            cat "$evidence/baseline-compile.log" "$evidence/revng-compile.log"
+            test "$(cat "$evidence/baseline.compile.rc")" = 0
+            test "$(cat "$evidence/revng.compile.rc")" = 0
+          ) > "$evidence/compile.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/compile.rc"
+          tail -n 60 "$evidence/compile.log"
+          echo "compile rc=$rc"
+          exit "$rc"
+
+      - name: Drive PCRecomp and revng against the original bytes (difftest)
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          printf '$ python3 tools/lift/difftest.py --project project --pe gate.exe --address 0x401000 --json <report>\n' | tee -a "$evidence/commands.txt"
+          (
+            set -e
+            python3 tools/lift/difftest.py --project "$evidence/project" \
+              --pe "$evidence/gate.exe" --address 0x401000 --cases 8 \
+              --json "$evidence/baseline-difftest.json" > "$evidence/baseline-difftest.log" 2>&1
+            python3 tools/lift/difftest.py --project "$evidence/project" \
+              --pe "$evidence/gate.exe" --address 0x401000 --cases 8 \
+              --source "$evidence/revng-adapter.c" --symbol sub_00401000 \
+              --json "$evidence/revng-difftest.json" > "$evidence/revng-difftest.log" 2>&1
+            cat "$evidence/baseline-difftest.log" "$evidence/revng-difftest.log"
+          ) > "$evidence/difftest.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/difftest.rc"
+          tail -n 80 "$evidence/difftest.log"
+          echo "difftest rc=$rc"
+          exit "$rc"
+
+      - name: Select with the repo multilifter (fail closed)
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          printf '$ python3 tools/lift/multilifter.py --lifter revng=<report> --lifter pcrecomp=<report> --json decision.json\n' | tee -a "$evidence/commands.txt"
+          python3 tools/lift/multilifter.py --quiet \
+            --lifter "revng=$evidence/revng-difftest.json" \
+            --lifter "pcrecomp=$evidence/baseline-difftest.json" \
+            --json "$evidence/decision.json" > "$evidence/multilifter.log" 2>&1
+          rc=$?
+          echo "$rc" > "$evidence/multilifter.rc"
+          cat "$evidence/multilifter.log"
+          echo "multilifter rc=$rc"
+          exit "$rc"
+
+      - name: Measure source quality against the PCRecomp baseline
+        shell: bash
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/revng-evidence"
+          printf '$ python3 tools/revng_source_quality.py --fixture gate.exe --baseline-c baseline.c --revng-c revng-full.c --out proof/revng/SOURCE_QUALITY.json\n' | tee -a "$evidence/commands.txt"
+          python3 tools/revng_source_quality.py \
+            --fixture "$evidence/gate.exe" --address 0x401000 \
+            --baseline-c "$evidence/baseline.c" \
+            --revng-c "$evidence/revng-full.c" \
+            --baseline-difftest "$evidence/baseline-difftest.json" \
+            --revng-difftest "$evidence/revng-difftest.json" \
+            --decision "$evidence/decision.json" \
+            --baseline-compile-rc "$evidence/baseline.compile.rc" \
+            --revng-compile-rc "$evidence/revng.compile.rc" \
+            --expected-fixture-sha256 "$(awk '/^fixture_sha256:/{print $2}' "$evidence/hashes.txt")" \
+            --out proof/revng/SOURCE_QUALITY.json --json \
+            > "$evidence/source-quality.json" 2> "$evidence/source-quality.log"
+          rc=$?
+          echo "$rc" > "$evidence/source-quality.rc"
+          cat "$evidence/source-quality.log"
+          echo "source-quality rc=$rc"
+          exit "$rc"
+
+      - name: Emit final evidence summary from measured files (fail closed)
+        if: always()
+        shell: bash
+        run: |
+          python3 - "$RUNNER_TEMP/revng-evidence" <<'PY'
+          import json
+          import os
+          import platform
+          import sys
+          from pathlib import Path
+
+          evidence = Path(sys.argv[1])
+          report = Path('reports/revng/revng-ci-summary.json')
+          report.parent.mkdir(parents=True, exist_ok=True)
+
+          stages = (
+              'download', 'verify', 'extract', 'fixture', 'revng-decompile',
+              'compile', 'difftest', 'multilifter', 'source-quality',
+          )
+          rows = []
+          for name in stages:
+              try:
+                  rc = int((evidence / f'{name}.rc').read_text(encoding='utf-8').strip())
+              except (OSError, ValueError):
+                  rc = 'NOT TESTED'
+              try:
+                  log = (evidence / f'{name}.log').read_text(encoding='utf-8')[-4000:]
+              except OSError:
+                  log = 'NOT TESTED'
+              rows.append({'name': name, 'rc': rc, 'log_tail': log})
+
+          def load(path):
+              try:
+                  return json.loads(Path(path).read_text(encoding='utf-8'))
+              except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                  return None
+
+          quality = load('proof/revng/SOURCE_QUALITY.json')
+          decision = load(evidence / 'decision.json')
+          hash_lines = {}
+          try:
+              for line in (evidence / 'hashes.txt').read_text(encoding='utf-8').splitlines():
+                  if ':' in line:
+                      key, value = line.split(':', 1)
+                      hash_lines[key.strip()] = value.strip()
+          except OSError:
+              pass
+          host = {}
+          try:
+              for line in (evidence / 'environment.txt').read_text(encoding='utf-8').splitlines():
+                  if ':' in line:
+                      key, value = line.split(':', 1)
+                      host[key.strip()] = value.strip()
+          except OSError:
+              pass
+
+          linux_host = (platform.system() == 'Linux'
+                        and os.environ.get('RUNNER_OS') == 'Linux'
+                        and host.get('host_os') == 'Linux'
+                        and host.get('runner_os') == 'Linux')
+          measured = all(row['rc'] == 0 for row in rows)
+          source_ok = (isinstance(quality, dict)
+                       and quality.get('verdict') == 'SOURCE_IMPROVED'
+                       and isinstance(quality.get('sha256'), str))
+          selected = (isinstance(decision, dict)
+                      and decision.get('decision') == 'PROMOTE'
+                      and decision.get('chosen_lifter') == 'revng')
+          status = 'PASS' if (linux_host and measured and source_ok and selected) else 'NOT TESTED'
+          payload = {
+              'schema': 1,
+              'issue': 25,
+              'workflow': 'revng-evidence',
+              'status': status,
+              'linux_host': linux_host,
+              'stages': rows,
+              'hashes': hash_lines,
+              'revng_selection': decision,
+              'source_quality_verdict': quality.get('verdict') if isinstance(quality, dict) else None,
+              'source_quality_reasons': quality.get('reasons', []) if isinstance(quality, dict) else [],
+              'claim_scope': ('Real pinned rev.ng C plus repo difftest/multilifter/source-quality '
+                              'evidence for one fixture at 0x00401000 only. Issue #25 stays OPEN; '
+                              'no HIGH_LEVEL_VERIFIED, gameplay equivalence or 100% claim.'),
+              'not_tested_reason': None if status == 'PASS' else (
+                  'Linux host guard, a measured rc, revng selection, or the fail-closed '
+                  'source-quality verdict did not pass'),
+          }
+          report.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
+          print(f'emitted {report}: status={status}')
+          for row in rows:
+              print(f"  {row['name']} rc={row['rc']}")
+          raise SystemExit(0 if status == 'PASS' else 1)
+          PY
+
+      - name: Upload revng evidence (hashes, commands, reports, logs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: revng-evidence
+          if-no-files-found: warn
+          path: |
+            reports/revng/revng-ci-summary.json
+            proof/revng/SOURCE_QUALITY.json
+            proof/revng/
+            reports/revng/
+            ${{ runner.temp }}/revng-evidence/
