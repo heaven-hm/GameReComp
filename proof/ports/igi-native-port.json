@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "title": "IGI PE32 -> macOS arm64 native rebuild",
+  "input": {
+    "path": "/Users/haseeb-mir/Downloads/IGI/igi.exe",
+    "sha256_prefix": "dea34892d417"
+  },
+  "binary": {
+    "local_path": "/Users/haseeb-mir/Downloads/recomp-apps/evidence/PROOF/binaries/igi-macos-arm64",
+    "sha256": "a7820f008f6659476fdc4ced6d4b1a06d4c32b75ab61bad9632bb958527c026c"
+  },
+  "commands": [
+    "python3 -m tools.autorecomp igi.exe --out-mode source ...",
+    "cmake --build build-macos --parallel 2"
+  ],
+  "fresh_frames": [
+    {
+      "level": "1",
+      "file": "proof/screenshots/igi-level1-fresh-0002.png",
+      "size": [
+        640,
+        480
+      ],
+      "colours": 6814,
+      "sha256": "b88f6d616981ffe6541e021a1b94f8590e6fd32adc6b0606912c1c52e4c21cf4"
+    },
+    {
+      "level": "5",
+      "file": "proof/screenshots/igi-level5-fresh-0001.png",
+      "size": [
+        640,
+        480
+      ],
+      "colours": 6814,
+      "sha256": "602b806620f0bf8f23a0b01fd1d7f3d6440fd026dee106edc1ca95ba6b9b5d1a"
+    },
+    {
+      "level": "9",
+      "file": "proof/screenshots/igi-level9-fresh-0002.png",
+      "size": [
+        640,
+        480
+      ],
+      "colours": 6814,
+      "sha256": "b88f6d616981ffe6541e021a1b94f8590e6fd32adc6b0606912c1c52e4c21cf4"
+    }
+  ],
+  "limits": "Local binary; hashed logs/frames committed, binary itself not committed."
+}
