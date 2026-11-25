@@ -1,0 +1,784 @@
+{
+  "artifacts_dir": "/Users/haseeb-mir/Documents/Code/GameReComp-game-target-oracle/proof/game-target-oracle/tmnf-issue23-attempt-artifacts",
+  "comparison": {
+    "declared_input_sha256": null,
+    "input_hashes_match": false,
+    "min_similarity": 0.85,
+    "native_input_sha256": null,
+    "original_input_sha256": null,
+    "similarity": null,
+    "similarity_met": false
+  },
+  "declared_input_sha256": "",
+  "evidence_path": "/Users/haseeb-mir/Documents/Code/GameReComp-game-target-oracle/proof/game-target-oracle/tmnf-issue23-attempt-evidence.json",
+  "evidence_sha256": "f52b80cd200fb74db36e4fc8a60c331361a60b8d8daba4b80751fccb05cf5276",
+  "game_id": "tmnf",
+  "generator": "tools/game_target_oracle_run.py",
+  "issues": [
+    23
+  ],
+  "limits": "Frame similarity is a coarse global colour-layout metric, not a pixel, perceptual or gameplay-state diff; checkpoint state, AI state, timing and audio are not compared here. Frames come from a Highball/Wine emulation of the original and from one native process on this host.",
+  "matrix_promotion": false,
+  "native": null,
+  "not_claimed": "PASS means only that this one declared original-vs-native scenario comparison passed: both sides executed, real non-blank frames were captured from independently confirmed game windows, identical input bytes were delivered, and a coarse 8x8 frame layout similarity exceeded the declared threshold. No claim of gameplay, graphics, audio or input equivalence, issue closure, other editions, other scenarios or other titles is made.",
+  "oracle": "game-target-oracle-dual-run",
+  "original": {
+    "binary": "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TmForever.exe",
+    "binary_sha256": "5e287e79a07cccc9f58989120fda2668d5da1086321033f162492af7c2671672",
+    "capture_backend": "cua",
+    "command": [
+      "/Users/haseeb-mir/.local/bin/highball",
+      "run",
+      "-b",
+      "Games",
+      "-e",
+      "x64-crossover26.3-r27",
+      "-d",
+      "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever",
+      "--",
+      "/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TmForever.exe"
+    ],
+    "command_display": "/Users/haseeb-mir/.local/bin/highball run -b Games -e x64-crossover26.3-r27 -d '/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever' -- '/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TmForever.exe'",
+    "executed": true,
+    "exit_code": -15,
+    "frames": [
+      {
+        "analysis": {
+          "blank": false,
+          "distinct_colors": 1639,
+          "format": "png8",
+          "grid": 8,
+          "height": 2100,
+          "sample_step": 35,
+          "sampled_pixels": 5760,
+          "signature": [
+            [
+              44,
+              48,
+              46
+            ],
+            [
+              39,
+              47,
+              49
+            ],
+            [
+              46,
+              53,
+              56
+            ],
+            [
+              143,
+              145,
+              151
+            ],
+            [
+              82,
+              94,
+              95
+            ],
+            [
+              69,
+              84,
+              84
+            ],
+            [
+              68,
+              84,
+              86
+            ],
+            [
+              88,
+              100,
+              103
+            ],
+            [
+              6,
+              14,
+              11
+            ],
+            [
+              6,
+              17,
+              15
+            ],
+            [
+              50,
+              60,
+              58
+            ],
+            [
+              108,
+              114,
+              110
+            ],
+            [
+              70,
+              82,
+              73
+            ],
+            [
+              65,
+              79,
+              69
+            ],
+            [
+              70,
+              85,
+              74
+            ],
+            [
+              106,
+              117,
+              108
+            ],
+            [
+              2,
+              9,
+              3
+            ],
+            [
+              3,
+              12,
+              4
+            ],
+            [
+              43,
+              47,
+              44
+            ],
+            [
+              101,
+              106,
+              104
+            ],
+            [
+              91,
+              98,
+              93
+            ],
+            [
+              94,
+              100,
+              96
+            ],
+            [
+              94,
+              101,
+              97
+            ],
+            [
+              87,
+              95,
+              89
+            ],
+            [
+              2,
+              12,
+              4
+            ],
+            [
+              4,
+              14,
+              6
+            ],
+            [
+              42,
+              47,
+              43
+            ],
+            [
+              72,
+              78,
+              74
+            ],
+            [
+              131,
+              135,
+              132
+            ],
+            [
+              129,
+              134,
+              130
+            ],
+            [
+              69,
+              76,
+              70
+            ],
+            [
+              60,
+              66,
+              61
+            ],
+            [
+              3,
+              13,
+              5
+            ],
+            [
+              6,
+              16,
+              7
+            ],
+            [
+              41,
+              49,
+              42
+            ],
+            [
+              54,
+              64,
+              56
+            ],
+            [
+              58,
+              69,
+              60
+            ],
+            [
+              57,
+              68,
+              60
+            ],
+            [
+              57,
+              68,
+              60
+            ],
+            [
+              69,
+              78,
+              71
+            ],
+            [
+              3,
+              13,
+              5
+            ],
+            [
+              5,
+              17,
+              6
+            ],
+            [
+              19,
+              29,
+              20
+            ],
+            [
+              61,
+              71,
+              64
+            ],
+            [
+              55,
+              66,
+              59
+            ],
+            [
+              62,
+              75,
+              65
+            ],
+            [
+              60,
+              73,
+              64
+            ],
+            [
+              62,
+              71,
+              63
+            ],
+            [
+              2,
+              8,
+              3
+            ],
+            [
+              2,
+              11,
+              4
+            ],
+            [
+              3,
+              12,
+              4
+            ],
+            [
+              56,
+              65,
+              58
+            ],
+            [
+              44,
+              53,
+              48
+            ],
+            [
+              63,
+              75,
+              66
+            ],
+            [
+              77,
+              87,
+              79
+            ],
+            [
+              26,
+              36,
+              27
+            ],
+            [
+              1,
+              3,
+              1
+            ],
+            [
+              1,
+              4,
+              1
+            ],
+            [
+              1,
+              6,
+              2
+            ],
+            [
+              2,
+              9,
+              3
+            ],
+            [
+              41,
+              49,
+              43
+            ],
+            [
+              58,
+              67,
+              60
+            ],
+            [
+              27,
+              36,
+              28
+            ],
+            [
+              2,
+              11,
+              3
+            ]
+          ],
+          "width": 3360
+        },
+        "bytes": 2275275,
+        "file": "original/original-frame-000.png",
+        "name": "original-screen-000.png",
+        "sha256": "4d055e336959467e7149f7d7a3355b65c73b5e3db7b3a8a2535b789530abda8e",
+        "source": "cua"
+      },
+      {
+        "analysis": {
+          "blank": false,
+          "distinct_colors": 1634,
+          "format": "png8",
+          "grid": 8,
+          "height": 2100,
+          "sample_step": 35,
+          "sampled_pixels": 5760,
+          "signature": [
+            [
+              44,
+              48,
+              46
+            ],
+            [
+              39,
+              47,
+              49
+            ],
+            [
+              47,
+              54,
+              57
+            ],
+            [
+              142,
+              143,
+              150
+            ],
+            [
+              71,
+              77,
+              83
+            ],
+            [
+              70,
+              85,
+              85
+            ],
+            [
+              68,
+              84,
+              86
+            ],
+            [
+              87,
+              100,
+              102
+            ],
+            [
+              6,
+              14,
+              11
+            ],
+            [
+              6,
+              17,
+              15
+            ],
+            [
+              50,
+              59,
+              58
+            ],
+            [
+              96,
+              96,
+              96
+            ],
+            [
+              64,
+              74,
+              67
+            ],
+            [
+              65,
+              79,
+              69
+            ],
+            [
+              71,
+              85,
+              75
+            ],
+            [
+              105,
+              117,
+              108
+            ],
+            [
+              2,
+              9,
+              3
+            ],
+            [
+              3,
+              12,
+              4
+            ],
+            [
+              42,
+              45,
+              43
+            ],
+            [
+              88,
+              88,
+              89
+            ],
+            [
+              90,
+              96,
+              92
+            ],
+            [
+              94,
+              100,
+              96
+            ],
+            [
+              95,
+              101,
+              97
+            ],
+            [
+              87,
+              96,
+              89
+            ],
+            [
+              2,
+              12,
+              4
+            ],
+            [
+              4,
+              14,
+              6
+            ],
+            [
+              44,
+              49,
+              44
+            ],
+            [
+              67,
+              70,
+              68
+            ],
+            [
+              130,
+              134,
+              131
+            ],
+            [
+              129,
+              134,
+              130
+            ],
+            [
+              69,
+              76,
+              70
+            ],
+            [
+              60,
+              66,
+              61
+            ],
+            [
+              3,
+              13,
+              5
+            ],
+            [
+              6,
+              16,
+              7
+            ],
+            [
+              46,
+              55,
+              47
+            ],
+            [
+              52,
+              61,
+              54
+            ],
+            [
+              55,
+              64,
+              58
+            ],
+            [
+              51,
+              60,
+              54
+            ],
+            [
+              55,
+              65,
+              58
+            ],
+            [
+              69,
+              78,
+              71
+            ],
+            [
+              3,
+              13,
+              5
+            ],
+            [
+              5,
+              17,
+              6
+            ],
+            [
+              26,
+              36,
+              27
+            ],
+            [
+              66,
+              76,
+              68
+            ],
+            [
+              60,
+              72,
+              63
+            ],
+            [
+              52,
+              63,
+              56
+            ],
+            [
+              58,
+              70,
+              61
+            ],
+            [
+              62,
+              71,
+              63
+            ],
+            [
+              2,
+              8,
+              3
+            ],
+            [
+              2,
+              11,
+              4
+            ],
+            [
+              3,
+              12,
+              4
+            ],
+            [
+              67,
+              77,
+              69
+            ],
+            [
+              61,
+              71,
+              64
+            ],
+            [
+              36,
+              43,
+              41
+            ],
+            [
+              64,
+              72,
+              67
+            ],
+            [
+              19,
+              29,
+              21
+            ],
+            [
+              1,
+              3,
+              1
+            ],
+            [
+              1,
+              4,
+              1
+            ],
+            [
+              1,
+              6,
+              2
+            ],
+            [
+              2,
+              9,
+              3
+            ],
+            [
+              56,
+              65,
+              58
+            ],
+            [
+              66,
+              76,
+              68
+            ],
+            [
+              29,
+              38,
+              30
+            ],
+            [
+              2,
+              11,
+              3
+            ]
+          ],
+          "width": 3360
+        },
+        "bytes": 2334825,
+        "file": "original/original-frame-001.png",
+        "name": "original-screen-001.png",
+        "sha256": "c06b59a27c8272d19f1d9bf1b5d2b35048144588271aa7bb2a12657f696dda8c",
+        "source": "cua"
+      }
+    ],
+    "input_delivered_sha256": null,
+    "raw": {
+      "stderr": {
+        "bytes": 11861,
+        "file": "original/stderr.raw",
+        "sha256": "067bdb2b98ee10684a3e064869d017b32bd566613f5802237748a677d8199bab"
+      },
+      "stdout": {
+        "bytes": 0,
+        "file": "original/stdout.raw",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "role": "original",
+    "timed_out": true,
+    "witness": {
+      "capture_backend": "cua",
+      "command": "/Users/haseeb-mir/.local/bin/highball run -b Games -e x64-crossover26.3-r27 -d '/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever' -- '/Users/haseeb-mir/Library/TrackManiaMacOS/games/tmnf/prefix/drive_c/Program Files (x86)/TmNationsForever/TmForever.exe'",
+      "declared_window_title": "TrackMania Modded Forever",
+      "focused_window": null,
+      "window_title_confirmed": false,
+      "window_titles": [
+        "GameReComp \u2014 Pick your game and turn it to native port",
+        "recomp-apps",
+        "IGI",
+        "Downloads",
+        "Storage"
+      ]
+    }
+  },
+  "reason": "ORIGINAL_WINDOW_UNCONFIRMED: no independently confirmed game window; a running process or desktop pixels alone are not evidence",
+  "reasons": [
+    "ORIGINAL_WINDOW_UNCONFIRMED: no independently confirmed game window; a running process or desktop pixels alone are not evidence",
+    "MISSING_NATIVE_INPUT: no native recompiled binary/run supplied; cannot compare an original against a native side",
+    "NO_DECLARED_INPUT: --input-file is required for PASS"
+  ],
+  "records": [
+    {
+      "declared_input_sha256": "",
+      "evidence_path": "/Users/haseeb-mir/Documents/Code/GameReComp-game-target-oracle/proof/game-target-oracle/tmnf-issue23-attempt-evidence.json",
+      "evidence_sha256": "f52b80cd200fb74db36e4fc8a60c331361a60b8d8daba4b80751fccb05cf5276",
+      "game_id": "tmnf",
+      "matrix_promotion": false,
+      "native_input_sha256": null,
+      "native_sha256": null,
+      "not_claimed": "PASS means only that this one declared original-vs-native scenario comparison passed: both sides executed, real non-blank frames were captured from independently confirmed game windows, identical input bytes were delivered, and a coarse 8x8 frame layout similarity exceeded the declared threshold. No claim of gameplay, graphics, audio or input equivalence, issue closure, other editions, other scenarios or other titles is made.",
+      "oracle": "game-target-oracle-dual-run",
+      "oracle_verified": true,
+      "original_input_sha256": null,
+      "original_sha256": "5e287e79a07cccc9f58989120fda2668d5da1086321033f162492af7c2671672",
+      "scenario": "tmnf",
+      "similarity": null,
+      "verdict": "PARTIAL"
+    }
+  ],
+  "scenario": "tmnf",
+  "schema": 1,
+  "status": "PARTIAL",
+  "verdict": "PARTIAL",
+  "verification": "NOT VERIFIED"
+}
