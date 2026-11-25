@@ -145,6 +145,9 @@ def test_checkout_deps_refusals_and_native_build_are_real_steps():
     text = _text()
     assert "uses: actions/checkout@v4" in text
     assert "uses: actions/setup-python@v5" in text
+    sdl2 = _step("Install SDL2 (Linux native build)")["run"]
+    for package in ("libsdl2-dev", "libsdl2-ttf-dev"):
+        assert package in sdl2, f"native Linux compile needs {package!r}"
     deps = _step("Install python deps")["run"]
     assert "pip install" in deps
     for dep in ("pytest", "pefile", "capstone", "unicorn"):
