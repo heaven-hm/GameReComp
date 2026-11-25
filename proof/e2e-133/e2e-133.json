@@ -1,0 +1,28 @@
+{
+ "schema": 1,
+ "issue": 133,
+ "claim": "Windows PE32 x86 -> native macOS arm64: two end-to-end scripted console scenarios with real Highball Wine oracle",
+ "pipeline": "python3 -m tools.autorecomp <original.exe> --input-os windows --input-arch x86 --target-os host --target-arch host --out-mode binary",
+ "oracle": "highball run -b Games <original.exe> < script",
+ "native": "<rebuilt native binary> < script",
+ "rows": [
+  {
+   "game": "arith-calc",
+   "windows_guest_sha256": "b6674fd6da06bc9dd36a49a5697efdeb8af7bd354f00b9c6d77359533b572d8f",
+   "native_guest_sha256": "b6674fd6da06bc9dd36a49a5697efdeb8af7bd354f00b9c6d77359533b572d8f",
+   "guest_output_identical": true,
+   "windows_lines": 11,
+   "native_lines": 11
+  },
+  {
+   "game": "base64",
+   "windows_guest_sha256": "3c96b39deed45ebb172ca6a4762ce37b2d0f304e2c835686129dedd3c0682c89",
+   "native_guest_sha256": "3c96b39deed45ebb172ca6a4762ce37b2d0f304e2c835686129dedd3c0682c89",
+   "guest_output_identical": true,
+   "windows_lines": 12,
+   "native_lines": 12
+  }
+ ],
+ "all_match": true,
+ "scope": "process-level console scenarios only; no GUI gameplay, input, audio or general game claim"
+}
