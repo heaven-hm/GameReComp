@@ -1,6 +1,7 @@
 //! Pure-Rust verification backend CLI: process / trace / frames evidence.
 use clap::{Parser, Subcommand};
-use game_recomp::verify::{compare_runs, compare_traces, frame_hashes, run_command, sha256, Evidence, Verdict};
+use game_recomp::verify::{aggregate_verdict, compare_runs, compare_traces, frida_adapter, frame_hashes,
+    run_command, sha256, unicorn_adapter, verify_matrix, Evidence, Scenario, Verdict};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -25,6 +26,25 @@ enum Cmd {
         stdin_file: Option<PathBuf>,
         #[arg(long, default_value_t = 30.0)]
         timeout: f64,
+        #[arg(long)]
+        out: PathBuf,
+    },
+    /// Advanced multi-input matrix with Unicorn/Frida adapters.
+    Matrix {
+        original: PathBuf,
+        rebuilt: PathBuf,
+        scenarios: PathBuf,
+        #[arg(long, default_value = "highball run {exe}")]
+        original_cmd: String,
+        #[arg(long, default_value = "{exe}")]
+        rebuilt_cmd: String,
+        /// Comma-separated adapters: unicorn,frida (or paths/commands via --unicorn-report/--frida-probe).
+        #[arg(long, default_value = "")]
+        adapters: String,
+        #[arg(long)]
+        unicorn_report: Option<PathBuf>,
+        #[arg(long)]
+        frida_probe: Option<String>,
         #[arg(long)]
         out: PathBuf,
     },
@@ -78,6 +98,46 @@ fn main() {
                 e.inputs.insert("rebuilt".into(), sha256(&std::fs::read(&rebuilt).unwrap_or_default()));
             }
             (out, e)
+        }
+        Cmd::Matrix { original, rebuilt, scenarios, original_cmd, rebuilt_cmd, adapters,
+                      unicorn_report, frida_probe, out } => {
+            let scenarios: Vec<Scenario> = match std::fs::read_to_string(&scenarios)
+                .ok().and_then(|s| serde_json::from_str(&s).ok()) {
+                Some(v) => v,
+                None => {
+                    let mut e = Evidence::new("matrix");
+                    e.reason = Some("scenario file missing or invalid".into());
+                    let text = serde_json::to_string_pretty(&e).unwrap();
+                    if let Some(p) = out.parent() { let _ = std::fs::create_dir_all(p); }
+                    std::fs::write(&out, format!("{}\n", text)).ok();
+                    println!("{}", text);
+                    std::process::exit(1);
+                }
+            };
+            let mut report = verify_matrix(&original, &rebuilt, &original_cmd, &rebuilt_cmd, &scenarios);
+            for a in adapters.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+                match a {
+                    "unicorn" => if let Some(p) = &unicorn_report {
+                        report.adapters.push(unicorn_adapter(p));
+                    } else {
+                        report.adapters.push(game_recomp::verify::AdapterReport {
+                            name: "unicorn".into(), verdict: Verdict::Blocked,
+                            detail: "no --unicorn-report supplied".into() });
+                    },
+                    "frida" => report.adapters.push(frida_adapter(frida_probe.as_deref()
+                        .unwrap_or("python3 tools/frida_probe.py --dry-run"))),
+                    _ => report.adapters.push(game_recomp::verify::AdapterReport {
+                        name: a.into(), verdict: Verdict::Blocked, detail: "unknown adapter".into() }),
+                }
+            }
+            let mut v: Vec<Verdict> = report.scenarios.iter().map(|r| r.evidence.verdict).collect();
+            v.extend(report.adapters.iter().map(|a| a.verdict));
+            report.aggregate = aggregate_verdict(&v);
+            let text = serde_json::to_string_pretty(&report).expect("serialize matrix");
+            if let Some(p) = out.parent() { let _ = std::fs::create_dir_all(p); }
+            std::fs::write(&out, format!("{}\n", text)).expect("write matrix");
+            println!("{}", text);
+            std::process::exit(if report.aggregate == Verdict::Pass { 0 } else { 1 });
         }
         Cmd::Trace { a, b, tolerance, out } => {
             let e = match (std::fs::read_to_string(&a), std::fs::read_to_string(&b)) {
