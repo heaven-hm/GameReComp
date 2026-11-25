@@ -1,45 +1,77 @@
 # rev.ng source quality — real CI evidence (issue #25)
 
-This file reports the **measured** outcome of the active
-`.github/workflows/revng-evidence.yml` job. It does not grant a verdict by
-itself: the machine-readable `proof/revng/SOURCE_QUALITY.json` written by
-`tools/revng_source_quality.py` is the authority, and its self-seal must match.
+**Conclusion: rev.ng did NOT produce measurably improved source on this
+fixture.** The active job ran for real; its conclusion was `failure` and the
+fail-closed summary status was `NOT TESTED`. Nothing here grants a PASS, and
+issue #25 stays OPEN.
 
-Status before the first real GitHub run: **PENDING — no run yet**. No PASS,
-no `SOURCE_IMPROVED`, and no issue state change is implied by this document.
+- Run URL: https://github.com/heaven-hm/GameReComp/actions/runs/45698198795
+- Run ID: `45698198795` (`workflow_dispatch`, head `2b43df712df9385c9916efce8c3bf95b5b42c2fa`)
+- GitHub conclusion: `failure`; job `revng-evidence` exit code 1
+- Machine-readable verdict: `NOT PROVEN` in `proof/revng/SOURCE_QUALITY.json`
+  (sealed, `sha256` recomputed and verified)
+- First real attempt `45695146599` failed earlier at the adapter/compile stage
+  (`recomp_funcs.h` include path, doubled `U` suffix, void-return cast). The
+  single corrective iteration is PR #301; the numbers below are from the rerun.
 
-## What is compared
+## Measured pin and host facts
 
-| Field | Value |
+| Fact | Measured value |
 |---|---|
-| Fixture | PE32 built by `tests/diff/differential_gate.py:build_gate_pe()` |
-| Function | `0x00401000` (`mov eax,[0x00404100]; add eax,-2; mov [0x00404104],eax; ret`) |
-| Baseline | PCRecomp project body generated from that exact PE by `game-recomp-cli` |
-| Candidate | C emitted by the pinned rev.ng distributable, adapted to the canonical `MEM32`/`RETC` contract for this one function |
-| Original bytes | Unicorn reference inside `tools/lift/difftest.py --project`, 8 entry states |
-| Selection | `tools/lift/multilifter.py --lifter revng=<report> --lifter pcrecomp=<report>` |
+| Archive byte count | `564214476` (exact match) |
+| Archive SHA-256 | `f19060db47165388df24343c6c7abc824742ac9063beeb614d474f3c6b764238` (`sha256sum -c checksums.sha256: OK`) |
+| rev.ng version on runner | `rev.ng version 1af3940` (native Linux x86-64, no container) |
+| PE32 fixture | 1,280 bytes, SHA-256 `d7871ee496e48a3bf79c4cb8f6cac71ca8e84d6f02e2b320c94b3b868de6633f` |
+| Function | `0x00401000`, 8 entry states, two named guest addresses |
 
-Measured and recorded for both candidates: exact C SHA-256 and byte count,
-`cc -fsyntax-only` rc, difftest report hash/verdict/case count/diverged count,
-and structured-C signals from the repo's own readability tooling (named locals
-and parameters, non-goto control statements, recovered types/structs,
-non-mechanical identifier ratio). Every hash is recomputed from file bytes by
-the evaluator; a claimed hash that disagrees is a `*_HASH_MISMATCH`.
+## Side-by-side measurement
 
-## Verdict rule
+| Evidence | PCRecomp baseline | rev.ng candidate |
+|---|---|---|
+| C bytes | 1086 | 187 |
+| C SHA-256 | `61578445e5748fe476d8c8b344d3a9161b10d5cb542b0c5360b1e4ead1f7a684` | `3e8e4cc976be17617c36b4ece6cae9d7e418336f2eaa6c0c8d0acf29df6b0ec7` |
+| `cc -fsyntax-only` rc | 0 | 0 |
+| difftest report SHA-256 | `075877f49e0b84509fd8ba8435bb51bb45739e5e00a4f56a33fb7845570393b8` | `eee2066731aad2a00a278fabf7d4a0141647d041b3623987fe3774d2375121b7` |
+| difftest verdict | `agree` | `agree-memory` |
+| Diverged cases | 0/8 | 8/8 |
+| Named locals | 5 (`_cf`, `_df`, `_flag_a`, `_flag_k`, `_fpu_cmp`) | 0 |
+| Named parameters | 0 | 0 |
+| Gotos | 0 | 0 |
+| Non-goto control statements | 0 | 0 |
+| Recovered types | 0 | 1 (`generic32_t`) |
+| Non-mechanical identifier ratio | 0.36 (18/50) | 0.333333 (3/9) |
 
-`SOURCE_IMPROVED` needs all of: measured compile rc 0 for both candidates;
-real, agree-with-zero-divergence difftest reports for both; a multilifter
-decision of `PROMOTE` with `chosen_lifter=revng` on those exact reports; no hash
-mismatch; and readability signals that are not worse and strictly better in
-naming and identifier quality. Anything else is `NOT PROVEN` with exact reason
-codes, and the job exits non-zero.
+Multilifter decision: `PROMOTE`, `chosen_lifter=pcrecomp`; revng row
+`DIVERGED` (8/8), PCRecomp row `PASS`. Decision SHA-256
+`4d3faeb33e5346c55e48e7e0be6e73db670687a9ee028527e31c4bbaeb9721c1`.
 
-The verdict is scoped to the two exact C hashes, that fixture and that one
-address. It is **not** `HIGH_LEVEL_VERIFIED`, gameplay equivalence, 100% or a
-general source-quality claim.
+## Why the verdict is NOT PROVEN
 
-## Real run
+Exact reason codes recorded in the sealed JSON:
 
-_To be filled from the actual GitHub Actions run after the first dispatch:
-run URL, conclusion, measured hashes/counts/signals and the exact verdict._
+- `REVNG_DIFFTEST_DIVERGED_FIELD` and `REVNG_DIFFTEST_DIVERGED_CASES` — revng's
+  `agree-memory` verdict still has 8/8 driven cases with `agree != true` (eax
+  diverges; the adapter calls a `void` revng function, which does not model the
+  guest return value). The evaluator refuses a scoped memory-only agreement as
+  a full comparison.
+- `DECISION_NOT_REVNG`, `DECISION_REVNG_NOT_PASS`, `DECISION_REVNG_DIVERGED` —
+  multilifter promoted PCRecomp, not revng.
+- `READABILITY_NOT_BETTER` — revng had 0 named locals versus 5 in the baseline
+  and a lower non-mechanical identifier ratio (0.333333 vs 0.36). It did not
+  recover more structured control flow for this tiny function.
+- `DIFFTEST_ADDRESS_MISMATCH` — a cosmetic evaluation issue in this run:
+  difftest writes `0x00401000` and the evaluator compared it literally to
+  `0x401000`. This does not change the verdict, which is already NOT PROVEN on
+  divergence, selection and readability.
+
+No compile failure, hash mismatch, missing C output or download failure
+occurred in this run. The job still failed closed because a real revng PASS
+was not established.
+
+## Scope
+
+The result is scoped to this exact fixture, function address and the two C
+hashes above. It is not `HIGH_LEVEL_VERIFIED`, not gameplay equivalence, not
+100%, and not a general claim about rev.ng source quality on other functions.
+The adapter used here is a one-function test harness, not a new dispatch path;
+the default PCRecomp-only build is unchanged. Issue #25 remains OPEN.
