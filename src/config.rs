@@ -61,6 +61,7 @@ pub struct AppConfig {
     pub repo_root: PathBuf,
     pub corpus_env: BTreeMap<String, String>,
     pub reveng_ai_cmd: Option<String>,
+    pub reveng_web_ai_cmd: Option<String>,
     pub screenshot_dir: Option<PathBuf>,
     pub assets_dir: Option<PathBuf>,
     pub default_timeout_secs: f64,
@@ -80,6 +81,21 @@ pub struct UserSettings {
     pub code_font_scale: f32,
     #[serde(default)]
     pub reveng_ai_cmd: String,
+    /// Path to the rev.ng binary (`REVNG_BIN` for the readability harness).
+    #[serde(default)]
+    pub revng_bin: String,
+    /// rev.ng output directory (`REVNG_DIR` for tools that consume it).
+    #[serde(default)]
+    pub revng_dir: String,
+    /// Base URL for the user-configured web AI provider (explicit opt-in).
+    #[serde(default)]
+    pub ai_web_endpoint: String,
+    /// Model name passed to the web AI command template.
+    #[serde(default)]
+    pub ai_web_model: String,
+    /// Command template for the web AI provider (`{endpoint}`/`{model}` are expanded).
+    #[serde(default)]
+    pub ai_web_cmd: String,
     #[serde(default)]
     pub projects_root: String,
     #[serde(default)]
@@ -239,6 +255,11 @@ impl Default for UserSettings {
             font_scale: default_font_scale(),
             code_font_scale: default_font_scale(),
             reveng_ai_cmd: String::new(),
+            revng_bin: String::new(),
+            revng_dir: String::new(),
+            ai_web_endpoint: String::new(),
+            ai_web_model: String::new(),
+            ai_web_cmd: String::new(),
             projects_root: String::new(),
             custom_projects: Vec::new(),
             hidden_projects: Vec::new(),
@@ -298,17 +319,18 @@ impl AppConfig {
         }
 
         let user_settings = UserSettings::load();
-        let reveng_ai_cmd = env::var("REVENG_AI_CMD")
-            .ok()
-            .filter(|s| !s.trim().is_empty())
-            .or_else(|| corpus_env.get("REVENG_AI_CMD").cloned())
-            .or_else(|| {
-                if user_settings.reveng_ai_cmd.trim().is_empty() {
-                    None
-                } else {
-                    Some(user_settings.reveng_ai_cmd.clone())
-                }
-            });
+        let reveng_ai_cmd = configured_command(
+            env::var("REVENG_AI_CMD").ok(),
+            &corpus_env,
+            "REVENG_AI_CMD",
+            &user_settings.reveng_ai_cmd,
+        );
+        let reveng_web_ai_cmd = configured_command(
+            env::var("REVENG_WEB_AI_CMD").ok(),
+            &corpus_env,
+            "REVENG_WEB_AI_CMD",
+            &user_settings.ai_web_cmd,
+        );
 
         let screenshot_dir = env::var("RECOMP_SCREENSHOT")
             .ok()
@@ -328,11 +350,34 @@ impl AppConfig {
             repo_root,
             corpus_env,
             reveng_ai_cmd,
+            reveng_web_ai_cmd,
             screenshot_dir,
             assets_dir,
             default_timeout_secs,
         }
     }
+}
+
+/// Resolve a configured command with the same precedence for local and web AI:
+/// process environment, then `config/corpus.env`, then saved user settings.
+fn configured_command(
+    env_value: Option<String>,
+    corpus_env: &BTreeMap<String, String>,
+    key: &str,
+    setting: &str,
+) -> Option<String> {
+    env_value
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| {
+            corpus_env
+                .get(key)
+                .filter(|s| !s.trim().is_empty())
+                .cloned()
+        })
+        .or_else(|| {
+            let trimmed = setting.trim();
+            (!trimmed.is_empty()).then(|| trimmed.to_string())
+        })
 }
 
 pub fn parse_env_file(text: &str) -> Vec<(String, String)> {
@@ -733,5 +778,98 @@ mod tests {
         assert_eq!(SystemResources::compute_recommended(10, 16384), 5);
         assert_eq!(SystemResources::compute_recommended(32, 65536), 8);
         assert_eq!(SystemResources::compute_recommended(1, 1024), 1);
+    }
+
+    #[test]
+    fn source_improve_settings_default_to_empty_and_preserve_other_defaults() {
+        let settings = UserSettings::default();
+        assert!(settings.revng_bin.is_empty());
+        assert!(settings.revng_dir.is_empty());
+        assert!(settings.ai_web_endpoint.is_empty());
+        assert!(settings.ai_web_model.is_empty());
+        assert!(settings.ai_web_cmd.is_empty());
+        assert_eq!(settings.theme, "dark");
+        assert_eq!(settings.default_timeout_secs, 12);
+    }
+
+    #[test]
+    fn parses_source_improve_settings_from_json() {
+        let settings: UserSettings = serde_json::from_str(
+            r#"{
+                "revng_bin": "/opt/revng/bin/revng",
+                "revng_dir": "/tmp/revng-out",
+                "ai_web_endpoint": "https://ai.example.invalid/v1",
+                "ai_web_model": "coder-web",
+                "ai_web_cmd": "web-ai --url {endpoint} --model {model}"
+            }"#,
+        )
+        .unwrap();
+        assert_eq!(settings.revng_bin, "/opt/revng/bin/revng");
+        assert_eq!(settings.revng_dir, "/tmp/revng-out");
+        assert_eq!(settings.ai_web_endpoint, "https://ai.example.invalid/v1");
+        assert_eq!(settings.ai_web_model, "coder-web");
+        assert_eq!(
+            settings.ai_web_cmd,
+            "web-ai --url {endpoint} --model {model}"
+        );
+    }
+
+    #[test]
+    fn missing_source_improve_settings_serde_default_to_empty() {
+        let settings: UserSettings = serde_json::from_str(r#"{"theme": "light"}"#).unwrap();
+        assert_eq!(settings.theme, "light");
+        assert!(settings.revng_bin.is_empty());
+        assert!(settings.revng_dir.is_empty());
+        assert!(settings.ai_web_endpoint.is_empty());
+        assert!(settings.ai_web_model.is_empty());
+        assert!(settings.ai_web_cmd.is_empty());
+    }
+
+    #[test]
+    fn configured_command_prefers_env_then_corpus_then_settings() {
+        let mut corpus_env = BTreeMap::new();
+        corpus_env.insert(
+            "REVENG_WEB_AI_CMD".to_string(),
+            "corpus-web --model {model}".to_string(),
+        );
+        assert_eq!(
+            configured_command(
+                Some("env-web --model {model}".to_string()),
+                &corpus_env,
+                "REVENG_WEB_AI_CMD",
+                "settings-web"
+            ),
+            Some("env-web --model {model}".to_string())
+        );
+        assert_eq!(
+            configured_command(None, &corpus_env, "REVENG_WEB_AI_CMD", "settings-web"),
+            Some("corpus-web --model {model}".to_string())
+        );
+        assert_eq!(
+            configured_command(
+                None,
+                &BTreeMap::new(),
+                "REVENG_WEB_AI_CMD",
+                "  settings-web  "
+            ),
+            Some("settings-web".to_string())
+        );
+        assert_eq!(
+            configured_command(None, &BTreeMap::new(), "REVENG_WEB_AI_CMD", "   "),
+            None
+        );
+    }
+
+    #[test]
+    fn parses_web_ai_command_from_corpus_env_file() {
+        let pairs =
+            parse_env_file("export REVENG_WEB_AI_CMD='web-ai --url {endpoint} --model {model}'\n");
+        assert_eq!(
+            pairs,
+            vec![(
+                "REVENG_WEB_AI_CMD".to_string(),
+                "web-ai --url {endpoint} --model {model}".to_string()
+            )]
+        );
     }
 }
