@@ -80,7 +80,7 @@ dimensions, colour counts and SHA-256 are in [game screenshots](docs/GAME_SCREEN
 
 ### Ghostty (macOS → Windows) — Mach-O app (`4b30ac9b049c`)
 
-- Source cloned from `ghostty-org/ghostty`; no Windows target is implemented in its build files, and the local Zig toolchain is broken (missing `libz3` dylib).
+- Source cloned from `ghostty-org/ghostty` (144 MB); `build.zig` contains Windows-specific target branches, so a source-level Windows build is plausible. The local Zig toolchain is broken (it requests `libz3.4.13.dylib` while Homebrew provides 5.4.1), so no Windows binary has been built yet.
 - Screenshot: none captured.
 - Verdict: **BLOCKED** — no source-level Windows build path available here.
 
