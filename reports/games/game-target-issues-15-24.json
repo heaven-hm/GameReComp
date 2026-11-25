@@ -189,11 +189,13 @@
       "evidence": [
         "TmForever.exe PE32 416 imports SHA-256 5e287e79a07c..., TimeDateStamp 0x4d431494, ImageBase 0x00400000",
         "TmForever.map SHA-256 558c6f71..., Timestamp 4d431494 = PE timestamp; entry point matched 0x0040351F; 118,469 symbols / 75,287 functions / 106,319 distinct addresses via tools/pe/map_names.py resolve",
-        "resolve output names.json SHA-256 2e98cffe... (7.8 MB, kept outside repo)"
+        "resolve output names.json SHA-256 2e98cffe... (7.8 MB, kept outside repo)",
+        "tools/lift/name_lift.py --known-file: loaded 106,319 validated map names from the resolved names.json (2026-11-25); malformed files fail closed; explicit --known overrides"
       ],
       "next_steps": [
         "Feed validated names into normal autorecomp metadata (no game-only decompiler)",
-        "Report D3D9/shader/input gaps to #5/#11; build deterministic offline race fixture"
+        "Report D3D9/shader/input gaps to #5/#11; build deterministic offline race fixture",
+        "Apply names to a fresh full lift once build-scale issue #26 permits it"
       ]
     },
     {
