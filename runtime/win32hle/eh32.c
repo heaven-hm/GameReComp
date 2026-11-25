@@ -354,22 +354,40 @@ static int dmd_local_unwind(uint32_t record, uint32_t tbl, int stop_index) {
  * valid (measured on gr.exe: record 0x104FEE94 -> table 0x0044BAF8 ->
  * catch 0x0040DC96).
  *
- * Recover without touching the guest metadata: use the innermost *live*
- * checkpoint whose entry_esp is inside the catch-owning guest frame.  It is a
- * valid setjmp target between the throw site and that frame, so longjmp there
- * unwinds the host C frames; its landing pad's default arm tail-calls the
- * lifted catch VA with the guest EBP/ESP set for the catch owner.  The exact
- * owner is still preferred whenever it exists. */
-static recomp_ehframe_t *dmd_resume_frame(uint32_t ebp, int *exact) {
-    recomp_ehframe_t *inner = NULL;
+ * Recover without touching the guest metadata, in this order:
+ *
+ *   1. the exact owner: the live checkpoint whose entry_esp == EBP+4;
+ *   2. the catch *owner* named by the DHandlerTable's fptr, when a live
+ *      checkpoint belongs to that guest function but its entry stack pointer
+ *      no longer matches the record's EBP (the lifter can inline the handler
+ *      body into a tail-call stub with a different prologue);
+ *   3. only if neither owner frame is live, the innermost checkpoint above
+ *      the record (an approximation -- it unwinds the host C frames but its
+ *      landing pad returns to the stub's caller, not to the handler owner).
+ *
+ * Step 2 is the target fix for a tail-call-inlined catch funclet: the DMD
+ * table names the function that owns the handler, so its live checkpoint (if
+ * any) is a better landing target than whichever checkpoint happens to be
+ * nearest the record.  Step 3 remains fail-visible: its reason string says
+ * "inner checkpoint". */
+static recomp_ehframe_t *dmd_resume_frame(uint32_t ebp, uint32_t owner_va,
+                                           int *exact, int *by_owner) {
+    recomp_ehframe_t *inner = NULL, *owner = NULL;
     *exact = 0;
+    *by_owner = 0;
     for (recomp_ehframe_t *f = g_eh_frames; f; f = f->prev) {
         if (f->entry_esp == ebp + 4u) { *exact = 1; return f; }
-        /* entry_esp is the function's entry stack pointer; a frame whose entry
-         * is above this record's EBP was called inside the catch-owning frame. */
+        /* A checkpoint of the function named by DHandlerTable.fptr owns the
+         * handler even when an inlined guest record's EBP has shifted. */
+        if (owner_va && f->func == owner_va &&
+            (!owner || f->entry_esp < owner->entry_esp))
+            owner = f;
+        /* A checkpoint entered above the record can still unwind the host C
+         * frames; keep the innermost one as the last resort. */
         if (f->entry_esp > ebp + 4u && (!inner || f->entry_esp < inner->entry_esp))
             inner = f;
     }
+    if (owner) { *by_owner = 1; return owner; }
     return inner;
 }
 
@@ -411,15 +429,17 @@ int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
                         int32_t bpoff = (int32_t)MEM32(cb + 4u);
                         if (!catch_va || !dmd_isbaseof(obj_ci, wanted)) continue;
                         uint32_t ebp = record + 12u;
-                        int exact = 0;
-                        recomp_ehframe_t *target_frame = dmd_resume_frame(ebp, &exact);
+                        int exact = 0, by_owner = 0;
+                        recomp_ehframe_t *target_frame =
+                            dmd_resume_frame(ebp, MEM32(tbl), &exact, &by_owner);
                         if (!target_frame) {
                             if (reason) *reason = "no EH checkpoint for tail-call-inlined catch frame and no inner live checkpoint";
                             return 0;
                         }
-                        /* The fallback enters the catch through the landing pad's
-                         * RECOMP_ITAIL(catch_va), so the continuation must be lifted. */
-                        if (!exact && !recomp_lookup(catch_va)) {
+                        /* Either non-exact path enters the catch through the
+                         * landing pad's RECOMP_ITAIL(catch_va), so it must be
+                         * a lifted guest function. */
+                        if ((!exact || by_owner) && !recomp_lookup(catch_va)) {
                             if (reason) *reason = "catch continuation is not a lifted guest function";
                             return 0;
                         }
@@ -451,6 +471,7 @@ int hle_eh_d_throw(uint32_t code, uint32_t n_args, uint32_t args_va,
                         g_ebp = ebp;
                         g_esp = catch_esp;
                         if (reason) *reason = exact ? "dispatched to guest catch"
+                            : by_owner ? "dispatched to guest catch via catch-owning frame (tail-call-inlined handler)"
                             : "dispatched to guest catch via inner checkpoint (catch frame tail-call-inlined: no EH landing pad)";
                         recomp_eh_resume(target_frame, catch_va);
                         return 0;
