@@ -33,6 +33,35 @@ The goal is to build a general-purpose toolchain that enables developers and res
 - Preserve older software and make it usable on modern platforms.
 - Support additional architectures, compilers, formats, and legacy technologies over time.
 
+
+## Priority titles — games and apps (honest status)
+
+These are the largest/most requested targets. Every row records the exact input
+hash and the strongest evidence we actually have. A native screenshot is proof
+only that the rebuilt process rendered a frame; it is **not** gameplay
+equivalence. See [game screenshots](docs/GAME_SCREENSHOTS.md) for all captured
+frames with dimensions, colour counts and SHA-256.
+
+| Title | Input (SHA-256 prefix) | Windows original under Highball | Native port | Screenshot evidence | Verdict |
+|---|---|---|---|---|---|
+| **Project I.G.I.** | `igi.exe` `dea34892d417` | Boots to Vulkan, stays alive (exit 124 at 35 s), Wine D3D errors | Texture abort FIXED; native splash renders; no Mission 1 build here | [native loading screen](docs/screenshots/igi-window-level5-splash.png) (640×480, 6,814 colours) — real frame, not gameplay | PARTIAL |
+| **TrackMania Nations Forever** | `TmForever.exe` `5e287e79a07c` | Boots to Vulkan (exit 124); **no game window** | `TmForever.map` validated, 118,469 symbols; no native build, no D3D9 backend | [desktop capture during original run](docs/screenshots/tm-forever-original-desktop-no-window.png) shows no window — negative evidence | BLOCKED |
+| **AssaultCube** | `ac_client.exe` `5b588e6ff7710` | exit 53: `OpenAL32.dll not found`, `status c0000135` | Recompile retry had no binary (2 h recover timeout) | none captured | BLOCKED |
+| **IDM Downloader** | `idman643build18.exe` `7346128fab42` | PE32 i386 installer, run evidence pending in the local corpus | not attempted | none captured | NOT TESTED |
+| **Winamp** | official Nullsoft installer (download pending) | pending | not attempted | none captured | NOT TESTED |
+| **Ghostty (macOS → Windows)** | `/Applications/Ghostty.app` Mach-O `4b30ac9b049c` | n/a (macOS source app) | source-level Windows target not implemented | none captured | BLOCKED |
+
+Issues that track these blockers: [#15](https://github.com/heaven-hm/GameReComp/issues/15)
+(IGI Mission 1 oracle), [#22](https://github.com/heaven-hm/GameReComp/issues/22) /
+[#23](https://github.com/heaven-hm/GameReComp/issues/23) (TrackMania build identity,
+D3D9, deterministic race), [#26](https://github.com/heaven-hm/GameReComp/issues/26)
+(build scale). No issue is closed without its 100% acceptance evidence.
+
+100% process-level proof (byte-identical stdout against the Windows original) does
+exist for the console targets `arith-calc`, `base64`, `busybox` (macOS), and
+`fifteensolver` (macOS **and** Linux) — see the repository verification reports
+and `docs/DIFFERENTIAL_ENGINE.md`.
+
 ## Development Roadmap
 
 The long-term roadmap is to expand GameReComp beyond individual games and support a wider range of legacy applications and software.
