@@ -36,51 +36,52 @@ The goal is to build a general-purpose toolchain that enables developers and res
 
 ## Priority titles — games and apps (honest status)
 
-One item per title. Each records the input hash, what was actually executed, the
-native port state, and the screenshot evidence we really have. A native frame
-proves rendering only; it is not gameplay equivalence. All captured frames with
-dimensions, colour counts and SHA-256 are in [game screenshots](docs/GAME_SCREENSHOTS.md).
+One item per title. Each records the input hash, what was executed, the native
+port state and the screenshot evidence we actually have. A native frame proves
+rendering only; it is not gameplay equivalence. Committed frames with dimensions,
+colour counts and SHA-256 are in [game evidence](docs/GAME_MATRIX.md); local-only
+observations are labelled as such.
 
 ### Project I.G.I. — `igi.exe` (`dea34892d417`)
 
 - Original under Highball: boots to Vulkan, stays alive (exit 124 at 35 s), Wine D3D errors.
-- macOS: native arm64 rebuild (37 MB, 0 unresolved imports) boots to DDraw7/D3D7. Three fresh frames were captured but are 1-colour blank — recorded as FAIL, not proof.
+- macOS: native arm64 rebuild (37 MB, 0 unresolved imports) boots to DDraw7/D3D7. Three fresh frames were captured locally but are 1-colour blank — recorded as FAIL, not proof (local-only evidence, not committed).
 - Linux: native aarch64 ELF (34 MB, SHA `e9c377c9…`, build 0) runs to the game's own "IGI CD not found" check — proof in [PR #259](https://github.com/heaven-hm/GameReComp/pull/259).
 - Screenshot: [historic native splash](docs/screenshots/igi-window-level5-splash.png) — 640×480, 6,814 colours; a real frame, not Mission 1 gameplay.
 - Verdict: **PARTIAL**. 100% requires an original-Windows Mission 1 input/frame/audio oracle and the proprietary assets (#15).
 
-### TrackMania — `TmNationsESWC.exe` / `TmForever.exe`
+### TrackMania — `TmNationsESWC.exe` (`822def6627f0`) / `TmForever.exe` (`5e287e79a07c`)
 
 - Originals under Highball: boot to Vulkan and stay alive (exit 124); no game window surfaces, so no original frame can be captured.
 - `TmForever.map` validated against the PE (118,469 symbols recovered from the existing importer).
-- ESWC source generation now succeeds on clean `develop`: 1.1 GB C tree, all pipeline stages OK; macOS native build is in progress, Linux build hit the 1-hour limit (issue #26). Forever source recovery exceeded 2 h.
+- Local, not-yet-committed runs: ESWC source generation completed on clean `develop` (1.1 GB C tree, all stages OK); its macOS build is still in progress and the Linux build hit a 1-hour limit (issue #26). Forever source recovery exceeded 2 h. Committed evidence remains the BLOCKED snapshots in `evidence/corpus/`.
 - Screenshot: none — the earlier desktop capture was unrelated browser content and was removed; absence of a window is recorded in logs only.
 - Verdict: **BLOCKED** (#22, #23, #26): build identity/protection gate, D3D9 backend, offline race oracle.
 
 ### AssaultCube — `ac_client.exe` (`5b588e6ff7710`)
 
 - Original under Highball: exit 53, `OpenAL32.dll not found`, `status c0000135`.
-- Native port: earlier retry had no binary (recovery exceeded 2 h); a fresh source generation from clean `develop` is running.
+- Native port: earlier retry had no binary (recovery exceeded 2 h); a fresh source generation from clean `develop` is running (local, uncommitted).
 - Screenshot: none captured.
 - Verdict: **BLOCKED** until the recompile produces a binary and a scenario oracle exists.
 
 ### IDM Downloader — `idman643build18.exe` (`7346128fab42`)
 
 - Original under Highball: PE32 i386 installer, exit 0 after 14 s.
-- Native port: macOS arm64 build already recorded in [game matrix](docs/GAME_MATRIX.md) — 605 functions, 104 imports, exit 0, no scenario oracle.
+- Native port: a local macOS arm64 build is recorded in [game matrix](docs/GAME_MATRIX.md) as NOT RUN (605 functions, 104 imports, local log only, no committed oracle).
 - Screenshot: none captured.
 - Verdict: **PARTIAL**.
 
 ### Winamp — official Nullsoft installer (`d064eefc27c7`, 13 MB PE32 i386)
 
-- Original under Highball: installer stayed alive (exit 124 at 25 s); no window captured.
+- Original under Highball: installer stayed alive (exit 124 at 25 s, local log only); no window captured.
 - Native port: not attempted. Freeware installer — do not redistribute the binary.
 - Screenshot: none captured.
 - Verdict: **ORIGINAL ONLY**.
 
 ### Ghostty (macOS → Windows) — Mach-O app (`4b30ac9b049c`)
 
-- Source cloned from `ghostty-org/ghostty` (144 MB); `build.zig` contains Windows-specific target branches, so a source-level Windows build is plausible. The local Zig toolchain is broken (it requests `libz3.4.13.dylib` while Homebrew provides 5.4.1), so no Windows binary has been built yet.
+- Source cloned from `ghostty-org/ghostty` (144 MB); `build.zig` contains Windows-specific target branches, so a source-level Windows build is plausible. The local Zig toolchain initially requested a missing `libz3.4.13.dylib` (Homebrew provides 5.4.1); issue #132/#135 record this as a do-not-integrate gate, so no Windows binary was built.
 - Screenshot: none captured.
 - Verdict: **BLOCKED** — no source-level Windows build path available here.
 
