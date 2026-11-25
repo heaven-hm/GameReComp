@@ -44,7 +44,7 @@ frames with dimensions, colour counts and SHA-256.
 
 | Title | Input (SHA-256 prefix) | Windows original under Highball | Native port | Screenshot evidence | Verdict |
 |---|---|---|---|---|---|
-| **Project I.G.I.** | `igi.exe` `dea34892d417` | Boots to Vulkan, stays alive (exit 124 at 35 s), Wine D3D errors | Texture abort FIXED; native splash renders; no Mission 1 build here | [native loading screen](docs/screenshots/igi-window-level5-splash.png) (640×480, 6,814 colours) — real frame, not gameplay | PARTIAL |
+| **Project I.G.I.** | `igi.exe` `dea34892d417` | Boots to Vulkan, stays alive (exit 124 at 35 s), Wine D3D errors | Texture abort FIXED; fresh native rebuild (37 MB, 0 unresolved imports) boots to DDraw7/D3D7; no Mission 1 oracle | [historic native splash](docs/screenshots/igi-window-level5-splash.png) (640×480, 6,814 colours); 3 fresh 2026-11-25 frames are 1-colour blank (FAIL) | PARTIAL / frames FAIL |
 | **TrackMania Nations Forever** | `TmForever.exe` `5e287e79a07c` | Boots to Vulkan (exit 124); **no game window** | `TmForever.map` validated, 118,469 symbols; no native build, no D3D9 backend | [desktop capture during original run](docs/screenshots/tm-forever-original-desktop-no-window.png) shows no window — negative evidence | BLOCKED |
 | **AssaultCube** | `ac_client.exe` `5b588e6ff7710` | exit 53: `OpenAL32.dll not found`, `status c0000135` | Recompile retry had no binary (2 h recover timeout) | none captured | BLOCKED |
 | **IDM Downloader** | `idman643build18.exe` `7346128fab42` | PE32 i386 installer: Highball **exit 0** after 14 s (installer completed) | not attempted | none captured | ORIGINAL ONLY |
