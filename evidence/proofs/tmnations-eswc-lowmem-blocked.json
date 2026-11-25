@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "game": "TrackMania Nations ESWC (TmNationsESWC.exe)",
+  "verdict": "BLOCKED",
+  "classification": "BLOCKED - build cannot complete; no native binary and no captured frames; no PASS claim",
+  "recorded_at": "2026-11-26T03:37:00+05:30",
+  "input": {
+    "path": "/Users/haseeb-mir/Downloads/recomp-apps/evidence/SIDE_BY_SIDE_EVIDENCE/windows/TmNationsESWC.exe",
+    "sha256": "822def6627f020035ef0819cf9f85493e952a2efb450d23770b330311ad8109d",
+    "bytes": 8989696,
+    "format": "i386 PE32, 259 imports, entry 0x00402F4B"
+  },
+  "pipeline": {
+    "command": "python3 -m tools.autorecomp TmNationsESWC.exe --project-dir /Users/haseeb-mir/tm-proof/eswc-lowmem --assets-dir <exe dir> --out-mode binary --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --split 200 --split-bytes 2097152 --jobs 1 --build-timeout 0 --no-table",
+    "inspect_seconds": 4.4,
+    "recover_seconds": 5593.8,
+    "recover_result": "84249 functions, 10670870 instructions",
+    "translate_seconds": 1391.2,
+    "translate_result": "699 source files, 1108459341 bytes, 0 lift errors",
+    "project_seconds": 4.4,
+    "generated_unit_count": 698,
+    "generated_bytes": 1105510414,
+    "soft_cap_bytes": 2097152,
+    "units_over_cap": 376
+  },
+  "build": {
+    "configure": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE='-O0 -DNDEBUG'",
+    "effective_flags": "-O0 -DNDEBUG -std=gnu11 -arch arm64 -w -D_THREAD_SAFE",
+    "parallel": 4,
+    "objects_completed": 741,
+    "objects_expected": 700,
+    "last_log": "[ 99%] Building ... wsock32.c.o; make[2]: *** recomp_0387.c.o Killed: 9; BUILD_RC=2",
+    "native_binary": null,
+    "reason_no_binary": "make aborted at 99% with three generated units still uncompiled"
+  },
+  "blocker_units": [
+    {
+      "file": "src/recomp/gen/recomp_0377.c",
+      "bytes": 13578357,
+      "lines": 350221,
+      "functions": 33,
+      "sha256": "001cee3f7d2a84f7355c9f275ba25d59db035aab38d6ee3de5e7a30d6ad0e508",
+      "over_cap_by_bytes": 11481205,
+      "clang_last_measured": {"wall": "00:53:51", "cpu": "00:13:37.03", "state": "running, killed"},
+      "gcc_14_attempt": {"command": "gcc-14 -O0 -w -std=gnu11 -DNDEBUG -D_THREAD_SAFE -DHLE_WITH_FFMPEG <4 CMake include dirs> -c recomp_0377.c -o <CMake object path>", "wall_seconds": 300.1, "result": "TIMEOUT_300", "object_produced": false}
+    },
+    {
+      "file": "src/recomp/gen/recomp_0386.c",
+      "bytes": 13105375,
+      "lines": 338670,
+      "functions": 49,
+      "sha256": "6b611b943f66eb17b0ce3ff44e0b3c84512c322d1ad090c5f041e60b7ace2a7a",
+      "over_cap_by_bytes": 11008223,
+      "clang_last_measured": {"wall": "00:53:47", "cpu": "00:13:33.62", "state": "running, killed"},
+      "gcc_14_attempt": {"command": "gcc-14 -O0 -w -std=gnu11 -DNDEBUG -D_THREAD_SAFE -DHLE_WITH_FFMPEG <4 CMake include dirs> -c recomp_0386.c -o <CMake object path>", "wall_seconds": 300.1, "result": "TIMEOUT_300", "object_produced": false}
+    },
+    {
+      "file": "src/recomp/gen/recomp_0387.c",
+      "bytes": 13068999,
+      "lines": 337665,
+      "functions": 1,
+      "sha256": "d588e0a4676255f1d5f617be81d7a13ad72708ff74a7837a9814a70ace7240e6",
+      "over_cap_by_bytes": 10971847,
+      "single_oversized_function": true,
+      "clang_last_measured": {"wall": "00:53:47", "cpu": "00:13:34.86", "state": "running, killed"},
+      "gcc_14_attempt": {"command": "gcc-14 -O0 -w -std=gnu11 -DNDEBUG -D_THREAD_SAFE -DHLE_WITH_FFMPEG <4 CMake include dirs> -c recomp_0387.c -o <CMake object path>", "wall_seconds": 300.1, "result": "TIMEOUT_300", "object_produced": false}
+    }
+  ],
+  "root_cause": {
+    "evidence": "3-second sample of clang cc1 pid 41734 at 2026-11-26T03:23:53+05:30",
+    "hot_stack": "clang::BackendConsumer::HandleTranslationUnit -> llvm::legacy::PassManagerImpl::run -> llvm::FPPassManager::runOnFunction -> llvm::MachineFunctionPass::runOnFunction -> llvm::BranchRelaxation::runOnMachineFunction -> BranchRelaxation::fixupConditionalBranch -> adjustBlockOffsets",
+    "sample_counts": "1914/1915 samples in BranchRelaxation::fixupConditionalBranch/adjustBlockOffsets",
+    "compiler": "Apple clang 16.0.0 (CommandLineTools), -O0 -DNDEBUG, physical footprint 1.2 GB per process",
+    "interpretation": "One pathological huge machine function makes LLVM branch relaxation superlinear; the 2 MiB --split-bytes cap is a soft cap and cannot split a single generated function (recomp_0387.c is one 13 MB function). GCC-14 at -O0 did not finish within 300 s either."
+  },
+  "not_claimed": [
+    "No native macOS binary was produced, so no RECOMP_SCREENSHOT run was performed.",
+    "No frame hashes or frame colour statistics exist; no app was launched.",
+    "No Windows execution oracle exists on this host, so even a successful build would be PARTIAL, never PASS."
+  ],
+  "minimal_next_action": "Regenerate the three units with a generator change that splits one oversized guest function into multiple C functions (or lowers the soft cap and emits a trampoline), then rebuild; alternatively investigate disabling LLVM BranchRelaxation for these units. Do not relaunch the unchanged generated units."
+}
