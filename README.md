@@ -64,6 +64,41 @@ Proofs for `busybox` (macOS) and `fifteensolver` (macOS and Linux) are proposed
 in PR #256 with exact commands/hashes/raw captures; they are not yet merged.
 See `docs/DIFFERENTIAL_ENGINE.md` for the engine and its honest limits.
 
+## Port proof — both directions
+
+### Windows PE32 → native macOS arm64
+
+- **IGI** (`igi.exe`, SHA `dea34892d417`): native rebuild 37 MB (SHA `a7820f00…`),
+  0 unresolved imports; boots to DDraw7/D3D7. Frames from a fresh level-5 run are
+  captured; one is a real 6,814-colour frame. Linux proof in PR #259.
+- **IDM Downloader** (`idman643build18.exe`, SHA `7346128fab42`): native rebuild
+  14 MB (SHA `7ad46b49…`), 104 imports bound / 0 unresolved; exits at its own
+  Windows-version check — build success, not full functionality.
+- **Winamp** (`winamp_latest_full.exe`, SHA `d064eefc27c7`): native rebuild
+  15 MB (SHA `005c2684…`) but boot-fails on 34 unresolved Win32 imports — FAIL,
+  recorded verbatim.
+- **Cube / prime-gen**: native binaries and hashed real frames in `proof/`.
+
+### macOS/Linux source → Windows PE32/PE32+ (run under `highball run`)
+
+- CLI apps (`prime-gen`, `passgen`, `base64-tool`, `guess-game`, `hangman`,
+  `tictactoe`, `mastermind`) cross-built with MinGW-w64 for both PE32 and PE32+;
+  exact commands, hashes and Highball results in the corpus
+  (`WINDOWS_PORTS/crossbuild-results.jsonl`). All 8 built; the non-interactive
+  ones exited 0 under Highball, interactive ones timed out as expected.
+
+### Verification engines
+
+- Python `tools/differential.py` and the Rust `verify-engine` were cross-checked
+  on the priority titles (IGI, Winamp, AssaultCube, TrackMania, IDM, cube control)
+  and agreed: IGI FAIL, the rest BLOCKED — no fabricated PASS.
+- Unicorn function-level oracle faults are recorded as BLOCKED. Frida attach is
+  SIP-blocked on macOS (`PermissionDeniedError`); no synthetic Frida traces.
+
+Native screenshots with dimensions, colour counts and SHA-256 are in the single
+[game evidence document](docs/GAME_MATRIX.md). These are process/render proof,
+not gameplay equivalence.
+
 ## Development Roadmap
 
 The long-term roadmap is to expand GameReComp beyond individual games and support a wider range of legacy applications and software.
