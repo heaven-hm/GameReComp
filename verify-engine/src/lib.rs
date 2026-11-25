@@ -552,6 +552,44 @@ pub fn frida_adapter(probe_cmd: &str) -> AdapterReport {
     AdapterReport { name: "frida".into(), verdict, detail }
 }
 
+
+pub fn classify_difftest(rows: &[serde_json::Value]) -> (Verdict, usize, usize, usize) {
+    let ok = |v: Option<&str>| matches!(v, Some("agree")|Some("agree-return")|Some("PASS")|Some("ok")|Some("agree-flags"));
+    let fault = |v: Option<&str>| matches!(v, Some("original-faulted")|Some("unmapped")|Some("error")|Some("oracle-faulted"));
+    let good = rows.iter().filter(|r| ok(r.get("verdict").and_then(|v|v.as_str()))).count();
+    let faults = rows.iter().filter(|r| fault(r.get("verdict").and_then(|v|v.as_str()))).count();
+    let bad = rows.iter().filter(|r| { let v=r.get("verdict").and_then(|x|x.as_str()); !ok(v)&&!fault(v) }).count();
+    let verdict = if rows.is_empty(){Verdict::Blocked}else if bad>0{Verdict::Fail}else if faults>0{Verdict::Blocked}else{Verdict::Pass};
+    (verdict,good,faults,bad)
+}
+#[cfg(not(target_arch="wasm32"))]
+pub fn forms_diff(pe:&Path,project:&Path,repo:&Path,max_addrs:usize,cases:usize,timeout:Duration)->Evidence {
+    let mut e=Evidence::new("forms");
+    let inv=project.join("reports/functions.json");
+    let text=match std::fs::read_to_string(&inv){Ok(t)=>t,Err(_)=>{e.reason=Some("inventory missing".into());return e}};
+    let json:serde_json::Value=match serde_json::from_str(&text){Ok(v)=>v,Err(_)=>{e.reason=Some("inventory unparseable".into());return e}};
+    let addrs:Vec<String>=json.get("functions").and_then(|v|v.as_array()).map(|a|a.iter().filter_map(|f|f.get("address").and_then(|x|x.as_str()).map(str::to_string)).collect()).unwrap_or_default();
+    if addrs.is_empty(){e.reason=Some("no functions".into());return e}
+    let step=(addrs.len()/max_addrs.max(1)).max(1);
+    let sample:Vec<&String>=addrs.iter().step_by(step).take(max_addrs).collect();
+    let tmp=std::env::temp_dir().join(format!("gcrec-forms-{}-{}.json",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()));
+    let script=repo.join("tools/lift/difftest.py");
+    let mut cmd=format!("python3 {} --project {} --pe {}",script.display(),project.display(),pe.display());
+    for a in &sample {cmd.push_str(&format!(" --address {}",a));}
+    cmd.push_str(&format!(" --cases {} --flags --json {}",cases,tmp.display()));
+    let r=run_command(&cmd,timeout,b"");
+    let body=format!("{}{}",r.stdout,r.stderr);
+    let report:serde_json::Value=match std::fs::read_to_string(&tmp).ok().and_then(|t|serde_json::from_str(&t).ok()){
+      Some(v)=>v,None=>{let _=std::fs::remove_file(&tmp);e.reason=Some(format!("no report: {}",body.chars().take(200).collect::<String>()));return e}};
+    let _=std::fs::remove_file(&tmp);
+    let rows=report.get("addresses").and_then(|v|v.as_array()).cloned().unwrap_or_default();
+    let (verdict,good,faults,bad)=classify_difftest(&rows);
+    e.checks.insert("functions_compared".into(),!rows.is_empty());
+    e.checks.insert("no_disagreements".into(),bad==0);
+    e.checks.insert("no_oracle_faults".into(),faults==0);
+    e.difference=Some(serde_json::json!({"sampled":sample.len(),"agree":good,"oracle_faults":faults,"disagreements":bad}));
+    e.verdict=verdict;e
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -630,6 +668,13 @@ mod tests {
         assert!(validate_scenario(&s).is_err());
     }
 
+    #[test] fn difftest_classification() {
+        let mk=|v| serde_json::json!({"verdict":v});
+        assert_eq!(classify_difftest(&[]).0,Verdict::Blocked);
+        assert_eq!(classify_difftest(&[mk("agree")]).0,Verdict::Pass);
+        assert_eq!(classify_difftest(&[mk("original-faulted")]).0,Verdict::Blocked);
+        assert_eq!(classify_difftest(&[mk("disagree")]).0,Verdict::Fail);
+    }
     #[test]
     fn scenario_hex_stdin_decodes() {
         let s: Scenario = serde_json::from_str(r#"{"name":"x","stdin_hex":"330a","args":["--v"]}"#).unwrap();

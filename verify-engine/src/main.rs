@@ -1,6 +1,6 @@
 //! Pure-Rust verification backend CLI: process / trace / frames evidence.
 use clap::{Parser, Subcommand};
-use game_recomp_verify::{aggregate_verdict, compare_runs, compare_traces, frida_adapter, frame_hashes,
+use game_recomp_verify::{forms_diff, aggregate_verdict, compare_runs, compare_traces, frida_adapter, frame_hashes,
     run_command, sha256, unicorn_adapter, verify_matrix, Evidence, Scenario, Verdict};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -48,6 +48,9 @@ enum Cmd {
         #[arg(long)]
         out: PathBuf,
     },
+    Forms { pe: PathBuf, project: PathBuf, #[arg(long, default_value=".")] repo: PathBuf,
+            #[arg(long, default_value_t=8)] max_addrs: usize, #[arg(long, default_value_t=8)] cases: usize,
+            #[arg(long, default_value_t=600.0)] timeout: f64, #[arg(long)] out: PathBuf },
     /// Compare two watched-value traces within an absolute tolerance.
     Trace {
         a: PathBuf,
@@ -138,6 +141,12 @@ fn main() {
             std::fs::write(&out, format!("{}\n", text)).expect("write matrix");
             println!("{}", text);
             std::process::exit(if report.aggregate == Verdict::Pass { 0 } else { 1 });
+        }
+        Cmd::Forms{pe,project,repo,max_addrs,cases,timeout,out}=>{
+            let e=forms_diff(&pe,&project,&repo,max_addrs,cases,std::time::Duration::from_secs_f64(timeout.max(1.0)));
+            let text=serde_json::to_string_pretty(&e).unwrap();
+            if let Some(p)=out.parent(){let _=std::fs::create_dir_all(p);} std::fs::write(&out,format!("{}\n",text)).unwrap();
+            println!("{}",text); std::process::exit(if e.verdict==Verdict::Pass{0}else{1});
         }
         Cmd::Trace { a, b, tolerance, out } => {
             let e = match (std::fs::read_to_string(&a), std::fs::read_to_string(&b)) {
