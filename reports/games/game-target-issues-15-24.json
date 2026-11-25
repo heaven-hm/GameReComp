@@ -1,0 +1,220 @@
+{
+  "report": "game-target-issues-15-24",
+  "generated": "2026-11-25",
+  "repo_head": "5495e66",
+  "rule": "An issue closes only on 100% verified acceptance criteria (original-Windows playable scenario vs native). No issue is closed here.",
+  "method": "Filesystem inventory + SHA-256 + pefile import/section census + MSVC linker-map identity validation + checked-in tools/pe/map_names.py resolve + prior verified evidence. Paths are user-owned inputs outside the repository; no proprietary files are committed.",
+  "shared_blockers": {
+    "d3d9": "No d3d9.dll / d3d9ex / dxgi HLE backend in runtime/win32hle; game-target issues #21-#24 depend on #5.",
+    "d3d8": "No d3d8.dll backend; issues #17-#20 depend on #3.",
+    "multi_dll": "runtime/win32hle/module.c maps resource DLLs but does not execute guest DLL code; issues #16-#21 depend on #9.",
+    "oracle": "No deterministic keyboard/mouse + frame/audio/scenario oracle harness (issues #145/#147/#146 open).",
+    "frida": "Frida blocked on this macOS host (PermissionDeniedError / NotSupportedError on dyld probe) - issue #171 open."
+  },
+  "issues": [
+    {
+      "issue": 15,
+      "title": "Project I.G.I. (2000) native Mission 1",
+      "edition": "user-owned local IGI PC edition",
+      "input_status": "PARTIAL",
+      "inputs": {},
+      "acceptance_ladder_rung": "input/edition inventory -> exact binary lifting/compilation -> partial native run (texture abort fixed)",
+      "status": "PARTIAL",
+      "blockers": [
+        "Original-Windows Mission 1 scenario oracle/input playback absent",
+        "No proof of full gameplay; texture abort fix is a narrow fix only",
+        "Complete D3D7 API edge coverage owned by #2"
+      ],
+      "evidence": [
+        "evidence/agent-p2-igi-texture/evidence.json (FIXED invalid-texture abort: before exit 1 / 63488 bpp; after exit 124 timeout / 16 bpp, continues rendering)",
+        "igi.exe PE32 128 imports SHA-256 dea34892..."
+      ],
+      "next_steps": [
+        "Obtain matching original-Windows Mission 1 trace with controlled inputs",
+        "Verify frame/state diffs vs native, then source-mod rebuild"
+      ]
+    },
+    {
+      "issue": 16,
+      "title": "Hitman: Codename 47 (2000)",
+      "edition": "not identified (no input)",
+      "input_status": "MISSING_INPUT",
+      "inputs": {},
+      "acceptance_ladder_rung": "not started",
+      "status": "MISSING_INPUT",
+      "blockers": [
+        "MISSING_INPUT: no authorised original Windows PC binary/asset set found in user-supplied paths (/Users/haseeb-mir/Downloads, /Users/haseeb-mir/Library); no commercial game code downloaded or committed.",
+        "#9 multi-DLL guest code execution absent",
+        "#2 D3D7 / Glide renderer path unverified"
+      ],
+      "evidence": [
+        "No hitman.exe / system.dll / renderopengl.dll found in supplied paths"
+      ],
+      "next_steps": [
+        "User must supply authorised edition + DLL set; then census IAT/ordinals/renderer load order"
+      ]
+    },
+    {
+      "issue": 17,
+      "title": "Max Payne (2001)",
+      "edition": "not identified (no input)",
+      "input_status": "MISSING_INPUT",
+      "inputs": {},
+      "acceptance_ladder_rung": "not started",
+      "status": "MISSING_INPUT",
+      "blockers": [
+        "MISSING_INPUT: no authorised original Windows PC binary/asset set found in user-supplied paths (/Users/haseeb-mir/Downloads, /Users/haseeb-mir/Library); no commercial game code downloaded or committed.",
+        "#3 D3D8 backend absent",
+        "#9 DLL lifecycle/TLS/SEH absent"
+      ],
+      "evidence": [
+        "No Max Payne PC EXE found; phobos665/payne-recomp is Xbox XBE, not PC evidence"
+      ],
+      "next_steps": [
+        "User-supplied PC edition required before any lifting"
+      ]
+    },
+    {
+      "issue": 18,
+      "title": "Max Payne 2 (2003)",
+      "edition": "not identified (no input)",
+      "input_status": "MISSING_INPUT",
+      "inputs": {},
+      "acceptance_ladder_rung": "not started",
+      "status": "MISSING_INPUT",
+      "blockers": [
+        "MISSING_INPUT: no authorised original Windows PC binary/asset set found in user-supplied paths (/Users/haseeb-mir/Downloads, /Users/haseeb-mir/Library); no commercial game code downloaded or committed.",
+        "#3 D3D8 absent",
+        "#9 multi-module/SEH absent"
+      ],
+      "evidence": [
+        "No Max Payne 2 PC EXE found"
+      ],
+      "next_steps": [
+        "Independent PC binary required; no reuse of MP1 addresses"
+      ]
+    },
+    {
+      "issue": 19,
+      "title": "Hitman 2: Silent Assassin (2002)",
+      "edition": "not identified (no input)",
+      "input_status": "MISSING_INPUT",
+      "inputs": {},
+      "acceptance_ladder_rung": "not started",
+      "status": "MISSING_INPUT",
+      "blockers": [
+        "MISSING_INPUT: no authorised original Windows PC binary/asset set found in user-supplied paths (/Users/haseeb-mir/Downloads, /Users/haseeb-mir/Library); no commercial game code downloaded or committed.",
+        "#3 D3D8 / #9 DLL execution absent"
+      ],
+      "evidence": [
+        "No Hitman 2 EXE found"
+      ],
+      "next_steps": [
+        "User-supplied edition + RenderOpenGL.dll before choosing renderer route"
+      ]
+    },
+    {
+      "issue": 20,
+      "title": "Hitman: Contracts (2004)",
+      "edition": "not identified (no input)",
+      "input_status": "MISSING_INPUT",
+      "inputs": {},
+      "acceptance_ladder_rung": "not started",
+      "status": "MISSING_INPUT",
+      "blockers": [
+        "MISSING_INPUT: no authorised original Windows PC binary/asset set found in user-supplied paths (/Users/haseeb-mir/Downloads, /Users/haseeb-mir/Library); no commercial game code downloaded or committed.",
+        "#3 D3D8 / #9 DLL execution absent"
+      ],
+      "evidence": [
+        "No Contracts EXE found"
+      ],
+      "next_steps": [
+        "User-supplied edition + DrawDll/renderer inventory"
+      ]
+    },
+    {
+      "issue": 21,
+      "title": "Hitman: Blood Money (2006)",
+      "edition": "not identified (no input)",
+      "input_status": "MISSING_INPUT",
+      "inputs": {},
+      "acceptance_ladder_rung": "not started",
+      "status": "MISSING_INPUT",
+      "blockers": [
+        "MISSING_INPUT: no authorised original Windows PC binary/asset set found in user-supplied paths (/Users/haseeb-mir/Downloads, /Users/haseeb-mir/Library); no commercial game code downloaded or committed.",
+        "#5 D3D9 absent",
+        "#9 C++/SEH multi-DLL absent"
+      ],
+      "evidence": [
+        "No Blood Money EXE found; ReHitman is a runtime SDK, not native source"
+      ],
+      "next_steps": [
+        "User-supplied retail build required"
+      ]
+    },
+    {
+      "issue": 22,
+      "title": "TrackMania Nations ESWC (2006)",
+      "edition": "local Windows build; timestamp 2019-05-23 (build identity unverified)",
+      "input_status": "BLOCKED_BY_INPUT_IDENTITY_AND_D3D9",
+      "inputs": {},
+      "acceptance_ladder_rung": "input/edition inventory (identity unresolved)",
+      "status": "BLOCKED_BY_INPUT_IDENTITY_AND_D3D9",
+      "blockers": [
+        "PE timestamp 1558652719 (2019) does not match a 2006 retail release; edition/protection must be verified before lifting",
+        "StarForce 3.07 protection documented for retail ESWC; no DRM bypass attempted",
+        "#5 D3D9 backend absent; native compile halted at 46% (recomp_0115.c.o, Terminated: 15)"
+      ],
+      "evidence": [
+        "TmNationsESWC.exe PE32 259 imports SHA-256 822def6627f0...",
+        "compile log: 46% halt (no binary)"
+      ],
+      "next_steps": [
+        "Verify authorised inspectable build/version; then report D3D9/DInput8 import matrix to #5/#11"
+      ]
+    },
+    {
+      "issue": 23,
+      "title": "TrackMania Nations Forever (2008)",
+      "edition": "local Windows build 2.12.0 family; map matches PE",
+      "input_status": "PARTIAL",
+      "inputs": {},
+      "acceptance_ladder_rung": "input/edition inventory -> map identity validated -> 118,469 symbols recovered",
+      "status": "PARTIAL",
+      "blockers": [
+        "#5 D3D9 / shader / D3DX backend absent",
+        "No playable offline race scenario or original-vs-native trace",
+        "Map symbols are names only, not proof of behaviour"
+      ],
+      "evidence": [
+        "TmForever.exe PE32 416 imports SHA-256 5e287e79a07c..., TimeDateStamp 0x4d431494, ImageBase 0x00400000",
+        "TmForever.map SHA-256 558c6f71..., Timestamp 4d431494 = PE timestamp; entry point matched 0x0040351F; 118,469 symbols / 75,287 functions / 106,319 distinct addresses via tools/pe/map_names.py resolve",
+        "resolve output names.json SHA-256 2e98cffe... (7.8 MB, kept outside repo)"
+      ],
+      "next_steps": [
+        "Feed validated names into normal autorecomp metadata (no game-only decompiler)",
+        "Report D3D9/shader/input gaps to #5/#11; build deterministic offline race fixture"
+      ]
+    },
+    {
+      "issue": 24,
+      "title": "TrackMania United Forever (2008)",
+      "edition": "not identified (no input)",
+      "input_status": "MISSING_INPUT",
+      "inputs": {},
+      "acceptance_ladder_rung": "not started",
+      "status": "MISSING_INPUT",
+      "blockers": [
+        "MISSING_INPUT: no authorised original Windows PC binary/asset set found in user-supplied paths (/Users/haseeb-mir/Downloads, /Users/haseeb-mir/Library); no commercial game code downloaded or committed.",
+        "Depends on #23 not yet passing",
+        "#5 D3D9 absent"
+      ],
+      "evidence": [
+        "No United Forever EXE found in supplied paths"
+      ],
+      "next_steps": [
+        "User-supplied United Forever edition required; no reuse of Forever addresses"
+      ]
+    }
+  ]
+}
