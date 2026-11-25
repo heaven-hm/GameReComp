@@ -64,6 +64,45 @@ Proofs for `busybox` (macOS) and `fifteensolver` (macOS and Linux) are proposed
 in PR #256 with exact commands/hashes/raw captures; they are not yet merged.
 See `docs/DIFFERENTIAL_ENGINE.md` for the engine and its honest limits.
 
+## Port proof — both directions
+
+### Windows PE32 → native macOS arm64
+
+- **IGI** (`igi.exe`, SHA `dea34892d417`): native rebuild 37 MB; hashes, commands
+  and three fresh level 1/5/9 captures (all 6,814 colours; levels 1 and 9 are byte-identical, so the argument does not change the frame) are in
+  `proof/ports/igi-native-port.json` and `proof/screenshots/igi-level*-fresh-*.png`.
+  Linux ELF proof in PR #259. No gameplay claim.
+- **IDM Downloader** (`idman643build18.exe`, SHA `7346128fab42`): native rebuild
+  binds 104 imports / 0 unresolved and exits at its own Windows-version check;
+  exact hash and log excerpt in `proof/ports/idm-native-port.json` — build success,
+  not full functionality.
+- **Winamp** (`winamp_latest_full.exe`, SHA `d064eefc27c7`): native rebuild
+  boot-fails on 34 unresolved Win32 imports — FAIL; hash and log excerpt in
+  `proof/ports/winamp-native-port.json`. The earlier "not attempted" row above
+  is superseded by this build proof.
+- **Cube / prime-gen**: native binaries and hashed real frames in `proof/`.
+
+### macOS/Linux source → Windows PE32/PE32+ (run under `highball run`)
+
+- CLI apps (`prime-gen`, `passgen`, `base64-tool`, `guess-game`, `hangman`,
+  `tictactoe`, `mastermind`) cross-built with MinGW-w64 for both PE32 and PE32+;
+  exact commands, hashes and Highball results in the corpus
+  (`proof/ports/windows-crossbuild-results.json`: 7 apps x PE32/PE32+ = 14 outputs;
+  the non-interactive ones exited 0 under Highball, interactive ones timed out).
+
+### Verification engines
+
+- Python `tools/differential.py` and the Rust `verify-engine` were cross-checked
+  on the priority titles locally; committed corpus evidence records BLOCKED engine
+  controls. The local cross-check found IGI native-vs-original FAIL and the rest
+  BLOCKED — no fabricated PASS.
+- Unicorn function-level oracle faults are recorded as BLOCKED. Frida attach is
+  SIP-blocked on macOS (`PermissionDeniedError`); no synthetic Frida traces.
+
+Screenshots with dimensions, colour counts and SHA-256 are in the single
+[game evidence document](docs/GAME_MATRIX.md). These are render proof, not
+gameplay equivalence.
+
 ## Development Roadmap
 
 The long-term roadmap is to expand GameReComp beyond individual games and support a wider range of legacy applications and software.
@@ -153,7 +192,7 @@ Game-specific screenshots and their verification status are kept in the single [
 | Hero Core (herocore gm5.exe) | Windows | i386 (PE32) | 17053 fns recovered; 19 units / 66.4 MiB C; binary herocore_gm5 24744 KiB [macOS arm64 (native)]; 495 imports bound, 18 unresolved; low-level 17053/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Hero Core (herocore gm7.exe) | Windows | i386 (PE32) | 21674 fns recovered; 24 units / 87.0 MiB C; binary herocore_gm7 30408 KiB [macOS arm64 (native)]; 506 imports bound, 26 unresolved; low-level 21674/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | IGI (IGI-Injector.exe) | Windows | i386 (PE32) | 2687 fns recovered; 7 units / 41.9 MiB C; binary IGI_Injector 10759 KiB [macOS arm64 (native)]; 108 imports bound, 17 unresolved; low-level 2687/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| IGI | Windows | i386 (PE32) | 7325 fns recovered; 16 units / 114.9 MiB C; binary igi 38292 KiB [macOS arm64 (native)]; 128 imports bound; low-level 7325/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 1; no oracle supplied |
+| IGI | Windows | i386 (PE32) | 7325 fns recovered; 16 units / 114.9 MiB C; binary igi 38292 KiB [macOS arm64 (native)]; 128 imports bound; low-level 7325/ high-level verified 0 | level 1/5/9 frames | PARTIAL - fresh native frames and process proof in `proof/ports/igi-native-port.json`; no original-Windows oracle |
 | Ikachan (dxIka.exe) | Windows | i386 (PE32) | 545 fns recovered; 3 units / 9.8 MiB C; binary dxIka 2921 KiB [macOS arm64 (native)]; 97 imports bound; low-level 543/ high-level verified 2 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 1; no oracle supplied |
 | NES_GameGenie (NES_GameGenieEncoder.exe) | Windows | i386 (PE32) | 84 fns recovered; 2 units / 0.3 MiB C; low-level 84/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/GameReComp/projects/NES_GameGenieEncoder/logs/com | - | NOT RUN - verification did not run |
 | Noiz2sa | Windows | i386 (PE32) | 6615 fns recovered; 14 units / 94.3 MiB C; binary noiz2sa 22293 KiB [macOS arm64 (native)]; 69 imports bound; low-level 6615/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and stayed alive until the 10s timeout; no crash observed, no oracle |
