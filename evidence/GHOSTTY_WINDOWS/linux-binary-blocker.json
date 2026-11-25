@@ -8,5 +8,6 @@
   "source": "Ubuntu 24.04 official .deb ghostty_1.3.0~us1-0ubuntu1.1_amd64.deb (SHA 8614ef9b...)",
   "tested": "docker run --platform linux/amd64 ubuntu:24.04 ghostty --version",
   "error": "GLIBC_2.43 not found (container has 2.39); missing libfreetype/harfbuzz/fontconfig/gtk-4/gio/adwaita/X11/gtk4-layer-shell/wayland-client",
-  "verdict": "BLOCKED - binary is genuine native Linux x86-64 but cannot execute in the available container (glibc + GTK4 deps)"
+  "verdict": "BLOCKED - binary is genuine native Linux x86-64 but cannot execute in the available container (glibc + GTK4 deps)",
+  "resolved_by": "evidence/GHOSTTY_WINDOWS/linux-binary-pass.json (fresh ubuntu:26.04 amd64 container, glibc 2.43 + GTK4 deps, --version exit 0)"
 }
