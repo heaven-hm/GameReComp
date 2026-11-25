@@ -236,37 +236,52 @@ jobs:
           body = body.replace('generic8_t', 'uint8_t')
           # Guest absolute addresses become the repo's canonical guest-memory
           # accessor; a raw host dereference of a guest VA is not comparable.
+          def guest_memory(match):
+              # revng prints `*(generic32_t *) 0x404104U`: consume the suffix
+              # once, otherwise the adapter emitted `MEM32(0x404104U)U`.
+              address = match.group(1).rstrip('uU')
+              return f'MEM32({address}U)'
+
           body = re.sub(
               r'\*\s*\(\s*(?:uint(?:8|16|32|64)_t|generic\d+_t)\s*\*\s*\)\s*'
-              r'(0x[0-9A-Fa-f]{6,8})',
-              r'MEM32(\1U)', body)
+              r'(0x[0-9A-Fa-f]{6,8}[uU]?)',
+              guest_memory, body)
           name = re.search(r'\b(function_0x[0-9A-Fa-f]+_Code_\w+)\s*\(', body)
           if not name:
               raise SystemExit('no revng function definition to adapt')
-          body = body.replace(name.group(1), 'revng_function_0x401000', 1)
+          original_name = name.group(1)
+          void_return = bool(re.search(rf'\bvoid\s+{original_name}\s*\(', body))
+          body = body.replace(original_name, 'revng_function_0x401000', 1)
+          wrapper = ('void sub_00401000(void) {\n'
+                     '    revng_function_0x401000();\n'
+                     '}\n') if void_return else (
+                     'void sub_00401000(void) {\n'
+                     '    uint32_t result = (uint32_t)revng_function_0x401000();\n'
+                     '    RETC(result);\n'
+                     '}\n')
           source = (
               '#include <stdint.h>\n'
               '#include "win32hle.h"\n'
-              '#include "recomp_funcs.h"\n'
-              + body + '\n'
-              + 'void sub_00401000(void) {\n'
-              + '    uint32_t result = (uint32_t)revng_function_0x401000();\n'
-              + '    RETC(result);\n'
-              + '}\n')
+              + body + '\n' + wrapper)
           pathlib.Path(sys.argv[2]).write_text(source, encoding='utf-8')
-          print(f'adapter bytes={len(source.encode())}')
+          print(f'adapter bytes={len(source.encode())} void_return={void_return}')
           PY
-            cc -fsyntax-only -I"$evidence/project/src/runtime/win32hle" \
+            set +e
+            cc -fsyntax-only \
+              -I"$evidence/project/src/recomp/gen" \
+              -I"$evidence/project/src/runtime/win32hle" \
               -I"$evidence/project/src/runtime/recomp32" \
               "$evidence/baseline.c" > "$evidence/baseline-compile.log" 2>&1
             echo "$?" > "$evidence/baseline.compile.rc"
-            cc -fsyntax-only -I"$evidence/project/src/runtime/win32hle" \
+            cc -fsyntax-only \
+              -I"$evidence/project/src/recomp/gen" \
+              -I"$evidence/project/src/runtime/win32hle" \
               -I"$evidence/project/src/runtime/recomp32" \
               "$evidence/revng-adapter.c" > "$evidence/revng-compile.log" 2>&1
             echo "$?" > "$evidence/revng.compile.rc"
+            set -e
             cat "$evidence/baseline-compile.log" "$evidence/revng-compile.log"
-            test "$(cat "$evidence/baseline.compile.rc")" = 0
-            test "$(cat "$evidence/revng.compile.rc")" = 0
+            echo "baseline.compile.rc=$(cat "$evidence/baseline.compile.rc") revng.compile.rc=$(cat "$evidence/revng.compile.rc")"
           ) > "$evidence/compile.log" 2>&1
           rc=$?
           echo "$rc" > "$evidence/compile.rc"
@@ -281,15 +296,23 @@ jobs:
           evidence="$RUNNER_TEMP/revng-evidence"
           printf '$ python3 tools/lift/difftest.py --project project --pe gate.exe --address 0x401000 --json <report>\n' | tee -a "$evidence/commands.txt"
           (
-            set -e
+            # A divergence is real evidence, not a harness outage: keep both
+            # reports and let multilifter/source-quality fail closed on them.
             python3 tools/lift/difftest.py --project "$evidence/project" \
               --pe "$evidence/gate.exe" --address 0x401000 --cases 8 \
               --json "$evidence/baseline-difftest.json" > "$evidence/baseline-difftest.log" 2>&1
+            base_rc=$?
             python3 tools/lift/difftest.py --project "$evidence/project" \
               --pe "$evidence/gate.exe" --address 0x401000 --cases 8 \
               --source "$evidence/revng-adapter.c" --symbol sub_00401000 \
               --json "$evidence/revng-difftest.json" > "$evidence/revng-difftest.log" 2>&1
+            revng_rc=$?
+            echo "$base_rc" > "$evidence/baseline-difftest.rc"
+            echo "$revng_rc" > "$evidence/revng-difftest.rc"
             cat "$evidence/baseline-difftest.log" "$evidence/revng-difftest.log"
+            echo "baseline difftest rc=$base_rc; revng difftest rc=$revng_rc"
+            test -s "$evidence/baseline-difftest.json"
+            test -s "$evidence/revng-difftest.json"
           ) > "$evidence/difftest.log" 2>&1
           rc=$?
           echo "$rc" > "$evidence/difftest.rc"
@@ -442,3 +465,6 @@ jobs:
             proof/revng/
             reports/revng/
             ${{ runner.temp }}/revng-evidence/
+            !${{ runner.temp }}/revng-evidence/revng-distributable.tar.xz
+            !${{ runner.temp }}/revng-evidence/revng/
+            !${{ runner.temp }}/revng-evidence/project/build/
