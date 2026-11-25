@@ -161,3 +161,16 @@ recorded as **BLOCKED (rebuild did not finish in session window)** with the
 exact command and live log under `evidence/p8-new-games/logs/heretic-rebuild.log`.
 Hexen is **BLOCKED (no IWAD; not attempted)**. Neither is claimed as built or
 running.
+
+## Chocolate Doom frame evidence with a legal WAD (issue #28)
+
+On 2026-11-25 the exact Chocolate Doom 1.3.0 win32 binary
+(`d1b9dabc567d0a79480a4b319850b69ea76e69a3b4be578586ae045b96af33cc`) was
+rebuilt with the current runtime and run through `tools.game_runner` with a
+freely redistributable Freedoom 1 WAD (`7323bcc168c5a45ff10749b339960e98314740a734c30d4b9f3337001f9e703d`):
+166 EXE imports plus 34 companion `SDL_net.dll` imports bound, **0 unresolved**,
+and 3 non-blank 256x200 frames (3,468 distinct colours). The guest exits 255
+after rendering from its own visplane-overflow error; no Windows oracle was
+used and no gameplay equivalence is claimed. Machine-readable evidence,
+recomputed frame hashes and the independent guard test are in
+`docs/ISSUE_28_PROOF.md` and `proof/issue-28/`.
