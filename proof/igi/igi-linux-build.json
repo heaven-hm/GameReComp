@@ -8,8 +8,8 @@
     "sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01"
   },
   "commands": [
-    "python3 -m tools.autorecomp igi.exe --out-mode source ...",
-    "python3 -m tools.linux_matrix --project igi-src-clean --out igi-linux-clean --original igi.exe --provision prebuilt --build-timeout 3600 --jobs 1"
+    "python3 -m tools.autorecomp /Users/haseeb-mir/Downloads/IGI/igi.exe --project-dir /Users/haseeb-mir/igi-proof/igi-src-clean --assets-dir /Users/haseeb-mir/Downloads/IGI --out-mode source --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --no-table",
+    "python3 -m tools.linux_matrix --project /Users/haseeb-mir/igi-proof/igi-src-clean --out /Users/haseeb-mir/igi-proof/igi-linux-clean --original /Users/haseeb-mir/Downloads/IGI/igi.exe --provision prebuilt --build-timeout 3600 --jobs 1"
   ],
   "target": {
     "status": "OK",

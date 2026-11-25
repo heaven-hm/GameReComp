@@ -3,8 +3,10 @@
 import json, sys
 from pathlib import Path
 
-REQUIRED = {"schema", "kind", "generated_at", "input", "target", "commands",
-            "scope", "scenarios", "aggregate", "limits"}
+REQUIRED_MATRIX = {"schema", "kind", "generated_at", "input", "target", "commands",
+                   "scope", "scenarios", "aggregate", "limits"}
+REQUIRED_BUILD = {"schema", "kind", "generated_at", "input", "target", "commands",
+                  "build_rc", "run_rc", "run_log_excerpt", "scope", "limits"}
 
 
 def validate(path: Path) -> list:
@@ -13,15 +15,26 @@ def validate(path: Path) -> list:
         d = json.loads(path.read_text())
     except Exception as e:
         return [f"{path}: unreadable JSON: {e}"]
-    missing = REQUIRED - set(d)
+    kind = d.get("kind")
+    required = REQUIRED_BUILD if kind == "build-proof" else REQUIRED_MATRIX if kind == "matrix" else None
+    if required is None:
+        problems.append(f"{path}: unsupported kind {kind!r}")
+        return problems
+    missing = required - set(d)
     if missing:
         problems.append(f"{path}: missing keys {sorted(missing)}")
-    if d.get("schema") != 2 or d.get("kind") != "matrix":
-        problems.append(f"{path}: unexpected schema/kind")
+    if d.get("schema") != 2:
+        problems.append(f"{path}: unexpected schema")
     if not d.get("input", {}).get("sha256") or not d.get("target", {}).get("sha256"):
         problems.append(f"{path}: input/target hash missing")
-    if not d.get("commands", {}).get("original") or not d.get("commands", {}).get("rebuilt"):
+    cmds = d.get("commands")
+    if kind == "matrix" and (not cmds or not cmds.get("original") or not cmds.get("rebuilt")):
         problems.append(f"{path}: exact commands missing")
+    if kind == "build-proof":
+        if not isinstance(cmds, list) or not cmds or any("..." in c for c in cmds):
+            problems.append(f"{path}: commands must be exact (no placeholders)")
+        if not d.get("run_log_excerpt"):
+            problems.append(f"{path}: run log excerpt missing")
     for s in d.get("scenarios", []):
         if not s.get("raw_original") or not s.get("raw_rebuilt"):
             problems.append(f"{path}: raw captures missing")
