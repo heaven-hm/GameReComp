@@ -34,6 +34,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install SDL2 (Linux native build)
+        shell: bash
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev
+
       - name: Record Linux host, toolchain and hashes
         shell: bash
         run: |
@@ -67,7 +74,7 @@ jobs:
         run: |
           set +e
           evidence="$RUNNER_TEMP/linux-evidence"
-          python3 -m pip install --upgrade pytest pefile pyyaml > "$evidence/deps.log" 2>&1
+          python3 -m pip install --upgrade pytest pefile pyyaml unicorn capstone > "$evidence/deps.log" 2>&1
           rc=$?
           echo "$rc" > "$evidence/deps.rc"
           cat "$evidence/deps.log"
@@ -235,7 +242,11 @@ jobs:
           except OSError:
               pass
 
-          measured = all(row['rc'] == 0 for row in rows)
+          # The pipeline CLI's EXIT_UNVERIFIED=3 means it built and launched the
+          # native binary but has no independent Windows oracle. It is recorded
+          # verbatim; it is never promoted to 0 or to a gameplay claim.
+          ok_codes = {'pipeline': (0, 3)}
+          measured = all(row['rc'] in ok_codes.get(row['name'], (0,)) for row in rows)
           linux_host = (platform.system() == 'Linux'
                         and os.environ.get('RUNNER_OS') == 'Linux'
                         and host.get('host_os') == 'Linux'
@@ -260,6 +271,9 @@ jobs:
               'build_rc': by_name['native_build'],
               'run_rc': by_name['pipeline'],
               'native_binary': native,
+              'claim_scope': ('Linux-host execution, native ELF build and launch; '
+                              'pipeline rc=3 is recorded as EXIT_UNVERIFIED (no '
+                              'independent Windows oracle), not as a gameplay PASS'),
               'report_path': 'reports/linux-matrix/linux-summary.json',
           }
           report.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')

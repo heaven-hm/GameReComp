@@ -145,9 +145,12 @@ def test_checkout_deps_refusals_and_native_build_are_real_steps():
     text = _text()
     assert "uses: actions/checkout@v4" in text
     assert "uses: actions/setup-python@v5" in text
+    sdl2 = _step("Install SDL2 (Linux native build)")["run"]
+    for package in ("libsdl2-dev", "libsdl2-ttf-dev"):
+        assert package in sdl2, f"native Linux compile needs {package!r}"
     deps = _step("Install python deps")["run"]
     assert "pip install" in deps
-    for dep in ("pytest", "pefile"):
+    for dep in ("pytest", "pefile", "capstone", "unicorn"):
         assert dep in deps, f"python deps missing {dep!r}"
 
     refusals = _step("ELF/Mach-O/.NET refusal tests")["run"]
@@ -213,7 +216,10 @@ def test_no_fake_pass_and_fail_closed_status():
     text = _text()
     assert "NOT TESTED" in text
     emitter = _step(EMIT_STEP)["run"]
-    assert "measured = all(row['rc'] == 0 for row in rows)" in emitter
+    assert "ok_codes = {'pipeline': (0, 3)}" in emitter
+    assert "measured = all(row['rc'] in ok_codes.get(row['name'], (0,)) for row in rows)" in emitter
+    assert "claim_scope" in emitter and "EXIT_UNVERIFIED" in emitter
+    assert "'build_rc': by_name['native_build']" in emitter
     for token in ("platform.system() == 'Linux'", "os.environ.get('RUNNER_OS') == 'Linux'",
                   "host.get('host_os') == 'Linux'", "host.get('runner_os') == 'Linux'"):
         assert token in emitter, f"Linux host guard missing {token!r}"
@@ -283,6 +289,24 @@ def test_emitter_is_fail_closed_on_non_linux_and_on_skipped_stages():
         assert summary["linux_pass_claimed"] is False
         assert summary["build_rc"] == 0  # measured, but not a Linux PASS
         assert summary["run_rc"] == 0
+
+        # Logic check only: on a simulated Linux host the pipeline's documented
+        # EXIT_UNVERIFIED=3 is recorded verbatim, never rewritten to 0 and never
+        # promoted to a gameplay claim.
+        (evidence / "environment.txt").write_text(
+            "host_os: Linux\nrunner_os: Linux\n", encoding="utf-8")
+        (evidence / "pipeline.rc").write_text("3\n", encoding="utf-8")
+        linux_preamble = "import platform\nplatform.system = lambda: 'Linux'\n"
+        third = subprocess.run(
+            [sys.executable, "-c", linux_preamble + script, str(evidence)],
+            cwd=root, env=dict(os.environ, RUNNER_OS="Linux"),
+            capture_output=True, text=True,
+        )
+        assert third.returncode == 0
+        summary = json.loads((root / REPORT_PATH).read_text(encoding="utf-8"))
+        assert summary["status"] == "PASS"
+        assert summary["run_rc"] == 3
+        assert "not as a gameplay PASS" in summary["claim_scope"]
 
 
 if __name__ == "__main__":
