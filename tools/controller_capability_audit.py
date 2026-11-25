@@ -280,13 +280,11 @@ def _device_state(devices: Any, base: Path, reasons: list[str],
     synthetic: set[str] = set()
     if devices is None or devices in ([], {}):
         for api in APIS:
-            checks[api]['device_supplied'] = False
             reasons.append(
                 f'{api}: API_DEVICE_ABSENT: no physical device row supplied')
         return {}
     if not isinstance(devices, list):
         for api in APIS:
-            checks[api]['device_supplied'] = False
             reasons.append(f'{api}: DEVICE_ROW_INVALID: devices is not a list')
         return {}
     seen: set[str] = set()
@@ -364,6 +362,10 @@ def _device_state(devices: Any, base: Path, reasons: list[str],
                 checks[api]['device'] = UNSUPPORTED
             else:
                 checks[api]['device'] = DEFERRED
+        if (checks[api]['device'] == DEFERRED
+                and not any(reason.startswith(f'{api}: ') for reason in reasons)):
+            reasons.append(
+                f'{api}: API_DEVICE_ABSENT: no physical device row for this API')
     return {api: {device['id']: device for device in eligible[api]}
             for api in APIS}
 
@@ -388,7 +390,6 @@ def _check_selftests(doc: dict, base: Path, host: Any,
     records = doc.get('records')
     if records is None or records in ([], {}):
         for api in APIS:
-            checks[api]['test_supplied'] = False
             reasons.append(
                 f'{api}: API_SELFTEST_ABSENT: no selftest record supplied')
         return
@@ -518,6 +519,11 @@ def _check_selftests(doc: dict, base: Path, host: Any,
             checks[api]['check_counts'] = {
                 status: sum(1 for case in normalised if case['status'] == status)
                 for status in STATUSES}
+    for api in APIS:
+        if (checks[api]['test'] == DEFERRED
+                and not any(reason.startswith(f'{api}: ') for reason in reasons)):
+            reasons.append(
+                f'{api}: API_SELFTEST_ABSENT: no selftest record for this API')
 
 
 def _per_api(checks: dict[str, dict], reasons: list[str]) -> dict[str, dict]:
@@ -550,23 +556,20 @@ def _per_api(checks: dict[str, dict], reasons: list[str]) -> dict[str, dict]:
         else:
             # Every refusal carries an exact, self-contained reason code even
             # when only some of the six APIs were named in the input files.
-            if (state['device'] == DEFERRED
-                    and not state.get('device_supplied', True)
-                    and need('API_DEVICE_ABSENT')):
+            if state['device'] == DEFERRED and need('API_DEVICE_ABSENT'):
                 api_reasons.append(
                     f'{api}: API_DEVICE_ABSENT: no physical device row supplied')
-            if (state['test'] == DEFERRED
-                    and not state.get('test_supplied', True)
-                    and need('API_SELFTEST_ABSENT')):
+            if state['test'] == DEFERRED and need('API_SELFTEST_ABSENT'):
                 api_reasons.append(
                     f'{api}: API_SELFTEST_ABSENT: no selftest record supplied')
             if state['device'] == UNSUPPORTED and need('NO_REAL_DEVICE'):
                 api_reasons.append(
                     f'{api}: NO_REAL_DEVICE: no eligible physical device for '
                     'this API')
-            if state['test'] == UNSUPPORTED and need('SELFTEST_FAILED'):
+            if state['test'] == UNSUPPORTED and need('UNSUPPORTED_SELFTEST'):
                 api_reasons.append(
-                    f'{api}: SELFTEST_FAILED: no passing real-hardware selftest')
+                    f'{api}: UNSUPPORTED_SELFTEST: no accepted real-hardware '
+                    'selftest for this API')
             if verdict == BLOCKED and need('EVIDENCE_INVALID'):
                 api_reasons.append(
                     f'{api}: EVIDENCE_INVALID: device={state["device"]}, '
@@ -593,9 +596,7 @@ def evaluate(inventory: dict, selftests: dict, *, inventory_base: Path | None = 
     _check_claims(selftests, 'selftests', reasons)
     raw_host = inventory.get('host')
     checks: dict[str, dict] = {
-        api: {'device': DEFERRED, 'test': DEFERRED,
-              'device_supplied': True, 'test_supplied': True}
-        for api in APIS}
+        api: {'device': DEFERRED, 'test': DEFERRED} for api in APIS}
     devices = _device_state(inventory.get('devices'),
                             inventory_base or Path('.'), reasons, checks)
     if not _host(raw_host):

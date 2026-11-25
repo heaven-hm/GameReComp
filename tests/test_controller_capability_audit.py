@@ -131,6 +131,23 @@ def test_complete_bundle_supports_every_audited_api(tmp_path):
         assert _has_reason(result, api, 'SUPPORTED: physical device')
 
 
+def test_every_refusal_carries_an_exact_reason(tmp_path):
+    """A partial inventory must still explain every non-supported API."""
+    bundle = _bundle(tmp_path / 'partial', apis=('xinput',))
+    code, result, _ = _run(bundle)
+    assert code != 0
+    assert result['supported_apis'] == ['xinput']
+    assert result['status'] == DEFERRED
+    for api in APIS:
+        row = result['per_api'][api]
+        if row['supported']:
+            continue
+        assert row['reasons']
+        assert all(reason.startswith(f'{api}: ') for reason in row['reasons'])
+        assert any(code in reason for reason in row['reasons']
+                   for code in ('API_DEVICE_ABSENT', 'API_SELFTEST_ABSENT'))
+
+
 def test_repeated_cli_runs_are_byte_identical(tmp_path):
     bundle = _bundle(tmp_path / 'repro')
     first = bundle['root'] / 'first.json'
