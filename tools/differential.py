@@ -32,7 +32,7 @@ SCHEMA = 1
 # in the evidence file; strip only these known prefixes for the comparison.
 LAUNCHER_PREFIXES = (
     "Launching ", "exit=", "msync:", "wine: failed to open",
-    "[pe] ", "[host] ", "[win32hle] ", "[screen] ", "[screenshot] ",
+    "[pe] ", "[host] ", "[module] ", "[win32hle] ", "[screen] ", "[screenshot] ",
 )
 ERR_PREFIX = re.compile(r"^[0-9a-f]{4}:(?:err|warn|fixme):")
 
