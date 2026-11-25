@@ -206,5 +206,5 @@
       "highball_exit": 124
     }
   ],
-  "note": "Local MinGW-w64 cross-builds from macOS/Linux source; 8 apps x PE32/PE32+; no new repo claim."
+  "note": "Local MinGW-w64 cross-builds from macOS/Linux source; 7 apps x PE32/PE32+ = 14 outputs; no new repo claim."
 }

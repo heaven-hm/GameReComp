@@ -11,8 +11,8 @@ alone. All hashes are SHA-256 of the exact bytes described.
 
 | Title | Input | Native binary | Process proof | Screenshot proof | Verdict |
 | --- | --- | --- | --- | --- | --- |
-| IGI (`igi.exe`) | `dea34892d417…` | 37 MB, `a7820f008f66…`, 128 imports bound, 0 unresolved | boots to DDraw7/D3D7; three level 1/5/9 runs logged in `proof/ports/igi-native-port.json` | three fresh 640x480 frames (6,814 / 6,814 / 6,813 colours) in `proof/screenshots/igi-level*-fresh-*.png`, shipped-byte hashes verified | **PARTIAL** — renders real frames; no original-Windows frame oracle, so no equivalence PASS |
-| IDM (`idman643build18.exe`) | `7346128fab42…` | 14 MB, `7ad46b497ad4…`, 104 imports bound, 0 unresolved | binds cleanly, then exits at its own "requires Windows 7 or later" check (`proof/ports/idm-native-port.json`) | none — process exits before any window | **PARTIAL** — build/launch proof only |
+| IGI (`igi.exe`) | `dea34892d417…` | 37 MB, `a7820f008f66…`, 128 imports bound, 0 unresolved | boots to DDraw7/D3D7; three level 1/5/9 runs logged in `proof/ports/igi-native-port.json` | three fresh 640x480 frames (all 6,814 colours; levels 1 and 9 byte-identical) in `proof/screenshots/igi-level*-fresh-*.png`, shipped-byte hashes verified | **PARTIAL** — renders real frames; no original-Windows frame oracle, so no equivalence PASS |
+| IDM (`idman643build18.exe`) | `7346128fab42…` | 14 MB, `7ad46b49de69…`, 104 imports bound, 0 unresolved | binds cleanly, then exits at its own "requires Windows 7 or later" check (`proof/ports/idm-native-port.json`) | none — process exits before any window | **PARTIAL** — build/launch proof only |
 | Winamp (`winamp_latest_full.exe`) | `d064eefc27c7…` | 15 MB, `005c268488d1…` | strict bind: 34 unresolved. After adding WCHAR shims and a no-op gate, permissive bind: 0 unresolved, boots, then exits 2 with `MessageBoxW: Error launching installer` | none | **FAIL** — the supplied PE32 is the *installer stub*, not `winamp.exe`; no installed app binary exists in the corpus. See `proof/ports/winamp-native-port.json` and local `evidence/PROOF/winamp-noop-run.json` |
 | AssaultCube (`ac_client.exe`) | i386 PE32, 340 imports, entry `0x0042E5F3` | none | source generation reached `recover` and was terminated; no binary | none | **BLOCKED** — recovery did not finish in this environment |
 | TrackMania ESWC (`TmNationsESWC.exe`) | generated 1.1 GB C tree, 118,469 symbols | none | macOS build killed by memory pressure; Linux build timed out | none | **BLOCKED** — toolchain memory/time limit |
@@ -29,9 +29,10 @@ alone. All hashes are SHA-256 of the exact bytes described.
 ## Verification engines
 
 - Python `tools/differential.py` and the Rust `verify-engine` were run on all six
-  priority targets. Both agree: IGI FAIL (native vs original), and Winamp,
-  AssaultCube, TrackMania, IDM and cube control BLOCKED. Recorded in
-  `evidence/ENGINE_CROSS_CHECK/results.jsonl`.
+  priority targets locally. The committed corpus records engine controls as BLOCKED
+  for IGI; the local cross-check found IGI native-vs-original FAIL and the rest
+  BLOCKED. Recorded in
+  `proof/engines/cross-check-results.jsonl`.
 - Unicorn function-level oracle faults are recorded as BLOCKED, not PASS.
 - Frida: remote-side attach is now **verified live** (v17.27.5): `frida.spawn`,
   `frida.attach`, `create_script`, `script.load`, `console.log`, `send()` message
@@ -39,7 +40,7 @@ alone. All hashes are SHA-256 of the exact bytes described.
   (`proof/ports/frida-remote-probe.json`). Host macOS remains
   SIP-blocked with `PermissionDeniedError`; no synthetic host traces are used.
 - 100-game engine sweep: 9 PASS, 90 BLOCKED, 1 genuine nondeterminism FAIL
-  (`evidence/ENGINE100/FINAL_REPORT.md`).
+  (`proof/engines/engine100-final-report.md`).
 
 ## What "100% complete" means here
 
