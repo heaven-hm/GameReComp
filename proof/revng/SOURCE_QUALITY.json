@@ -1,0 +1,228 @@
+{
+  "candidates": {
+    "pcrecomp": {
+      "bytes": 1086,
+      "compile_rc": 0,
+      "compile_rc_path": "/home/runner/work/_temp/revng-evidence/baseline.compile.rc",
+      "path": "/home/runner/work/_temp/revng-evidence/baseline.c",
+      "sha256": "61578445e5748fe476d8c8b344d3a9161b10d5cb542b0c5360b1e4ead1f7a684"
+    },
+    "revng": {
+      "bytes": 187,
+      "compile_rc": 0,
+      "compile_rc_path": "/home/runner/work/_temp/revng-evidence/revng.compile.rc",
+      "path": "/home/runner/work/_temp/revng-evidence/revng-full.c",
+      "sha256": "3e8e4cc976be17617c36b4ece6cae9d7e418336f2eaa6c0c8d0acf29df6b0ec7"
+    }
+  },
+  "claim_scope": "one fixture, one function address, the two exact C hashes and the exact difftest reports named in this record. Not HIGH_LEVEL_VERIFIED, not gameplay equivalence, not 100%, and not a general source-quality claim for any other function, provider or build.",
+  "criteria": [
+    {
+      "baseline": 5,
+      "met": false,
+      "name": "named_identifier_count",
+      "revng": 0
+    },
+    {
+      "baseline": 0,
+      "met": true,
+      "name": "named_parameter_count",
+      "revng": 0
+    },
+    {
+      "baseline": 0,
+      "met": true,
+      "name": "goto_not_worse",
+      "revng": 0
+    },
+    {
+      "baseline": 0,
+      "met": true,
+      "name": "structured_control_not_worse",
+      "revng": 0
+    },
+    {
+      "baseline": 0,
+      "met": true,
+      "name": "recovered_types_not_worse",
+      "revng": 1
+    },
+    {
+      "baseline": 0.36,
+      "met": false,
+      "name": "identifier_quality_strictly_better",
+      "revng": 0.333333
+    }
+  ],
+  "decision": {
+    "bytes": 867,
+    "chosen_lifter": "pcrecomp",
+    "decision": "PROMOTE",
+    "path": "/home/runner/work/_temp/revng-evidence/decision.json",
+    "revng_row": {
+      "diverged_cases": 8,
+      "status": "DIVERGED",
+      "total_cases": 8,
+      "verdict": "agree-memory"
+    },
+    "sha256": "4d3faeb33e5346c55e48e7e0be6e73db670687a9ee028527e31c4bbaeb9721c1"
+  },
+  "difftest": {
+    "pcrecomp": {
+      "addresses": [
+        "0x00401000"
+      ],
+      "bytes": 2963,
+      "cases_driven": 8,
+      "diverged_cases": 0,
+      "path": "/home/runner/work/_temp/revng-evidence/baseline-difftest.json",
+      "sha256": "075877f49e0b84509fd8ba8435bb51bb45739e5e00a4f56a33fb7845570393b8",
+      "tool": "tools/lift/difftest.py --project",
+      "verdicts": [
+        "agree"
+      ]
+    },
+    "revng": {
+      "addresses": [
+        "0x00401000"
+      ],
+      "bytes": 3870,
+      "cases_driven": 8,
+      "diverged_cases": 8,
+      "path": "/home/runner/work/_temp/revng-evidence/revng-difftest.json",
+      "sha256": "eee2066731aad2a00a278fabf7d4a0141647d041b3623987fe3774d2375121b7",
+      "tool": "tools/lift/difftest.py --project",
+      "verdicts": [
+        "agree-memory"
+      ]
+    }
+  },
+  "fixture": {
+    "bytes": 1280,
+    "path": "/home/runner/work/_temp/revng-evidence/gate.exe",
+    "sha256": "d7871ee496e48a3bf79c4cb8f6cac71ca8e84d6f02e2b320c94b3b868de6633f"
+  },
+  "function_address": "0x401000",
+  "issue": 25,
+  "readability": {
+    "pcrecomp": {
+      "goto_count": 0,
+      "identifier_quality": 0.36,
+      "named_locals": [
+        "_cf",
+        "_df",
+        "_flag_a",
+        "_flag_k",
+        "_fpu_cmp"
+      ],
+      "named_parameters": [],
+      "non_goto_control_statements": 0,
+      "non_mechanical_identifiers": [
+        "FK_ADD",
+        "FK_NONE",
+        "L_00401000",
+        "RECOMP_ENTER",
+        "RECOMP_GENERATED_CODE",
+        "_cf",
+        "_df",
+        "_flag_a",
+        "_flag_b",
+        "_flag_k",
+        "_fpu_cmp",
+        "define",
+        "eax",
+        "esp",
+        "h",
+        "include",
+        "math",
+        "string"
+      ],
+      "recovered_structs": [],
+      "recovered_types": [],
+      "repo_readability_exported_symbols": [
+        "sub_00401000"
+      ],
+      "repo_readability_top_level_definitions": [
+        "sub_00401000"
+      ],
+      "signals_from": [
+        "tools/revng_source_quality.py",
+        "tools/autorecomp/readability.py",
+        "docs/SOURCE_PROVENANCE.md"
+      ],
+      "source_bytes": 1086,
+      "total_identifiers": 50
+    },
+    "revng": {
+      "goto_count": 0,
+      "identifier_quality": 0.333333,
+      "named_locals": [],
+      "named_parameters": [],
+      "non_goto_control_statements": 0,
+      "non_mechanical_identifiers": [
+        "Microsoft_x86_cdecl",
+        "_ABI",
+        "include"
+      ],
+      "recovered_structs": [],
+      "recovered_types": [
+        "generic32_t"
+      ],
+      "repo_readability_exported_symbols": [
+        "function_0x401000_Code_x86"
+      ],
+      "repo_readability_top_level_definitions": [
+        "function_0x401000_Code_x86"
+      ],
+      "signals_from": [
+        "tools/revng_source_quality.py",
+        "tools/autorecomp/readability.py",
+        "docs/SOURCE_PROVENANCE.md"
+      ],
+      "source_bytes": 187,
+      "total_identifiers": 9
+    }
+  },
+  "reasons": [
+    {
+      "code": "REVNG_DIFFTEST_DIVERGED_FIELD",
+      "detail": "/home/runner/work/_temp/revng-evidence/revng-difftest.json: DIFFTEST_DIVERGED_FIELD: row reports diverged cases"
+    },
+    {
+      "code": "REVNG_DIFFTEST_DIVERGED_CASES",
+      "detail": "/home/runner/work/_temp/revng-evidence/revng-difftest.json: DIFFTEST_DIVERGED_CASES: 8/8"
+    },
+    {
+      "code": "REVNG_DIFFTEST_ADDRESS_MISMATCH",
+      "detail": "/home/runner/work/_temp/revng-evidence/revng-difftest.json: DIFFTEST_ADDRESS_MISMATCH: expected 0x401000, got ['0x00401000']"
+    },
+    {
+      "code": "PCRECOMP_DIFFTEST_ADDRESS_MISMATCH",
+      "detail": "/home/runner/work/_temp/revng-evidence/baseline-difftest.json: DIFFTEST_ADDRESS_MISMATCH: expected 0x401000, got ['0x00401000']"
+    },
+    {
+      "code": "DECISION_NOT_REVNG",
+      "detail": "/home/runner/work/_temp/revng-evidence/decision.json"
+    },
+    {
+      "code": "DECISION_REVNG_NOT_PASS",
+      "detail": "/home/runner/work/_temp/revng-evidence/decision.json"
+    },
+    {
+      "code": "DECISION_REVNG_DIVERGED",
+      "detail": "/home/runner/work/_temp/revng-evidence/decision.json"
+    },
+    {
+      "code": "READABILITY_NOT_BETTER",
+      "detail": "named_identifier_count: baseline=5 revng=0"
+    },
+    {
+      "code": "READABILITY_NOT_BETTER",
+      "detail": "identifier_quality_strictly_better: baseline=0.36 revng=0.333333"
+    }
+  ],
+  "schema": 1,
+  "sha256": "d31a76a6ebdd20882dbda11a43accb7529765a7c75df2b2ed926d288c1062bff",
+  "tool": "tools/revng_source_quality.py",
+  "verdict": "NOT PROVEN"
+}
