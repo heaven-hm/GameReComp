@@ -1,36 +1,58 @@
 {
-  "schema": 1,
+  "schema": 2,
   "kind": "matrix",
-  "aggregate": "pass",
+  "generated_at": "2026-11-25T08:19:16Z",
+  "input": {
+    "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/busybox-w32.exe",
+    "sha256": "7bfee530965315665044e6e01db58125f2763c8a39c2e72ba1a6beb6923e0e1f"
+  },
+  "target": {
+    "description": "macOS arm64 native",
+    "sha256": "26f92b54a2b9dd4bc69952c29338b513d485f926b3e1e077cb3b837c421c1a7d",
+    "path": "/Users/haseeb-mir/legacy-proof/busybox-src/build-macos/busybox_w32",
+    "command": [
+      "/Users/haseeb-mir/legacy-proof/busybox-src/build-macos/busybox_w32",
+      "echo",
+      "hello"
+    ]
+  },
+  "commands": {
+    "original": [
+      "highball",
+      "run",
+      "/Users/haseeb-mir/Downloads/recomp-apps/win32/busybox-w32.exe",
+      "echo",
+      "hello"
+    ],
+    "rebuilt": [
+      "/Users/haseeb-mir/legacy-proof/busybox-src/build-macos/busybox_w32",
+      "echo",
+      "hello"
+    ]
+  },
+  "scope": "single scripted command (echo hello)",
   "scenarios": [
     {
-      "name": "echo-hello",
-      "input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "args_sha256": "584a331fd6b02dcb1ecbe2eba731f609a2e1e3dac0bb73ae998dfad14c309a77",
-      "attempts": 1,
-      "evidence": {
-        "schema": 1,
-        "kind": "scenario/echo-hello",
-        "verdict": "pass",
-        "checks": {
-          "exit_code": true,
-          "stdout_exact": true
-        },
-        "failed_checks": [],
-        "stdout_sha256": {
-          "original": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03",
-          "rebuilt": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
-        },
-        "limits": "Per-scenario input bytes are identical on both sides; no scope beyond that scenario"
-      }
+      "name": "controlled",
+      "stdin_hex": "",
+      "args": [
+        "echo",
+        "hello"
+      ],
+      "expected": {
+        "exit_code": 0,
+        "guest_stdout_sha256": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+      },
+      "actual": {
+        "exit_code": 0,
+        "guest_stdout_sha256": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+      },
+      "raw_original": "hello\nLaunching busybox-w32.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nArguments: echo hello\nexit=0 after 0s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261125T081915Z-Games-busybox-w32.exe.log\n",
+      "raw_rebuilt": "hello\n[pe] <embedded image> mapped at 0x00400000, span 0xA2000\n[pe] static TLS: template 0x00499000..0x00499004 (+0 zero), index 0\n[pe] bound 311 imports, 0 unresolved\n[host] C:\\busybox-w32.exe booted: entry 0x00406EE0, 0 unresolved imports\n[module] GetProcAddress(msvcrt.dll, _vscprintf): not answered\n",
+      "guest_normalized": "hello\n",
+      "verdict": "pass"
     }
   ],
-  "adapters": [],
-  "coverage": {
-    "blocked": 0,
-    "failed": 0,
-    "passed": 1,
-    "scenarios": 1
-  },
-  "limits": "Multi-input process parity; adapters add Unicorn/Frida evidence where available"
+  "aggregate": "pass",
+  "limits": "Process-level parity for the stated scenario only. No gameplay, GUI, audio or timing equivalence."
 }

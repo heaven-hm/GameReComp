@@ -1,36 +1,75 @@
 {
-  "schema": 1,
+  "schema": 2,
   "kind": "matrix",
-  "aggregate": "pass",
+  "generated_at": "2026-11-25T08:19:15Z",
+  "input": {
+    "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe",
+    "sha256": "47b443772e36be8a8cf8c45fe80951a466264f370fa28a4851ea57b5c1f17d95"
+  },
+  "target": {
+    "description": "Linux aarch64 ELF in container",
+    "sha256": "b8ef634f3294c829acf02a622c325464fc8c7b155d9739d39382a175f8a9f55a",
+    "path": "/Users/haseeb-mir/legacy-proof/solver-linux/staging/fifteensolver/build/fifteensolver",
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "-v",
+      "/Users/haseeb-mir/legacy-proof/solver-linux/staging/fifteensolver:/work",
+      "-w",
+      "/work",
+      "-v",
+      "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe:/original:ro",
+      "gamerecomp/linux-runner:local",
+      "/work/build/fifteensolver",
+      "/original"
+    ]
+  },
+  "commands": {
+    "original": [
+      "highball",
+      "run",
+      "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe"
+    ],
+    "rebuilt": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "-v",
+      "/Users/haseeb-mir/legacy-proof/solver-linux/staging/fifteensolver:/work",
+      "-w",
+      "/work",
+      "-v",
+      "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe:/original:ro",
+      "gamerecomp/linux-runner:local",
+      "/work/build/fifteensolver",
+      "/original"
+    ]
+  },
+  "scope": "usage/error path parity only",
   "scenarios": [
     {
-      "name": "empty",
-      "input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "args_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "attempts": 3,
-      "evidence": {
-        "schema": 1,
-        "kind": "scenario/empty",
-        "verdict": "pass",
-        "checks": {
-          "exit_code": true,
-          "stdout_exact": true
-        },
-        "failed_checks": [],
-        "stdout_sha256": {
-          "original": "6613f42a4023fc1510d2bca47d1ed2c155d23766708e285319d38624556892a8",
-          "rebuilt": "6613f42a4023fc1510d2bca47d1ed2c155d23766708e285319d38624556892a8"
-        },
-        "limits": "Per-scenario input bytes are identical on both sides; no scope beyond that scenario"
-      }
+      "name": "controlled",
+      "stdin_hex": "",
+      "args": [],
+      "expected": {
+        "exit_code": 1,
+        "guest_stdout_sha256": "6613f42a4023fc1510d2bca47d1ed2c155d23766708e285319d38624556892a8"
+      },
+      "actual": {
+        "exit_code": 1,
+        "guest_stdout_sha256": "6613f42a4023fc1510d2bca47d1ed2c155d23766708e285319d38624556892a8"
+      },
+      "raw_original": "Launching fifteensolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 1s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261125T081912Z-Games-fifteensolver.exe.log\nusage: Z:\\Users\\haseeb-mir\\Downloads\\recomp-apps\\win32\\fifteensolver.exe [-g | -v] <game_id>\r\n",
+      "raw_rebuilt": "[pe] /original mapped at 0x00400000, span 0x2A000\n[pe] static TLS: template 0x0040D000..0x0040D004 (+0 zero), index 0\n[pe] bound 58 imports (0 delay), 0 unresolved\n[host] /original booted: entry 0x00401460, 0 unresolved imports\nusage: C:\\original [-g | -v] <game_id>\n",
+      "guest_normalized": "usage: <exe> [-g | -v] <game_id>\n",
+      "verdict": "pass"
     }
   ],
-  "adapters": [],
-  "coverage": {
-    "blocked": 0,
-    "failed": 0,
-    "passed": 1,
-    "scenarios": 1
-  },
-  "limits": "Multi-input process parity; adapters add Unicorn/Frida evidence where available"
+  "aggregate": "pass",
+  "limits": "Process-level parity for the stated scenario only. No gameplay, GUI, audio or timing equivalence."
 }
