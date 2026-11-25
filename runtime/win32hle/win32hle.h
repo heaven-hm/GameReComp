@@ -522,6 +522,8 @@ static uint32_t hle_resolve_import(const char *name);
 static uint32_t hle_resolve_import_or_stub(const char *name);
 int hle_screenshot_active(void);
 int hle_screenshot_count(void);
+/* SDL 1.2 OpenGL present: bottom-up RGBA -> top-down 24-bpp RGB. */
+void hle_sdl12_gl_rgba_to_rgb(const uint8_t *rgba, int w, int h, uint8_t *rgb);
 uint8_t * hle_szdd_expand(const uint8_t *in, uint32_t n, uint32_t *out_n);
 static void hle_unimplemented(void);
 int hle_wide_to_ansi(const uint16_t *w, char *out, size_t n);
