@@ -1,0 +1,22 @@
+{
+  "pid": 33355,
+  "version": "17.24.3",
+  "attach": "OK",
+  "payload": [
+    {
+      "op": "modules",
+      "names": [
+        "choc-copy",
+        "libSDL2_ttf-2.0.0.dylib",
+        "libSDL2-2.0.0.dylib",
+        "libavformat.63.1.102.dylib",
+        "libavcodec.63.1.102.dylib",
+        "libswresample.7.1.102.dylib",
+        "libavutil.61.1.102.dylib",
+        "Cocoa"
+      ],
+      "arch": "arm64",
+      "platform": "darwin"
+    }
+  ]
+}
