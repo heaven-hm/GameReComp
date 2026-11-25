@@ -1,0 +1,21 @@
+[pe] <embedded image> mapped at 0x00400000, span 0x23000
+[pe] static TLS: template 0x00408000..0x00408004 (+0 zero), index 0
+[pe] bound 44 imports (0 delay), 0 unresolved
+[host] C:\base64.exe booted: entry 0x00401460, 0 unresolved imports
+
+[36m[1m========================================
+        C BASE64 ENCODER / DECODER      
+========================================[0m
+1. Base64 Encode String
+2. Base64 Decode String
+3. Exit
+Choose (1-3): Enter text to encode: 
+[32mEncoded Result:[0m
+aGVsbG8gd29ybGQA
+
+1. Base64 Encode String
+2. Base64 Decode String
+3. Exit
+Choose (1-3): 
+Goodbye!
+
