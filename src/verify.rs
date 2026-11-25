@@ -24,17 +24,26 @@ pub enum Verdict {
 /// Minimal SHA-256 (FIPS 180-4), pure Rust.
 pub fn sha256(data: &[u8]) -> String {
     const K: [u32; 64] = [
-        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
+        0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe,
+        0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f,
+        0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
+        0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc,
+        0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+        0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116,
+        0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7,
+        0xc67178f2,
     ];
     let mut h = [
-        0x6a09e667u32, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+        0x6a09e667u32,
+        0xbb67ae85,
+        0x3c6ef372,
+        0xa54ff53a,
+        0x510e527f,
+        0x9b05688c,
+        0x1f83d9ab,
+        0x5be0cd19,
     ];
     let bit_len = (data.len() as u64) * 8;
     let mut msg = data.to_vec();
@@ -46,24 +55,42 @@ pub fn sha256(data: &[u8]) -> String {
     for chunk in msg.chunks_exact(64) {
         let mut w = [0u32; 64];
         for i in 0..16 {
-            w[i] = u32::from_be_bytes([chunk[i * 4], chunk[i * 4 + 1], chunk[i * 4 + 2], chunk[i * 4 + 3]]);
+            w[i] = u32::from_be_bytes([
+                chunk[i * 4],
+                chunk[i * 4 + 1],
+                chunk[i * 4 + 2],
+                chunk[i * 4 + 3],
+            ]);
         }
         for i in 16..64 {
             let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
             let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);
-            w[i] = w[i - 16].wrapping_add(s0).wrapping_add(w[i - 7]).wrapping_add(s1);
+            w[i] = w[i - 16]
+                .wrapping_add(s0)
+                .wrapping_add(w[i - 7])
+                .wrapping_add(s1);
         }
         let (mut a, mut b, mut c, mut d) = (h[0], h[1], h[2], h[3]);
         let (mut e, mut f, mut g, mut hh) = (h[4], h[5], h[6], h[7]);
         for i in 0..64 {
             let s1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
             let ch = (e & f) ^ ((!e) & g);
-            let t1 = hh.wrapping_add(s1).wrapping_add(ch).wrapping_add(K[i]).wrapping_add(w[i]);
+            let t1 = hh
+                .wrapping_add(s1)
+                .wrapping_add(ch)
+                .wrapping_add(K[i])
+                .wrapping_add(w[i]);
             let s0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
             let maj = (a & b) ^ (a & c) ^ (b & c);
             let t2 = s0.wrapping_add(maj);
-            hh = g; g = f; f = e; e = d.wrapping_add(t1);
-            d = c; c = b; b = a; a = t1.wrapping_add(t2);
+            hh = g;
+            g = f;
+            f = e;
+            e = d.wrapping_add(t1);
+            d = c;
+            c = b;
+            b = a;
+            a = t1.wrapping_add(t2);
         }
         for (x, y) in h.iter_mut().zip([a, b, c, d, e, f, g, hh]) {
             *x = x.wrapping_add(y);
@@ -76,17 +103,24 @@ pub fn sha256(data: &[u8]) -> String {
 
 /// Replace environment-specific .exe paths with a stable placeholder.
 fn normalize_exe_paths(line: &str) -> String {
-    let mut s = line.replace("C:\\original", "<exe>").replace("/original", "<exe>");
+    let mut s = line
+        .replace("C:\\original", "<exe>")
+        .replace("/original", "<exe>");
     while let Some(i) = s.to_lowercase().find(".exe") {
         let end = i + 4;
         let mut start = i;
         while start > 0 {
             let c = s.as_bytes()[start - 1];
-            if c == b' ' || c == b'\t' || c == b'"' || c == b'=' { break; }
+            if c == b' ' || c == b'\t' || c == b'"' || c == b'=' {
+                break;
+            }
             start -= 1;
         }
         // Include a Windows drive prefix (e.g. Z:\\) when present.
-        if start >= 2 && s.as_bytes()[start - 2] == b':' && (s.as_bytes()[start - 1] == b'\\' || s.as_bytes()[start - 1] == b'/') {
+        if start >= 2
+            && s.as_bytes()[start - 2] == b':'
+            && (s.as_bytes()[start - 1] == b'\\' || s.as_bytes()[start - 1] == b'/')
+        {
             start -= 2;
         }
         s.replace_range(start..end, "<exe>");
@@ -96,8 +130,17 @@ fn normalize_exe_paths(line: &str) -> String {
 
 pub fn normalize(text: &str) -> String {
     let prefixes = [
-        "Launching ", "exit=", "Arguments: ", "msync:", "wine: failed to open", "[pe] ", "[host] ", "[module] ",
-        "[win32hle] ", "[screen] ", "[screenshot] ",
+        "Launching ",
+        "exit=",
+        "Arguments: ",
+        "msync:",
+        "wine: failed to open",
+        "[pe] ",
+        "[host] ",
+        "[module] ",
+        "[win32hle] ",
+        "[screen] ",
+        "[screenshot] ",
     ];
     let mut out = Vec::new();
     for line in text.lines() {
@@ -118,7 +161,9 @@ fn is_err_line(line: &str) -> bool {
     b.len() > 5
         && b.iter().take(4).all(|c| c.is_ascii_hexdigit())
         && b[4] == b':'
-        && (line[5..].starts_with("err:") || line[5..].starts_with("warn:") || line[5..].starts_with("fixme:"))
+        && (line[5..].starts_with("err:")
+            || line[5..].starts_with("warn:")
+            || line[5..].starts_with("fixme:"))
 }
 
 pub fn first_difference(a: &str, b: &str) -> Option<(usize, String, String)> {
@@ -131,7 +176,11 @@ pub fn first_difference(a: &str, b: &str) -> Option<(usize, String, String)> {
             (x, y) => {
                 i += 1;
                 if x != y {
-                    return Some((i, x.unwrap_or("<missing>").to_string(), y.unwrap_or("<missing>").to_string()));
+                    return Some((
+                        i,
+                        x.unwrap_or("<missing>").to_string(),
+                        y.unwrap_or("<missing>").to_string(),
+                    ));
                 }
             }
         }
@@ -177,12 +226,18 @@ impl Evidence {
             stdout_sha256: None,
             inputs: BTreeMap::new(),
             difference: None,
-            limits: "Process-level parity only; no gameplay/audio/timing oracle is implied".to_string(),
+            limits: "Process-level parity only; no gameplay/audio/timing oracle is implied"
+                .to_string(),
         }
     }
 
     pub fn finish(mut self) -> Self {
-        self.failed_checks = self.checks.iter().filter(|(_, v)| !**v).map(|(k, _)| k.clone()).collect();
+        self.failed_checks = self
+            .checks
+            .iter()
+            .filter(|(_, v)| !**v)
+            .map(|(k, _)| k.clone())
+            .collect();
         self.verdict = if self.checks.is_empty() {
             Verdict::Blocked
         } else if self.failed_checks.is_empty() {
@@ -238,7 +293,10 @@ pub fn compare_traces(a: &str, b: &str, tolerance: f64) -> Evidence {
         for line in s.lines() {
             let p: Vec<&str> = line.split_whitespace().collect();
             if p.len() >= 3 {
-                m.insert(p[0].to_string(), p[2..].iter().map(|x| x.to_string()).collect());
+                m.insert(
+                    p[0].to_string(),
+                    p[2..].iter().map(|x| x.to_string()).collect(),
+                );
             }
         }
         m
@@ -257,17 +315,26 @@ pub fn compare_traces(a: &str, b: &str, tolerance: f64) -> Evidence {
             match (x.parse::<f64>(), y.parse::<f64>()) {
                 (Ok(fx), Ok(fy)) => {
                     let d = (fx - fy).abs();
-                    if i >= worst.len() { worst.resize(i + 1, 0.0); }
+                    if i >= worst.len() {
+                        worst.resize(i + 1, 0.0);
+                    }
                     worst[i] = worst[i].max(d);
                 }
-                _ if x != y => exact_bad.push(serde_json::json!({"time": k, "column": i, "a": x, "b": y})),
+                _ if x != y => {
+                    exact_bad.push(serde_json::json!({"time": k, "column": i, "a": x, "b": y}))
+                }
                 _ => {}
             }
         }
     }
-    e.checks.insert("numeric_tolerance".to_string(), worst.iter().all(|d| *d <= tolerance));
-    e.checks.insert("exact_values".to_string(), exact_bad.is_empty());
-    e.difference = Some(serde_json::json!({"max_delta_per_column": worst, "exact_mismatches": exact_bad}));
+    e.checks.insert(
+        "numeric_tolerance".to_string(),
+        worst.iter().all(|d| *d <= tolerance),
+    );
+    e.checks
+        .insert("exact_values".to_string(), exact_bad.is_empty());
+    e.difference =
+        Some(serde_json::json!({"max_delta_per_column": worst, "exact_mismatches": exact_bad}));
     e.finish()
 }
 
@@ -329,12 +396,21 @@ fn bounded_capture(path: &Path) -> String {
     out
 }
 
-pub fn run_command_with(template: &str, timeout: Duration, stdin: &[u8],
-                        env: &BTreeMap<String, String>) -> RunResult {
+pub fn run_command_with(
+    template: &str,
+    timeout: Duration,
+    stdin: &[u8],
+    env: &BTreeMap<String, String>,
+) -> RunResult {
     let args = split_args(template);
     if args.is_empty() {
-        return RunResult { rc: None, stdout: String::new(), stderr: String::new(), seconds: 0.0,
-                           error: Some("empty command".to_string()) };
+        return RunResult {
+            rc: None,
+            stdout: String::new(),
+            stderr: String::new(),
+            seconds: 0.0,
+            error: Some("empty command".to_string()),
+        };
     }
     let t0 = Instant::now();
     use std::io::Write;
@@ -344,18 +420,44 @@ pub fn run_command_with(template: &str, timeout: Duration, stdin: &[u8],
     let tmp = std::env::temp_dir();
     let op = tmp.join(format!("gcrec-v-out-{}-{}", std::process::id(), id));
     let ep = tmp.join(format!("gcrec-v-err-{}-{}", std::process::id(), id));
-    let of = std::fs::OpenOptions::new().write(true).create_new(true).open(&op);
-    let ef = std::fs::OpenOptions::new().write(true).create_new(true).open(&ep);
+    let of = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&op);
+    let ef = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&ep);
     let (of, ef) = match (of, ef) {
         (Ok(x), Ok(y)) => (x, y),
-        _ => return RunResult { rc: None, stdout: String::new(), stderr: String::new(),
-                                seconds: t0.elapsed().as_secs_f64(), error: Some("temp capture failed".into()) },
+        _ => {
+            return RunResult {
+                rc: None,
+                stdout: String::new(),
+                stderr: String::new(),
+                seconds: t0.elapsed().as_secs_f64(),
+                error: Some("temp capture failed".into()),
+            }
+        }
     };
-    let mut child = match Command::new(&args[0]).args(&args[1..]).envs(env)
-        .stdin(Stdio::piped()).stdout(Stdio::from(of)).stderr(Stdio::from(ef)).spawn() {
+    let mut child = match Command::new(&args[0])
+        .args(&args[1..])
+        .envs(env)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::from(of))
+        .stderr(Stdio::from(ef))
+        .spawn()
+    {
         Ok(c) => c,
-        Err(e) => return RunResult { rc: None, stdout: String::new(), stderr: String::new(),
-                                     seconds: t0.elapsed().as_secs_f64(), error: Some(e.to_string()) },
+        Err(e) => {
+            return RunResult {
+                rc: None,
+                stdout: String::new(),
+                stderr: String::new(),
+                seconds: t0.elapsed().as_secs_f64(),
+                error: Some(e.to_string()),
+            }
+        }
     };
     if let Some(mut input) = child.stdin.take() {
         let _ = input.write_all(stdin);
@@ -364,17 +466,41 @@ pub fn run_command_with(template: &str, timeout: Duration, stdin: &[u8],
     loop {
         match child.try_wait() {
             Ok(Some(_)) => break,
-            Ok(None) if t0.elapsed() >= timeout => { timed_out = true; let _ = child.kill(); break; }
+            Ok(None) if t0.elapsed() >= timeout => {
+                timed_out = true;
+                let _ = child.kill();
+                break;
+            }
             Ok(None) => std::thread::sleep(Duration::from_millis(10)),
-            Err(e) => return RunResult { rc: None, stdout: String::new(), stderr: String::new(),
-                                         seconds: t0.elapsed().as_secs_f64(), error: Some(e.to_string()) },
+            Err(e) => {
+                return RunResult {
+                    rc: None,
+                    stdout: String::new(),
+                    stderr: String::new(),
+                    seconds: t0.elapsed().as_secs_f64(),
+                    error: Some(e.to_string()),
+                }
+            }
         }
     }
-    let rc = if timed_out { let _ = child.wait(); Some(124) }
-             else { child.wait().ok().and_then(|s| s.code()) };
+    let rc = if timed_out {
+        let _ = child.wait();
+        Some(124)
+    } else {
+        child.wait().ok().and_then(|s| s.code())
+    };
     let secs = t0.elapsed().as_secs_f64();
-    RunResult { rc, stdout: bounded_capture(&op), stderr: bounded_capture(&ep), seconds: secs,
-                error: if timed_out { Some("timeout".into()) } else { None } }
+    RunResult {
+        rc,
+        stdout: bounded_capture(&op),
+        stderr: bounded_capture(&ep),
+        seconds: secs,
+        error: if timed_out {
+            Some("timeout".into())
+        } else {
+            None
+        },
+    }
 }
 
 /// Fail-closed validation of untrusted scenario data. No shell is involved,
@@ -389,11 +515,23 @@ pub fn validate_scenario(s: &Scenario) -> Result<(), String> {
     if !s.stdin_hex.bytes().all(|c| c.is_ascii_hexdigit()) {
         return Err("stdin_hex is not hex".into());
     }
-    if s.args.len() > 64 || s.args.iter().any(|a| a.len() > 4096 || a.contains('\0') || a.contains('\n')) {
+    if s.args.len() > 64
+        || s.args
+            .iter()
+            .any(|a| a.len() > 4096 || a.contains('\0') || a.contains('\n'))
+    {
         return Err("invalid arguments".into());
     }
-    if s.env.len() > 32 || s.env.iter().any(|(k, v)| k.len() > 256 || v.len() > 4096
-        || k.contains('\0') || v.contains('\0') || k.contains('\n') || v.contains('\n')) {
+    if s.env.len() > 32
+        || s.env.iter().any(|(k, v)| {
+            k.len() > 256
+                || v.len() > 4096
+                || k.contains('\0')
+                || v.contains('\0')
+                || k.contains('\n')
+                || v.contains('\n')
+        })
+    {
         return Err("invalid environment".into());
     }
     if !(0.1..=3600.0).contains(&s.timeout) {
@@ -419,8 +557,12 @@ pub struct Scenario {
     pub retries: u8,
 }
 
-fn default_timeout() -> f64 { 30.0 }
-fn default_retries() -> u8 { 2 }
+fn default_timeout() -> f64 {
+    30.0
+}
+fn default_retries() -> u8 {
+    2
+}
 
 impl Scenario {
     pub fn stdin(&self) -> Vec<u8> {
@@ -467,37 +609,63 @@ pub struct MatrixReport {
 /// Fail-closed aggregation: one FAIL wins; otherwise any BLOCKED wins;
 /// PASS only when every scenario and every adapter passed.
 pub fn aggregate_verdict(v: &[Verdict]) -> Verdict {
-    if v.iter().any(|x| *x == Verdict::Fail) { Verdict::Fail }
-    else if v.iter().any(|x| *x == Verdict::Blocked) || v.is_empty() { Verdict::Blocked }
-    else { Verdict::Pass }
+    if v.iter().any(|x| *x == Verdict::Fail) {
+        Verdict::Fail
+    } else if v.iter().any(|x| *x == Verdict::Blocked) || v.is_empty() {
+        Verdict::Blocked
+    } else {
+        Verdict::Pass
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn verify_matrix(original: &Path, rebuilt: &Path, original_cmd: &str,
-                     rebuilt_cmd: &str, scenarios: &[Scenario]) -> MatrixReport {
+pub fn verify_matrix(
+    original: &Path,
+    rebuilt: &Path,
+    original_cmd: &str,
+    rebuilt_cmd: &str,
+    scenarios: &[Scenario],
+) -> MatrixReport {
     let mut rows = Vec::new();
     for s in scenarios {
         if let Err(reason) = validate_scenario(s) {
             let mut ev = Evidence::new(&format!("scenario/{}", s.name));
             ev.reason = Some(format!("rejected untrusted scenario: {}", reason));
-            rows.push(ScenarioEvidence { name: s.name.clone(), input_sha256: sha256(s.stdin_hex.as_bytes()),
-                args_sha256: sha256(s.args.join(" ").as_bytes()), attempts: 0, evidence: ev });
+            rows.push(ScenarioEvidence {
+                name: s.name.clone(),
+                input_sha256: sha256(s.stdin_hex.as_bytes()),
+                args_sha256: sha256(s.args.join(" ").as_bytes()),
+                attempts: 0,
+                evidence: ev,
+            });
             continue;
         }
         let stdin = s.stdin();
-        let a_cmd = format!("{} {}", original_cmd.replace("{exe}", &original.to_string_lossy()), s.args.join(" "));
-        let b_cmd = format!("{} {}", rebuilt_cmd.replace("{exe}", &rebuilt.to_string_lossy()), s.args.join(" "));
+        let a_cmd = format!(
+            "{} {}",
+            original_cmd.replace("{exe}", &original.to_string_lossy()),
+            s.args.join(" ")
+        );
+        let b_cmd = format!(
+            "{} {}",
+            rebuilt_cmd.replace("{exe}", &rebuilt.to_string_lossy()),
+            s.args.join(" ")
+        );
         let t = Duration::from_secs_f64(s.timeout.max(0.1));
         let mut a = run_command_with(&a_cmd, t, &stdin, &s.env);
         let mut attempts = 1u8;
-        while attempts <= s.retries.max(1) && (a.rc != Some(0) || (a.stdout.is_empty() && a.stderr.is_empty())) {
+        while attempts <= s.retries.max(1)
+            && (a.rc != Some(0) || (a.stdout.is_empty() && a.stderr.is_empty()))
+        {
             a = run_command_with(&a_cmd, t, &stdin, &s.env);
             attempts += 1;
         }
         let b = run_command_with(&b_cmd, t, &stdin, &s.env);
         let mut e = compare_runs(&a, &b);
         e.kind = format!("scenario/{}", s.name);
-        e.limits = "Per-scenario input bytes are identical on both sides; no scope beyond that scenario".into();
+        e.limits =
+            "Per-scenario input bytes are identical on both sides; no scope beyond that scenario"
+                .into();
         rows.push(ScenarioEvidence {
             name: s.name.clone(),
             input_sha256: sha256(&stdin),
@@ -508,9 +676,24 @@ pub fn verify_matrix(original: &Path, rebuilt: &Path, original_cmd: &str,
     }
     let mut coverage = BTreeMap::new();
     coverage.insert("scenarios".into(), rows.len());
-    coverage.insert("passed".into(), rows.iter().filter(|r| r.evidence.verdict == Verdict::Pass).count());
-    coverage.insert("failed".into(), rows.iter().filter(|r| r.evidence.verdict == Verdict::Fail).count());
-    coverage.insert("blocked".into(), rows.iter().filter(|r| r.evidence.verdict == Verdict::Blocked).count());
+    coverage.insert(
+        "passed".into(),
+        rows.iter()
+            .filter(|r| r.evidence.verdict == Verdict::Pass)
+            .count(),
+    );
+    coverage.insert(
+        "failed".into(),
+        rows.iter()
+            .filter(|r| r.evidence.verdict == Verdict::Fail)
+            .count(),
+    );
+    coverage.insert(
+        "blocked".into(),
+        rows.iter()
+            .filter(|r| r.evidence.verdict == Verdict::Blocked)
+            .count(),
+    );
     let all: Vec<Verdict> = rows.iter().map(|r| r.evidence.verdict).collect();
     MatrixReport {
         schema: SCHEMA,
@@ -519,7 +702,8 @@ pub fn verify_matrix(original: &Path, rebuilt: &Path, original_cmd: &str,
         scenarios: rows,
         adapters: Vec::new(),
         coverage,
-        limits: "Multi-input process parity; adapters add Unicorn/Frida evidence where available".into(),
+        limits: "Multi-input process parity; adapters add Unicorn/Frida evidence where available"
+            .into(),
     }
 }
 
@@ -528,23 +712,62 @@ pub fn unicorn_adapter(report_path: &Path) -> AdapterReport {
     let text = std::fs::read_to_string(report_path).unwrap_or_default();
     let json: serde_json::Value = match serde_json::from_str(&text) {
         Ok(v) => v,
-        Err(_) => return AdapterReport { name: "unicorn".into(), verdict: Verdict::Blocked,
-                                         detail: "difftest report missing or unparseable".into() },
+        Err(_) => {
+            return AdapterReport {
+                name: "unicorn".into(),
+                verdict: Verdict::Blocked,
+                detail: "difftest report missing or unparseable".into(),
+            }
+        }
     };
-    let rows = json.get("addresses").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+    let rows = json
+        .get("addresses")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
     if rows.is_empty() {
-        return AdapterReport { name: "unicorn".into(), verdict: Verdict::Blocked,
-                               detail: "no per-function oracle results".into() };
+        return AdapterReport {
+            name: "unicorn".into(),
+            verdict: Verdict::Blocked,
+            detail: "no per-function oracle results".into(),
+        };
     }
-    let ok = rows.iter().filter(|r| matches!(r.get("verdict").and_then(|v| v.as_str()),
-        Some("agree") | Some("agree-return") | Some("PASS") | Some("ok"))).count();
-    let fault = rows.iter().filter(|r| matches!(r.get("verdict").and_then(|v| v.as_str()),
-        Some("original-faulted") | Some("unmapped") | Some("error"))).count();
-    let verdict = if ok == rows.len() { Verdict::Pass }
-        else if fault > 0 && ok + fault == rows.len() { Verdict::Blocked }
-        else { Verdict::Fail };
-    AdapterReport { name: "unicorn".into(), verdict,
-        detail: format!("{} agree, {} oracle-fault, {} disagree of {} addresses", ok, fault, rows.len() - ok - fault, rows.len()) }
+    let ok = rows
+        .iter()
+        .filter(|r| {
+            matches!(
+                r.get("verdict").and_then(|v| v.as_str()),
+                Some("agree") | Some("agree-return") | Some("PASS") | Some("ok")
+            )
+        })
+        .count();
+    let fault = rows
+        .iter()
+        .filter(|r| {
+            matches!(
+                r.get("verdict").and_then(|v| v.as_str()),
+                Some("original-faulted") | Some("unmapped") | Some("error")
+            )
+        })
+        .count();
+    let verdict = if ok == rows.len() {
+        Verdict::Pass
+    } else if fault > 0 && ok + fault == rows.len() {
+        Verdict::Blocked
+    } else {
+        Verdict::Fail
+    };
+    AdapterReport {
+        name: "unicorn".into(),
+        verdict,
+        detail: format!(
+            "{} agree, {} oracle-fault, {} disagree of {} addresses",
+            ok,
+            fault,
+            rows.len() - ok - fault,
+            rows.len()
+        ),
+    }
 }
 
 /// Frida adapter: live attach is attempted by the supplied probe command.
@@ -555,22 +778,45 @@ pub fn frida_adapter(probe_cmd: &str) -> AdapterReport {
     let r = run_command(probe_cmd, Duration::from_secs(40), b"");
     let text = format!("{}{}", r.stdout, r.stderr);
     let dry_run_only = probe_cmd.contains("--dry-run");
-    let blocked = dry_run_only || text.contains("PermissionDenied") || text.contains("NotSupported")
-        || text.contains("unable to access") || text.contains("probing dyld")
+    let blocked = dry_run_only
+        || text.contains("PermissionDenied")
+        || text.contains("NotSupported")
+        || text.contains("unable to access")
+        || text.contains("probing dyld")
         || r.error.is_some();
-    let verdict = if blocked { Verdict::Blocked }
-        else if r.rc == Some(0) && text.contains("frida") { Verdict::Pass }
-        else { Verdict::Blocked };
+    let verdict = if blocked {
+        Verdict::Blocked
+    } else if r.rc == Some(0) && text.contains("frida") {
+        Verdict::Pass
+    } else {
+        Verdict::Blocked
+    };
     let detail = if dry_run_only {
         "dry-run probe only — no live Frida attach evidence (never synthesized)".to_string()
     } else {
-        text.lines().find(|l| l.contains("PermissionDenied") || l.contains("NotSupported")
-            || l.contains("unable to access") || l.contains("dyld") || l.contains("frida"))
-            .unwrap_or_else(|| text.lines().find(|l| !l.trim().is_empty()).unwrap_or("no probe output"))
+        text.lines()
+            .find(|l| {
+                l.contains("PermissionDenied")
+                    || l.contains("NotSupported")
+                    || l.contains("unable to access")
+                    || l.contains("dyld")
+                    || l.contains("frida")
+            })
+            .unwrap_or_else(|| {
+                text.lines()
+                    .find(|l| !l.trim().is_empty())
+                    .unwrap_or("no probe output")
+            })
             .to_string()
-            .chars().take(600).collect()
+            .chars()
+            .take(600)
+            .collect()
     };
-    AdapterReport { name: "frida".into(), verdict, detail }
+    AdapterReport {
+        name: "frida".into(),
+        verdict,
+        detail,
+    }
 }
 
 #[cfg(test)]
@@ -579,8 +825,14 @@ mod tests {
 
     #[test]
     fn sha256_known_vectors() {
-        assert_eq!(sha256(b""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-        assert_eq!(sha256(b"abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+        assert_eq!(
+            sha256(b""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        assert_eq!(
+            sha256(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
     }
 
     #[test]
@@ -591,10 +843,17 @@ mod tests {
 
     #[test]
     fn identical_runs_pass_different_fail() {
-        let a = RunResult { rc: Some(0), stdout: "x\n".into(), stderr: String::new(), seconds: 0.0, error: None };
+        let a = RunResult {
+            rc: Some(0),
+            stdout: "x\n".into(),
+            stderr: String::new(),
+            seconds: 0.0,
+            error: None,
+        };
         let b = a.clone();
         assert_eq!(compare_runs(&a, &b).verdict, Verdict::Pass);
-        let mut c = a.clone(); c.stdout = "y\n".into();
+        let mut c = a.clone();
+        c.stdout = "y\n".into();
         assert_eq!(compare_runs(&a, &c).verdict, Verdict::Fail);
     }
 
@@ -603,22 +862,36 @@ mod tests {
         let cmd = format!("python3 -c print('x'*{})", MAX_CAPTURE_BYTES * 3);
         let r = run_command(&cmd, Duration::from_secs(20), b"");
         assert_eq!(r.rc, Some(0));
-        assert!(r.stdout.len() <= MAX_CAPTURE_BYTES + 64, "captured {} bytes", r.stdout.len());
+        assert!(
+            r.stdout.len() <= MAX_CAPTURE_BYTES + 64,
+            "captured {} bytes",
+            r.stdout.len()
+        );
         assert!(r.stdout.contains("bounded by verify core"));
     }
 
     #[test]
     fn empty_output_is_not_a_pass() {
-        let a = RunResult { rc: Some(0), stdout: "Launching x\nexit=0 after 1s\n".into(),
-                            stderr: String::new(), seconds: 0.0, error: None };
+        let a = RunResult {
+            rc: Some(0),
+            stdout: "Launching x\nexit=0 after 1s\n".into(),
+            stderr: String::new(),
+            seconds: 0.0,
+            error: None,
+        };
         let b = a.clone();
         assert_eq!(compare_runs(&a, &b).verdict, Verdict::Blocked);
     }
 
     #[test]
     fn missing_oracle_is_blocked() {
-        let a = RunResult { rc: None, stdout: String::new(), stderr: String::new(), seconds: 0.0,
-                            error: Some("no binary".into()) };
+        let a = RunResult {
+            rc: None,
+            stdout: String::new(),
+            stderr: String::new(),
+            seconds: 0.0,
+            error: Some("no binary".into()),
+        };
         let b = a.clone();
         assert_eq!(compare_runs(&a, &b).verdict, Verdict::Blocked);
     }
@@ -635,9 +908,18 @@ mod tests {
     #[test]
     fn fail_closed_aggregation() {
         assert_eq!(aggregate_verdict(&[]), Verdict::Blocked);
-        assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Blocked]), Verdict::Blocked);
-        assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Fail]), Verdict::Fail);
-        assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Pass]), Verdict::Pass);
+        assert_eq!(
+            aggregate_verdict(&[Verdict::Pass, Verdict::Blocked]),
+            Verdict::Blocked
+        );
+        assert_eq!(
+            aggregate_verdict(&[Verdict::Pass, Verdict::Fail]),
+            Verdict::Fail
+        );
+        assert_eq!(
+            aggregate_verdict(&[Verdict::Pass, Verdict::Pass]),
+            Verdict::Pass
+        );
     }
 
     #[test]
@@ -653,7 +935,8 @@ mod tests {
 
     #[test]
     fn scenario_hex_stdin_decodes() {
-        let s: Scenario = serde_json::from_str(r#"{"name":"x","stdin_hex":"330a","args":["--v"]}"#).unwrap();
+        let s: Scenario =
+            serde_json::from_str(r#"{"name":"x","stdin_hex":"330a","args":["--v"]}"#).unwrap();
         assert_eq!(s.stdin(), b"3\n");
         assert_eq!(s.args, vec!["--v"]);
     }

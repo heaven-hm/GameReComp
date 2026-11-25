@@ -11,7 +11,7 @@ use super::home::{
 use super::style;
 use super::{
     FnFilter, FnSort, FocusInput, GameReCompApp, JobStatus, MapColorMode, ProjectTab, Route,
-    WorkerKind,
+    SourceImproveMethod, WorkerKind,
 };
 use crate::model::{FunctionRow, ProjectModel};
 use crate::pipeline_opts::AppProfile;
@@ -633,7 +633,12 @@ fn render_overview_tab(
                     "✨ Improve C Readability (AI)",
                 )
                 .on_click(cx.listener(move |this, _, _, cx| {
-                    this.start_readability_agent_for_dir(proj_dir_ai.clone(), None, cx);
+                    this.start_readability_agent_for_dir(
+                        SourceImproveMethod::AiLocal,
+                        proj_dir_ai.clone(),
+                        None,
+                        cx,
+                    );
                 })),
             )
             .child(

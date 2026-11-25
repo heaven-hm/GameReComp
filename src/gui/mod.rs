@@ -87,6 +87,47 @@ pub enum InspectorTab {
     Notes,
 }
 
+/// Which provider the Inspector's "Improve source code" control should run.
+///
+/// All three routes go through `tools/autorecomp/readability.py`, which only
+/// accepts an edit after a rebuild and a re-run against the recorded baseline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SourceImproveMethod {
+    /// Deterministic provider; no AI command is required.
+    #[default]
+    Revng,
+    /// AI provider configured by `REVENG_AI_CMD` (local CLI/model).
+    AiLocal,
+    /// AI provider configured by `REVENG_WEB_AI_CMD` (explicit opt-in only).
+    AiWeb,
+}
+
+impl SourceImproveMethod {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Revng => "rev.ng (deterministic)",
+            Self::AiLocal => "AI (local)",
+            Self::AiWeb => "AI (web)",
+        }
+    }
+
+    pub fn short_label(self) -> &'static str {
+        match self {
+            Self::Revng => "rev.ng",
+            Self::AiLocal => "AI (local)",
+            Self::AiWeb => "AI (web)",
+        }
+    }
+
+    /// The `--providers` value understood by `readability.py`.
+    pub fn providers_arg(self) -> &'static str {
+        match self {
+            Self::Revng => "revng",
+            Self::AiLocal | Self::AiWeb => "ai",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DropState {
     Idle,
@@ -131,6 +172,11 @@ pub enum FocusInput {
     InspectorNote,
     SettingsProjectsRoot,
     SettingsRomLib,
+    SettingsRevngBin,
+    SettingsRevngDir,
+    SettingsAiWebEndpoint,
+    SettingsAiWebModel,
+    SettingsAiWebCmd,
     IssueTitle,
     IssueNotes,
     RunGameDataDir,
@@ -457,6 +503,10 @@ pub struct GameReCompApp {
     pub inspector_source_file: Option<PathBuf>,
     pub inspector_note_input: String,
 
+    // "Improve source code" method selector (Inspector source view)
+    pub source_improve_method: SourceImproveMethod,
+    pub show_source_improve_menu: bool,
+
     // Frames gallery
     pub selected_frame_idx: Option<usize>,
 
@@ -609,6 +659,8 @@ impl GameReCompApp {
             inspector_source: String::new(),
             inspector_source_file: None,
             inspector_note_input: String::new(),
+            source_improve_method: SourceImproveMethod::default(),
+            show_source_improve_menu: false,
             selected_frame_idx: None,
             agent_cmd_buf,
             agent_target_fn: String::new(),
@@ -1403,6 +1455,62 @@ impl GameReCompApp {
         }
     }
 
+    /// Command used for the explicit "AI (web)" route. The saved template may
+    /// contain `{endpoint}` / `{model}` placeholders; `{input}` / `{output}`
+    /// are left untouched for `readability.py` to fill in.
+    pub fn effective_web_ai_cmd(&self) -> Option<String> {
+        let template = {
+            let trimmed = self.settings.ai_web_cmd.trim();
+            if !trimmed.is_empty() {
+                trimmed.to_string()
+            } else {
+                self.cfg
+                    .reveng_web_ai_cmd
+                    .clone()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string()
+            }
+        };
+        if template.is_empty() {
+            return None;
+        }
+        let endpoint = self.settings.ai_web_endpoint.trim();
+        let model = self.settings.ai_web_model.trim();
+        if (template.contains("{endpoint}") && endpoint.is_empty())
+            || (template.contains("{model}") && model.is_empty())
+        {
+            return None;
+        }
+        Some(
+            template
+                .replace("{endpoint}", endpoint)
+                .replace("{model}", model),
+        )
+    }
+
+    pub fn save_source_improve_settings(&mut self) {
+        let _ = self.settings.save();
+        self.push_toast(
+            "Source improvement settings saved",
+            &format!(
+                "rev.ng: {} · web AI: {}",
+                if self.settings.revng_bin.trim().is_empty() {
+                    "not configured"
+                } else {
+                    self.settings.revng_bin.trim()
+                },
+                if self.settings.ai_web_cmd.trim().is_empty() {
+                    "not configured"
+                } else {
+                    "configured"
+                }
+            ),
+            self.tokens().match_fill,
+            false,
+        );
+    }
+
     pub fn save_agent_cmd(&mut self) {
         self.settings.reveng_ai_cmd = self.agent_cmd_buf.trim().to_string();
         self.cfg.reveng_ai_cmd = if self.settings.reveng_ai_cmd.is_empty() {
@@ -1752,11 +1860,17 @@ impl GameReCompApp {
         } else {
             Some(target_fn)
         };
-        self.start_readability_agent_for_dir(dir, target, cx);
+        self.start_readability_agent_for_dir(self.source_improve_method, dir, target, cx);
     }
 
+    /// Start a gated source-improvement pass for one project directory.
+    ///
+    /// Every method uses the same harness: a baseline must already be built and
+    /// run, every edit is rebuilt and re-run, and failures are reverted. Only
+    /// the provider (`--providers`) and its configured command change.
     pub fn start_readability_agent_for_dir(
         &mut self,
+        method: SourceImproveMethod,
         dir: PathBuf,
         target_fn: Option<String>,
         cx: &mut Context<Self>,
@@ -1777,16 +1891,57 @@ impl GameReCompApp {
             cx.notify();
             return;
         }
-        let Some(ai_cmd) = self.effective_ai_cmd() else {
-            self.push_toast(
-                "Optional AI agent not configured",
-                "AI is optional and only improves readable C source code. Choose a preset or set REVENG_AI_CMD in Agents & models first.",
-                self.tokens().work,
-                false,
-            );
-            self.route = Route::Agents;
-            cx.notify();
-            return;
+        let revng_bin = self.settings.revng_bin.trim().to_string();
+        let revng_dir = self.settings.revng_dir.trim().to_string();
+        let (ai_cmd, web_cmd): (Option<String>, Option<String>) = match method {
+            SourceImproveMethod::Revng => {
+                let revng_available = !revng_bin.is_empty()
+                    || std::env::var_os("REVNG_BIN").is_some_and(|v| !v.is_empty())
+                    || std::env::var_os("REVNG_DECOMPILE_CMD").is_some_and(|v| !v.is_empty())
+                    || self.cfg.corpus_env.contains_key("REVNG_BIN")
+                    || self.cfg.corpus_env.contains_key("REVNG_DECOMPILE_CMD")
+                    || crate::config::find_executable("revng").is_some();
+                if !revng_available {
+                    self.push_toast(
+                        "rev.ng not configured",
+                        "Set the rev.ng binary and output directory in Settings → Source improvement. No AI fallback will be used.",
+                        self.tokens().work,
+                        false,
+                    );
+                    self.route = Route::Settings;
+                    cx.notify();
+                    return;
+                }
+                (None, None)
+            }
+            SourceImproveMethod::AiLocal => {
+                let Some(cmd) = self.effective_ai_cmd() else {
+                    self.push_toast(
+                        "Optional AI agent not configured",
+                        "AI is optional and only improves readable C source code. Choose a preset or set REVENG_AI_CMD in Agents & models first.",
+                        self.tokens().work,
+                        false,
+                    );
+                    self.route = Route::Agents;
+                    cx.notify();
+                    return;
+                };
+                (Some(cmd), None)
+            }
+            SourceImproveMethod::AiWeb => {
+                let Some(cmd) = self.effective_web_ai_cmd() else {
+                    self.push_toast(
+                        "Web AI not configured",
+                        "Set REVENG_WEB_AI_CMD (and any {endpoint}/{model} values) under Settings → Source improvement. Web AI is explicit opt-in only.",
+                        self.tokens().work,
+                        false,
+                    );
+                    self.route = Route::Settings;
+                    cx.notify();
+                    return;
+                };
+                (None, Some(cmd))
+            }
         };
         if self.jobs.iter().any(|j| {
             j.is_active()
@@ -1817,22 +1972,35 @@ impl GameReCompApp {
             "tools.autorecomp.readability".to_string(),
             dir.display().to_string(),
             "--providers".to_string(),
-            "ai".to_string(),
+            method.providers_arg().to_string(),
         ];
         if let Some(ref f) = target_fn {
             args.push("--function".to_string());
             args.push(f.clone());
         }
 
+        let method_label = method.short_label();
         let stage = match target_fn {
-            Some(ref f) => format!("C readability ({f})"),
-            None => "C source readability".to_string(),
+            Some(ref f) => format!("C readability [{method_label}] ({f})"),
+            None => format!("C source readability [{method_label}]"),
         };
         let proj_name = dir
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("project")
             .to_string();
+        let command_prefix = match method {
+            SourceImproveMethod::Revng => format!("# source improve: {method_label}"),
+            SourceImproveMethod::AiLocal => {
+                format!(
+                    "# source improve: {method_label}\n$ REVENG_AI_CMD=\"{}\"",
+                    ai_cmd.clone().unwrap_or_default()
+                )
+            }
+            SourceImproveMethod::AiWeb => {
+                format!("# source improve: {method_label}\n$ REVENG_WEB_AI_CMD=\"{}\"\n$ REVENG_AI_CMD=\"{}\"", web_cmd.clone().unwrap_or_default(), web_cmd.clone().unwrap_or_default())
+            }
+        };
 
         let (tx, rx) = mpsc::channel();
         let cancel_requested = Arc::new(AtomicBool::new(false));
@@ -1840,7 +2008,7 @@ impl GameReCompApp {
         self.jobs.push(ActiveJob {
             id,
             kind: WorkerKind::Readability,
-            name: format!("AI Readability: {proj_name}"),
+            name: format!("Readability [{method_label}]: {proj_name}"),
             pe_path: String::new(),
             pe_summary: String::new(),
             target_label: stage.clone(),
@@ -1858,16 +2026,13 @@ impl GameReCompApp {
             paused_total: Duration::ZERO,
             finished_secs: None,
             current_file: String::new(),
-            current_task_detail:
-                "Optional AI pass — improving readable C source code (compile- & evidence-verified)"
-                    .to_string(),
+            current_task_detail: format!(
+                "{method_label} pass — improving readable C source code (compile- & evidence-gated)"
+            ),
             compile_pct: None,
             processed_files: Vec::new(),
             live_stages: fresh_live_stages(),
-            live_logs: vec![format!(
-                "$ REVENG_AI_CMD=\"{ai_cmd}\" python3 {}",
-                args.join(" ")
-            )],
+            live_logs: vec![format!("{command_prefix}\n$ python3 {}", args.join(" "))],
             child: child_slot,
             cancel_requested,
             pgid: pgid_slot,
@@ -1876,7 +2041,7 @@ impl GameReCompApp {
         self.selected_job_id = Some(id);
         self.push_feed(
             "agent",
-            &format!("started optional AI C readability pass on {proj_name}"),
+            &format!("started {method_label} readability pass on {proj_name}"),
             false,
         );
         cx.notify();
@@ -1885,10 +2050,26 @@ impl GameReCompApp {
             let mut cmd = Command::new(crate::config::python_interpreter(&repo_root));
             cmd.current_dir(&repo_root)
                 .env("PYTHONPATH", &repo_root)
-                .env("REVENG_AI_CMD", &ai_cmd)
                 .args(&args)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
+            // The readability harness reads REVENG_AI_CMD for every AI route;
+            // the web route just supplies its own user-configured command.
+            if let Some(cmd_text) = ai_cmd {
+                cmd.env("REVENG_AI_CMD", cmd_text);
+            }
+            if let Some(cmd_text) = web_cmd {
+                cmd.env("REVENG_WEB_AI_CMD", &cmd_text)
+                    .env("REVENG_AI_CMD", cmd_text);
+            }
+            if method == SourceImproveMethod::Revng {
+                if !revng_bin.is_empty() {
+                    cmd.env("REVNG_BIN", &revng_bin);
+                }
+                if !revng_dir.is_empty() {
+                    cmd.env("REVNG_DIR", &revng_dir);
+                }
+            }
             let code = run_streaming_child_inner(
                 cmd,
                 child_for_thread,
@@ -1903,9 +2084,9 @@ impl GameReCompApp {
                 built_binary: None,
                 has_wasm: false,
                 summary: if code == 0 {
-                    "Optional AI C readability pass finished cleanly".to_string()
+                    format!("{method_label} readability pass finished; see reports/readability.html for the gated outcome")
                 } else {
-                    format!("Optional AI C readability pass exited with status {code} (check reports/readability.html)")
+                    format!("{method_label} readability pass exited with status {code} (check reports/readability.html)")
                 },
             });
         });
@@ -3869,7 +4050,12 @@ impl GameReCompApp {
                             }
                             if ok && !ev.cancelled && !ev.is_dry_run && ev.auto_ai_readability {
                                 if self.effective_ai_cmd().is_some() {
-                                    self.start_readability_agent_for_dir(dir.clone(), None, cx);
+                                    self.start_readability_agent_for_dir(
+                                        SourceImproveMethod::AiLocal,
+                                        dir.clone(),
+                                        None,
+                                        cx,
+                                    );
                                 } else {
                                     self.push_toast(
                                         "Skipped optional AI readability",
@@ -3930,6 +4116,11 @@ impl GameReCompApp {
             FocusInput::InspectorNote => Some(&mut self.inspector_note_input),
             FocusInput::SettingsProjectsRoot => Some(&mut self.settings.projects_root),
             FocusInput::SettingsRomLib => Some(&mut self.settings.rom_library_dir),
+            FocusInput::SettingsRevngBin => Some(&mut self.settings.revng_bin),
+            FocusInput::SettingsRevngDir => Some(&mut self.settings.revng_dir),
+            FocusInput::SettingsAiWebEndpoint => Some(&mut self.settings.ai_web_endpoint),
+            FocusInput::SettingsAiWebModel => Some(&mut self.settings.ai_web_model),
+            FocusInput::SettingsAiWebCmd => Some(&mut self.settings.ai_web_cmd),
             FocusInput::IssueTitle => Some(&mut self.issue_draft.title),
             FocusInput::IssueNotes => Some(&mut self.issue_draft.user_notes),
             FocusInput::RunGameDataDir => self.run_game_modal.as_mut().map(|m| &mut m.data_dir),
@@ -3983,6 +4174,8 @@ impl GameReCompApp {
                 self.show_theme_menu = false;
             } else if self.show_new_menu {
                 self.show_new_menu = false;
+            } else if self.show_source_improve_menu {
+                self.show_source_improve_menu = false;
             }
             cx.notify();
             return;
@@ -4002,6 +4195,11 @@ impl GameReCompApp {
                     FocusInput::ProjectRename => self.commit_project_rename(),
                     FocusInput::QuickRenameProject => self.commit_quick_rename_project(window, cx),
                     FocusInput::AgentCmd => self.save_agent_cmd(),
+                    FocusInput::SettingsRevngBin
+                    | FocusInput::SettingsRevngDir
+                    | FocusInput::SettingsAiWebEndpoint
+                    | FocusInput::SettingsAiWebModel
+                    | FocusInput::SettingsAiWebCmd => self.save_source_improve_settings(),
                     FocusInput::InspectorNote => {
                         if let Some(idx) = self.inspector_func_idx {
                             if let Some(addr) = self
@@ -4934,10 +5132,7 @@ mod tests {
         );
         // An explicitly configured assets dir wins over the PE parent.
         assert_eq!(
-            GameReCompApp::native_launch_assets_root(
-                game_data.to_str().unwrap(),
-                [pe.as_path()]
-            ),
+            GameReCompApp::native_launch_assets_root(game_data.to_str().unwrap(), [pe.as_path()]),
             Some(fs::canonicalize(&game_data).unwrap())
         );
         // Stale paths are skipped instead of producing an invalid launch cwd.
