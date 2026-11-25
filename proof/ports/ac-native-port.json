@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "title": "AssaultCube source -> native macOS arm64",
+  "source": "github.com/assaultcube/AC (open source GPL)",
+  "binary": {
+    "path": "/Users/haseeb-mir/ac-source/source/src/ac_client",
+    "sha256": "52a3a254b3b3d4ed670d196a3a5615f18625b8a84c3735408ea69281e12c5669",
+    "bytes": 1876120
+  },
+  "build": "Apple clang++ -O3, SDL2 + SDL2_image + enet + OpenAL + Vorbis, macOS frameworks",
+  "run": "DYLD_LIBRARY_PATH=source/enet/.libs SDL_VIDEODRIVER=cocoa SDL_AUDIODRIVER=dummy ./ac_client -w1024 -h768; no crash, rendered first-run setup screen",
+  "frame": {
+    "file": "ac-native-macos-frame2-centre.png",
+    "size": [
+      1024,
+      768
+    ],
+    "colours": 2758,
+    "sha256": "67b64561fcdc4fc97953399ddf494996a1511cbfc7c3464060535b6fd4fcc6cd"
+  },
+  "verdict": "PARTIAL - native source build boots and renders a real frame; no original-Windows frame oracle"
+}

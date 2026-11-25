@@ -8,6 +8,6 @@
     "bytes": 2462504
   },
   "source_generation": "GameReComp autorecomp: inspect(ok), recover(ok, 7665 functions / 732436 instructions), translate(ok), project(ok), report(ok)",
-  "native_build": "in progress",
-  "verdict": "PENDING - real application binary recovered and source generated; native build/runtime proof to be added when complete"
+  "native_build": "completed: e96ccd09dc88e1f5db86d51da2e513fb34c802d9f00588753af705ad22ce309b",
+  "verdict": "FAIL - native build completed but boot fails with 275 unresolved tataki.dll C++ exports; see build-result.json"
 }
