@@ -1,0 +1,19 @@
+{
+  "title": "Winamp real app - final shim progress",
+  "binary_sha256": "531e5385be71ca805fff228ac6ff5463141e12139bad817335b5f4d4dc5c8daa",
+  "bind": "735 imports bound, 0 unresolved with RECOMP_PERMISSIVE=1",
+  "shims_added": [
+    "GlobalAddAtomW",
+    "_fsopen",
+    "_Mtx_init_in_situ",
+    "_Mtx_destroy_in_situ",
+    "_Mtx_lock",
+    "_Mtx_unlock",
+    "SleepConditionVariableCS",
+    "WakeAllConditionVariable",
+    "WakeConditionVariable"
+  ],
+  "fault": "signal 10 at guest 0xFFFFFFEC in sub_00445AB5, RECOMP_ICALL through a tataki.dll C++ vtable pointer",
+  "cua_capture": "evidence/CUA/winamp-attempt.png, 783 colours, fail frame not used as proof",
+  "verdict": "FAIL - boot succeeds but companion C++ DLL object model not implemented"
+}
