@@ -15,6 +15,11 @@ path = "src/bin/game-recomp-cli.rs"
 required-features = ["cli"]
 
 [[bin]]
+name = "game-recomp-verify"
+path = "src/bin/game-recomp-verify.rs"
+required-features = ["cli"]
+
+[[bin]]
 name = "game-recomp-gui"
 path = "src/bin/game-recomp-gui.rs"
 required-features = ["gui"]
