@@ -82,7 +82,7 @@ fn normalize_exe_paths(line: &str) -> String {
         let mut start = i;
         while start > 0 {
             let c = s.as_bytes()[start - 1];
-            if c == b' ' || c == b'\t' || c == b'"' || c == b'=' || c == b':' { break; }
+            if c == b' ' || c == b'\t' || c == b'"' || c == b'=' { break; }
             start -= 1;
         }
         // Include a Windows drive prefix (e.g. Z:\\) when present.
