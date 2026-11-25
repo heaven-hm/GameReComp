@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generator": "tools/revng_container_runner.py",
+  "issue": 25,
+  "pin": "revng/revng@sha256:aaafb2bc57cdc4d6f499b99453a48dfd622ef5611f5eb57927e43b80d03063ac",
+  "verdict": "NO_REVNG_PASS",
+  "decision": "BLOCKED",
+  "reason_codes": [
+    "DISK_GUARD_BLOCKED",
+    "PINNED_IMAGE_NOT_USABLE",
+    "PULL_NOT_AUTHORISED",
+    "NO_REVNG_C_OUTPUT"
+  ],
+  "disk_guard": {
+    "minimum_free_bytes": 6442450944,
+    "pull_budget_bytes": 6442450944,
+    "allowed": false,
+    "reason": "only 2913185792 bytes (2.713 GiB) free; refusing to start a pull that needs up to 6442450944 bytes (6 GiB) and requires a 6 GiB floor"
+  },
+  "host": {
+    "platform": "macOS-27.2.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "python": "3.12.1",
+    "docker_client": "Docker version 29.9.2, build a82e528901",
+    "docker_server": "29.5.2",
+    "docker_available": true,
+    "disk": {
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/waveG/1",
+      "free_bytes": 2913185792,
+      "total_bytes": 245107195904,
+      "free_gib": 2.713,
+      "error": null
+    },
+    "image": {
+      "pin": "revng/revng@sha256:aaafb2bc57cdc4d6f499b99453a48dfd622ef5611f5eb57927e43b80d03063ac",
+      "pinned_digest": "sha256:aaafb2bc57cdc4d6f499b99453a48dfd622ef5611f5eb57927e43b80d03063ac",
+      "inspect_returncode": 1,
+      "repo_digests": [],
+      "image_id": null,
+      "usable": false,
+      "inspect_stderr_tail": "Error response from daemon: No such image: revng/revng@sha256:aaafb2bc57cdc4d6f499b99453a48dfd622ef5611f5eb57927e43b80d03063ac\n"
+    }
+  },
+  "pull": null,
+  "version_probes": [],
+  "fixture": null,
+  "what_it_proves": "host facts and the exact reason no real rev.ng run happened",
+  "what_it_does_not_prove": "any decompiler quality claim, any differential agreement, any issue state change, or any acceptance criterion of issue #25",
+  "workspace_disk_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/waveG/1"
+}
