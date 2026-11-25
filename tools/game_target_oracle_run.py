@@ -434,20 +434,28 @@ class Cua:
                 titles.append(str(title))
         return titles
 
-    def focus_title(self, needle: str) -> dict | None:
-        """Bring a window whose title matches ``needle`` to the foreground."""
-        tree = self.call("get_accessibility_tree", {})
-        for window in tree.get("windows", []):
-            title = str(window.get("title") or window.get("name") or "")
-            if needle.lower() not in title.lower():
-                continue
-            try:
-                pid, wid = int(window["pid"]), int(window["window_id"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            result = self.call("bring_to_front", {"pid": pid, "window_id": wid})
-            return {"pid": pid, "window_id": wid, "title": title,
-                    "effect": result.get("effect")}
+    def focus_title(self, needle: str, attempts: int = 4) -> dict | None:
+        """Bring a window whose title matches ``needle`` to the foreground.
+
+        GUI windows appear asynchronously; a short retry avoids mistaking a
+        still-starting game for a process with no window.  No match is still
+        reported as ``None`` (never a guessed confirmation).
+        """
+        for attempt in range(max(1, attempts)):
+            tree = self.call("get_accessibility_tree", {})
+            for window in tree.get("windows", []):
+                title = str(window.get("title") or window.get("name") or "")
+                if needle.lower() not in title.lower():
+                    continue
+                try:
+                    pid, wid = int(window["pid"]), int(window["window_id"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                result = self.call("bring_to_front", {"pid": pid, "window_id": wid})
+                return {"pid": pid, "window_id": wid, "title": title,
+                        "effect": result.get("effect"), "attempt": attempt + 1}
+            if attempt + 1 < max(1, attempts):
+                time.sleep(1.0)
         return None
 
     def capture(self, target: Path) -> bool:
@@ -565,9 +573,10 @@ class LocalHarness:
                         witness["focused_window"] = cua.focus_title(request.window_title)
                     witness["window_titles"] = cua.window_titles()
                     witness["window_title_confirmed"] = (
-                        not request.window_title or any(
-                            request.window_title.lower() in t.lower()
-                            for t in witness["window_titles"]))
+                        not request.window_title
+                        or witness.get("focused_window") is not None
+                        or any(request.window_title.lower() in t.lower()
+                               for t in witness["window_titles"]))
                 for index in range(max(0, request.frames)):
                     target = (request.artifacts_dir /
                               f"{request.role}-screen-{index:03d}.png").resolve()
