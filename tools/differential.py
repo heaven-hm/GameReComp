@@ -195,6 +195,109 @@ def process_diff(args) -> dict:
     return rec
 
 
+def form_key(insn) -> tuple:
+    """Stable instruction form: mnemonic + operand kinds + leading opcode byte."""
+    return (insn.mnemonic, tuple(op.type for op in insn.operands), insn.bytes[:1].hex())
+
+
+def collect_forms(pe_path: Path, project: Path, per_form: int, max_forms: int) -> list:
+    """Pick representative lifted functions covering distinct instruction forms.
+
+    igi-recomp isolates every instruction form and drives it from random states;
+    GameReComp's generic path can only drive whole lifted functions, so this
+    selects one function per form and lets difftest.py compare those functions
+    against the original bytes. That is a coverage proxy, not isolated-form
+    equivalence, and is labelled as such in the evidence.
+    """
+    import pefile
+    from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+
+    report = json.loads((project / "reports" / "functions.json").read_text())
+    pe = pefile.PE(str(pe_path), fast_load=True)
+    base = pe.OPTIONAL_HEADER.ImageBase
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+    md.detail = True
+    data = pe.__data__
+    forms = {}
+    for fn in report.get("functions", []):
+        va = int(fn["address"], 0)
+        rva = va - base
+        sec = next((s for s in pe.sections
+                    if s.VirtualAddress <= rva < s.VirtualAddress + max(s.Misc_VirtualSize, s.SizeOfRawData)), None)
+        if sec is None:
+            continue
+        off = sec.PointerToRawData + (rva - sec.VirtualAddress)
+        chunk = data[off:off + min(int(fn.get("size", 128)), 256)]
+        for insn in md.disasm(chunk, va):
+            key = form_key(insn)
+            bucket = forms.setdefault(key, [])
+            if len(bucket) < per_form:
+                bucket.append(va)
+            if len(forms) >= max_forms and all(len(v) >= per_form for v in forms.values()):
+                break
+        if len(forms) >= max_forms and all(len(v) >= per_form for v in forms.values()):
+            break
+    return [{"form": " ".join([k[0]] + ["op%d" % t for t in k[1]] + [k[2]]),
+             "addresses": ["0x%08X" % v for v in vals]} for k, vals in forms.items()][:max_forms]
+
+
+def forms_diff(args) -> dict:
+    import tempfile
+    rec = {"schema": SCHEMA, "kind": "forms", "pe": str(args.pe), "project": str(args.project),
+           "scope": "representative lifted functions per instruction form (coverage proxy)"}
+    pe, project = Path(args.pe), Path(args.project)
+    if not pe.is_file() or not (project / "reports" / "functions.json").is_file():
+        rec.update(status="BLOCKED", reason="original PE or project function inventory not found")
+        return rec
+    forms = collect_forms(pe, project, args.per_form, args.max_forms)
+    rec["forms"] = forms
+    addrs = sorted({a for f in forms for a in f["addresses"]})
+    if not addrs:
+        rec.update(status="BLOCKED", reason="no instruction forms mapped to lifted functions")
+        return rec
+    with tempfile.TemporaryDirectory() as t:
+        out = Path(t) / "difftest.json"
+        cmd = [sys.executable, "tools/lift/difftest.py", "--project", str(project),
+               "--pe", str(pe)]
+        for a in addrs:
+            cmd += ["--address", a]
+        cmd += ["--cases", str(args.cases), "--flags", "--json", str(out)]
+        rec["command"] = cmd
+        r = subprocess.run(cmd, cwd=args.repo, capture_output=True, timeout=args.timeout)
+        rec["difftest_rc"] = r.returncode
+        # difftest exits 1 when a compared function disagrees: that is a FAIL,
+        # not a BLOCKED. Only a missing/unparseable report is missing evidence.
+        if not out.is_file():
+            rec.update(status="BLOCKED",
+                       reason="difftest produced no report: " + (r.stderr or r.stdout).decode("utf-8", errors="replace")[-600:])
+            return rec
+        try:
+            report = json.loads(out.read_text())
+        except (ValueError, OSError) as e:
+            rec.update(status="BLOCKED", reason="difftest report unreadable: %s" % e)
+            return rec
+    results = report.get("addresses", []) or report.get("results", [])
+    ok = {"agree", "agree-return", "PASS", "ok", "agree-flags"}
+    oracle_fault = {"original-faulted", "unmapped", "no-original", "error", "oracle-faulted"}
+    def verdict(x):
+        return x.get("verdict", x.get("status", ""))
+    bad = [x for x in results if verdict(x) not in ok | oracle_fault]
+    faults = [x for x in results if verdict(x) in oracle_fault]
+    rec["cases_total"] = len(results)
+    rec["cases_bad"] = bad[:10]
+    rec["oracle_faults"] = faults[:10]
+    if not results:
+        rec["status"] = "BLOCKED"
+    elif bad:
+        rec["status"] = "FAIL"
+    elif faults:
+        rec["status"] = "BLOCKED"
+        rec["reason"] = "%d/%d addresses faulted in the original oracle (not counted as PASS)" % (len(faults), len(results))
+    else:
+        rec["status"] = "PASS"
+    return rec
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -219,9 +322,22 @@ def main(argv=None) -> int:
     t.add_argument("b", type=Path)
     t.add_argument("--tolerance", type=float, default=0.001)
     t.add_argument("--out", type=Path)
+    f = sub.add_parser("forms", help="instruction-form coverage sweep via difftest.py")
+    f.add_argument("--pe", required=True, type=Path)
+    f.add_argument("--project", required=True, type=Path)
+    f.add_argument("--repo", default="/Users/haseeb-mir/Documents/Code/GameReComp",
+                   help="checkout containing tools/lift/difftest.py")
+    f.add_argument("--per-form", type=int, default=1)
+    f.add_argument("--max-forms", type=int, default=20)
+    f.add_argument("--cases", type=int, default=8)
+    f.add_argument("--timeout", type=float, default=600)
+    f.add_argument("--out", required=True, type=Path)
+    f.add_argument("--stdout", action="store_true")
     a = ap.parse_args(argv)
     if a.cmd == "trace":
         rec = {"schema": SCHEMA, "kind": "trace", **compare_traces(a.a, a.b, a.tolerance)}
+    elif a.cmd == "forms":
+        rec = forms_diff(a)
     else:
         if a.args:
             a.original_cmd += " " + a.args

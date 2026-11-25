@@ -6,7 +6,29 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.differential import compare_traces, normalize_guest
+from tools.differential import compare_traces, form_key, normalize_guest
+
+
+class FormTests(unittest.TestCase):
+    def test_form_key_is_stable(self):
+        from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+        md = Cs(CS_ARCH_X86, CS_MODE_32)
+        md.detail = True
+        insn = next(md.disasm(b"\x55\x8b\xec", 0x401000))
+        self.assertEqual(form_key(insn)[0], "push")
+        self.assertEqual(form_key(insn), form_key(insn))
+
+    def test_forms_without_inventory_are_blocked(self):
+        with tempfile.TemporaryDirectory() as t:
+            pe, proj, out = Path(t) / "a.exe", Path(t) / "proj", Path(t) / "out.json"
+            pe.write_bytes(b"MZ")
+            proj.mkdir()
+            cmd = [sys.executable, "-m", "tools.differential", "forms", "--pe", str(pe),
+                   "--project", str(proj), "--out", str(out)]
+            p = subprocess.run(cmd, capture_output=True, cwd=Path(__file__).resolve().parents[1])
+            rec = json.loads(out.read_text())
+            self.assertEqual(rec["status"], "BLOCKED")
+            self.assertEqual(p.returncode, 1)
 
 
 class DifferentialTests(unittest.TestCase):

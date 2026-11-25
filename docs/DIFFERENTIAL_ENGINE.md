@@ -48,6 +48,23 @@ python3 -m tools.differential process \
 | `trace` | per-column max absolute delta against tolerance; non-numeric values exact | no overlapping timestamps |
 | `functions:*` | every case in a `difftest.py --json` report is `agree-return`/`PASS` | any case disagrees |
 
+### Instruction-form sweep (igi-recomp style)
+
+```sh
+python3 -m tools.differential forms --pe game.exe --project generated-project \
+  --max-forms 40 --cases 8 --out forms.json
+```
+
+This disassembles the lifted functions, groups instructions by form (mnemonic,
+operand kinds, leading opcode byte), picks one representative function per form
+and drives them through `tools/lift/difftest.py` against the original bytes.
+igi-recomp isolates each *instruction* from random states; GameReComp can only
+drive whole lifted functions, so this is explicitly a **coverage proxy**, not
+isolated-form equivalence. `original-faulted` addresses are BLOCKED, never
+counted as PASS. Measured on `arith-calc.exe`: 12 forms mapped, 1 function
+compared, verdict BLOCKED (original bytes faulted in the oracle) — the honest
+result, not a fabricated success.
+
 `--original-cmd` defaults to `highball run {exe}` (primary original runner) and
 is overridable for tests or alternate runners. `--rebuilt-cmd` supports native
 executables and containerised ELF runners.
