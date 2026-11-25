@@ -57,6 +57,12 @@ it is derived symbol metadata, not shipped game code. The map's names alone are
 not evidence of gameplay; they are fed through normal `tools/autorecomp`
 metadata when a D3D9 backend and a race fixture exist.
 
+The generic ingestion path is now exercised: `tools/lift/name_lift.py --known-file
+names.json` loads the 106,319 distinct addresses produced above (verified
+2026-11-25; explicit `--known VA=NAME` still wins on conflicts, malformed files
+fail closed). Applying the names to a generated lift still requires a full
+TmForever lift, which remains gated by the build-scale issue #26.
+
 ## 4. Shared blockers (must be solved in their owning issues)
 
 - **#5 D3D9 / D3DX / shaders**: absent in `runtime/win32hle`; gates #21–#24.
