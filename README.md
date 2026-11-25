@@ -45,10 +45,10 @@ frames with dimensions, colour counts and SHA-256.
 | Title | Input (SHA-256 prefix) | Windows original under Highball | Native port | Screenshot evidence | Verdict |
 |---|---|---|---|---|---|
 | **Project I.G.I.** | `igi.exe` `dea34892d417` | Boots to Vulkan, stays alive (exit 124 at 35 s), Wine D3D errors | Texture abort FIXED; fresh native rebuild (37 MB, 0 unresolved imports) boots to DDraw7/D3D7; no Mission 1 oracle | [historic native splash](docs/screenshots/igi-window-level5-splash.png) (640×480, 6,814 colours); 3 fresh 2026-11-25 frames are 1-colour blank (FAIL) | PARTIAL / frames FAIL |
-| **TrackMania Nations Forever** | `TmForever.exe` `5e287e79a07c` | Boots to Vulkan (exit 124); **no game window** | `TmForever.map` validated, 118,469 symbols; no native build, no D3D9 backend | [desktop capture during original run](docs/screenshots/tm-forever-original-desktop-no-window.png) shows no window — negative evidence | BLOCKED |
+| **TrackMania Nations Forever** | `TmForever.exe` `5e287e79a07c` | Boots to Vulkan under Highball (exit 124 at 35 s; local log) | `TmForever.map` validated, 118,469 symbols; no native build, no D3D9 backend | none captured (no original frame available) | BLOCKED |
 | **AssaultCube** | `ac_client.exe` `5b588e6ff7710` | exit 53: `OpenAL32.dll not found`, `status c0000135` | Recompile retry had no binary (2 h recover timeout) | none captured | BLOCKED |
-| **IDM Downloader** | `idman643build18.exe` `7346128fab42` | PE32 i386 installer: Highball **exit 0** after 14 s (installer completed) | not attempted | none captured | ORIGINAL ONLY |
-| **Winamp** | official Nullsoft `winamp_latest_full.exe` `d064eefc27c7` (13 MB, PE32 i386) | installer stayed alive under Highball (exit 124 at 25 s, no window captured) | not attempted | none captured | ORIGINAL ONLY |
+| **IDM Downloader** | `idman643build18.exe` `7346128fab42` | PE32 i386 installer: Highball **exit 0** after 14 s (installer completed) | native macOS build already recorded: 605 fns, 104 imports, exit 0 (PARTIAL, no scenario oracle) — see [game matrix](docs/GAME_MATRIX.md) | none captured | PARTIAL |
+| **Winamp** | official Nullsoft `winamp_latest_full.exe` `d064eefc27c7` (13 MB, PE32 i386) | installer stayed alive under Highball (exit 124 at 25 s, no window captured) | not attempted | none captured | ORIGINAL ONLY (freeware installer; do not redistribute) |
 | **Ghostty (macOS → Windows)** | `/Applications/Ghostty.app` Mach-O `4b30ac9b049c` | n/a (macOS source app) | source-level Windows target not implemented | none captured | BLOCKED |
 
 Issues that track these blockers: [#15](https://github.com/heaven-hm/GameReComp/issues/15)
@@ -57,10 +57,12 @@ Issues that track these blockers: [#15](https://github.com/heaven-hm/GameReComp/
 D3D9, deterministic race), [#26](https://github.com/heaven-hm/GameReComp/issues/26)
 (build scale). No issue is closed without its 100% acceptance evidence.
 
-100% process-level proof (byte-identical stdout against the Windows original) does
-exist for the console targets `arith-calc`, `base64`, `busybox` (macOS), and
-`fifteensolver` (macOS **and** Linux) — see the repository verification reports
-and `docs/DIFFERENTIAL_ENGINE.md`.
+Byte-identical stdout for one scripted console scenario is committed for
+`arith-calc` in [proof/e2e-133](proof/e2e-133/README.md); `base64` has a second
+scripted-stdin match in the same folder (PARTIAL, not general equivalence).
+Proofs for `busybox` (macOS) and `fifteensolver` (macOS and Linux) are proposed
+in PR #256 with exact commands/hashes/raw captures; they are not yet merged.
+See `docs/DIFFERENTIAL_ENGINE.md` for the engine and its honest limits.
 
 ## Development Roadmap
 
