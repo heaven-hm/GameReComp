@@ -190,6 +190,11 @@ pub fn compare_runs(a: &RunResult, b: &RunResult) -> Evidence {
     }
     let ga = normalize(&format!("{}{}", a.stdout, a.stderr));
     let gb = normalize(&format!("{}{}", b.stdout, b.stderr));
+    // Two empty outputs are not evidence: treat as BLOCKED, never PASS.
+    if ga.trim().is_empty() && gb.trim().is_empty() {
+        e.reason = Some("no guest output observed on either side (vacuous comparison)".into());
+        return e;
+    }
     let mut hashes = BTreeMap::new();
     hashes.insert("original".to_string(), sha256(ga.as_bytes()));
     hashes.insert("rebuilt".to_string(), sha256(gb.as_bytes()));
@@ -579,6 +584,14 @@ mod tests {
         assert_eq!(r.rc, Some(0));
         assert!(r.stdout.len() <= MAX_CAPTURE_BYTES + 64, "captured {} bytes", r.stdout.len());
         assert!(r.stdout.contains("bounded by verify core"));
+    }
+
+    #[test]
+    fn empty_output_is_not_a_pass() {
+        let a = RunResult { rc: Some(0), stdout: "Launching x\nexit=0 after 1s\n".into(),
+                            stderr: String::new(), seconds: 0.0, error: None };
+        let b = a.clone();
+        assert_eq!(compare_runs(&a, &b).verdict, Verdict::Blocked);
     }
 
     #[test]
