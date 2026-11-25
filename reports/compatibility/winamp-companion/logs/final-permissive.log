@@ -1,0 +1,110 @@
+[pe] <embedded image> mapped at 0x00400000, span 0x28F000
+[pe] static TLS: template 0x004DBD98..0x004DBDBC (+0 zero), index 0
+[pe] <embedded image> mapped at 0x10000000, span 0x6A000
+[pe] <embedded image> mapped at 0x7EFD0000, span 0x2B000
+[pe] unresolved import VCRUNTIME140.dll!__std_type_info_destroy_list
+[pe] unresolved import api-ms-win-crt-heap-l1-1-0.dll!_aligned_malloc
+[pe] unresolved import api-ms-win-crt-math-l1-1-0.dll!exp
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_execute_onexit_table
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_seh_filter_dll
+[pe] bound 27 imports (0 delay), 5 unresolved
+[pe] companion nsutil.dll: 5 unresolved imports
+[pe] companion nsutil.dll mapped at 0x10000000 (33 exports)
+[pe] unresolved import KERNEL32.dll!GetStringTypeExW
+[pe] unresolved import GDI32.dll!SetRectRgn
+[pe] unresolved import GDI32.dll!RectInRegion
+[pe] unresolved import GDI32.dll!PtInRegion
+[pe] unresolved import GDI32.dll!OffsetRgn
+[pe] unresolved import GDI32.dll!InvertRgn
+[pe] unresolved import GDI32.dll!GetRegionData
+[pe] unresolved import GDI32.dll!ExtCreateRegion
+[pe] unresolved import GDI32.dll!FillRgn
+[pe] unresolved import GDI32.dll!GetClipRgn
+[pe] unresolved import MSVCP140.dll!?_Xlength_error@std@@YAXPBD@Z
+[pe] unresolved import MSIMG32.dll!AlphaBlend
+[pe] unresolved import VCRUNTIME140.dll!_purecall
+[pe] unresolved import VCRUNTIME140.dll!__CxxFrameHandler3
+[pe] unresolved import VCRUNTIME140.dll!__std_terminate
+[pe] unresolved import VCRUNTIME140.dll!__current_exception
+[pe] unresolved import VCRUNTIME140.dll!__current_exception_context
+[pe] unresolved import VCRUNTIME140.dll!__std_type_info_destroy_list
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_seh_filter_dll
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_execute_onexit_table
+[pe] bound 95 imports (3 delay), 20 unresolved
+[pe] companion tataki.dll: 20 unresolved imports
+[pe] companion tataki.dll mapped at 0x7EFD0000 (332 exports)
+[pe] bound 735 imports (56 delay), 0 unresolved
+[host] C:\winamp.exe booted: entry 0x004BB7D9, 0 unresolved imports
+[pe] /Users/haseeb-mir/winamp-payload/Shared/nde.dll mapped at 0x11570000, span 0x16000
+[pe] unresolved import KERNEL32.dll!CreateMutexW
+[pe] unresolved import USER32.dll!CharLowerW
+[pe] unresolved import ADVAPI32.dll!ConvertStringSecurityDescriptorToSecurityDescriptorW
+[pe] unresolved import nxlite.dll!NXStringSetHeap
+[pe] unresolved import nxlite.dll!NXStringMalloc
+[pe] unresolved import nxlite.dll!NXStringRelease
+[pe] unresolved import nxlite.dll!NXStringCreateWithUTF16
+[pe] unresolved import nxlite.dll!NXStringCreateWithBytes
+[pe] unresolved import nxlite.dll!NXStringRetain
+[pe] unresolved import VCRUNTIME140.dll!__std_type_info_destroy_list
+[pe] unresolved import VCRUNTIME140.dll!__RTDynamicCast
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_seh_filter_dll
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_execute_onexit_table
+[pe] unresolved import api-ms-win-crt-string-l1-1-0.dll!wcsncpy
+[pe] unresolved import api-ms-win-crt-string-l1-1-0.dll!iswxdigit
+[pe] unresolved import api-ms-win-crt-convert-l1-1-0.dll!wcstol
+[pe] unresolved import api-ms-win-crt-convert-l1-1-0.dll!_wtoi64
+[pe] bound 71 imports (0 delay), 17 unresolved
+[module] C:\Shared\nde.dll: 17 unresolved imports
+[module] C:\Shared\nde.dll: no lifted DllMain; data only
+[module] LoadLibrary("C:\Shared\nde.dll") -> 0x11570000
+[pe] /Users/haseeb-mir/winamp-payload/Plugins/gen_crasher.dll mapped at 0x11590000, span 0x17000
+[pe] unresolved import VERSION.dll!GetFileVersionInfoSizeW
+[pe] unresolved import VERSION.dll!VerQueryValueW
+[pe] unresolved import VERSION.dll!GetFileVersionInfoW
+[pe] unresolved import ADVAPI32.dll!GetUserNameW
+[pe] unresolved import VCRUNTIME140.dll!__std_type_info_destroy_list
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_execute_onexit_table
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_seh_filter_dll
+[pe] bound 107 imports (0 delay), 7 unresolved
+[module] C:\Plugins\gen_crasher.dll: 7 unresolved imports
+[module] C:\Plugins\gen_crasher.dll: no lifted DllMain; data only
+[module] LoadLibrary("C:\Plugins\gen_crasher.dll") -> 0x11590000
+ICALL: unresolved VA 0x11594BCF from 0x004A8335
+[module] GetProcAddress(7E010000, ChangeWindowMessageFilter): not answered
+ICALL: null target from 0x1006311D (NULL vtable/interface pointer; no dispatch possible)
+[pe] /Users/haseeb-mir/winamp-payload/System/wasabi2.w5s mapped at 0x119B0000, span 0xE000
+[pe] unresolved import nxlite.dll!NXOnceInit
+[pe] unresolved import nxlite.dll!NXPathMatchExtension
+[pe] unresolved import nxlite.dll!NXStringGetBytesSize
+[pe] unresolved import nxlite.dll!NXStringGetBytes
+[pe] unresolved import nxlite.dll!NXURICreateRemovingFilename
+[pe] unresolved import nxlite.dll!NXFile_stat
+[pe] unresolved import nxlite.dll!NXDataRelease
+[pe] unresolved import nxlite.dll!NXDataCreateEmpty
+[pe] unresolved import nxlite.dll!NXDataCreateFromURI
+[pe] unresolved import nxlite.dll!NXDataSetSourceURI
+[pe] unresolved import nxlite.dll!NXDataSetSourceStat
+[pe] unresolved import nxlite.dll!NXOnce
+[pe] unresolved import nxlite.dll!NXDataSetMIME
+[pe] unresolved import nxlite.dll!NXDataCreate
+[pe] unresolved import nxlite.dll!NXURICreateWithNXString
+[pe] unresolved import nxlite.dll!NXStringCreateWithFormatting
+[pe] unresolved import nxlite.dll!NXStringCreateWithUTF16
+[pe] unresolved import nxlite.dll!NXStringCreateWithUTF8
+[pe] unresolved import nxlite.dll!NXStringRelease
+[pe] unresolved import nxlite.dll!NXStringRetain
+[pe] unresolved import nxlite.dll!NXURICreateFromPath
+[pe] unresolved import nxlite.dll!NXURIRetain
+[pe] unresolved import nxlite.dll!NXURIRelease
+[pe] unresolved import nxlite.dll!NXStringKeywordCompare
+[pe] unresolved import VCRUNTIME140.dll!__std_type_info_destroy_list
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_execute_onexit_table
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_seh_filter_dll
+[pe] unresolved import api-ms-win-crt-filesystem-l1-1-0.dll!_wstat64
+[pe] bound 55 imports (0 delay), 28 unresolved
+[module] C:\System\wasabi2.w5s: 28 unresolved imports
+[module] C:\System\wasabi2.w5s: no lifted DllMain; data only
+[module] LoadLibrary("C:\System\wasabi2.w5s") -> 0x119B0000
+ICALL: unresolved VA 0x119B2887 from 0x004A1C13
+
+[win32hle] fatal signal 10 at 0x709ba028b8 (guest VA 0x9BA028B8) in lifted function 0x004311B0, esp 0x1096E674, pc 0x1007f11a0

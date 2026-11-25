@@ -1,0 +1,6 @@
+[  1%] Building C object CMakeFiles/winamp.dir/src/runtime/win32hle/kernel32_ext.c.o
+[  3%] Building C object CMakeFiles/winamp.dir/src/runtime/win32hle/kernel32_crt.c.o
+[  4%] Building C object CMakeFiles/winamp.dir/src/runtime/win32hle/msvcrt.c.o
+[  6%] Building C object CMakeFiles/winamp.dir/src/runtime/win32hle/kernel32.c.o
+[  7%] Linking C executable winamp
+[100%] Built target winamp
