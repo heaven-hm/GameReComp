@@ -110,7 +110,7 @@ Windows game.exe → recover & lift → generate C → compile → run → verif
 
 ## Proof & gameplay
 
-Game-specific screenshots and their verification status are kept in the separate [game screenshots page](docs/GAME_MATRIX.md).
+Game-specific screenshots and their verification status are kept in the single [game evidence document](docs/GAME_MATRIX.md).
 
 | Evidence | Current result |
 | --- | --- |

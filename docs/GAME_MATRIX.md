@@ -255,4 +255,4 @@ failure, no native binary, or no build); no screenshot can be shown for them.
 - **TrackMania ESWC / Forever / IGI**: engine controls returned BLOCKED.
 - **New downloads** (Chocolate Strife, Crispy Strife, VCMI): controls BLOCKED.
 
-See [verification methodology](VERIFICATION.md) and [game matrix](GAME_MATRIX.md).
+See [verification methodology](VERIFICATION.md). No original-Windows frame oracle exists here (#145/#171); captures are native-only and labelled PARTIAL or FAIL.
