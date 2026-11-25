@@ -1,0 +1,168 @@
+--- /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/winamp-evidence/runtime/win32hle/msvcrt.c	2026-11-26 02:23:44
++++ /Users/haseeb-mir/winamp-companion-proof/winamp-companion-src/src/runtime/win32hle/msvcrt.c	2026-11-26 02:21:41
+@@ -186,6 +186,12 @@
+     (char *)"PATH=C:\\WINDOWS\\SYSTEM32;C:\\WINDOWS",
+     (char *)"WINDIR=C:\\WINDOWS",
+     (char *)"TEMP=C:\\WINDOWS\\TEMP",
++    /* Winamp's logger builds its file path from APPDATA. C: is the guest's
++     * own launch/assets directory, a writable stand-in for the Roaming
++     * folder, with no host user name or machine path baked in. */
++    (char *)"APPDATA=C:\\",
++    (char *)"LOCALAPPDATA=C:\\",
++    (char *)"USERPROFILE=C:\\",
+ };
+ 
+ /* The host's own command line, as __getmainargs reports it. macOS keeps it in
+@@ -462,21 +468,29 @@
+ }
+ 
+ /* ================================================================ stdio */
+-static void c_fopen(void) {                          /* (path, mode) */
+-    ms_init();
+-    const char *path = ASTR(0), *mode = ASTR(1);
+-    if (!path || !mode) { ms_seterrno(EINVAL); RETC(0); }
++static uint32_t ms_fopen_va(const char *path, const char *mode) {
++    if (!path || !mode) { ms_seterrno(EINVAL); return 0; }
+     char host[1024], hm[8];
+     ms_host_path(path, mode, host, sizeof host);
+     ms_host_mode(mode, hm, sizeof hm);
+     FILE *fp = fopen(host, hm);
+-    if (!fp) { ms_seterrno(errno); RETC(0); }
++    if (!fp) { ms_seterrno(errno); return 0; }
+     int slot = ms_slot_alloc(fp, fileno(fp), 1);
+-    if (slot < 0) { fclose(fp); ms_seterrno(EMFILE); RETC(0); }
++    if (slot < 0) { fclose(fp); ms_seterrno(EMFILE); return 0; }
+     uint32_t va = ms_iobuf_new(slot, mode);
+-    if (!va) { fclose(fp); ms_slot_free(&g_stream[slot]); ms_seterrno(ENOMEM); RETC(0); }
++    if (!va) { fclose(fp); ms_slot_free(&g_stream[slot]); ms_seterrno(ENOMEM); return 0; }
+     g_stream[slot].iobuf = va;
+-    RETC(va);
++    return va;
++}
++static void c_fopen(void) {                          /* (path, mode) */
++    ms_init();
++    RETC(ms_fopen_va(ASTR(0), ASTR(1)));
++}
++/* Winamp's config/codebase opens go through MSVC's _fsopen(path, mode, shflag).
++ * The host is single-process, so the sharing flag changes nothing. */
++static void c_fsopen(void) {                         /* (path, mode, shflag) */
++    ms_init();
++    RETC(ms_fopen_va(ASTR(0), ASTR(1)));
+ }
+ 
+ static void c_fclose(void) {                         /* (stream) */
+@@ -1618,17 +1632,35 @@
+  * plain vsprintf are the ones that matter here: the secure variant (which
+  * returns -1 for an overlong result) and the _s variant (same, with a buffer
+  * size).  Both are honoured by the size check below. */
+-static void u_stdio_common_vsprintf(void) {
+-    ms_init();
++static uint32_t u_vsprintf_common(void) {
+     /* options is the first 64-bit argument: words 0 and 1 */
+     uint32_t buffer = A32(2), bufsize = A32(3);
+     const char *fmt = (const char *)hle_ptr(A32(4));
+     uint32_t args = A32(6);
+     char *out = (char *)hle_ptr(buffer);
+-    if (!out || !fmt) { ms_seterrno(EINVAL); RETC(0xFFFFFFFFu); }
++    if (!out || !fmt) { ms_seterrno(EINVAL); return 0xFFFFFFFFu; }
+     int n = hle_guest_format(t_fmt, sizeof t_fmt, fmt, args);
+-    if (bufsize && (uint32_t)n >= bufsize) { memcpy(out, t_fmt, bufsize - 1); out[bufsize - 1] = 0; RETC(0xFFFFFFFFu); }
++    if (bufsize && (uint32_t)n >= bufsize) { memcpy(out, t_fmt, bufsize - 1); out[bufsize - 1] = 0; return 0xFFFFFFFFu; }
+     memcpy(out, t_fmt, (size_t)n + 1);
++    return (uint32_t)n;
++}
++static void u_stdio_common_vsprintf(void) { ms_init(); RETC(u_vsprintf_common()); }
++/* The secure spelling has the same argument layout as the plain one. */
++static void u_stdio_common_vsprintf_s(void) { ms_init(); RETC(u_vsprintf_common()); }
++/* __stdio_common_vswprintf: same layout as vsprintf, but the format and the
++ * destination are UTF-16. Convert the format to the host's printf dialect and
++ * write the result back as guest wchar_t units. */
++static void u_stdio_common_vswprintf(void) {
++    ms_init();
++    uint32_t buffer = A32(2), bufsize = A32(3), fmtva = A32(4), args = A32(6);
++    const uint16_t *wf = (const uint16_t *)hle_ptr(fmtva);
++    char afmt[1024];
++    if (!wf || !hle_wide_to_ansi(wf, afmt, sizeof afmt)) { RETC(0xFFFFFFFFu); }
++    int n = hle_guest_format(t_fmt, sizeof t_fmt, afmt, args);
++    if (bufsize && (uint32_t)n >= bufsize) RETC(0xFFFFFFFFu);
++    if (!buffer) RETC((uint32_t)n);
++    for (int i = 0; i < n; i++) MEM16(buffer + 2u * (uint32_t)i) = (uint16_t)(unsigned char)t_fmt[i];
++    MEM16(buffer + 2u * (uint32_t)n) = 0;
+     RETC((uint32_t)n);
+ }
+ /* __stdio_common_vfprintf(options, stream, format, locale, argptr): printf
+@@ -2881,7 +2913,57 @@
+ }
+ 
+ /* ============================================================ the shims */
++/* Winamp (VC142) uses the C11 threads layer from MSVCP140. The recompiled
++ * guest is single-threaded/cooperatively scheduled, so its mutexes and
++ * condition variables need no host synchronization; a no-op that leaves the
++ * (zeroed) guest object alone is enough for the calls to return. */
++static void c_Mtx_init_in_situ(void)     { RETCV(); }
++static void c_Mtx_destroy_in_situ(void)  { RETCV(); }
++static void c_Mtx_lock(void)             { RETCV(); }
++static void c_Mtx_unlock(void)           { RETCV(); }
++static void c_Cnd_destroy_in_situ(void)  { RETCV(); }
++static void c_Cnd_signal(void)           { RETCV(); }
++/* MSVCP140's exception/error helpers (the guest's own CRT code calls them). */
++static void c_Syserror_map(void)          { RETC(hle_guest_strdup("Unknown error")); }
++/* MSVC's reentrant wcstok: the caller keeps the cursor in its context word. */
++static int wcstok_delim(uint32_t delim, uint16_t ch) {
++    for (uint32_t p = delim; MEM16(p); p += 2) if (MEM16(p) == ch) return 1;
++    return 0;
++}
++static void c_wcsstr(void) {
++    uint32_t h = A32(0), n = A32(1);
++    if (!h || !n) RETC(0);
++    for (uint32_t p = h; MEM16(p); p += 2) {
++        uint32_t i = 0;
++        while (MEM16(n + 2u * i) && MEM16(p + 2u * i) == MEM16(n + 2u * i)) i++;
++        if (!MEM16(n + 2u * i)) RETC(p);
++    }
++    RETC(0);
++}
++static void c_wcstok(void) {
++    uint32_t s = A32(0), delim = A32(1), ctx = A32(2);
++    if (!ctx || !delim) RETC(0);
++    uint32_t start = s ? s : MEM32(ctx);
++    if (!start) RETC(0);
++    while (MEM16(start) && wcstok_delim(delim, MEM16(start))) start += 2;
++    if (!MEM16(start)) { MEM32(ctx) = 0; RETC(0); }
++    uint32_t tok = start;
++    while (MEM16(start) && !wcstok_delim(delim, MEM16(start))) start += 2;
++    if (MEM16(start)) { MEM16(start) = 0; MEM32(ctx) = start + 2; }
++    else MEM32(ctx) = 0;
++    RETC(tok);
++}
++
+ const win32hle_shim win32hle_msvcrt[] = {
++    { "_Mtx_init_in_situ",            c_Mtx_init_in_situ },
++    { "_Mtx_destroy_in_situ",         c_Mtx_destroy_in_situ },
++    { "_Mtx_lock",                    c_Mtx_lock },
++    { "_Mtx_unlock",                  c_Mtx_unlock },
++    { "_Cnd_destroy_in_situ",         c_Cnd_destroy_in_situ },
++    { "_Cnd_signal",                  c_Cnd_signal },
++    { "?_Syserror_map@std@@YAPBDH@Z", c_Syserror_map },
++    { "wcstok",                       c_wcstok },
++    { "wcsstr",                       c_wcsstr },
+     /* startup */
+     /* The api-ms-win-crt-runtime-l1-1-0 names that are the same functions the
+      * msvcrt names above already answer (_initterm, _initterm_e, _errno, _cexit,
+@@ -2910,6 +2992,8 @@
+     { "_time64",                      u_time64 },
+     { "_get_stream_buffer_pointers",  u_get_stream_buffer_pointers },
+     { "__stdio_common_vsprintf",      u_stdio_common_vsprintf },
++    { "__stdio_common_vsprintf_s",    u_stdio_common_vsprintf_s },
++    { "__stdio_common_vswprintf",     u_stdio_common_vswprintf },
+     { "__stdio_common_vfprintf",      u_stdio_common_vfprintf },
+     { "__stdio_common_vsscanf",       u_stdio_common_vsscanf },
+     { "__stdio_common_vfscanf",       u_stdio_common_vfscanf },
+@@ -2963,6 +3047,7 @@
+     { "__p__errno",                   c_p_errno },
+     /* stdio */
+     { "fopen",                        c_fopen },
++    { "_fsopen",                      c_fsopen },
+     { "fclose",                       c_fclose },
+     { "fflush",                       c_fflush },
+     { "freopen",                      c_freopen },
