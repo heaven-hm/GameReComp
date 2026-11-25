@@ -153,6 +153,39 @@ void hle_sdl12_gl_swap(void) {
     SDL_GL_SwapWindow(g_window);
 }
 
+/* See win32hle.h: validate the four words of a guest virtual call without
+ * ever dereferencing a null one.  This is deliberately only a diagnostic.
+ * The measured issue #27 failure is not in this file: gr.exe's GameManager
+ * has a NULL InGameState at +0x74 because a DMD OpenEx from prefManager.load
+ * (gr.prf) was resumed in guest frame 0x00419CC0 instead of the frame that
+ * owns the catch; that wrong-frame resume skips gameManager.init().  Fixing
+ * the resume needs an EH checkpoint in the tail-call-inlined catch owner
+ * (lifter/eh32.c), which no SDL shim can supply. */
+int hle_guest_vcall_target(uint32_t object_va, uint32_t interface_off,
+                           uint32_t slot_off, uint32_t *target_va) {
+    if (target_va) *target_va = 0;
+    if (!object_va) return HLE_VCHAIN_NO_OBJECT;
+    uint32_t interface_va = MEM32(object_va + interface_off);
+    if (!interface_va) return HLE_VCHAIN_NO_INTERFACE;
+    uint32_t vtable_va = MEM32(interface_va);
+    if (!vtable_va) return HLE_VCHAIN_NO_VTABLE;
+    uint32_t fn_va = MEM32(vtable_va + slot_off);
+    if (!fn_va) return HLE_VCHAIN_NO_TARGET;
+    if (target_va) *target_va = fn_va;
+    return HLE_VCHAIN_OK;
+}
+
+const char *hle_guest_vcall_reason(int result) {
+    switch (result) {
+    case HLE_VCHAIN_OK:           return "valid guest virtual target";
+    case HLE_VCHAIN_NO_OBJECT:    return "NULL guest object";
+    case HLE_VCHAIN_NO_INTERFACE: return "NULL guest interface/subobject";
+    case HLE_VCHAIN_NO_VTABLE:    return "NULL guest vtable (object never constructed)";
+    case HLE_VCHAIN_NO_TARGET:    return "NULL virtual method slot";
+    default:                      return "unknown guest virtual-call defect";
+    }
+}
+
 static void error(const char *s) { snprintf(g_error, sizeof g_error, "%s", s ? s : "SDL error"); }
 static void put16(uint32_t p, uint16_t v) { MEM8(p) = (uint8_t)v; MEM8(p + 1) = (uint8_t)(v >> 8); }
 static uint16_t get16(uint32_t p) { return (uint16_t)(MEM8(p) | ((uint16_t)MEM8(p + 1) << 8)); }
