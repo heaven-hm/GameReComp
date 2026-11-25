@@ -73,6 +73,27 @@ pub fn sha256(data: &[u8]) -> String {
 }
 
 /// Strip launcher/Wine/GameReComp runtime chatter; keep only guest output.
+
+/// Replace environment-specific .exe paths with a stable placeholder.
+fn normalize_exe_paths(line: &str) -> String {
+    let mut s = line.to_string();
+    while let Some(i) = s.to_lowercase().find(".exe") {
+        let end = i + 4;
+        let mut start = i;
+        while start > 0 {
+            let c = s.as_bytes()[start - 1];
+            if c == b' ' || c == b'\t' || c == b'"' || c == b'=' || c == b':' { break; }
+            start -= 1;
+        }
+        // Include a Windows drive prefix (e.g. Z:\\) when present.
+        if start >= 2 && s.as_bytes()[start - 2] == b':' && (s.as_bytes()[start - 1] == b'\\' || s.as_bytes()[start - 1] == b'/') {
+            start -= 2;
+        }
+        s.replace_range(start..end, "<exe>");
+    }
+    s
+}
+
 pub fn normalize(text: &str) -> String {
     let prefixes = [
         "Launching ", "exit=", "Arguments: ", "msync:", "wine: failed to open", "[pe] ", "[host] ", "[module] ",
@@ -83,7 +104,7 @@ pub fn normalize(text: &str) -> String {
         if prefixes.iter().any(|p| line.starts_with(p)) || is_err_line(line) {
             continue;
         }
-        out.push(line);
+        out.push(normalize_exe_paths(line));
     }
     let mut s = out.join("\n");
     if !out.is_empty() {
