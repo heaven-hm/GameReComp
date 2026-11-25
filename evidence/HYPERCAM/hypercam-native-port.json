@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "title": "HyperCam 7 PE32 -> native macOS arm64",
+  "input": {
+    "path": "official CDN SolveigMM_HyperCam_7_0_2601_19.exe",
+    "bytes": 68941232,
+    "sha256": "892571b5292904e024048c394579b779fa8707095a15961ff6547300963ed7ee"
+  },
+  "native_binary": {
+    "sha256": "0f8aa93fed8608fee10317e338ac3b5f24cba10a58f3f996963466550a300e1c",
+    "bytes": 70529504
+  },
+  "build": "GameReComp autorecomp source generation (all stages ok) + cmake build exit 0",
+  "native_run_log": "[pe] bound 11 imports, 0 unresolved; [host] booted entry 0x004BF490; [module] GetProcAddress(GetShortPathNameA) not answered; [win32hle] ExitProcess(0)",
+  "frames": 0,
+  "verdict": "PARTIAL - clean build and boot, but the supplied PE32 is an installer stub that exits immediately without UI; no application frame"
+}
