@@ -1,0 +1,16 @@
+{
+ "schema": 1,
+ "game": "arith-calc.exe",
+ "original_path": "/Users/haseeb-mir/Downloads/recomp-apps/SIDE_BY_SIDE_EVIDENCE/windows/arith-calc.exe",
+ "original_sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+ "windows_runner": "Highball Games bottle, engine x64-crossover26.3-r27",
+ "windows_command": "highball run -b Games <original.exe>",
+ "windows_exit": 0,
+ "windows_guest_stdout_sha256": "b6674fd6da06bc9dd36a49a5697efdeb8af7bd354f00b9c6d77359533b572d8f",
+ "windows_guest_stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\n",
+ "native_command": "<rebuilt native binary> (from END_TO_END_PROOF/batch1/arith-calc)",
+ "native_guest_stdout_sha256": "b6674fd6da06bc9dd36a49a5697efdeb8af7bd354f00b9c6d77359533b572d8f",
+ "native_guest_stdout": "arith:start\nprimes<200=46\nfib(20)=6765\ngcd(1071,462)=21\npopcount(0xF0F0F0F0)=16\nrotl(0x12345678,8)=878082066\npoly=12512\nmul=-8369910\ndiv=-18\nmod=-141\narith:done\n",
+ "guest_output_byte_identical": true,
+ "claim": "process-level Windows-oracle MATCH for this console app only; not gameplay equivalence"
+}
