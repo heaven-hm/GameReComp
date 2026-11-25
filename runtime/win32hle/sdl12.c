@@ -107,7 +107,51 @@ static int g_gl_mode;
 void *hle_sdl12_window(void) { return g_window; }
 void *hle_sdl12_glcontext(void) { return g_glctx; }
 int   hle_sdl12_gl_active(void) { return g_glctx != NULL; }
-void  hle_sdl12_gl_swap(void) { if (g_glctx && g_window) SDL_GL_SwapWindow(g_window); }
+
+/* Read the presented OpenGL framebuffer into the same 24-bpp bottom-up-to-top
+ * RGB form every other frame source uses, then hand it to the common hook.
+ * glReadPixels returns bottom-up RGBA, so rows are reversed and alpha dropped.
+ * Pure conversion is split out so a selftest can verify it without a GPU.
+ * Nothing is allocated or read unless a frame recorder is actually installed. */
+void hle_sdl12_gl_rgba_to_rgb(const uint8_t *rgba, int w, int h, uint8_t *rgb) {
+    if (!rgba || !rgb || w <= 0 || h <= 0) return;
+    const int stride = w * 4;
+    for (int y = 0; y < h; y++) {
+        const uint8_t *src = rgba + (size_t)(h - 1 - y) * stride;
+        uint8_t *dst = rgb + (size_t)y * (w * 3);
+        for (int x = 0; x < w; x++) {
+            dst[x * 3]     = src[x * 4];
+            dst[x * 3 + 1] = src[x * 4 + 1];
+            dst[x * 3 + 2] = src[x * 4 + 2];
+        }
+    }
+}
+
+static void gl_capture_present(void) {
+    if (!hle_screen_frame_hook || !g_glctx || !g_window) return;
+    int w = 0, h = 0;
+    SDL_GL_GetDrawableSize(g_window, &w, &h);
+    if (w <= 0 || h <= 0 || w > 8192 || h > 8192) return;
+    void *p = SDL_GL_GetProcAddress("glReadPixels");
+    if (!p) return;
+    size_t rgba_n = (size_t)w * (size_t)h * 4u;
+    uint8_t *rgba = (uint8_t *)malloc(rgba_n);
+    uint8_t *rgb = (uint8_t *)malloc((size_t)w * (size_t)h * 3u);
+    if (!rgba || !rgb) { free(rgba); free(rgb); return; }
+    memset(rgba, 0, rgba_n);
+    ((void (*)(int, int, int, int, unsigned, unsigned, void *))p)(
+        0, 0, w, h, 0x1908u /*GL_RGBA*/, 0x1401u /*GL_UNSIGNED_BYTE*/, rgba);
+    hle_sdl12_gl_rgba_to_rgb(rgba, w, h, rgb);
+    hle_screen_frame_hook(rgb, w, h, w * 3, 24);
+    free(rgb);
+    free(rgba);
+}
+
+void hle_sdl12_gl_swap(void) {
+    if (!g_glctx || !g_window) return;
+    gl_capture_present();
+    SDL_GL_SwapWindow(g_window);
+}
 
 static void error(const char *s) { snprintf(g_error, sizeof g_error, "%s", s ? s : "SDL error"); }
 static void put16(uint32_t p, uint16_t v) { MEM8(p) = (uint8_t)v; MEM8(p + 1) = (uint8_t)(v >> 8); }
