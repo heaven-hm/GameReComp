@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "capability": "native-hash",
+  "capture_id": "arith-calc-highball-console",
+  "source": "tools.highball_oracle_capture (real Highball/Wine run)",
+  "measured": {
+    "native_sha256": null,
+    "reason": "No rebuilt native binary is available at a stable path for this PE"
+  },
+  "native": {
+    "sha256": null,
+    "status": "not available at a stable path; no matching original/native pair"
+  },
+  "note": "The real Highball console record records native_sha256: null. Without an expected native hash supplied on the CLI there is no matching native hash, so the native-hash capability is BLOCKED."
+}
