@@ -75,7 +75,7 @@ pub fn sha256(data: &[u8]) -> String {
 /// Strip launcher/Wine/GameReComp runtime chatter; keep only guest output.
 pub fn normalize(text: &str) -> String {
     let prefixes = [
-        "Launching ", "exit=", "Arguments: ", "msync:", "wine: failed to open", "[pe] ", "[host] ",
+        "Launching ", "exit=", "Arguments: ", "msync:", "wine: failed to open", "[pe] ", "[host] ", "[module] ",
         "[win32hle] ", "[screen] ", "[screenshot] ",
     ];
     let mut out = Vec::new();
