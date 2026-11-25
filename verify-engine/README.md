@@ -79,6 +79,24 @@ Highball is the primary original runner (no raw Wine invocation).
   by SIP/dyld (`PermissionDeniedError`, `NotSupportedError`) and is recorded
   verbatim.
 
+## Backbone hardening (fast, reliable, secure core)
+
+The engine is designed as a core part of GameReComp, not a one-off script:
+
+- **Bounded capture** — stdout/stderr go to unique temp files, not unbounded
+  pipes or in-memory buffers. Only the first/last 512 KiB are read into the
+  evidence JSON; a real 3 MiB-output regression test confirms this. This
+  removes both the memory-exhaustion path and the Wine-grandchild pipe hang.
+- **Untrusted input validation** — scenarios are checked before any process
+  starts: 1 MiB stdin cap, ≤64 args of ≤4 KiB, ≤32 env pairs, no NUL/newline
+  injection, timeout range 0.1–3600 s. Invalid scenarios become BLOCKED with a
+  reason; they never become PASS.
+- **Fail-closed by construction** — empty check sets, timeouts, missing oracles,
+  Unicorn original-faults and Frida dry-runs all resolve to BLOCKED. `pass`
+  requires every check to be true.
+- **Fast failure** — 10 ms polling on child exit; bounded file reads; no shell
+  interpolation (commands are argv arrays assembled from validated templates).
+
 ## Measured evidence
 
 - 8 standalone engine unit tests pass (38 with the main-crate suite): SHA-256 vectors, launcher normalization, identical /

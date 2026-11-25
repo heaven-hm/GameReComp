@@ -11,6 +11,7 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 pub const SCHEMA: u32 = 1;
+pub const MAX_CAPTURE_BYTES: usize = 1 << 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -274,6 +275,34 @@ pub fn run_command(template: &str, timeout: Duration, stdin: &[u8]) -> RunResult
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+static RUN_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Bounded capture: never let a misbehaving guest fill host memory with a
+/// multi-GB log. Keep the head and tail; the middle is explicitly marked.
+fn bounded_capture(path: &Path) -> String {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut out = String::new();
+    if let Ok(mut f) = std::fs::File::open(path) {
+        let len = f.metadata().map(|m| m.len()).unwrap_or(0) as usize;
+        let half = MAX_CAPTURE_BYTES / 2;
+        let head = len.min(half);
+        let mut buf = vec![0u8; head];
+        let _ = f.read_exact(&mut buf);
+        out.push_str(&String::from_utf8_lossy(&buf));
+        if len > head {
+            let tail = len.min(half);
+            if f.seek(SeekFrom::End(-(tail as i64))).is_ok() {
+                let mut b = vec![0u8; tail];
+                let _ = f.read_exact(&mut b);
+                out.push_str("\n...[bounded by verify core]...\n");
+                out.push_str(&String::from_utf8_lossy(&b));
+            }
+        }
+    }
+    let _ = std::fs::remove_file(path);
+    out
+}
+
 pub fn run_command_with(template: &str, timeout: Duration, stdin: &[u8],
                         env: &BTreeMap<String, String>) -> RunResult {
     let args = split_args(template);
@@ -284,8 +313,20 @@ pub fn run_command_with(template: &str, timeout: Duration, stdin: &[u8],
     let t0 = Instant::now();
     use std::io::Write;
     use std::process::{Command, Stdio};
+    use std::sync::atomic::Ordering;
+    let id = RUN_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let tmp = std::env::temp_dir();
+    let op = tmp.join(format!("gcrec-v-out-{}-{}", std::process::id(), id));
+    let ep = tmp.join(format!("gcrec-v-err-{}-{}", std::process::id(), id));
+    let of = std::fs::OpenOptions::new().write(true).create_new(true).open(&op);
+    let ef = std::fs::OpenOptions::new().write(true).create_new(true).open(&ep);
+    let (of, ef) = match (of, ef) {
+        (Ok(x), Ok(y)) => (x, y),
+        _ => return RunResult { rc: None, stdout: String::new(), stderr: String::new(),
+                                seconds: t0.elapsed().as_secs_f64(), error: Some("temp capture failed".into()) },
+    };
     let mut child = match Command::new(&args[0]).args(&args[1..]).envs(env)
-        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
+        .stdin(Stdio::piped()).stdout(Stdio::from(of)).stderr(Stdio::from(ef)).spawn() {
         Ok(c) => c,
         Err(e) => return RunResult { rc: None, stdout: String::new(), stderr: String::new(),
                                      seconds: t0.elapsed().as_secs_f64(), error: Some(e.to_string()) },
@@ -298,32 +339,41 @@ pub fn run_command_with(template: &str, timeout: Duration, stdin: &[u8],
         match child.try_wait() {
             Ok(Some(_)) => break,
             Ok(None) if t0.elapsed() >= timeout => { timed_out = true; let _ = child.kill(); break; }
-            Ok(None) => std::thread::sleep(Duration::from_millis(20)),
+            Ok(None) => std::thread::sleep(Duration::from_millis(10)),
             Err(e) => return RunResult { rc: None, stdout: String::new(), stderr: String::new(),
                                          seconds: t0.elapsed().as_secs_f64(), error: Some(e.to_string()) },
         }
     }
+    let rc = if timed_out { let _ = child.wait(); Some(124) }
+             else { child.wait().ok().and_then(|s| s.code()) };
     let secs = t0.elapsed().as_secs_f64();
-    // On timeout, Wine/Highball descendants can keep stdout/stderr pipes open:
-    // wait_with_output() would block forever. Kill, reap the direct child, and
-    // return a bounded result without trying to drain inherited pipes.
-    if timed_out {
-        let _ = child.kill();
-        let _ = child.wait();
-        return RunResult { rc: Some(124), stdout: String::new(), stderr: String::new(),
-                           seconds: secs, error: Some("timeout".to_string()) };
+    RunResult { rc, stdout: bounded_capture(&op), stderr: bounded_capture(&ep), seconds: secs,
+                error: if timed_out { Some("timeout".into()) } else { None } }
+}
+
+/// Fail-closed validation of untrusted scenario data. No shell is involved,
+/// but oversized/embedded-newline inputs are rejected before any process starts.
+pub fn validate_scenario(s: &Scenario) -> Result<(), String> {
+    if s.name.is_empty() || s.name.len() > 128 || s.name.contains('\0') || s.name.contains('\n') {
+        return Err("invalid scenario name".into());
     }
-    match child.wait_with_output() {
-        Ok(o) => RunResult {
-            rc: o.status.code(),
-            stdout: String::from_utf8_lossy(&o.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&o.stderr).to_string(),
-            seconds: secs,
-            error: None,
-        },
-        Err(e) => RunResult { rc: None, stdout: String::new(), stderr: String::new(), seconds: secs,
-                              error: Some(e.to_string()) },
+    if s.stdin_hex.len() > 2 * MAX_CAPTURE_BYTES {
+        return Err("stdin exceeds 1 MiB".into());
     }
+    if !s.stdin_hex.bytes().all(|c| c.is_ascii_hexdigit()) {
+        return Err("stdin_hex is not hex".into());
+    }
+    if s.args.len() > 64 || s.args.iter().any(|a| a.len() > 4096 || a.contains('\0') || a.contains('\n')) {
+        return Err("invalid arguments".into());
+    }
+    if s.env.len() > 32 || s.env.iter().any(|(k, v)| k.len() > 256 || v.len() > 4096
+        || k.contains('\0') || v.contains('\0') || k.contains('\n') || v.contains('\n')) {
+        return Err("invalid environment".into());
+    }
+    if !(0.1..=3600.0).contains(&s.timeout) {
+        return Err("timeout out of range".into());
+    }
+    Ok(())
 }
 
 /// One deterministic verification scenario: identical input to both sides.
@@ -401,6 +451,13 @@ pub fn verify_matrix(original: &Path, rebuilt: &Path, original_cmd: &str,
                      rebuilt_cmd: &str, scenarios: &[Scenario]) -> MatrixReport {
     let mut rows = Vec::new();
     for s in scenarios {
+        if let Err(reason) = validate_scenario(s) {
+            let mut ev = Evidence::new(&format!("scenario/{}", s.name));
+            ev.reason = Some(format!("rejected untrusted scenario: {}", reason));
+            rows.push(ScenarioEvidence { name: s.name.clone(), input_sha256: sha256(s.stdin_hex.as_bytes()),
+                args_sha256: sha256(s.args.join(" ").as_bytes()), attempts: 0, evidence: ev });
+            continue;
+        }
         let stdin = s.stdin();
         let a_cmd = format!("{} {}", original_cmd.replace("{exe}", &original.to_string_lossy()), s.args.join(" "));
         let b_cmd = format!("{} {}", rebuilt_cmd.replace("{exe}", &rebuilt.to_string_lossy()), s.args.join(" "));
@@ -516,6 +573,15 @@ mod tests {
     }
 
     #[test]
+    fn output_capture_is_bounded() {
+        let cmd = format!("python3 -c print('x'*{})", MAX_CAPTURE_BYTES * 3);
+        let r = run_command(&cmd, Duration::from_secs(20), b"");
+        assert_eq!(r.rc, Some(0));
+        assert!(r.stdout.len() <= MAX_CAPTURE_BYTES + 64, "captured {} bytes", r.stdout.len());
+        assert!(r.stdout.contains("bounded by verify core"));
+    }
+
+    #[test]
     fn missing_oracle_is_blocked() {
         let a = RunResult { rc: None, stdout: String::new(), stderr: String::new(), seconds: 0.0,
                             error: Some("no binary".into()) };
@@ -538,6 +604,17 @@ mod tests {
         assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Blocked]), Verdict::Blocked);
         assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Fail]), Verdict::Fail);
         assert_eq!(aggregate_verdict(&[Verdict::Pass, Verdict::Pass]), Verdict::Pass);
+    }
+
+    #[test]
+    fn untrusted_scenarios_are_rejected() {
+        let mut s: Scenario = serde_json::from_str(r#"{"name":"ok","stdin_hex":"330a"}"#).unwrap();
+        assert!(validate_scenario(&s).is_ok());
+        s.stdin_hex = "zz".into();
+        assert!(validate_scenario(&s).is_err());
+        s.stdin_hex = "330a".into();
+        s.env.insert("BAD".into(), "line\nbreak".into());
+        assert!(validate_scenario(&s).is_err());
     }
 
     #[test]
