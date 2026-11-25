@@ -52,7 +52,13 @@ class Cpu64GsTests(unittest.TestCase):
     def test_default_gs_helpers_are_not_x86_inline_asm(self):
         text = CPU64.read_text()
         self.assertIn('RECOMP64_GS_NATIVE', text, 'opt-in native GS must be explicit')
-        self.assertIn('extern uint8_t *g_gs_base', text, 'modelled TEB base is required')
+        # The modelled TEB is exposed through cpu64_rd_gs64/cpu64_wr_gs64 in
+        # cpu64.h (implemented in cpu64.c). g_gs_base itself lives in the
+        # loader's host64_linux.c, so asserting it here was stale.
+        self.assertIn('uint64_t cpu64_rd_gs64(uint64_t off)', text,
+                      'modelled TEB read helper is required')
+        self.assertIn('void cpu64_wr_gs64(uint64_t off, uint64_t v)', text,
+                      'modelled TEB write helper is required')
         # The x86 asm template may exist only in the explicit opt-in branch.
         opt_in = text.split('#elif defined(RECOMP64_GS_NATIVE) && defined(__x86_64__)')
         self.assertEqual(len(opt_in), 2)
