@@ -36,33 +36,62 @@ The goal is to build a general-purpose toolchain that enables developers and res
 
 ## Priority titles — games and apps (honest status)
 
-These are the largest/most requested targets. Every row records the exact input
-hash and the strongest evidence we actually have. A native screenshot is proof
-only that the rebuilt process rendered a frame; it is **not** gameplay
-equivalence. See [game screenshots](docs/GAME_SCREENSHOTS.md) for all captured
-frames with dimensions, colour counts and SHA-256.
+One item per title. Each records the input hash, what was actually executed, the
+native port state, and the screenshot evidence we really have. A native frame
+proves rendering only; it is not gameplay equivalence. All captured frames with
+dimensions, colour counts and SHA-256 are in [game screenshots](docs/GAME_SCREENSHOTS.md).
 
-| Title | Input (SHA-256 prefix) | Windows original under Highball | Native port | Screenshot evidence | Verdict |
-|---|---|---|---|---|---|
-| **Project I.G.I.** | `igi.exe` `dea34892d417` | Boots to Vulkan, stays alive (exit 124 at 35 s), Wine D3D errors | Texture abort FIXED; fresh native rebuild (37 MB, 0 unresolved imports) boots to DDraw7/D3D7; no Mission 1 oracle | [historic native splash](docs/screenshots/igi-window-level5-splash.png) (640×480, 6,814 colours); 3 fresh 2026-11-25 frames are 1-colour blank (FAIL) | PARTIAL / frames FAIL |
-| **TrackMania Nations Forever** | `TmForever.exe` `5e287e79a07c` | Boots to Vulkan under Highball (exit 124 at 35 s; local log) | `TmForever.map` validated, 118,469 symbols; no native build, no D3D9 backend | none captured (no original frame available) | BLOCKED |
-| **AssaultCube** | `ac_client.exe` `5b588e6ff7710` | exit 53: `OpenAL32.dll not found`, `status c0000135` | Recompile retry had no binary (2 h recover timeout) | none captured | BLOCKED |
-| **IDM Downloader** | `idman643build18.exe` `7346128fab42` | PE32 i386 installer: Highball **exit 0** after 14 s (installer completed) | native macOS build already recorded: 605 fns, 104 imports, exit 0 (PARTIAL, no scenario oracle) — see [game matrix](docs/GAME_MATRIX.md) | none captured | PARTIAL |
-| **Winamp** | official Nullsoft `winamp_latest_full.exe` `d064eefc27c7` (13 MB, PE32 i386) | installer stayed alive under Highball (exit 124 at 25 s, no window captured) | not attempted | none captured | ORIGINAL ONLY (freeware installer; do not redistribute) |
-| **Ghostty (macOS → Windows)** | `/Applications/Ghostty.app` Mach-O `4b30ac9b049c` | n/a (macOS source app) | source-level Windows target not implemented | none captured | BLOCKED |
+### Project I.G.I. — `igi.exe` (`dea34892d417`)
 
-Issues that track these blockers: [#15](https://github.com/heaven-hm/GameReComp/issues/15)
-(IGI Mission 1 oracle), [#22](https://github.com/heaven-hm/GameReComp/issues/22) /
-[#23](https://github.com/heaven-hm/GameReComp/issues/23) (TrackMania build identity,
-D3D9, deterministic race), [#26](https://github.com/heaven-hm/GameReComp/issues/26)
-(build scale). No issue is closed without its 100% acceptance evidence.
+- Original under Highball: boots to Vulkan, stays alive (exit 124 at 35 s), Wine D3D errors.
+- macOS: native arm64 rebuild (37 MB, 0 unresolved imports) boots to DDraw7/D3D7. Three fresh frames were captured but are 1-colour blank — recorded as FAIL, not proof.
+- Linux: native aarch64 ELF (34 MB, SHA `e9c377c9…`, build 0) runs to the game's own "IGI CD not found" check — proof in [PR #259](https://github.com/heaven-hm/GameReComp/pull/259).
+- Screenshot: [historic native splash](docs/screenshots/igi-window-level5-splash.png) — 640×480, 6,814 colours; a real frame, not Mission 1 gameplay.
+- Verdict: **PARTIAL**. 100% requires an original-Windows Mission 1 input/frame/audio oracle and the proprietary assets (#15).
 
-Byte-identical stdout for one scripted console scenario is committed for
-`arith-calc` in [proof/e2e-133](proof/e2e-133/README.md); `base64` has a second
-scripted-stdin match in the same folder (PARTIAL, not general equivalence).
-Proofs for `busybox` (macOS) and `fifteensolver` (macOS and Linux) are proposed
-in PR #256 with exact commands/hashes/raw captures; they are not yet merged.
-See `docs/DIFFERENTIAL_ENGINE.md` for the engine and its honest limits.
+### TrackMania — `TmNationsESWC.exe` / `TmForever.exe`
+
+- Originals under Highball: boot to Vulkan and stay alive (exit 124); no game window surfaces, so no original frame can be captured.
+- `TmForever.map` validated against the PE (118,469 symbols recovered from the existing importer).
+- ESWC source generation now succeeds on clean `develop`: 1.1 GB C tree, all pipeline stages OK; macOS native build is in progress, Linux build hit the 1-hour limit (issue #26). Forever source recovery exceeded 2 h.
+- Screenshot: none — the earlier desktop capture was unrelated browser content and was removed; absence of a window is recorded in logs only.
+- Verdict: **BLOCKED** (#22, #23, #26): build identity/protection gate, D3D9 backend, offline race oracle.
+
+### AssaultCube — `ac_client.exe` (`5b588e6ff7710`)
+
+- Original under Highball: exit 53, `OpenAL32.dll not found`, `status c0000135`.
+- Native port: earlier retry had no binary (recovery exceeded 2 h); a fresh source generation from clean `develop` is running.
+- Screenshot: none captured.
+- Verdict: **BLOCKED** until the recompile produces a binary and a scenario oracle exists.
+
+### IDM Downloader — `idman643build18.exe` (`7346128fab42`)
+
+- Original under Highball: PE32 i386 installer, exit 0 after 14 s.
+- Native port: macOS arm64 build already recorded in [game matrix](docs/GAME_MATRIX.md) — 605 functions, 104 imports, exit 0, no scenario oracle.
+- Screenshot: none captured.
+- Verdict: **PARTIAL**.
+
+### Winamp — official Nullsoft installer (`d064eefc27c7`, 13 MB PE32 i386)
+
+- Original under Highball: installer stayed alive (exit 124 at 25 s); no window captured.
+- Native port: not attempted. Freeware installer — do not redistribute the binary.
+- Screenshot: none captured.
+- Verdict: **ORIGINAL ONLY**.
+
+### Ghostty (macOS → Windows) — Mach-O app (`4b30ac9b049c`)
+
+- Source cloned from `ghostty-org/ghostty`; no Windows target is implemented in its build files, and the local Zig toolchain is broken (missing `libz3` dylib).
+- Screenshot: none captured.
+- Verdict: **BLOCKED** — no source-level Windows build path available here.
+
+Issues tracking these blockers: [#15](https://github.com/heaven-hm/GameReComp/issues/15),
+[#22](https://github.com/heaven-hm/GameReComp/issues/22),
+[#23](https://github.com/heaven-hm/GameReComp/issues/23),
+[#26](https://github.com/heaven-hm/GameReComp/issues/26). No issue is closed without
+100% acceptance evidence. Byte-identical stdout for one scripted console scenario
+is committed for `arith-calc` in [proof/e2e-133](proof/e2e-133/README.md); proofs
+for `busybox` and `fifteensolver` are in `proof/legacy-software/`. See
+[the differential engine](docs/DIFFERENTIAL_ENGINE.md) for the honest limits.
 
 ## Development Roadmap
 
