@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "kind": "matrix",
+  "aggregate": "pass",
+  "scenarios": [
+    {
+      "name": "echo-hello",
+      "input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "args_sha256": "584a331fd6b02dcb1ecbe2eba731f609a2e1e3dac0bb73ae998dfad14c309a77",
+      "attempts": 1,
+      "evidence": {
+        "schema": 1,
+        "kind": "scenario/echo-hello",
+        "verdict": "pass",
+        "checks": {
+          "exit_code": true,
+          "stdout_exact": true
+        },
+        "failed_checks": [],
+        "stdout_sha256": {
+          "original": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03",
+          "rebuilt": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+        },
+        "limits": "Per-scenario input bytes are identical on both sides; no scope beyond that scenario"
+      }
+    }
+  ],
+  "adapters": [],
+  "coverage": {
+    "blocked": 0,
+    "failed": 0,
+    "passed": 1,
+    "scenarios": 1
+  },
+  "limits": "Multi-input process parity; adapters add Unicorn/Frida evidence where available"
+}
