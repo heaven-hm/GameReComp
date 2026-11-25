@@ -398,6 +398,27 @@ void *hle_sdl12_window(void);
 void *hle_sdl12_glcontext(void);
 int   hle_sdl12_gl_active(void);
 void  hle_sdl12_gl_swap(void);
+
+/* Guest virtual-call chain validation (issue #27).
+ *
+ * A DMD/COM-style call `call [vtbl + slot]` is really four guest words:
+ * object, [object + interface_off], [interface] (the vtable) and the slot.
+ * A missing guest-ABI fix must be named at the *first* missing word instead
+ * of logging a generic "null target" and leaving registers stale.  The
+ * helper below is fail-closed: it never dereferences a null word and never
+ * invents a target, so a diagnostic or selftest can distinguish a missing
+ * interface from a missing vtable or method. */
+enum hle_vchain_result {
+    HLE_VCHAIN_OK = 0,
+    HLE_VCHAIN_NO_OBJECT = 1,
+    HLE_VCHAIN_NO_INTERFACE = 2,
+    HLE_VCHAIN_NO_VTABLE = 3,
+    HLE_VCHAIN_NO_TARGET = 4
+};
+int         hle_guest_vcall_target(uint32_t object_va, uint32_t interface_off,
+                                   uint32_t slot_off, uint32_t *target_va);
+const char *hle_guest_vcall_reason(int result);
+
 /* The primary surface, for a presenter: 0 until there is one. seq changes
  * when its pixels or palette may have. */
 int  hle_dd_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bpp, const uint32_t **palette, unsigned *seq);
