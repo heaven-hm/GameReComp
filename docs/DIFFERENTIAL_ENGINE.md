@@ -97,3 +97,46 @@ A process PASS is a **100% process-level** statement for the supplied args and
 stdin. It is not gameplay parity, frame timing, audio, or a whole-game oracle.
 GUI games need a deterministic input/frame/audio harness (#145–#147) before any
 game-level PASS; until then their honest status is PARTIAL or BLOCKED.
+
+---
+
+# Rust verification backend (canonical implementation)
+
+## Advanced matrix engine (multi-input, Unicorn + Frida adapters)
+
+`game-recomp-verify matrix ORIGINAL REBUILT scenarios.json` runs a **scenario
+matrix**: each scenario carries distinct hex-encoded stdin, argv, environment,
+timeout and bounded retries. For every scenario the engine hashes the exact
+input bytes, runs both sides with identical input, retries the original on the
+known Highball flaky-startup (empty output / non-zero rc), and compares exit
+code plus normalized stdout/stderr. Aggregation is fail-closed: any FAIL wins;
+otherwise any BLOCKED wins; PASS only if every scenario and adapter passed.
+
+Adapters (`--adapters unicorn,frida`):
+- **Unicorn** reads a `tools/lift/difftest.py --json` report and classifies each
+  function verdict: agree / oracle-faulted / disagree. Oracle faults are BLOCKED,
+  never PASS (the original's bytes could not be driven).
+- **Frida** runs a supplied probe command and preserves the exact error text;
+  `--dry-run` is explicitly BLOCKED ("no live attach evidence"). No synthetic
+  traces are produced. On this macOS host live Frida is blocked by SIP/dyld
+  (`PermissionDeniedError` / `NotSupportedError`) — recorded verbatim.
+
+Measured on `arith-calc.exe` (Windows Highball vs Linux ELF):
+4 scenarios (empty / menu-1 / menu-2 / quit) → **4 PASS**, identical stdout SHA
+`b6674fd6…`; with Unicorn (1 oracle-fault) and Frida (dry-run) adapters the
+aggregate is **BLOCKED** — the advanced engine refuses to call a partial oracle
+a success.
+
+## Backbone role and hardening
+
+This engine is a core GameReComp module (`game_recomp::verify`), also shipped
+as a standalone crate in `verify-engine/`. Output capture is bounded to 512 KiB
+head + tail via temp files (no multi-GB logs, no Wine pipe hangs), scenarios are
+validated before execution (1 MiB stdin, capped args/env, no NUL/newline), and
+all missing-evidence paths resolve to `blocked`. 40 core tests / 10 standalone
+tests pass, including a real oversized-output regression.
+
+Same as the Python engine: process-level parity only. A `pass` for a console
+scenario does not prove GUI gameplay, audio, frame timing, or whole-game
+equivalence. Game-target closure still requires an original-Windows scenario
+oracle (#145–#147).
