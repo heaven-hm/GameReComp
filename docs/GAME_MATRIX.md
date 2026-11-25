@@ -213,34 +213,65 @@ Status text is quoted from each project's own README; the architecture and OS co
 
 ---
 
-## Captured frames
+## Captured frames (all committed images, hashed as shipped)
+
+24 unique images after removing byte-identical duplicates. A 1-colour frame is FAIL.
 
 <table>
-<tr><td align="center"><img src="screenshots/cube-native-frame-0000.png" alt="Cube (new native rebuild)" width="240"><br><sub>Cube (new native rebuild)</sub></td><td align="center">240×263<br>4 colours<br><code>4612755ca7d1</code></td></tr>
-<tr><td align="center"><img src="screenshots/cube-native-frame-0001.png" alt="Cube (new native rebuild)" width="240"><br><sub>Cube (new native rebuild)</sub></td><td align="center">240×263<br>4 colours<br><code>90b3fa0e8fa4</code></td></tr>
-<tr><td align="center"><img src="screenshots/cube-native-frame-0002.png" alt="Cube (new native rebuild)" width="240"><br><sub>Cube (new native rebuild)</sub></td><td align="center">240×263<br>4 colours<br><code>90b3fa0e8fa4</code></td></tr>
-<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0001.png" alt="Cave Story (one-by-one sweep)" width="240"><br><sub>Cave Story (one-by-one sweep)</sub></td><td align="center">640×480<br>5 colours<br><code>c921689ead26</code></td></tr>
-<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0000-blank.png" alt="Cave Story blank control" width="240"><br><sub>Cave Story blank control</sub></td><td align="center">640×480<br>1 colours<br><code>9347fe86f6b4</code></td></tr>
-<tr><td align="center"><img src="screenshots/ikachan-blank-frame.png" alt="Ikachan (blank FAIL example)" width="240"><br><sub>Ikachan (blank FAIL example)</sub></td><td align="center">351×238<br>1 colours<br><code>bbe32c0f170a</code></td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-01-intro.png" alt="Cave Story (earlier native build)" width="240"><br><sub>Cave Story (earlier native build)</sub></td><td align="center">640×480<br>47 colours<br><code>2bb1b42e7cd6</code></td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-02-intro.png" alt="Cave Story (earlier native build)" width="240"><br><sub>Cave Story (earlier native build)</sub></td><td align="center">640×480<br>46 colours<br><code>503559ab2e1b</code></td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-03-screen.png" alt="Cave Story (earlier native build)" width="240"><br><sub>Cave Story (earlier native build)</sub></td><td align="center">640×480<br>16 colours<br><code>8c9a36bf692b</code></td></tr>
+<tr><td align="center"><img src="screenshots/cavestory-doukutsu-01-intro.png" alt="cavestory-doukutsu-01-intro.png" width="160"><br><sub>cavestory-doukutsu-01-intro.png</sub></td><td>640×480<br>47 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cavestory-doukutsu-02-intro.png" alt="cavestory-doukutsu-02-intro.png" width="160"><br><sub>cavestory-doukutsu-02-intro.png</sub></td><td>640×480<br>46 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cavestory-doukutsu-03-screen.png" alt="cavestory-doukutsu-03-screen.png" width="160"><br><sub>cavestory-doukutsu-03-screen.png</sub></td><td>640×480<br>16 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cube-native-frame-0000.png" alt="cube-native-frame-0000.png" width="160"><br><sub>cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cube-native-frame-0001.png" alt="cube-native-frame-0001.png" width="160"><br><sub>cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0000-blank.png" alt="doukutsu-sweep-frame-0000-blank.png" width="160"><br><sub>doukutsu-sweep-frame-0000-blank.png</sub></td><td>640×480<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0001.png" alt="doukutsu-sweep-frame-0001.png" width="160"><br><sub>doukutsu-sweep-frame-0001.png</sub></td><td>640×480<br>5 colours</td></tr>
+<tr><td align="center"><img src="screenshots/frame-0000-frame-0000.bmp" alt="frame-0000-frame-0000.bmp" width="160"><br><sub>frame-0000-frame-0000.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/game-recomp-cli-help.png" alt="game-recomp-cli-help.png" width="160"><br><sub>game-recomp-cli-help.png</sub></td><td>1945×1880<br>5546 colours</td></tr>
+<tr><td align="center"><img src="screenshots/game-recomp-gui-dark.png" alt="game-recomp-gui-dark.png" width="160"><br><sub>game-recomp-gui-dark.png</sub></td><td>2760×1816<br>5368 colours</td></tr>
+<tr><td align="center"><img src="screenshots/game-recomp-gui-light.png" alt="game-recomp-gui-light.png" width="160"><br><sub>game-recomp-gui-light.png</sub></td><td>2760×1816<br>6396 colours</td></tr>
+<tr><td align="center"><img src="screenshots/game-recomp-gui-nord-frost.png" alt="game-recomp-gui-nord-frost.png" width="160"><br><sub>game-recomp-gui-nord-frost.png</sub></td><td>2760×1816<br>6175 colours</td></tr>
+<tr><td align="center"><img src="screenshots/igi-window-level5-splash.png" alt="igi-window-level5-splash.png" width="160"><br><sub>igi-window-level5-splash.png</sub></td><td>640×480<br>6814 colours</td></tr>
+<tr><td align="center"><img src="screenshots/ikachan-blank-frame.png" alt="ikachan-blank-frame.png" width="160"><br><sub>ikachan-blank-frame.png</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/macos-ikachan-blank.bmp" alt="macos-ikachan-blank.bmp" width="160"><br><sub>macos-ikachan-blank.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0000.bmp" alt="screenshots-000-Doukutsu-frame-0000.bmp" width="160"><br><sub>screenshots-000-Doukutsu-frame-0000.bmp</sub></td><td>640×480<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0001.bmp" alt="screenshots-000-Doukutsu-frame-0001.bmp" width="160"><br><sub>screenshots-000-Doukutsu-frame-0001.bmp</sub></td><td>640×480<br>5 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0000.png" alt="screenshots-cube-native-frame-0000.png" width="160"><br><sub>screenshots-cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.bmp" alt="screenshots-cube-native-frame-0001.bmp" width="160"><br><sub>screenshots-cube-native-frame-0001.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.png" alt="screenshots-cube-native-frame-0001.png" width="160"><br><sub>screenshots-cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>580×456<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>580×456<br>2 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-ikachan-native-frame-0000.png" alt="screenshots-ikachan-native-frame-0000.png" width="160"><br><sub>screenshots-ikachan-native-frame-0000.png</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-tm-forever-original-desktop-no-window.png" alt="screenshots-tm-forever-original-desktop-no-window.png" width="160"><br><sub>screenshots-tm-forever-original-desktop-no-window.png</sub></td><td>3360×2100<br>3257 colours</td></tr>
 </table>
 
-## Frame inventory (all captured screenshots)
+## Frame inventory
 
-| File | Game / source | Size | Distinct RGB colours | SHA-256 | Verdict |
-|---|---|---|---|---|---|
-| `cube-native-frame-0000.png` | Cube (new native rebuild) | 240×263 | 4 | `4612755ca7d157200990c452459471be497591c51f56938ef54885f4db0963fa` | PARTIAL — real non-blank native render |
-| `cube-native-frame-0001.png` | Cube (new native rebuild) | 240×263 | 4 | `90b3fa0e8fa4159a38a5f251d9ca6e9a3c619cd61a322d0e8beb3e9335e245ef` | PARTIAL — real non-blank native render |
-| `cube-native-frame-0002.png` | Cube (new native rebuild) | 240×263 | 4 | `90b3fa0e8fa4159a38a5f251d9ca6e9a3c619cd61a322d0e8beb3e9335e245ef` | PARTIAL — real non-blank native render |
-| `doukutsu-sweep-frame-0001.png` | Cave Story (one-by-one sweep) | 640×480 | 5 | `c921689ead26aa8966b9a88cc5fce73e7946bb3d73efa74bc40b764c5cd951cc` | PARTIAL — real non-blank native render |
-| `doukutsu-sweep-frame-0000-blank.png` | Cave Story blank control | 640×480 | 1 | `9347fe86f6b448518e30d671057b4ece3e7f2cf3906488168f63736a4c990bc0` | FAIL — blank, never counted as evidence |
-| `ikachan-blank-frame.png` | Ikachan (blank FAIL example) | 351×238 | 1 | `bbe32c0f170a633dda300f55f1c914041c6b1fcb0a58b9725eeab734ca582f39` | FAIL — blank, never counted as evidence |
-| `cavestory-doukutsu-01-intro.png` | Cave Story (earlier native build) | 640×480 | 47 | `2bb1b42e7cd652851b5fd909eee365fb4a6d0c2db39c5e4d9f60c5e66f277204` | PARTIAL — real non-blank native render |
-| `cavestory-doukutsu-02-intro.png` | Cave Story (earlier native build) | 640×480 | 46 | `503559ab2e1b95963dacbe03b6533012e3ed852a18a339925a058ccfb1d59ba0` | PARTIAL — real non-blank native render |
-| `cavestory-doukutsu-03-screen.png` | Cave Story (earlier native build) | 640×480 | 16 | `8c9a36bf692ba0cd4fc20fc7802b2c4eeccb9464625d82dce01e236cc48d86d0` | PARTIAL — real non-blank native render |
-| `igi-window-level5-splash.png` | Project I.G.I. (native splash) | 640×480 | 6814 | `02500b672883205a89c27388c8505cfb6efb6cd5824eccf5e5da3bcac04fde01` | PARTIAL — real non-blank native render |
+| File | Size | Distinct RGB colours | SHA-256 of committed file | Verdict |
+|---|---|---|---|---|
+| `cavestory-doukutsu-01-intro.png` | 640×480 | 47 | `2bb1b42e7cd652851b5fd909eee365fb4a6d0c2db39c5e4d9f60c5e66f277204` | PARTIAL — real non-blank native render |
+| `cavestory-doukutsu-02-intro.png` | 640×480 | 46 | `503559ab2e1b95963dacbe03b6533012e3ed852a18a339925a058ccfb1d59ba0` | PARTIAL — real non-blank native render |
+| `cavestory-doukutsu-03-screen.png` | 640×480 | 16 | `8c9a36bf692ba0cd4fc20fc7802b2c4eeccb9464625d82dce01e236cc48d86d0` | PARTIAL — real non-blank native render |
+| `cube-native-frame-0000.png` | 240×263 | 4 | `4612755ca7d157200990c452459471be497591c51f56938ef54885f4db0963fa` | PARTIAL — real non-blank native render |
+| `cube-native-frame-0001.png` | 240×263 | 4 | `90b3fa0e8fa4159a38a5f251d9ca6e9a3c619cd61a322d0e8beb3e9335e245ef` | PARTIAL — real non-blank native render |
+| `doukutsu-sweep-frame-0000-blank.png` | 640×480 | 1 | `9347fe86f6b448518e30d671057b4ece3e7f2cf3906488168f63736a4c990bc0` | FAIL — blank, never counted as evidence |
+| `doukutsu-sweep-frame-0001.png` | 640×480 | 5 | `c921689ead26aa8966b9a88cc5fce73e7946bb3d73efa74bc40b764c5cd951cc` | PARTIAL — real non-blank native render |
+| `frame-0000-frame-0000.bmp` | 240×263 | 4 | `178b877da9efb47443124586f83ab98ddd1b24cf6948c9d1bd290584822bcee8` | PARTIAL — real non-blank native render |
+| `game-recomp-cli-help.png` | 1945×1880 | 5546 | `e168a7cf9b58448504b60e154732817551e4e5769557e07d66371e2f04b12cc1` | PARTIAL — real non-blank native render |
+| `game-recomp-gui-dark.png` | 2760×1816 | 5368 | `f205594aceb27a84608e6e68ca5bb2578bd54cab4faa245b5e833708f07dfd12` | PARTIAL — real non-blank native render |
+| `game-recomp-gui-light.png` | 2760×1816 | 6396 | `dc30097e919b03d52fcca57923380134d5ed6aa89aff6afd5f8a9abcd138478a` | PARTIAL — real non-blank native render |
+| `game-recomp-gui-nord-frost.png` | 2760×1816 | 6175 | `5a6f160d9c587fd3a8bb16e2544fb6c8e46acc14b44059afb588b83519f55e72` | PARTIAL — real non-blank native render |
+| `igi-window-level5-splash.png` | 640×480 | 6814 | `02500b672883205a89c27388c8505cfb6efb6cd5824eccf5e5da3bcac04fde01` | PARTIAL — real non-blank native render |
+| `ikachan-blank-frame.png` | 351×238 | 1 | `bbe32c0f170a633dda300f55f1c914041c6b1fcb0a58b9725eeab734ca582f39` | FAIL — blank, never counted as evidence |
+| `macos-ikachan-blank.bmp` | 351×238 | 1 | `49cf95b7411cb08e3026a9dcc05fcfa5d8988f7da4cdfba73fff9cfd45ab757c` | FAIL — blank, never counted as evidence |
+| `screenshots-000-Doukutsu-frame-0000.bmp` | 640×480 | 1 | `756292a16d18a3f5cf9e98b00422f3024b5ecde7b19f3388db4f365ac641a6b6` | FAIL — blank, never counted as evidence |
+| `screenshots-000-Doukutsu-frame-0001.bmp` | 640×480 | 5 | `2da261e8053037a722dfffea2f726ddc712a974bdce909de63fc4daff2bf7c3b` | PARTIAL — real non-blank native render |
+| `screenshots-cube-native-frame-0000.png` | 240×263 | 4 | `9d9354563483299a037f5d2b05d0f27e4f7b08c6b54c2c2abda6c88ba9b574d6` | PARTIAL — real non-blank native render |
+| `screenshots-cube-native-frame-0001.bmp` | 240×263 | 4 | `3d1d1f381c350b77b24eb743047e833d1fda9197bcdf56f9e5a3081b36b5e968` | PARTIAL — real non-blank native render |
+| `screenshots-cube-native-frame-0001.png` | 240×263 | 4 | `6ee0fb77087fee263d49efae690a2b26eb0e69af5201e91462640fc10457c8e5` | PARTIAL — real non-blank native render |
+| `screenshots-frame-0000.bmp` | 580×456 | 1 | `1b2cab9f8c1d1ac541bc03551fa1f0aed380c440566c32bc579f0b65c38b3d28` | FAIL — blank, never counted as evidence |
+| `screenshots-frame-0001.bmp` | 580×456 | 2 | `11116c2709934dac8a2ae03b758922e1c46c840012fffda777c26e6ef17c8843` | PARTIAL — real non-blank native render |
+| `screenshots-ikachan-native-frame-0000.png` | 351×238 | 1 | `967db05021e1d219c3ad2e5ff91deab9e3a5499983820115f856a224b8392581` | FAIL — blank, never counted as evidence |
+| `screenshots-tm-forever-original-desktop-no-window.png` | 3360×2100 | 3257 | `8fb8df33a567d0509cf33276aefec98ee189f6ca005328720a9350c972e00847` | PARTIAL — real non-blank native render |
 
 ## Tested games without captured frames
 
