@@ -8,7 +8,7 @@ Every game this product knows about, in one table: the locally supplied corpus t
 
 **Port details** are read from each project's own `reports/report.json`: functions recovered, generated C, the rebuilt binary, imports the runtime bound, and the low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed high-level source. A row whose `evidence` points into the git-ignored `projects/` tree is shown as NOT RUN, because it has no committed proof.
 
-Updated 2026-11-24T08:01:57Z by `python -m tools.gamesdb --matrix`.
+Updated 2026-11-25T23:30:00Z by `python -m tools.gamesdb --matrix`; IGI fresh-frame rows added by hand with shipped-byte hashes.
 
 **Evidence-backed results:** **9 / 128** recorded rows point at a committed proof file; **9** of those carry a PASS/PARTIAL verdict (**1** explicitly report `0` unresolved imports). Other rows are NOT RUN / FAIL here even when a local build log exists outside version control.
 
@@ -215,9 +215,11 @@ Status text is quoted from each project's own README; the architecture and OS co
 
 ## Captured frames (all committed images, hashed as shipped)
 
-24 unique images after removing byte-identical duplicates. A 1-colour frame is FAIL.
+26 unique images after removing byte-identical duplicates. A 1-colour frame is FAIL.
 
 <table>
+<tr><td align="center"><img src="../proof/screenshots/igi-level1-fresh-0002.png" alt="igi-level1-fresh-0002.png" width="160"><br><sub>igi-level1-fresh-0002.png</sub></td><td>640×480<br>6,814 colours</td></tr>
+<tr><td align="center"><img src="../proof/screenshots/igi-level5-fresh-0001.png" alt="igi-level5-fresh-0001.png" width="160"><br><sub>igi-level5-fresh-0001.png</sub></td><td>640×480<br>6,814 colours</td></tr>
 <tr><td align="center"><img src="screenshots/cavestory-doukutsu-01-intro.png" alt="cavestory-doukutsu-01-intro.png" width="160"><br><sub>cavestory-doukutsu-01-intro.png</sub></td><td>640×480<br>47 colours</td></tr>
 <tr><td align="center"><img src="screenshots/cavestory-doukutsu-02-intro.png" alt="cavestory-doukutsu-02-intro.png" width="160"><br><sub>cavestory-doukutsu-02-intro.png</sub></td><td>640×480<br>46 colours</td></tr>
 <tr><td align="center"><img src="screenshots/cavestory-doukutsu-03-screen.png" alt="cavestory-doukutsu-03-screen.png" width="160"><br><sub>cavestory-doukutsu-03-screen.png</sub></td><td>640×480<br>16 colours</td></tr>

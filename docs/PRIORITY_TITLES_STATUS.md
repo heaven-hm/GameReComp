@@ -23,15 +23,15 @@ alone. All hashes are SHA-256 of the exact bytes described.
 
 | Title | Method | Result | Verdict |
 | --- | --- | --- | --- |
-| prime-gen, passgen, base64-tool, guess-game, hangman, tictactoe, mastermind | MinGW-w64 cross-build to PE32 and PE32+ | 14 outputs (7 apps x 2 architectures); non-interactive apps exit 0 under Highball, interactive ones time out as expected. Exact commands/hashes/`highball_exit` in `proof/ports/windows-crossbuild-results.json` | **PASS (process)** — stdout hashes compared; no GUI oracle needed |
+| prime-gen, passgen, base64-tool, guess-game, hangman, tictactoe, mastermind | MinGW-w64 cross-build to PE32 and PE32+ | 14 outputs (7 apps x 2 architectures); non-interactive apps exit 0 under Highball, interactive ones time out as expected. Hashes/`highball_exit` in `proof/ports/windows-crossbuild-results.json` | **PASS (process)** — stdout hashes compared; no GUI oracle needed |
 | Ghostty | Zig source, target `x86_64-windows-gnu` / `x86_64-linux-gnu` | Zig 0.17.1 installation in progress; no ported binary yet | **BLOCKED** — toolchain not ready at report time |
 
 ## Verification engines
 
 - Python `tools/differential.py` and the Rust `verify-engine` were run on all six
-  priority targets locally. The committed corpus records engine controls as BLOCKED
-  for IGI; the local cross-check found IGI native-vs-original FAIL and the rest
-  BLOCKED. Recorded in
+  priority targets locally. The committed cross-check records IGI as FAIL in both
+  engines (`control: false`, no independent oracle), and Winamp, AssaultCube,
+  TrackMania, IDM and cube control as BLOCKED. Recorded in
   `proof/engines/cross-check-results.jsonl`.
 - Unicorn function-level oracle faults are recorded as BLOCKED, not PASS.
 - Frida: remote-side attach is now **verified live** (v17.27.5): `frida.spawn`,
