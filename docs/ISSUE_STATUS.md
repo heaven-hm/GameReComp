@@ -213,7 +213,7 @@ needs an oracle WAD. Status: **PARTIAL**; OPEN.
 
 Closure is not a judgement call. The authoritative, machine-readable gate is
 the `<!-- BEGIN CLOSURE GATE -->` JSON block in
-`docs/ISSUE_WORK_LEDGER.md`, enforced by `tests/test_issue_closure_gate.py`.
+`docs/ISSUE_WORK_LEDGER.md` and `docs/closure-audit/REPORT.md`, enforced by `tests/test_issue_closure_gate.py`.
 An issue may be marked `complete: true` **only if** all three hold:
 
 1. its dedicated evidence file exists (`evidence/issues/issue-NN.json`);

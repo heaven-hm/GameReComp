@@ -121,7 +121,7 @@ arith:done
   `malloc`/`free`/`strlen`, critical sections, TLS) against native libc.
 * The main `tools.autorecomp` CLI still refuses PE32+ input (the x64 lifter is
   invoked directly here); lifting x64 into that pipeline remains a separate
-  gate (`docs/feasibility/X64_LIFTER_GATE.md`).
+  gate (`docs/LINUX_PLATFORM_STATUS.md`).
 * Highball's Wine bottle occasionally reports `exit=1 after 0s` with no guest
   output on back-to-back runs. The proof driver retries up to three times and
   records every attempt; the committed evidence used a single successful

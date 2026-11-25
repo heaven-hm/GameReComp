@@ -28,7 +28,7 @@ Generated from real PE32 import tables by `python3 -m tools.api_coverage`.
 
 ## Recently registered shims (24, last checkpoint)
 
-APIs first registered in the last integration checkpoint recorded in `docs/ISSUE_EXECUTION_PLAN.md` (the 10-agent coverage-refresh checkpoint). This section is additive: it reports the registration delta from the previous coverage checkpoint (2,249 shims), not extra coverage. **Registration only proves a name is present**; per-API selftests, not this list, are the behaviour evidence.
+APIs first registered in the last integration checkpoint recorded in `docs/ISSUE_STATUS.md` (the 10-agent coverage-refresh checkpoint). This section is additive: it reports the registration delta from the previous coverage checkpoint (2,249 shims), not extra coverage. **Registration only proves a name is present**; per-API selftests, not this list, are the behaviour evidence.
 
 - A22 - COMCTL32 FlatSB (comctl32.dll): `FlatSB_EnableScrollBar`, `FlatSB_GetScrollInfo`, `FlatSB_GetScrollPos`, `FlatSB_GetScrollProp`, `FlatSB_GetScrollRange`, `FlatSB_ShowScrollBar`, `FlatSB_SetScrollInfo`, `FlatSB_SetScrollPos`, `FlatSB_SetScrollRange`.
 - A26 - locale Ex APIs (kernel32.dll): `CompareStringEx`, `GetLocaleInfoEx`, `LCMapStringEx`.
