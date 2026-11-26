@@ -803,7 +803,15 @@ fn render_drop_picked(
         .map(|m| crate::cli::format_bytes(m.len()))
         .unwrap_or_else(|_| "-".to_string());
 
-    let (status_txt, status_border, status_fg) = if !info.ok {
+    let native_source_input = !info.ok
+        && matches!(info.input_os.as_deref(), Some("macos") | Some("linux"));
+    let (status_txt, status_border, status_fg) = if native_source_input {
+        (
+            format!("{} detected — verified source-level port available", info.magic),
+            t.match_fill,
+            t.match_ink,
+        )
+    } else if !info.ok {
         (format!("Not usable: {}", info.error), t.not_c, t.miss)
     } else if info.pe32_x86 {
         (
