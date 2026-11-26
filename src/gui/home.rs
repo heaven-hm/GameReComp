@@ -433,7 +433,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
         (
             "1",
             "Drop your game or app",
-            "GameReComp inspects the PE32 header, imports, and entry point fail-closed",
+            "GameReComp inspects the executable header, imports, and entry point fail-closed",
         ),
         (
             "2",
@@ -522,7 +522,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
                 .text_size(px(t.ui_px(15.0)))
                 .line_height(px(t.ui_px(23.0)))
                 .text_color(rgb(t.ink_2))
-                .child("Turn 32-bit Windows games and apps into standalone native ports for macOS, Linux, Windows, or WebAssembly — with automatic machine detection, live per-file animations, and one-click game launch."),
+                .child("Turn Windows, macOS and Linux games/apps into standalone native ports for macOS, Linux, Windows, or WebAssembly — with automatic machine detection, live per-file animations, and one-click game launch."),
         )
         .child(step_list)
 }
@@ -626,11 +626,35 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
         .justify_center()
         .gap(px(6.0))
         .mt(px(10.0))
-        .child(plat_chip(t, "★ PE32 x86", true))
-        .child(plat_chip(t, "macOS", false))
-        .child(plat_chip(t, "Linux", false))
-        .child(plat_chip(t, "Windows", false))
-        .child(plat_chip(t, "WebAssembly", false));
+        .children([
+            ("auto", "Auto"),
+            ("windows", "Windows"),
+            ("macos", "macOS"),
+            ("linux", "Linux"),
+        ].into_iter().enumerate().map(|(idx, (value, label))| {
+            let selected = app.opts.input_os == value;
+            style::option_pill(("home_in_os", idx), t, label, selected).on_click(
+                cx.listener(move |this, _, _, cx| {
+                    this.opts.input_os = value.to_string();
+                    cx.notify();
+                }),
+            )
+        }))
+        .child(div().w(px(10.0)))
+        .children([
+            ("auto", "Auto"),
+            ("x86", "x86"),
+            ("x86_64", "x64"),
+            ("arm64", "arm64"),
+        ].into_iter().enumerate().map(|(idx, (value, label))| {
+            let selected = app.opts.input_arch == value;
+            style::option_pill(("home_in_arch", idx), t, label, selected).on_click(
+                cx.listener(move |this, _, _, cx| {
+                    this.opts.input_arch = value.to_string();
+                    cx.notify();
+                }),
+            )
+        }));
 
     let active_slots = app.active_slot_count();
     div()
@@ -679,7 +703,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                 .font_family(t.ui_font)
                 .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.muted))
-                .child("32-bit Windows PE (.exe)  ·")
+                .child("Windows / macOS / Linux executable  ·")
                 .child(
                     div()
                         .id("drop_choose_file_link")
@@ -718,7 +742,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                 .font_family(t.ui_font)
                 .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
-                .child("Tip: Drop multiple .exe files at once to decompile several games in parallel."),
+                .child("Tip: Drop multiple executables at once; unsupported formats are refused with a clear reason."),
         )
         .child(plat_row)
         .child(
@@ -736,7 +760,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                         .font_weight(FontWeight::BOLD)
                         .child("★"),
                 )
-                .child("recommended: PE32 i386 native & wasm32 · PE32+ fails closed"),
+                .child("supported reconstruction: PE32 i386 · other inputs fail closed with a named reason"),
         )
         .child(
             div()
@@ -2939,20 +2963,6 @@ fn start_card(
         )
 }
 
-fn plat_chip(t: &ThemeTokens, label: &'static str, rec: bool) -> Div {
-    div()
-        .px(px(8.0))
-        .py(px(4.0))
-        .rounded(px(2.0))
-        .bg(rgb(t.bg_alt))
-        .border_1()
-        .border_color(if rec { rgb(t.match_fill) } else { rgb(t.line) })
-        .font_family(t.mono_font)
-        .font_weight(FontWeight::BOLD)
-        .text_size(px(t.ui_px(10.5)))
-        .text_color(if rec { rgb(t.ink) } else { rgb(t.muted) })
-        .child(label)
-}
 
 fn fact(t: &ThemeTokens, k: &'static str, v: &str) -> Div {
     div()

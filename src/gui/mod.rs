@@ -883,7 +883,7 @@ impl GameReCompApp {
                         let _ = weak.update(cx, |this, cx| {
                             this.push_toast(
                                 "No executable selected",
-                                &format!("Skipped {rejected_count} item(s); select valid PE32 x86 executables."),
+                                &format!("Skipped {rejected_count} item(s); unsupported formats are refused by the backend with a named reason."),
                                 this.tokens().not_c,
                                 true,
                             );
@@ -1215,16 +1215,7 @@ impl GameReCompApp {
                 if let Ok(Ok(Some(mut files))) = rx.await {
                     if let Some(file) = files.pop() {
                         let _ = weak.update(cx, |this, cx| {
-                            if has_exe_extension(&file) {
-                                this.pick_pe_path(file);
-                            } else {
-                                this.push_toast(
-                                    "Choose a game/app executable",
-                                    "The selected file must have an .exe extension.",
-                                    this.tokens().not_c,
-                                    true,
-                                );
-                            }
+                            this.pick_pe_path(file);
                             cx.notify();
                         });
                     }
@@ -5070,6 +5061,11 @@ pub fn launch_gui(cfg: AppConfig, open_dir: Option<&Path>) -> i32 {
             gpui::init(cx);
             style::register_fonts(cx);
             let bounds = Bounds::centered(None, size(px(1380.0), px(880.0)), cx);
+            let app_icon = Arc::new(
+                image::load_from_memory(include_bytes!("../../assets/gamerecomp-app-icon-128.png"))
+                    .expect("embedded GameRecomp app icon")
+                    .to_rgba8(),
+            );
             let options = WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 window_min_size: Some(size(px(860.0), px(580.0))),
@@ -5078,6 +5074,7 @@ pub fn launch_gui(cfg: AppConfig, open_dir: Option<&Path>) -> i32 {
                     appears_transparent: false,
                     ..Default::default()
                 }),
+                icon: Some(app_icon),
                 ..Default::default()
             };
             cx.on_window_closed(|cx, _id| {
