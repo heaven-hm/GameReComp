@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -56,8 +56,11 @@ fn parse_pe_header_block(pe_head: &[u8]) -> PeInfo {
         "PE32".to_string()
     };
     info.pe32_x86 = machine == 0x014c && opt_magic == 0x10b;
+    // PE32+ stores ImageBase as a 64-bit field at opt_off + 24; PE32 stores a
+    // 32-bit field at opt_off + 28. Reading only four bytes for PE32+ silently
+    // truncates standard x64 bases such as 0x140000000 to 0x40000000.
     info.image_base = if opt_magic == 0x20b {
-        u32_le(pe_head, opt_off + 24) as u64
+        u64_le(pe_head, opt_off + 24)
     } else {
         u32_le(pe_head, opt_off + 28) as u64
     };
@@ -102,30 +105,140 @@ fn u32_le(b: &[u8], off: usize) -> u32 {
     }
 }
 
-/// Resolve a macOS `.app` bundle directory to its Mach-O executable.
-/// Returns the original path when it is not an app bundle.
-pub fn resolve_app_bundle(path: &Path) -> PathBuf {
-    if !path.is_dir() || path.extension().and_then(|e| e.to_str()) != Some("app") {
-        return path.to_path_buf();
+fn u64_le(b: &[u8], off: usize) -> u64 {
+    if off + 8 <= b.len() {
+        u64::from_le_bytes([
+            b[off],
+            b[off + 1],
+            b[off + 2],
+            b[off + 3],
+            b[off + 4],
+            b[off + 5],
+            b[off + 6],
+            b[off + 7],
+        ])
+    } else {
+        0
     }
-    let plist = path.join("Contents").join("Info.plist");
-    let text = std::fs::read_to_string(&plist).unwrap_or_default();
-    let mut name = None;
-    if let Some(pos) = text.find("<key>CFBundleExecutable</key>") {
-        let tail = &text[pos..];
-        if let (Some(a), Some(b)) = (tail.find("<string>"), tail.find("</string>")) {
-            if a < b {
-                name = Some(tail[a + 8..b].trim().to_string());
-            }
+}
+
+/// Drop XML comments so a commented-out key cannot imitate a real one.
+fn strip_plist_comments(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find("<!--") {
+        out.push_str(&rest[..start]);
+        match rest[start + 4..].find("-->") {
+            Some(end) => rest = &rest[start + 4 + end + 3..],
+            // An unterminated comment invalidates everything after it; keep
+            // only the text before it so no later key can be picked up.
+            None => return out,
         }
     }
-    let name = name.unwrap_or_else(|| {
-        path.file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("Contents")
-            .to_string()
-    });
-    path.join("Contents").join("MacOS").join(name)
+    out.push_str(rest);
+    out
+}
+
+/// Read the `<string>` value belonging to a specific `<key>` in an XML plist.
+///
+/// The value search stops at the next `<key>` or `</dict>` so a string of a
+/// later entry can never be attributed to the key we asked for.
+fn plist_string_for_key(text: &str, wanted: &str) -> Result<String, String> {
+    const KEY_OPEN: &str = "<key>";
+    const KEY_CLOSE: &str = "</key>";
+    const STRING_OPEN: &str = "<string>";
+    const STRING_CLOSE: &str = "</string>";
+
+    let text = strip_plist_comments(text);
+    let mut search = 0usize;
+    let mut matched = false;
+    while let Some(rel) = text[search..].find(KEY_OPEN) {
+        let key_start = search + rel + KEY_OPEN.len();
+        let Some(rel_end) = text[key_start..].find(KEY_CLOSE) else {
+            break;
+        };
+        let key_end = key_start + rel_end;
+        let after_key = key_end + KEY_CLOSE.len();
+        if text[key_start..key_end].trim() != wanted {
+            search = after_key;
+            continue;
+        }
+        if matched {
+            return Err(format!("duplicate <key>{wanted}</key> in Info.plist"));
+        }
+        matched = true;
+
+        let rest = &text[after_key..];
+        let bound = [rest.find(KEY_OPEN), rest.find("</dict>")]
+            .into_iter()
+            .flatten()
+            .min()
+            .unwrap_or(rest.len());
+        let value_section = &rest[..bound];
+        let Some(rel_open) = value_section.find(STRING_OPEN) else {
+            return Err(format!(
+                "<key>{wanted}</key> has no <string> value in Info.plist"
+            ));
+        };
+        let value_start = rel_open + STRING_OPEN.len();
+        let Some(rel_close) = value_section[value_start..].find(STRING_CLOSE) else {
+            return Err(format!(
+                "unterminated <string> value for <key>{wanted}</key> in Info.plist"
+            ));
+        };
+        let name = value_section[value_start..value_start + rel_close].trim();
+        if name.is_empty() || name.contains(['<', '>', '&', '\0']) {
+            return Err(format!(
+                "invalid <string> value for <key>{wanted}</key> in Info.plist"
+            ));
+        }
+        return Ok(name.to_string());
+    }
+    Err(format!("no <key>{wanted}</key> in Info.plist"))
+}
+
+/// A bundle executable must be one relative filename component. Anything
+/// else could escape `Contents/MacOS/` when joined onto the bundle path.
+fn is_safe_bundle_executable(name: &str) -> bool {
+    let mut components = Path::new(name).components();
+    !name.contains(['\\', '\0'])
+        && matches!(components.next(), Some(Component::Normal(_)))
+        && components.next().is_none()
+}
+
+/// Resolve a macOS `.app` bundle directory to its Mach-O executable, returning
+/// a diagnostic instead of an untrusted path.
+fn resolve_app_bundle_checked(path: &Path) -> Result<PathBuf, String> {
+    if !path.is_dir() || path.extension().and_then(|e| e.to_str()) != Some("app") {
+        return Ok(path.to_path_buf());
+    }
+    let plist = path.join("Contents").join("Info.plist");
+    let text = std::fs::read_to_string(&plist)
+        .map_err(|err| format!("cannot read {}: {err}", plist.display()))?;
+    let name = plist_string_for_key(&text, "CFBundleExecutable")?;
+    if !is_safe_bundle_executable(&name) {
+        return Err(format!(
+            "unsafe CFBundleExecutable {name:?} in {} -- expected a single relative filename",
+            plist.display()
+        ));
+    }
+    Ok(path.join("Contents").join("MacOS").join(name))
+}
+
+/// Resolve a macOS `.app` bundle directory to its Mach-O executable.
+/// Returns the original path when it is not an app bundle, or when the bundle
+/// cannot be resolved safely (with a diagnostic on stderr).
+pub fn resolve_app_bundle(path: &Path) -> PathBuf {
+    match resolve_app_bundle_checked(path) {
+        Ok(resolved) => resolved,
+        Err(err) => {
+            eprintln!(
+                "warning: cannot resolve app bundle {} safely: {err}",
+                path.display()
+            );
+            path.to_path_buf()
+        }
+    }
 }
 
 /// Identify Mach-O / ELF headers before the PE header check so the GUI can
@@ -160,7 +273,9 @@ fn native_format_info(bytes: &[u8]) -> Option<PeInfo> {
             input_arch: Some("host".to_string()),
             ..PeInfo::default()
         };
-        info.error = "Linux ELF input: PE32 lifting does not apply; use the verified source-level port".to_string();
+        info.error =
+            "Linux ELF input: PE32 lifting does not apply; use the verified source-level port"
+                .to_string();
         return Some(info);
     }
     None
@@ -168,7 +283,13 @@ fn native_format_info(bytes: &[u8]) -> Option<PeInfo> {
 
 pub fn inspect_pe(path: &Path) -> PeInfo {
     let mut info = PeInfo::default();
-    let resolved = resolve_app_bundle(path);
+    let resolved = match resolve_app_bundle_checked(path) {
+        Ok(resolved) => resolved,
+        Err(err) => {
+            info.error = err;
+            return info;
+        }
+    };
     let Ok(mut f) = File::open(&resolved) else {
         info.error = "cannot read the file".to_string();
         return info;
@@ -377,6 +498,141 @@ mod tests {
         assert_eq!(
             resolve_target("auto", "auto").unwrap(),
             (host_os, host_arch)
+        );
+    }
+
+    /// A throwaway `.app` bundle with a caller-supplied Info.plist.
+    struct FakeApp {
+        root: PathBuf,
+        app: PathBuf,
+    }
+
+    impl FakeApp {
+        fn new(label: &str, plist: &str) -> Self {
+            use std::sync::atomic::{AtomicU64, Ordering};
+            static NEXT: AtomicU64 = AtomicU64::new(0);
+            let unique = NEXT.fetch_add(1, Ordering::Relaxed);
+            let root = std::env::temp_dir().join(format!(
+                "game-recomp-pe-test-{label}-{}-{unique}",
+                std::process::id()
+            ));
+            let _ = std::fs::remove_dir_all(&root);
+            let app = root.join("Demo.app");
+            std::fs::create_dir_all(app.join("Contents").join("MacOS")).unwrap();
+            std::fs::write(app.join("Contents").join("Info.plist"), plist).unwrap();
+            Self { root, app }
+        }
+    }
+
+    impl Drop for FakeApp {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.root);
+        }
+    }
+
+    fn plist_with_executable(value: &str) -> String {
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+             <plist version=\"1.0\"><dict>\n\
+             <key>CFBundleExecutable</key><string>{value}</string>\n\
+             </dict></plist>"
+        )
+    }
+
+    #[test]
+    fn reads_full_64bit_image_base_for_pe32plus() {
+        // Minimal PE32+ header: MZ -> e_lfanew 0x40 -> PE\0\0 -> optional
+        // header with magic 0x20b and a 64-bit ImageBase at opt_off + 24.
+        let mut bytes = vec![0u8; 0x80];
+        bytes[0..2].copy_from_slice(b"MZ");
+        bytes[0x3c..0x40].copy_from_slice(&0x40u32.to_le_bytes());
+        bytes[0x40..0x44].copy_from_slice(b"PE\0\0");
+        bytes[0x44..0x46].copy_from_slice(&0x8664u16.to_le_bytes());
+        let opt = 0x40 + 24;
+        bytes[opt..opt + 2].copy_from_slice(&0x20bu16.to_le_bytes());
+        bytes[opt + 24..opt + 32].copy_from_slice(&0x140000000u64.to_le_bytes());
+
+        let info = inspect_pe_bytes(&bytes);
+        assert!(info.ok, "{}", info.error);
+        assert_eq!(info.magic, "PE32+");
+        assert_eq!(info.machine, "x86-64");
+        assert_eq!(info.image_base, 0x140000000);
+
+        // A base whose high half is nonzero but low half is not the classic
+        // 0x40000000 must also survive intact.
+        bytes[opt + 24..opt + 32].copy_from_slice(&0x180000000u64.to_le_bytes());
+        assert_eq!(inspect_pe_bytes(&bytes).image_base, 0x180000000);
+
+        // PE32 still reads the 32-bit field at opt_off + 28.
+        bytes[opt..opt + 2].copy_from_slice(&0x10bu16.to_le_bytes());
+        bytes[opt + 24..opt + 28].copy_from_slice(&0u32.to_le_bytes());
+        bytes[opt + 28..opt + 32].copy_from_slice(&0x400000u32.to_le_bytes());
+        assert_eq!(inspect_pe_bytes(&bytes).image_base, 0x400000);
+    }
+
+    #[test]
+    fn rejects_unsafe_bundle_executable_names() {
+        for evil in [
+            "/bin/sh",
+            "../../../outside",
+            "Contents/../../evil",
+            "sub/tool",
+            "..\\outside",
+            ".",
+            "..",
+            "",
+        ] {
+            let bundle = FakeApp::new("unsafe", &plist_with_executable(evil));
+            let err = resolve_app_bundle_checked(&bundle.app).unwrap_err();
+            assert!(err.contains("CFBundleExecutable"), "{err}");
+            // Public API and file inspection must both fail closed.
+            assert_eq!(resolve_app_bundle(&bundle.app), bundle.app);
+            let info = inspect_pe(&bundle.app);
+            assert!(!info.ok, "{evil} unexpectedly resolved");
+            assert!(info.error.contains("CFBundleExecutable"), "{}", info.error);
+        }
+    }
+
+    #[test]
+    fn binds_plist_value_to_its_own_key() {
+        // The old code took the first <string> anywhere after the key, so a
+        // non-string entry followed by another key's string caused traversal.
+        let plist = "<?xml version=\"1.0\"?>\n\
+            <plist version=\"1.0\"><dict>\n\
+            <key>CFBundleExecutable</key>\n\
+            <integer>7</integer>\n\
+            <key>CFBundleName</key>\n\
+            <string>../../../outside</string>\n\
+            </dict></plist>";
+        let bundle = FakeApp::new("key-confusion", plist);
+        let err = resolve_app_bundle_checked(&bundle.app).unwrap_err();
+        assert!(err.contains("CFBundleExecutable"), "{err}");
+        assert_eq!(resolve_app_bundle(&bundle.app), bundle.app);
+
+        // A commented-out decoy key must not win over the real one.
+        let plist = "<?xml version=\"1.0\"?>\n\
+            <plist version=\"1.0\"><dict>\n\
+            <!-- <key>CFBundleExecutable</key><string>../../../outside</string> -->\n\
+            <key>CFBundleName</key><string>Demo</string>\n\
+            <key>CFBundleExecutable</key><string>demo-bin</string>\n\
+            <key>CFBundleIdentifier</key><string>com.example.demo</string>\n\
+            </dict></plist>";
+        let bundle = FakeApp::new("comment-decoy", plist);
+        assert_eq!(
+            resolve_app_bundle_checked(&bundle.app).unwrap(),
+            bundle.app.join("Contents").join("MacOS").join("demo-bin")
+        );
+
+        // A later key's string must not replace this key's own value.
+        let plist = "<?xml version=\"1.0\"?>\n\
+            <plist version=\"1.0\"><dict>\n\
+            <key>CFBundleExecutable</key><string>demo-bin</string>\n\
+            <key>CFBundleName</key><string>evil-name</string>\n\
+            </dict></plist>";
+        let bundle = FakeApp::new("later-key", plist);
+        assert_eq!(
+            resolve_app_bundle(&bundle.app),
+            bundle.app.join("Contents").join("MacOS").join("demo-bin")
         );
     }
 }
