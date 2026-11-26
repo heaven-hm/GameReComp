@@ -74,24 +74,45 @@ static uint32_t guest_file(FILE *f) {
 /* ---- printf with guest varargs ------------------------------------------- *
  * Walk the format; each conversion pulls its argument from guest memory at
  * `ap` (4 bytes, or 8 for a double or %ll) and is rendered by the host
- * snprintf, one spec at a time. %s takes a guest pointer. */
+ * snprintf, one spec at a time. %s takes a guest pointer.
+ *
+ * Memory safety: `out` is touched only inside [0, cap). The would-be length
+ * is returned with snprintf semantics, so callers must clamp it before
+ * fwrite/memcpy. `spec` is a fixed 32-byte stack buffer: every append is
+ * bounds-checked, and a truncating snprintf (or a null %n target) fails the
+ * whole call with -1 instead of walking past the buffer. */
 static int gformat(char *out, size_t cap, const char *fmt, uint32_t ap) {
-    size_t n = 0;
-#define PUT(s, l) do { size_t _l = (l); if (n + _l < cap) memcpy(out + n, s, _l); n += _l; } while (0)
+    size_t n = 0;                                   /* would-be byte count */
+#define SPEC_PUT(ch) do { if (k >= (int)sizeof spec - 1) return -1; spec[k++] = (char)(ch); } while (0)
+#define PUT(s, l) do {                                                  \
+        size_t _full = (l);                                             \
+        if (n < cap) {                                                  \
+            size_t _avail = cap - n - 1;                                \
+            size_t _copy = _full < _avail ? _full : _avail;             \
+            memcpy(out + n, (s), _copy);                                \
+        }                                                               \
+        if (_full > SIZE_MAX - n) return -1;                            \
+        n += _full;                                                     \
+    } while (0)
     while (*fmt) {
         if (*fmt != '%') { PUT(fmt, 1); fmt++; continue; }
         if (fmt[1] == '%') { PUT("%", 1); fmt += 2; continue; }
         char spec[32], tmp[512];
         int k = 0, longs = 0;
-        spec[k++] = *fmt++;
-        while (*fmt && strchr("-+ #0123456789.*hlLqjzt", *fmt) && k < 28) {
-            if (*fmt == '*') {                           /* width/precision from args */
-                k += snprintf(spec + k, sizeof spec - k, "%d", (int)MEM32(ap));
-                ap += 4; fmt++; continue;
+        SPEC_PUT(*fmt++);
+        while (*fmt && strchr("-+ #0123456789.*hlLqjzt", *fmt)) {
+            if (*fmt == '*') {                       /* width/precision from args */
+                int w = (int)MEM32(ap);
+                int r;
+                ap += 4; fmt++;
+                r = snprintf(spec + k, sizeof spec - (size_t)k, "%d", w);
+                if (r < 0 || (size_t)r >= sizeof spec - (size_t)k) return -1;
+                k += r;
+                continue;
             }
             if (*fmt == 'l' || *fmt == 'q') longs++;
             if (*fmt != 'l' && *fmt != 'q' && *fmt != 'h' && *fmt != 'L')
-                spec[k++] = *fmt;
+                SPEC_PUT(*fmt);
             fmt++;
         }
         char c = *fmt ? *fmt++ : 0;
@@ -99,10 +120,11 @@ static int gformat(char *out, size_t cap, const char *fmt, uint32_t ap) {
         switch (c) {
         case 'd': case 'i': case 'u': case 'x': case 'X': case 'o': case 'c':
             if (longs >= 2) {
-                spec[k++] = 'l'; spec[k++] = 'l'; spec[k++] = c; spec[k] = 0;
+                SPEC_PUT('l'); SPEC_PUT('l'); SPEC_PUT(c);
+                spec[k] = 0;
                 w = snprintf(tmp, sizeof tmp, spec, (long long)MEM64(ap)); ap += 8;
             } else {
-                spec[k++] = c; spec[k] = 0;
+                SPEC_PUT(c); spec[k] = 0;
                 w = snprintf(tmp, sizeof tmp, spec, (int)MEM32(ap)); ap += 4;
             }
             break;
@@ -111,39 +133,61 @@ static int gformat(char *out, size_t cap, const char *fmt, uint32_t ap) {
             break;
         case 's': {
             uint32_t s = MEM32(ap); ap += 4;
-            spec[k++] = 's'; spec[k] = 0;
+            SPEC_PUT('s'); spec[k] = 0;
             w = snprintf(tmp, sizeof tmp, spec, s ? GSTR(s) : "(null)");
             break;
         }
         case 'f': case 'e': case 'E': case 'g': case 'G':
-            spec[k++] = c; spec[k] = 0;
+            SPEC_PUT(c); spec[k] = 0;
             w = snprintf(tmp, sizeof tmp, spec, MEMD(ap)); ap += 8;
             break;
-        case 'n':
-            MEM32(MEM32(ap)) = (uint32_t)n; ap += 4;
+        case 'n': {
+            uint32_t addr = MEM32(ap); ap += 4;
+            if (addr == 0) return -1;                /* never store to guest address 0 */
+            MEM32(addr) = (uint32_t)n;
             continue;
+        }
         default:
             continue;
         }
-        if (w > (int)sizeof tmp - 1) w = sizeof tmp - 1;
+        if (w < 0) return -1;
+        if (w > (int)sizeof tmp - 1) w = (int)sizeof tmp - 1;
         if (w > 0) PUT(tmp, (size_t)w);
     }
     if (cap) out[n < cap ? n : cap - 1] = 0;
     return (int)n;
 #undef PUT
+#undef SPEC_PUT
 }
 
 static char g_fmtbuf[65536];
 
-static void sh_printf(void)   { int n = gformat(g_fmtbuf, sizeof g_fmtbuf, GSTR(ARG(0)), g_esp + 8);
-                                fwrite(g_fmtbuf, 1, n, stdout); NS_RET(n); }
-static void sh_fprintf(void)  { FILE *f = host_file(ARG(0));
-                                int n = gformat(g_fmtbuf, sizeof g_fmtbuf, GSTR(ARG(1)), g_esp + 12);
-                                if (f) fwrite(g_fmtbuf, 1, n, f); NS_RET(n); }
-static void sh_sprintf(void)  { int n = gformat(g_fmtbuf, sizeof g_fmtbuf, GSTR(ARG(1)), g_esp + 12);
-                                memcpy(GSTR(ARG(0)), g_fmtbuf, n + 1); NS_RET(n); }
-static void sh_vsprintf(void) { int n = gformat(g_fmtbuf, sizeof g_fmtbuf, GSTR(ARG(1)), ARG(2));
-                                memcpy(GSTR(ARG(0)), g_fmtbuf, n + 1); NS_RET(n); }
+/* gformat returns the would-be length (or -1 on an internal fault). Clamp it
+ * to the bytes that actually exist in g_fmtbuf before any host read/write. */
+static size_t fmt_write_len(int n, size_t cap) {
+    if (n < 0) return 0;
+    return (size_t)n < cap ? (size_t)n : cap - 1;
+}
+
+static void sh_printf(void) {
+    int n = gformat(g_fmtbuf, sizeof g_fmtbuf, GSTR(ARG(0)), g_esp + 8);
+    fwrite(g_fmtbuf, 1, fmt_write_len(n, sizeof g_fmtbuf), stdout); NS_RET(n < 0 ? -1 : n);
+}
+static void sh_fprintf(void) {
+    FILE *f = host_file(ARG(0));
+    int n = gformat(g_fmtbuf, sizeof g_fmtbuf, GSTR(ARG(1)), g_esp + 12);
+    if (f) fwrite(g_fmtbuf, 1, fmt_write_len(n, sizeof g_fmtbuf), f); NS_RET(n < 0 ? -1 : n);
+}
+static void sh_sprintf(void) {
+    int n = gformat(g_fmtbuf, sizeof g_fmtbuf, GSTR(ARG(1)), g_esp + 12);
+    size_t len = fmt_write_len(n, sizeof g_fmtbuf);
+    memcpy(GSTR(ARG(0)), g_fmtbuf, len); GSTR(ARG(0))[len] = 0; NS_RET(n < 0 ? -1 : n);
+}
+static void sh_vsprintf(void) {
+    int n = gformat(g_fmtbuf, sizeof g_fmtbuf, GSTR(ARG(1)), ARG(2));
+    size_t len = fmt_write_len(n, sizeof g_fmtbuf);
+    memcpy(GSTR(ARG(0)), g_fmtbuf, len); GSTR(ARG(0))[len] = 0; NS_RET(n < 0 ? -1 : n);
+}
 
 /* ---- scanf: host vsscanf with each guest pointer translated -------------- */
 static int gscan(const char *src, const char *fmt, uint32_t ap, int *consumed) {
