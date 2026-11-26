@@ -855,7 +855,7 @@ def lift_segment(ne: NEHeader, seg_num: int, func_offset: int = -1, xmod=None):
                 return m.group(0)
             return (f'{_unreachable_name()}("{seg.index:03d}", 0x{m.group(2)});'
                     f' return; /* branch into mid-instruction */')
-        code = re.sub(rf'(seg{seg.index:03d}_([0-9A-F]{{4}}))\(cpu\); return;',
+        code = re.sub(rf'\b(seg{seg.index:03d}_([0-9A-F]{{4}}))\(cpu\); return;',
                       _unknown_label, code)
 
         # Fall-through: if the last instruction is not a control-flow terminator,

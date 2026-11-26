@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heaven-hm/GameReComp/blob/develop/docs/compatibility/coverage.schema.json",
+  "title": "GameReComp machine-readable compatibility coverage inventory",
+  "description": "One canonical registry for API families, interfaces, implemented status, fixture results, host dependencies, known limitations, source provenance and evidence. Inputs are keyed by SHA-256. MISSING_INPUT and NOT_RUN are never PASS.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generator", "target", "inputs", "families", "summary", "gate"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "generator": { "type": "string", "minLength": 1 },
+    "target": { "$ref": "#/$defs/target" },
+    "inputs": {
+      "type": "object",
+      "description": "Every examined input, keyed by SHA-256 of its bytes; for an absent input the key is SHA-256 of 'missing:' plus its path.",
+      "additionalProperties": { "$ref": "#/$defs/input" }
+    },
+    "families": { "type": "array", "items": { "$ref": "#/$defs/family" } },
+    "summary": { "$ref": "#/$defs/summary" },
+    "gate": { "$ref": "#/$defs/gate" }
+  },
+  "$defs": {
+    "result": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "PARTIAL", "MISSING_INPUT", "NOT_RUN", "HOST_NOT_TESTED", "UNSUPPORTED", "SKIP"]
+    },
+    "implemented_status": {
+      "type": "string",
+      "enum": ["not-present", "declared", "linked", "unit-tested", "integration-tested", "original-verified"]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "head_at_generation", "host_os", "host_arch", "pe_formats"],
+      "properties": {
+        "branch": { "type": "string" },
+        "head_at_generation": { "type": "string" },
+        "host_os": { "type": "string" },
+        "host_arch": { "type": "string" },
+        "pe_formats": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_sha256", "kind", "path", "present", "status", "observed_result"],
+      "properties": {
+        "input_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "kind": {
+          "type": "string",
+          "enum": ["fixture-pe32", "fixture-ne", "fixture-pe32plus", "registry", "source", "report", "integration", "schema", "tool"]
+        },
+        "path": { "type": "string" },
+        "present": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["ok", "MISSING_INPUT", "invalid"] },
+        "fixture_id": { "type": ["string", "null"] },
+        "expected_result": { "$ref": "#/$defs/result" },
+        "observed_result": { "$ref": "#/$defs/result" },
+        "detail": { "type": "string" },
+        "bytes_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "guest_interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dll", "imports", "method_slots"],
+      "properties": {
+        "dll": { "type": "string" },
+        "imports": { "type": "array", "items": { "type": "string" } },
+        "method_slots": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "registration_symbol", "registered_in", "commit"],
+      "properties": {
+        "files": { "type": "array", "items": { "type": "string" } },
+        "registration_symbol": { "type": ["string", "null"] },
+        "registered_in": { "type": ["string", "null"] },
+        "commit": { "type": "string" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_sha256", "kind", "result", "note"],
+      "properties": {
+        "input_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "kind": { "type": "string" },
+        "result": { "$ref": "#/$defs/result" },
+        "note": { "type": "string" }
+      }
+    },
+    "family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family_id", "api_family", "interface_version", "interface_iid", "pe_format",
+        "guest_interface", "implemented_status", "expected_implemented_status",
+        "fixture_result", "expected_fixture_result", "fixture_id", "abi_signature",
+        "host_dependencies", "known_limitations", "source_provenance", "evidence",
+        "owner_issue", "unresolved_failures", "notes"
+      ],
+      "properties": {
+        "family_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "api_family": { "type": "string", "minLength": 1 },
+        "interface_version": { "type": "string", "minLength": 1 },
+        "interface_iid": { "type": ["string", "null"] },
+        "pe_format": { "type": "string", "enum": ["PE32", "NE", "PE32+"] },
+        "guest_interface": { "$ref": "#/$defs/guest_interface" },
+        "implemented_status": { "$ref": "#/$defs/implemented_status" },
+        "expected_implemented_status": { "$ref": "#/$defs/implemented_status" },
+        "fixture_result": { "$ref": "#/$defs/result" },
+        "expected_fixture_result": { "$ref": "#/$defs/result" },
+        "fixture_id": { "type": "string" },
+        "abi_signature": { "type": "string" },
+        "host_dependencies": { "type": "array", "items": { "type": "string" } },
+        "known_limitations": { "type": "array", "items": { "type": "string" } },
+        "source_provenance": { "$ref": "#/$defs/source_provenance" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "owner_issue": { "type": "integer", "minimum": 1 },
+        "unresolved_failures": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["families", "inputs", "missing_inputs", "not_run", "pass", "partial", "unsupported"],
+      "properties": {
+        "families": { "type": "integer", "minimum": 0 },
+        "inputs": { "type": "integer", "minimum": 0 },
+        "missing_inputs": { "type": "integer", "minimum": 0 },
+        "not_run": { "type": "integer", "minimum": 0 },
+        "pass": { "type": "integer", "minimum": 0 },
+        "partial": { "type": "integer", "minimum": 0 },
+        "unsupported": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "checks", "reason"],
+      "properties": {
+        "verdict": { "type": "string", "enum": ["PASS", "FAIL", "INCOMPLETE"] },
+        "checks": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["schema_valid", "deleted_tests", "new_critical_imports", "fixture_mismatches", "missing_inputs", "missing_never_pass", "unsupported_never_pass"],
+          "properties": {
+            "schema_valid": { "type": "boolean" },
+            "deleted_tests": { "type": "array", "items": { "type": "string" } },
+            "new_critical_imports": { "type": "array", "items": { "type": "string" } },
+            "fixture_mismatches": { "type": "array", "items": { "type": "string" } },
+            "missing_inputs": { "type": "array", "items": { "type": "string" } },
+            "missing_never_pass": { "type": "array", "items": { "type": "string" } },
+            "unsupported_never_pass": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}
