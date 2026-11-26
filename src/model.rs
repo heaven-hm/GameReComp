@@ -98,6 +98,10 @@ pub struct ProjectUiMeta {
     pub game_data_dir: String,
     #[serde(default)]
     pub launch_with_data_dir: bool,
+    /// Extra command-line arguments passed to the rebuilt guest after any
+    /// assets-directory argument. Used by CLI tools that require a game id.
+    #[serde(default)]
+    pub launch_arguments: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

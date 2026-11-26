@@ -134,6 +134,7 @@ pub enum FocusInput {
     IssueTitle,
     IssueNotes,
     RunGameDataDir,
+    RunGameArguments,
     QuickRenameProject,
 }
 
@@ -166,6 +167,7 @@ pub struct RunGameModal {
     pub has_wasm: bool,
     pub use_data_dir: bool,
     pub data_dir: String,
+    pub arguments: String,
     pub suggested_pe_dir: String,
     pub save_as_default: bool,
 }
@@ -2302,11 +2304,68 @@ impl GameReCompApp {
         }
     }
 
+    /// Split a user-supplied launch-argument string into argv entries.
+    /// Supports single/double quotes and backslash escapes.
+    pub fn split_launch_args(input: &str) -> Vec<String> {
+        let mut out = Vec::new();
+        let mut current = String::new();
+        let mut quote: Option<char> = None;
+        let mut escape = false;
+        let mut started = false;
+        for ch in input.chars() {
+            if escape {
+                current.push(ch);
+                escape = false;
+                started = true;
+                continue;
+            }
+            if ch == '\\' && quote != Some('\'') {
+                escape = true;
+                started = true;
+                continue;
+            }
+            if let Some(q) = quote {
+                if ch == q {
+                    quote = None;
+                } else {
+                    current.push(ch);
+                }
+                started = true;
+                continue;
+            }
+            if ch == '\'' || ch == '"' {
+                quote = Some(ch);
+                started = true;
+            } else if ch.is_whitespace() {
+                if started {
+                    out.push(std::mem::take(&mut current));
+                    started = false;
+                }
+            } else {
+                current.push(ch);
+                started = true;
+            }
+        }
+        if started {
+            out.push(current);
+        }
+        out
+    }
+
     pub fn launch_rebuilt_binary(&mut self, bin: &Path) {
         self.launch_rebuilt_binary_with_data(bin, None);
     }
 
     pub fn launch_rebuilt_binary_with_data(&mut self, bin: &Path, data_dir: Option<&Path>) {
+        self.launch_rebuilt_binary_with_args(bin, data_dir, "");
+    }
+
+    pub fn launch_rebuilt_binary_with_args(
+        &mut self,
+        bin: &Path,
+        data_dir: Option<&Path>,
+        extra_args: &str,
+    ) {
         if !bin.is_file() {
             self.push_toast(
                 "Missing executable",
@@ -2335,11 +2394,15 @@ impl GameReCompApp {
         } else if let Some(parent) = bin.parent() {
             cmd.current_dir(parent);
         }
+        for arg in Self::split_launch_args(extra_args) {
+            cmd.arg(arg);
+        }
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
         match cmd.spawn() {
             Ok(mut child) => {
                 // A rebuilt guest can map its PE and exit before any window
-                // appears. Wait briefly and say so instead of reporting a
-                // successful launch that the user cannot see.
+                // appears. Wait briefly, then show the real stdout/stderr so a
+                // CLI tool's usage or error is not hidden behind a generic toast.
                 let mut early_exit = None;
                 for _ in 0..12 {
                     match child.try_wait() {
@@ -2351,17 +2414,38 @@ impl GameReCompApp {
                         Err(_) => break,
                     }
                 }
-                self.launched_children.push(child);
                 if let Some(code) = early_exit {
+                    let output = child.wait_with_output().ok();
+                    let mut text = String::new();
+                    if let Some(out) = output {
+                        text.push_str(&String::from_utf8_lossy(&out.stdout));
+                        text.push_str(&String::from_utf8_lossy(&out.stderr));
+                    }
+                    let text = text.trim();
+                    let detail = if text.is_empty() {
+                        format!("{} exited with status {}; no window was shown.", bin.display(), code)
+                    } else {
+                        format!("{} exited with status {}:\n{}", bin.display(), code, text)
+                    };
                     self.push_toast(
-                        "Rebuilt binary exited immediately",
-                        &format!(
-                            "{} exited with status {}; no window was shown. See the run stage in Build & log for unresolved imports.",
-                            bin.display(), code
-                        ),
-                        self.tokens().not_c,
-                        true,
+                        if code == 0 {
+                            "Rebuilt app finished"
+                        } else {
+                            "Rebuilt binary exited immediately"
+                        },
+                        &detail,
+                        if code == 0 {
+                            self.tokens().match_fill
+                        } else {
+                            self.tokens().not_c
+                        },
+                        code != 0,
                     );
+                } else {
+                    self.launched_children.push(child);
+                }
+                if early_exit.is_some() {
+                    // Toast already emitted above.
                 } else if let Some(dir) = data_dir {
                     self.push_toast(
                         "Launched with game data",
@@ -2398,9 +2482,9 @@ impl GameReCompApp {
                 && !meta.game_data_dir.trim().is_empty()
             {
                 let data_path = normalized_path(Path::new(meta.game_data_dir.trim()));
-                self.launch_rebuilt_binary_with_data(&b, Some(&data_path));
+                self.launch_rebuilt_binary_with_args(&b, Some(&data_path), &meta.launch_arguments);
             } else {
-                self.launch_rebuilt_binary_with_data(&b, None);
+                self.launch_rebuilt_binary_with_args(&b, None, &meta.launch_arguments);
             }
         } else if has_wasm {
             self.launch_or_open_wasm(dir);
@@ -2448,6 +2532,7 @@ impl GameReCompApp {
             has_wasm,
             use_data_dir,
             data_dir,
+            arguments: meta.launch_arguments.clone(),
             suggested_pe_dir,
             save_as_default: true,
         });
@@ -2527,6 +2612,7 @@ impl GameReCompApp {
             if modal.binary_path.is_some() || !modal.has_wasm {
                 meta.launch_with_data_dir = modal.use_data_dir;
             }
+            meta.launch_arguments = modal.arguments.clone();
             if let Err(error) = save_ui_meta_at(&modal.project_dir, &meta) {
                 self.push_toast(
                     "Could not save launch options",
@@ -2547,6 +2633,7 @@ impl GameReCompApp {
                     if modal.binary_path.is_some() || !modal.has_wasm {
                         proj.ui_meta.launch_with_data_dir = modal.use_data_dir;
                     }
+                    proj.ui_meta.launch_arguments = modal.arguments.clone();
                 }
             }
             if !launch_now {
@@ -2568,7 +2655,11 @@ impl GameReCompApp {
         if launch_now {
             if modal.use_data_dir {
                 if let Some(ref bin) = modal.binary_path {
-                    self.launch_rebuilt_binary_with_data(bin, resolved_data.as_deref());
+                    self.launch_rebuilt_binary_with_args(
+                        bin,
+                        resolved_data.as_deref(),
+                        &modal.arguments,
+                    );
                 } else if modal.has_wasm {
                     self.launch_or_open_wasm(&modal.project_dir);
                 } else {
@@ -2580,7 +2671,7 @@ impl GameReCompApp {
                     );
                 }
             } else if let Some(ref bin) = modal.binary_path {
-                self.launch_rebuilt_binary_with_data(bin, None);
+                self.launch_rebuilt_binary_with_args(bin, None, &modal.arguments);
             } else if modal.has_wasm {
                 self.launch_or_open_wasm(&modal.project_dir);
             } else {
@@ -2593,7 +2684,10 @@ impl GameReCompApp {
             }
         }
         self.run_game_modal = None;
-        if self.focused_input == Some(FocusInput::RunGameDataDir) {
+        if matches!(
+            self.focused_input,
+            Some(FocusInput::RunGameDataDir | FocusInput::RunGameArguments)
+        ) {
             self.focused_input = None;
         }
         cx.notify();
@@ -2601,7 +2695,10 @@ impl GameReCompApp {
 
     pub fn close_run_game_modal(&mut self, cx: &mut Context<Self>) {
         self.run_game_modal = None;
-        if self.focused_input == Some(FocusInput::RunGameDataDir) {
+        if matches!(
+            self.focused_input,
+            Some(FocusInput::RunGameDataDir | FocusInput::RunGameArguments)
+        ) {
             self.focused_input = None;
         }
         cx.notify();
@@ -3901,6 +3998,7 @@ impl GameReCompApp {
             FocusInput::IssueTitle => Some(&mut self.issue_draft.title),
             FocusInput::IssueNotes => Some(&mut self.issue_draft.user_notes),
             FocusInput::RunGameDataDir => self.run_game_modal.as_mut().map(|m| &mut m.data_dir),
+            FocusInput::RunGameArguments => self.run_game_modal.as_mut().map(|m| &mut m.arguments),
             FocusInput::QuickRenameProject => self.rename_modal.as_mut().map(|m| &mut m.name_buf),
         }
     }
@@ -4948,5 +5046,22 @@ mod tests {
             }
         }
         assert_eq!(percent_encode_query("Hi [1]!"), "Hi%20%5B1%5D%21");
+    }
+
+    #[test]
+    fn launch_arguments_split_quotes_and_escapes() {
+        assert!(GameReCompApp::split_launch_args("").is_empty());
+        assert_eq!(
+            GameReCompApp::split_launch_args("-g 3x3:6a1a_7a8d"),
+            vec!["-g", "3x3:6a1a_7a8d"]
+        );
+        assert_eq!(
+            GameReCompApp::split_launch_args("--name \"Two Words\" 'other arg'"),
+            vec!["--name", "Two Words", "other arg"]
+        );
+        assert_eq!(
+            GameReCompApp::split_launch_args("a\\ b c"),
+            vec!["a b", "c"]
+        );
     }
 }

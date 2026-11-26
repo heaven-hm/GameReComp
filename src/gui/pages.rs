@@ -1816,6 +1816,40 @@ pub fn render_run_game_modal(
                                 }),
                         )
                     })
+                    .when(modal.binary_path.is_some() || !modal.has_wasm, |el| {
+                        el.child(
+                            div()
+                                .flex()
+                                .flex_col()
+                                .gap(px(6.0))
+                                .child(style::eyebrow(t, "EXTRA COMMAND-LINE ARGUMENTS"))
+                                .child(
+                                    style::text_input_box(
+                                        "run_modal_args_input",
+                                        t,
+                                        &modal.arguments,
+                                        "e.g. -g 3x3:6a1a... (CLI tools)",
+                                        app.focused_input
+                                            == Some(FocusInput::RunGameArguments),
+                                        true,
+                                    )
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.set_focus_input(
+                                            Some(FocusInput::RunGameArguments),
+                                            window,
+                                            cx,
+                                        );
+                                    })),
+                                )
+                                .child(
+                                    div()
+                                        .font_family(t.ui_font)
+                                        .text_size(px(t.ui_px(11.0)))
+                                        .text_color(rgb(t.muted))
+                                        .child("Quotes and backslash escapes are supported. Saved with this project's launch options."),
+                                ),
+                        )
+                    })
                     .child(
                         style::toggle_checkbox(
                             "run_modal_remember",
