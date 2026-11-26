@@ -410,6 +410,8 @@ pub struct GameReCompApp {
 
     // Multi-game parallel decompilation & queue state
     pub jobs: Vec<ActiveJob>,
+    /// Standalone launches kept alive (and reaped) after the GUI reports them.
+    pub launched_children: Vec<Child>,
     pub queued_pipelines: Vec<QueuedJob>,
     pub queued_batches: Vec<QueuedBatch>,
     pub selected_job_id: Option<u64>,
@@ -545,6 +547,7 @@ impl GameReCompApp {
             picked_pe_info: PeInfo::default(),
             picked_owned_checked: false,
             jobs: Vec::new(),
+            launched_children: Vec::new(),
             queued_pipelines: Vec::new(),
             queued_batches: Vec::new(),
             selected_job_id: None,
@@ -2348,8 +2351,33 @@ impl GameReCompApp {
             cmd.current_dir(parent);
         }
         match cmd.spawn() {
-            Ok(_) => {
-                if let Some(dir) = data_dir {
+            Ok(mut child) => {
+                // A rebuilt guest can map its PE and exit before any window
+                // appears. Wait briefly and say so instead of reporting a
+                // successful launch that the user cannot see.
+                let mut early_exit = None;
+                for _ in 0..12 {
+                    match child.try_wait() {
+                        Ok(Some(status)) => {
+                            early_exit = Some(status.code().unwrap_or(-1));
+                            break;
+                        }
+                        Ok(None) => thread::sleep(Duration::from_millis(100)),
+                        Err(_) => break,
+                    }
+                }
+                self.launched_children.push(child);
+                if let Some(code) = early_exit {
+                    self.push_toast(
+                        "Rebuilt binary exited immediately",
+                        &format!(
+                            "{} exited with status {}; no window was shown. See the run stage in Build & log for unresolved imports.",
+                            bin.display(), code
+                        ),
+                        self.tokens().not_c,
+                        true,
+                    );
+                } else if let Some(dir) = data_dir {
                     self.push_toast(
                         "Launched with game data",
                         &format!("{} (data: {})", bin.display(), dir.display()),

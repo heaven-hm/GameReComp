@@ -382,6 +382,7 @@ extern const win32hle_shim win32hle_msvcrt[];         /* the MSVC CRT on the hos
 extern const win32hle_shim win32hle_kernel32_atom[];  /* the local atom table (kernel32_atom.c) */
 extern const win32hle_shim win32hle_dinput[];         /* DirectInput 3/5/7 keyboard+mouse (dinput.c) */
 extern const win32hle_shim win32hle_winamp_extra[];   /* safe-default W-import bring-up shims */
+extern const win32hle_shim win32hle_idm_extra[];      /* safe-default IDM bring-up shims */
 
 /* The SDL 1.2 window and GL context, for gl32.c. They are sdl12.c's: a GL
  * context exists only after SDL_SetVideoMode with SDL_OPENGL. */
