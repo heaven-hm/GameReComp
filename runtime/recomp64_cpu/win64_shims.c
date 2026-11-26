@@ -90,6 +90,39 @@ static void out_write(FILE *f, const char *s, size_t n) {
     }
 }
 
+/* snprintf() returns the length the formatted text WOULD have had, which can
+ * exceed the buffer when truncated and is negative on an encoding error. Never
+ * hand that raw value to out_write(): it would read past the end of the caller's
+ * stack buffer. Clamp to the usable capacity and emit only what is really there;
+ * the returned count then matches what %n and the printf result should report. */
+static int emit_bounded(FILE *out, const char *b, size_t cap, int n) {
+    if (n <= 0) return 0;
+    size_t len = (size_t)n;
+    if (len > cap) len = cap;
+    out_write(out, b, len);
+    return (int)len;
+}
+
+/* The width of a Win64 integer conversion. Plain d/u/x/o are 32-bit int or
+ * unsigned int; the upper half of the 64-bit vararg slot is caller garbage.
+ * A single 'l' was already reduced by host_spec (guest long == int), so only
+ * 'll', 'I64' (rewritten to 'll') and j/z/t promote to 64 bits. */
+static int fmt_int_width(const char *spec, char conv) {
+    int sz = 4;
+    for (const char *q = spec + 1; *q && *q != conv; q++) {
+        if (*q == 'h') {
+            if (q[1] == 'h') { sz = 1; q++; }
+            else sz = 2;
+        } else if (*q == 'l') {
+            if (q[1] == 'l') { sz = 8; q++; }
+            else sz = 4;
+        } else if (*q == 'j' || *q == 'z' || *q == 't') {
+            sz = 8;
+        }
+    }
+    return sz;
+}
+
 /* ---- guest memory helpers ------------------------------------------------ */
 static void guest_str(uint64_t va, char *out, size_t cap) {
     size_t n = 0;
@@ -154,7 +187,7 @@ static int vfmt(CPU *c, FILE *out, int tail) {
 #define EMIT(...) do {                                                      \
         char _b[1024];                                                      \
         int _n = snprintf(_b, sizeof _b, __VA_ARGS__);                      \
-        if (_n > 0) { out_write(out, _b, (size_t)_n); wrote += _n; }         \
+        wrote += emit_bounded(out, _b, sizeof _b - 1, _n);                  \
     } while (0)
     const char *p = fmt;
     while (*p) {
@@ -183,31 +216,25 @@ static int vfmt(CPU *c, FILE *out, int tail) {
             uint64_t dst = vararg(va, ai++);
             wr32(dst, (uint32_t)wrote);
         } else {
-            /* All integer widths: fetch a 64-bit slot, then pass the width the
-             * specifier asks for. lp64 `long` was already dropped by host_spec. */
+            /* Every vararg slot is 64 bits, but plain %d/%u/%x take a 32-bit
+             * int: its upper half is caller garbage and must never be handed
+             * to the host format. Pass the exact promoted C type for the width. */
             uint64_t v = vararg(va, ai++);
-            const char *q = spec;
             int is_unsigned = strchr("uoxX", ch) != NULL;
-            int sz = 8;
-            for (; q && *q; q++) {
-                if (*q == 'h') sz = (q[1] == 'h') ? 1 : 2;
-                else if (*q == 'l') sz = (q[1] == 'l') ? 8 : 4;
-                else if (*q == 'z' || *q == 'I') sz = 8;
-            }
+            int sz = fmt_int_width(spec, ch);
+            uint64_t m = sz == 1 ? 0xffu : sz == 2 ? 0xffffu : sz == 4 ? 0xffffffffu : ~(uint64_t)0;
+            v &= m;
             if (is_unsigned) {
-                uint64_t m = sz == 1 ? 0xffu : sz == 2 ? 0xffffu : sz == 4 ? 0xffffffffu : ~(uint64_t)0;
-                v &= m;
                 if (sz == 1) EMIT(spec, (unsigned int)(unsigned char)v);
                 else if (sz == 2) EMIT(spec, (unsigned int)(unsigned short)v);
                 else if (sz == 4) EMIT(spec, (unsigned int)(uint32_t)v);
-                else EMIT(spec, v);
+                else EMIT(spec, (unsigned long long)v);
             } else {
                 int64_t sv = (int64_t)v;
-                if (sz == 1) sv = (int8_t)v;
-                else if (sz == 2) sv = (int16_t)v;
-                else if (sz == 4) sv = (int32_t)v;
-                if (sz == 8) EMIT(spec, sv);
-                else EMIT(spec, (int)sv);
+                if (sz == 1) EMIT(spec, (int)(int8_t)v);
+                else if (sz == 2) EMIT(spec, (int)(int16_t)v);
+                else if (sz == 4) EMIT(spec, (int)(int32_t)v);
+                else EMIT(spec, (long long)sv);
             }
         }
         p = conv + 1;
@@ -218,6 +245,68 @@ static int vfmt(CPU *c, FILE *out, int tail) {
 }
 
 /* ---- __stdio_common_vfscanf --------------------------------------------- */
+#define VSCAN_BUF 4096u
+
+/* Last byte of a %[...] scan set (the ']' and any leading '^' are part of it). */
+static const char *scanset_end(const char *p) {
+    const char *q = p;
+    if (*q == '^') q++;
+    if (*q == ']') q++;                 /* a leading ']' is literal */
+    while (*q && *q != ']') q++;
+    return *q ? q + 1 : p;             /* unbalanced: let fscanf fail closed */
+}
+
+/* Build a host fscanf spec from the guest's [p, end) slice (p is at '%').
+ * Win64 long is 32 bits, so one 'l' is dropped for integers while 'I64' and
+ * j/z/t become 'll'. Floats keep 'l': %f needs float*, %lf needs double*.
+ * %s/%[...] always get a width <= VSCAN_BUF-1, even if the guest omitted one
+ * or asked for more, so the bounded destination can never be overrun. */
+static void scan_spec(const char *p, const char *end, const char *conv,
+                      char *out, size_t cap) {
+    char c = *conv;
+    int is_float = strchr("eEfFgGaA", c) != NULL;
+    int bounded = (c == 's' || c == '[');
+    size_t n = 0;
+    int have_width = 0;
+    const char *q = p + 1;              /* skip '%' */
+
+    out[n++] = '%';
+    while (q < conv && n + 2 < cap) {
+        if (q + 2 < conv && q[0] == 'I' && q[1] == '6' && q[2] == '4') {
+            out[n++] = 'l'; out[n++] = 'l'; q += 3; continue;
+        }
+        if (*q == 'l' && !is_float) {
+            if (q + 1 < conv && q[1] == 'l') {
+                out[n++] = 'l'; out[n++] = 'l'; q += 2;
+            } else q++;                 /* guest long == int */
+            continue;
+        }
+        if ((*q == 'j' || *q == 'z' || *q == 't') && !is_float) {
+            out[n++] = 'l'; out[n++] = 'l'; q++; continue;
+        }
+        if (*q == 'L' && is_float) { q++; continue; }   /* no long double */
+        if (isdigit((unsigned char)*q)) {
+            unsigned long w = 0;
+            while (q < conv && isdigit((unsigned char)*q)) {
+                w = w * 10 + (unsigned long)(*q - '0');
+                q++;
+            }
+            if (bounded && w > VSCAN_BUF - 1) w = VSCAN_BUF - 1;
+            have_width = 1;
+            n += (size_t)snprintf(out + n, cap - n, "%lu", w);
+            continue;
+        }
+        out[n++] = *q++;
+    }
+    if (bounded && !have_width)
+        n += (size_t)snprintf(out + n, cap - n, "%lu", (unsigned long)(VSCAN_BUF - 1));
+    size_t tail = (size_t)(end - conv);
+    if (n + tail + 1 > cap) tail = cap - n - 1;
+    memcpy(out + n, conv, tail);
+    n += tail;
+    out[n] = 0;
+}
+
 static int vscan(CPU *c, FILE *in, int tail) {
     uint64_t fmt_va = ARG2(c);
     char fmt[2048];
@@ -235,49 +324,107 @@ static int vscan(CPU *c, FILE *in, int tail) {
         const char *conv = p + 1;
         while (*conv && !strchr("diouxXceEfFgGaAs[", *conv)) conv++;
         if (!*conv) return got;
-        char spec[64];
-        host_spec(p, conv, spec, sizeof spec);
+        const char *end = conv + 1;
+        if (*conv == '[') {
+            const char *se = scanset_end(end);
+            if (se > end) end = se;
+        }
         char ch = (char)*conv;
         int suppress = 0;
-        const char *q = spec;
-        while (q && *q == '*') { suppress = 1; q++; }
-        uint64_t dst = vararg(va, ai);
-        (void)dst;
+        for (const char *q = p + 1; q < conv; q++)
+            if (*q == '*') suppress = 1;
+        char spec[128];
+        scan_spec(p, end, conv, spec, sizeof spec);
+        /* A suppressed conversion consumes no vararg and writes no guest byte. */
+        uint64_t dst = suppress ? 0 : vararg(va, ai);
         int n = 0;
-        if (ch == 'd' || ch == 'i' || ch == 'u' || ch == 'x' || ch == 'X' || ch == 'o') {
-            long long v = 0;
-            if (ch == 'u' || ch == 'x' || ch == 'X' || ch == 'o') {
-                unsigned long long uv = 0;
-                n = fscanf(in, spec, &uv);
-                v = (long long)uv;
-            } else n = fscanf(in, spec, &v);
-            if (n == 1 && !suppress) {
-                const char *s = spec;
-                int sz = 4;
-                while (s && *s) { if (*s == 'h') sz = (s[1] == 'h') ? 1 : 2; else if (*s == 'l') sz = (s[1] == 'l') ? 8 : 4; s++; }
-                if (sz == 1) wr8(dst, (uint8_t)v);
-                else if (sz == 2) wr16(dst, (uint16_t)v);
-                else if (sz == 4) wr32(dst, (uint32_t)v);
-                else wr64(dst, (uint64_t)v);
+        if (strchr("diouxX", ch)) {
+            int sz = fmt_int_width(spec, ch);
+            int unsig = (ch == 'u' || ch == 'o' || ch == 'x' || ch == 'X');
+            /* Match the host fscanf destination to the specifier exactly, then
+             * write back the guest width the specifier asked for. */
+            if (sz == 8) {
+                if (unsig) {
+                    unsigned long long v = 0;
+                    n = fscanf(in, spec, &v);
+                    if (n == 1 && !suppress) wr64(dst, v);
+                } else {
+                    long long v = 0;
+                    n = fscanf(in, spec, &v);
+                    if (n == 1 && !suppress) wr64(dst, (uint64_t)v);
+                }
+            } else if (sz == 4) {
+                if (unsig) {
+                    unsigned int v = 0;
+                    n = fscanf(in, spec, &v);
+                    if (n == 1 && !suppress) wr32(dst, v);
+                } else {
+                    int v = 0;
+                    n = fscanf(in, spec, &v);
+                    if (n == 1 && !suppress) wr32(dst, (uint32_t)v);
+                }
+            } else if (sz == 2) {
+                if (unsig) {
+                    unsigned short v = 0;
+                    n = fscanf(in, spec, &v);
+                    if (n == 1 && !suppress) wr16(dst, v);
+                } else {
+                    short v = 0;
+                    n = fscanf(in, spec, &v);
+                    if (n == 1 && !suppress) wr16(dst, (uint16_t)v);
+                }
+            } else {
+                if (unsig) {
+                    unsigned char v = 0;
+                    n = fscanf(in, spec, &v);
+                    if (n == 1 && !suppress) wr8(dst, v);
+                } else {
+                    signed char v = 0;
+                    n = fscanf(in, spec, &v);
+                    if (n == 1 && !suppress) wr8(dst, (uint8_t)v);
+                }
             }
         } else if (ch == 'c') {
-            char v = 0; n = fscanf(in, spec, &v);
+            char v = 0;
+            n = fscanf(in, spec, &v);
             if (n == 1 && !suppress) wr8(dst, (uint8_t)v);
-        } else if (ch == 's') {
-            char v[4096]; n = fscanf(in, spec, v);
-            if (n == 1 && !suppress) for (size_t k = 0; k <= strlen(v); k++) wr8(dst + k, (uint8_t)v[k]);
-        } else if (ch == 'f' || ch == 'e' || ch == 'g' || ch == 'F' || ch == 'E' || ch == 'G') {
-            double v = 0; n = fscanf(in, spec, &v);
-            if (n == 1 && !suppress) wr64(dst, *(uint64_t *)&v);
-        } else {
-            /* %[set]: read with the same spec into a buffer, then copy out. */
-            char v[4096]; n = fscanf(in, spec, v);
-            if (n == 1 && !suppress) for (size_t k = 0; k <= strlen(v); k++) wr8(dst + k, (uint8_t)v[k]);
+        } else if (ch == 's' || ch == '[') {
+            char v[VSCAN_BUF];
+            memset(v, 0, sizeof v);
+            n = fscanf(in, spec, v);
+            if (n == 1 && !suppress) {
+                size_t k = 0;
+                while (k + 1 < sizeof v && v[k]) { wr8(dst + k, (uint8_t)v[k]); k++; }
+                wr8(dst + k, 0);
+            }
+        } else if (strchr("eEfFgGaA", ch)) {
+            int is_double = 0;
+            for (const char *q = p + 1; q < conv; q++) if (*q == 'l') is_double = 1;
+            if (is_double) {
+                double v = 0;
+                n = fscanf(in, spec, &v);
+                if (n == 1 && !suppress) {
+                    uint64_t bits;
+                    memcpy(&bits, &v, sizeof bits);
+                    wr64(dst, bits);
+                }
+            } else {
+                float v = 0;
+                n = fscanf(in, spec, &v);
+                if (n == 1 && !suppress) {
+                    uint32_t bits;
+                    memcpy(&bits, &v, sizeof bits);
+                    wr32(dst, bits);
+                }
+            }
         }
-        if (n != 1) return got;
-        got++;
-        ai++;
-        p = conv + 1;
+        if (n < 0) return got;              /* EOF / input failure */
+        if (!suppress) {
+            if (n != 1) return got;
+            got++;
+            ai++;
+        }
+        p = end;
     }
     return got;
 }
@@ -289,7 +436,13 @@ static char    *g_argv_array[2];
 static char   **g_argv_cell;
 static char    *g_environ[1];
 static int32_t g_commode, g_fmode = 0x40;
-static int32_t g_tls[64];
+/* Win64 TLS values are LPVOID-sized: an int32_t slot would truncate every
+ * pointer above 4 GiB. g_tls_used is the allocation bitmap so TlsAlloc can
+ * hand out distinct indices instead of the old hard-coded slot 3. */
+#define TLS_SLOTS       64u
+#define TLS_BAD_INDEX   0xFFFFFFFFu      /* TLS_OUT_OF_INDEXES */
+static uint64_t g_tls[TLS_SLOTS];
+static uint64_t g_tls_used;   /* 64 bits for 64 slots: 1u << 32 would overflow */
 static uint32_t g_onexit[64];
 static int g_onexit_n;
 
@@ -344,10 +497,39 @@ int win64_hle_invoke(CPU *c, uint32_t idx) {
     if (IS("SetLastError")) { return 1; }
     if (IS("SetUnhandledExceptionFilter")) { SET64(c->rax, 0); return 1; }
     if (IS("signal")) { SET64(c->rax, 0); return 1; }
-    if (IS("TlsGetValue")) { SET64(c->rax, g_tls[(a0 & 0x3f)]); return 1; }
-    if (IS("TlsSetValue")) { g_tls[(a0 & 0x3f)] = a1; SET32(c->rax, 1); return 1; }
-    if (IS("TlsAlloc")) { SET32(c->rax, 3); return 1; }
-    if (IS("TlsFree")) { SET32(c->rax, 1); return 1; }
+    /* ---- thread local storage ---- */
+    if (IS("TlsGetValue")) {
+        uint32_t i = (uint32_t)a0;
+        SET64(c->rax, i < TLS_SLOTS && (g_tls_used & (1ULL << i)) ? g_tls[i] : 0);
+        return 1;
+    }
+    if (IS("TlsSetValue")) {
+        uint32_t i = (uint32_t)a0;
+        if (i >= TLS_SLOTS || !(g_tls_used & (1ULL << i))) { SET32(c->rax, 0); return 1; }
+        g_tls[i] = a1;
+        SET32(c->rax, 1);
+        return 1;
+    }
+    if (IS("TlsAlloc")) {
+        for (uint32_t i = 0; i < TLS_SLOTS; i++) {
+            if (!(g_tls_used & (1ULL << i))) {
+                g_tls_used |= 1ULL << i;
+                g_tls[i] = 0;               /* Windows zeroes a fresh slot */
+                SET32(c->rax, i);
+                return 1;
+            }
+        }
+        SET32(c->rax, TLS_BAD_INDEX);
+        return 1;
+    }
+    if (IS("TlsFree")) {
+        uint32_t i = (uint32_t)a0;
+        if (i >= TLS_SLOTS || !(g_tls_used & (1ULL << i))) { SET32(c->rax, 0); return 1; }
+        g_tls_used &= ~(1ULL << i);
+        g_tls[i] = 0;
+        SET32(c->rax, 1);
+        return 1;
+    }
     if (IS("VirtualProtect")) { if (a3) wr32(a3, (uint32_t)a2); SET32(c->rax, 1); return 1; }
     if (IS("VirtualQuery")) { SET64(c->rax, 0x30); return 1; }
     if (IS("_set_new_mode")) { SET32(c->rax, 0); return 1; }
