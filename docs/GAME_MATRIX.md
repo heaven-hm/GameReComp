@@ -12,6 +12,409 @@ Updated 2026-11-25T23:30:00Z by `python -m tools.gamesdb --matrix`; IGI fresh-fr
 
 **Evidence-backed results:** **9 / 128** recorded rows point at a committed proof file; **9** of those carry a PASS/PARTIAL verdict (**1** explicitly report `0` unresolved imports). Other rows are NOT RUN / FAIL here even when a local build log exists outside version control.
 
+## Installed on this machine (Highball bottle)
+
+All 361 installed Windows executables found under `~/Library/Application Support/Highball/bottles/Games/` are listed below. Counts: 5 BAD, 192 PE32 i386, 164 PE32+ x86-64. A listed app is an installed input, not a working port. `PE32+ x86-64` and invalid headers fail closed with a named reason. Screenshots are embedded at full frame size only where a real committed frame exists; every other row says so explicitly. No frame is fabricated, and no row is PASS without an independent Windows scenario oracle.
+
+| Installed executable | Format | Honest ten-word description | Full-frame screenshot proof |
+| --- | --- | --- | --- |
+| `Games/drive_c/Program Files/Cheat Engine/Cheat Engine.exe` | PE32 i386 | Cheat Engine.exe: PE32 i386 accepted; no frame; NOT RUN without | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/DotNetDataCollector32.exe` | PE32 i386 | DotNetDataCollector32.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/DotNetDataCollector64.exe` | PE32+ x86-64 | DotNetDataCollector64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/Kernelmoduleunloader.exe` | PE32 i386 | Kernelmoduleunloader.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/Tutorial-x86_64.exe` | PE32+ x86-64 | Tutorial-x86_64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/ceregreset.exe` | PE32 i386 | ceregreset.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/cheatengine-i386.exe` | PE32 i386 | cheatengine-i386.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/cheatengine-x86_64-SSE4-AVX2.exe` | PE32+ x86-64 | cheatengine-x86_64-SSE4-AVX2.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/cheatengine-x86_64.exe` | PE32+ x86-64 | cheatengine-x86_64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/gtutorial-i386.exe` | PE32 i386 | gtutorial-i386.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/gtutorial-x86_64.exe` | PE32+ x86-64 | gtutorial-x86_64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/unins000.exe` | PE32 i386 | unins000.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files/Cheat Engine/windowsrepair.exe` | PE32 i386 | windowsrepair.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files/Internet Explorer/iexplore.exe` | PE32+ x86-64 | iexplore.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files/Windows Media Player/wmplayer.exe` | PE32+ x86-64 | wmplayer.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files/Windows NT/Accessories/wordpad.exe` | PE32+ x86-64 | wordpad.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Common Files/Solveig Multimedia/ffmpeg.exe` | PE32 i386 | ffmpeg.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Common Files/Solveig Multimedia/x264.exe` | PE32 i386 | x264.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/HyperCam 7/SMM_HCEditor.exe` | PE32 i386 | SMM_HCEditor.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/HyperCam 7/SMM_HyperCam.exe` | PE32 i386 | SMM_HyperCam.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/HyperCam 7/SMM_HyperCam_Recovery.exe` | PE32 i386 | SMM_HyperCam_Recovery.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/HyperCam 7/Uninstall.exe` | PE32 i386 | Uninstall.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Download Manager/IDMGrHlp.exe` | PE32 i386 | IDMGrHlp.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Download Manager/IDMIntegrator64.exe` | PE32+ x86-64 | IDMIntegrator64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Download Manager/IDMMsgHost.exe` | PE32 i386 | IDMMsgHost.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Download Manager/IDMan.exe` | PE32 i386 | IDMan.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Download Manager/IEMonitor.exe` | PE32 i386 | IEMonitor.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Download Manager/MediumILStart.exe` | PE32 i386 | MediumILStart.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Download Manager/Uninstall.exe` | PE32 i386 | Uninstall.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Download Manager/idmBroker.exe` | PE32 i386 | idmBroker.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Internet Explorer/iexplore.exe` | PE32 i386 | iexplore.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Winamp/Elevator.exe` | PE32 i386 | Elevator.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Winamp/UninstWA.exe` | PE32 i386 | UninstWA.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Winamp/reporter.exe` | PE32 i386 | reporter.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Winamp/winamp.exe` | PE32 i386 | winamp.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Winamp/winampa.exe` | PE32 i386 | winampa.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Windows Media Player/wmplayer.exe` | PE32 i386 | wmplayer.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/Program Files (x86)/Windows NT/Accessories/wordpad.exe` | PE32 i386 | wordpad.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/DoConfig.exe` | PE32 i386 | DoConfig.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/Tetris.exe` | PE32+ x86-64 | Tetris.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | full-frame: `docs/screenshots/native/tetris-oucc-new-01.png` |
+| `Games/drive_c/recomp-oracle/TrackEditor.exe` | PE32 i386 | TrackEditor.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/arith-calc.exe` | PE32 i386 | arith-calc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/base64.exe` | PE32 i386 | base64.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/blackbox.exe` | PE32+ x86-64 | blackbox.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/bridges.exe` | PE32+ x86-64 | bridges.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/busybox.exe` | PE32 i386 | busybox.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/cube.exe` | PE32+ x86-64 | cube.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | full-frame: `docs/screenshots/cube-native-frame-0000.png`, `docs/screenshots/cube-native-frame-0001.png` |
+| `Games/drive_c/recomp-oracle/fifteen.exe` | PE32+ x86-64 | fifteen.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/fifteensolver.exe` | PE32 i386 | fifteensolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/filling.exe` | PE32+ x86-64 | filling.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/fillingsolver.exe` | PE32 i386 | fillingsolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/flip.exe` | PE32+ x86-64 | flip.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/flood.exe` | PE32+ x86-64 | flood.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/galaxies.exe` | PE32+ x86-64 | galaxies.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/galaxiespicture.exe` | PE32 i386 | galaxiespicture.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/galaxiessolver.exe` | PE32 i386 | galaxiessolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/game2048.exe` | PE32+ x86-64 | game2048.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/guess.exe` | PE32+ x86-64 | guess.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/guess_game_x64.exe` | PE32+ x86-64 | guess_game_x64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/guess_game_x86.exe` | PE32 i386 | guess_game_x86.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/hangman_x64.exe` | PE32+ x86-64 | hangman_x64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/hangman_x86.exe` | PE32 i386 | hangman_x86.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/igi2-hm.exe` | PE32 i386 | igi2-hm.exe: PE32 i386; native frame committed; no Windows oracle claim | full-frame: `proof/screenshots/igi-level1-fresh-0002.png` |
+| `Games/drive_c/recomp-oracle/igi2.exe` | PE32 i386 | igi2.exe: PE32 i386; native frame committed; no Windows oracle claim | full-frame: `proof/screenshots/igi-level1-fresh-0002.png`, `proof/screenshots/igi-level5-fresh-0001.png`, `proof/screenshots/igi-level9-fresh-0002.png` |
+| `Games/drive_c/recomp-oracle/inertia.exe` | PE32+ x86-64 | inertia.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/keen.exe` | PE32+ x86-64 | keen.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/keensolver.exe` | PE32 i386 | keensolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/lightup.exe` | PE32+ x86-64 | lightup.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/lightupsolver.exe` | PE32 i386 | lightupsolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/luhn.exe` | PE32 i386 | luhn.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/magnets.exe` | PE32+ x86-64 | magnets.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/magnetssolver.exe` | PE32 i386 | magnetssolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/map.exe` | PE32+ x86-64 | map.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/mapsolver.exe` | PE32 i386 | mapsolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/mines.exe` | PE32 i386 | mines.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/mosaic.exe` | PE32+ x86-64 | mosaic.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/netgame.exe` | PE32+ x86-64 | netgame.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/oversample.exe` | PE32 i386 | oversample.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/p12_float32.exe` | PE32 i386 | p12_float32.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/p12_float64.exe` | PE32+ x86-64 | p12_float64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/p12_l2w64.exe` | PE32+ x86-64 | p12_l2w64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/pattern.exe` | PE32+ x86-64 | pattern.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/patternpicture.exe` | PE32 i386 | patternpicture.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/patternsolver.exe` | PE32 i386 | patternsolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/pegs.exe` | PE32+ x86-64 | pegs.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/prime-gen.exe` | PE32 i386 | prime-gen.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/range.exe` | PE32+ x86-64 | range.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/rect.exe` | PE32+ x86-64 | rect.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/run64.exe` | PE32+ x86-64 | run64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/samegame.exe` | PE32+ x86-64 | samegame.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/signpost.exe` | PE32+ x86-64 | signpost.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/signpostsolver.exe` | PE32 i386 | signpostsolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/singles.exe` | PE32+ x86-64 | singles.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/singlessolver.exe` | PE32 i386 | singlessolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/sixteen.exe` | PE32+ x86-64 | sixteen.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/slantsolver.exe` | PE32 i386 | slantsolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/snake-windows-x86_64.exe` | PE32+ x86-64 | snake-windows-x86_64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/snake.exe` | PE32+ x86-64 | snake.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/solosolver.exe` | PE32 i386 | solosolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/tents.exe` | PE32+ x86-64 | tents.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/tentssolver.exe` | PE32 i386 | tentssolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/tetris-win-32-ch.exe` | PE32 i386 | tetris-win-32-ch.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/tetris-win-32-en.exe` | PE32 i386 | tetris-win-32-en.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/tetris-win-32-jp.exe` | PE32 i386 | tetris-win-32-jp.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/tf.exe` | PE32 i386 | tf.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/tictactoe.exe` | PE32+ x86-64 | tictactoe.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/towers.exe` | PE32+ x86-64 | towers.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/towerssolver.exe` | PE32 i386 | towerssolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/tracks.exe` | PE32+ x86-64 | tracks.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/trackssolver.exe` | PE32 i386 | trackssolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/twiddle.exe` | PE32+ x86-64 | twiddle.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/undead.exe` | PE32+ x86-64 | undead.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/unequal.exe` | PE32+ x86-64 | unequal.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/unequalsolver.exe` | PE32 i386 | unequalsolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/unruly.exe` | PE32+ x86-64 | unruly.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/recomp-oracle/unrulysolver.exe` | PE32 i386 | unrulysolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/recomp-oracle/untangle.exe` | PE32+ x86-64 | untangle.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/OpenIGI/Library/openigi/versions/0.6.2/OpenIGI.Desktop.exe` | PE32+ x86-64 | OpenIGI.Desktop.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/Temp/2EL09O1F/Resume.exe` | PE32 i386 | Resume.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/Temp/2EL09O1F/SolveigMM_HyperCam_7_0_2601_19/presetup/Common/SMM_HCEditor.exe` | PE32 i386 | SMM_HCEditor.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/Temp/2EL09O1F/SolveigMM_HyperCam_7_0_2601_19/presetup/Common/SMM_HyperCam.exe` | PE32 i386 | SMM_HyperCam.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/Temp/2EL09O1F/SolveigMM_HyperCam_7_0_2601_19/presetup/Common/SMM_HyperCam_Recovery.exe` | PE32 i386 | SMM_HyperCam_Recovery.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/Temp/2EL09O1F/SolveigMM_HyperCam_7_0_2601_19/presetup/Sys/Uninstall.exe` | PE32 i386 | Uninstall.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/Temp/2EL09O1F/SolveigMM_HyperCam_7_0_2601_19/presetup/Sys/ffmpeg.exe` | PE32 i386 | ffmpeg.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/Temp/2EL09O1F/SolveigMM_HyperCam_7_0_2601_19/presetup/Sys/x264.exe` | PE32 i386 | x264.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/users/haseeb-mir/AppData/Local/Temp/2EL09O1F/comregc.exe` | PE32+ x86-64 | comregc.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v1.1.4322/aspnet_regiis.exe` | PE32 i386 | aspnet_regiis.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v1.1.4322/ngen.exe` | PE32 i386 | ngen.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v1.1.4322/regsvcs.exe` | PE32 i386 | regsvcs.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v2.0.50727/csc.exe` | PE32 i386 | csc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v2.0.50727/installutil.exe` | PE32 i386 | installutil.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v2.0.50727/msbuild.exe` | PE32 i386 | msbuild.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v2.0.50727/ngen.exe` | PE32 i386 | ngen.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v2.0.50727/regasm.exe` | PE32 i386 | regasm.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v3.0/windows communication foundation/servicemodelreg.exe` | PE32 i386 | servicemodelreg.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v3.0/wpf/presentationfontcache.exe` | PE32 i386 | presentationfontcache.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v3.5/msbuild.exe` | PE32 i386 | msbuild.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v4.0.30319/csc.exe` | PE32 i386 | csc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v4.0.30319/installutil.exe` | PE32 i386 | installutil.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v4.0.30319/msbuild.exe` | PE32 i386 | msbuild.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework/v4.0.30319/ngen.exe` | PE32 i386 | ngen.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v1.1.4322/aspnet_regiis.exe` | PE32+ x86-64 | aspnet_regiis.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v1.1.4322/ngen.exe` | PE32+ x86-64 | ngen.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v1.1.4322/regsvcs.exe` | PE32+ x86-64 | regsvcs.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v2.0.50727/csc.exe` | PE32 i386 | csc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v2.0.50727/installutil.exe` | PE32 i386 | installutil.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v2.0.50727/msbuild.exe` | PE32 i386 | msbuild.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v2.0.50727/ngen.exe` | PE32+ x86-64 | ngen.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v2.0.50727/regasm.exe` | PE32+ x86-64 | regasm.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v3.0/windows communication foundation/servicemodelreg.exe` | PE32+ x86-64 | servicemodelreg.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v3.0/wpf/presentationfontcache.exe` | PE32+ x86-64 | presentationfontcache.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v3.5/msbuild.exe` | PE32 i386 | msbuild.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/csc.exe` | PE32 i386 | csc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/installutil.exe` | PE32 i386 | installutil.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/msbuild.exe` | PE32 i386 | msbuild.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/ngen.exe` | PE32+ x86-64 | ngen.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/command/start.exe` | PE32 i386 | start.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/explorer.exe` | PE32+ x86-64 | explorer.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/hh.exe` | PE32+ x86-64 | hh.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/notepad.exe` | PE32+ x86-64 | notepad.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/regedit.exe` | PE32+ x86-64 | regedit.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/rundll.exe` | BAD | rundll.exe: invalid PE header; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/WindowsPowerShell/v1.0/powershell.exe` | PE32+ x86-64 | powershell.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/arp.exe` | PE32+ x86-64 | arp.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/attrib.exe` | PE32+ x86-64 | attrib.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/cabarc.exe` | PE32+ x86-64 | cabarc.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/cacls.exe` | PE32+ x86-64 | cacls.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/certutil.exe` | PE32+ x86-64 | certutil.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/clock.exe` | PE32+ x86-64 | clock.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/cmd.exe` | PE32+ x86-64 | cmd.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/conhost.exe` | PE32+ x86-64 | conhost.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/control.exe` | PE32+ x86-64 | control.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/cscript.exe` | PE32+ x86-64 | cscript.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/dism.exe` | PE32+ x86-64 | dism.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/dllhost.exe` | PE32+ x86-64 | dllhost.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/dplaysvr.exe` | PE32+ x86-64 | dplaysvr.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/dpnsvr.exe` | PE32+ x86-64 | dpnsvr.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/dpvsetup.exe` | PE32+ x86-64 | dpvsetup.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/dxdiag.exe` | PE32+ x86-64 | dxdiag.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/eject.exe` | PE32+ x86-64 | eject.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/expand.exe` | PE32+ x86-64 | expand.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/explorer.exe` | PE32+ x86-64 | explorer.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/extrac32.exe` | PE32+ x86-64 | extrac32.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/fc.exe` | PE32+ x86-64 | fc.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/find.exe` | PE32+ x86-64 | find.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/findstr.exe` | PE32+ x86-64 | findstr.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/fsutil.exe` | PE32+ x86-64 | fsutil.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/hostname.exe` | PE32+ x86-64 | hostname.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/icacls.exe` | PE32+ x86-64 | icacls.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/icinfo.exe` | PE32+ x86-64 | icinfo.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/iexplore.exe` | PE32+ x86-64 | iexplore.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/ipconfig.exe` | PE32+ x86-64 | ipconfig.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/klist.exe` | PE32+ x86-64 | klist.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/lodctr.exe` | PE32+ x86-64 | lodctr.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/makecab.exe` | PE32+ x86-64 | makecab.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/mshta.exe` | PE32+ x86-64 | mshta.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/msidb.exe` | PE32+ x86-64 | msidb.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/msiexec.exe` | PE32+ x86-64 | msiexec.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/msinfo32.exe` | PE32+ x86-64 | msinfo32.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/net.exe` | PE32+ x86-64 | net.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/netsh.exe` | PE32+ x86-64 | netsh.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/netstat.exe` | PE32+ x86-64 | netstat.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/notepad.exe` | PE32+ x86-64 | notepad.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/ntoskrnl.exe` | PE32+ x86-64 | ntoskrnl.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/oleview.exe` | PE32+ x86-64 | oleview.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/ping.exe` | PE32+ x86-64 | ping.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/plugplay.exe` | PE32+ x86-64 | plugplay.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/pnputil.exe` | PE32+ x86-64 | pnputil.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/progman.exe` | PE32+ x86-64 | progman.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/reg.exe` | PE32+ x86-64 | reg.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/regini.exe` | PE32+ x86-64 | regini.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/regsvr32.exe` | PE32+ x86-64 | regsvr32.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/robocopy.exe` | PE32+ x86-64 | robocopy.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/rpcss.exe` | PE32+ x86-64 | rpcss.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/runas.exe` | PE32+ x86-64 | runas.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/rundll32.exe` | PE32+ x86-64 | rundll32.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/sc.exe` | PE32+ x86-64 | sc.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/schtasks.exe` | PE32+ x86-64 | schtasks.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/sdbinst.exe` | PE32+ x86-64 | sdbinst.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/secedit.exe` | PE32+ x86-64 | secedit.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/services.exe` | PE32+ x86-64 | services.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/setx.exe` | PE32+ x86-64 | setx.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/shutdown.exe` | PE32+ x86-64 | shutdown.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/sort.exe` | PE32+ x86-64 | sort.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/spoolsv.exe` | PE32+ x86-64 | spoolsv.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/start.exe` | PE32+ x86-64 | start.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/subst.exe` | PE32+ x86-64 | subst.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/svchost.exe` | PE32+ x86-64 | svchost.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/systeminfo.exe` | PE32+ x86-64 | systeminfo.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/taskkill.exe` | PE32+ x86-64 | taskkill.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/tasklist.exe` | PE32+ x86-64 | tasklist.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/taskmgr.exe` | PE32+ x86-64 | taskmgr.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/termsv.exe` | PE32+ x86-64 | termsv.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/timeout.exe` | PE32+ x86-64 | timeout.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/uninstaller.exe` | PE32+ x86-64 | uninstaller.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/unlodctr.exe` | PE32+ x86-64 | unlodctr.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/view.exe` | PE32+ x86-64 | view.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/wbem/mofcomp.exe` | PE32+ x86-64 | mofcomp.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/wbem/wmic.exe` | PE32+ x86-64 | wmic.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/wevtutil.exe` | PE32+ x86-64 | wevtutil.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/where.exe` | PE32+ x86-64 | where.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/whoami.exe` | PE32+ x86-64 | whoami.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/wineboot.exe` | PE32+ x86-64 | wineboot.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winebrowser.exe` | PE32+ x86-64 | winebrowser.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winecfg.exe` | PE32+ x86-64 | winecfg.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/wineconsole.exe` | PE32+ x86-64 | wineconsole.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winedbg.exe` | PE32+ x86-64 | winedbg.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winedevice.exe` | PE32+ x86-64 | winedevice.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winefile.exe` | PE32+ x86-64 | winefile.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winemenubuilder.exe` | PE32+ x86-64 | winemenubuilder.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winemine.exe` | PE32+ x86-64 | winemine.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winemsibuilder.exe` | PE32+ x86-64 | winemsibuilder.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winepath.exe` | PE32+ x86-64 | winepath.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winhlp32.exe` | PE32+ x86-64 | winhlp32.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winmgmt.exe` | PE32+ x86-64 | winmgmt.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/winver.exe` | PE32+ x86-64 | winver.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/write.exe` | PE32+ x86-64 | write.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/wscript.exe` | PE32+ x86-64 | wscript.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/wuauserv.exe` | PE32+ x86-64 | wuauserv.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/wusa.exe` | PE32+ x86-64 | wusa.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/system32/xcopy.exe` | PE32+ x86-64 | xcopy.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/syswow64/WindowsPowerShell/v1.0/powershell.exe` | PE32 i386 | powershell.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/arp.exe` | PE32 i386 | arp.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/attrib.exe` | PE32 i386 | attrib.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/cabarc.exe` | PE32 i386 | cabarc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/cacls.exe` | PE32 i386 | cacls.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/certutil.exe` | PE32 i386 | certutil.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/clock.exe` | PE32 i386 | clock.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/cmd.exe` | PE32 i386 | cmd.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/control.exe` | PE32 i386 | control.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/cscript.exe` | PE32 i386 | cscript.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/ddhelp.exe` | PE32 i386 | ddhelp.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/dism.exe` | PE32 i386 | dism.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/dllhost.exe` | PE32 i386 | dllhost.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/dosx.exe` | PE32 i386 | dosx.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/dplaysvr.exe` | PE32 i386 | dplaysvr.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/dpnsvr.exe` | PE32 i386 | dpnsvr.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/dpvsetup.exe` | PE32 i386 | dpvsetup.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/dxdiag.exe` | PE32 i386 | dxdiag.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/eject.exe` | PE32 i386 | eject.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/expand.exe` | PE32 i386 | expand.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/explorer.exe` | PE32 i386 | explorer.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/extrac32.exe` | PE32 i386 | extrac32.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/fc.exe` | PE32 i386 | fc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/find.exe` | PE32 i386 | find.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/findstr.exe` | PE32 i386 | findstr.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/fsutil.exe` | PE32 i386 | fsutil.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/gdi.exe` | BAD | gdi.exe: invalid PE header; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/syswow64/hh.exe` | PE32 i386 | hh.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/hostname.exe` | PE32 i386 | hostname.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/icacls.exe` | PE32 i386 | icacls.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/icinfo.exe` | PE32 i386 | icinfo.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/iexplore.exe` | PE32 i386 | iexplore.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/ipconfig.exe` | PE32 i386 | ipconfig.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/klist.exe` | PE32 i386 | klist.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/krnl386.exe` | BAD | krnl386.exe: invalid PE header; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/syswow64/lodctr.exe` | PE32 i386 | lodctr.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/makecab.exe` | PE32 i386 | makecab.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/mshta.exe` | PE32 i386 | mshta.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/msidb.exe` | PE32 i386 | msidb.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/msiexec.exe` | PE32 i386 | msiexec.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/msinfo32.exe` | PE32 i386 | msinfo32.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/net.exe` | PE32 i386 | net.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/netsh.exe` | PE32 i386 | netsh.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/netstat.exe` | PE32 i386 | netstat.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/notepad.exe` | PE32 i386 | notepad.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/ntoskrnl.exe` | PE32 i386 | ntoskrnl.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/oleview.exe` | PE32 i386 | oleview.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/ping.exe` | PE32 i386 | ping.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/pnputil.exe` | PE32 i386 | pnputil.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/progman.exe` | PE32 i386 | progman.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/reg.exe` | PE32 i386 | reg.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/regedit.exe` | PE32 i386 | regedit.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/regini.exe` | PE32 i386 | regini.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/regsvr32.exe` | PE32 i386 | regsvr32.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/robocopy.exe` | PE32 i386 | robocopy.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/runas.exe` | PE32 i386 | runas.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/rundll32.exe` | PE32 i386 | rundll32.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/sc.exe` | PE32 i386 | sc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/schtasks.exe` | PE32 i386 | schtasks.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/sdbinst.exe` | PE32 i386 | sdbinst.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/secedit.exe` | PE32 i386 | secedit.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/setx.exe` | PE32 i386 | setx.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/shutdown.exe` | PE32 i386 | shutdown.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/sort.exe` | PE32 i386 | sort.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/start.exe` | PE32 i386 | start.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/subst.exe` | PE32 i386 | subst.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/svchost.exe` | PE32 i386 | svchost.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/systeminfo.exe` | PE32 i386 | systeminfo.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/taskkill.exe` | PE32 i386 | taskkill.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/tasklist.exe` | PE32 i386 | tasklist.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/taskmgr.exe` | PE32 i386 | taskmgr.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/timeout.exe` | PE32 i386 | timeout.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/uninstaller.exe` | PE32 i386 | uninstaller.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/unlodctr.exe` | PE32 i386 | unlodctr.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/user.exe` | BAD | user.exe: invalid PE header; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/syswow64/view.exe` | PE32 i386 | view.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/wbem/mofcomp.exe` | PE32 i386 | mofcomp.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/wbem/wmic.exe` | PE32 i386 | wmic.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/wevtutil.exe` | PE32 i386 | wevtutil.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/where.exe` | PE32 i386 | where.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/whoami.exe` | PE32 i386 | whoami.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winebrowser.exe` | PE32 i386 | winebrowser.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winecfg.exe` | PE32 i386 | winecfg.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/wineconsole.exe` | PE32 i386 | wineconsole.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winedbg.exe` | PE32 i386 | winedbg.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winedevice.exe` | PE32 i386 | winedevice.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winefile.exe` | PE32 i386 | winefile.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winemine.exe` | PE32 i386 | winemine.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winemsibuilder.exe` | PE32 i386 | winemsibuilder.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winepath.exe` | PE32 i386 | winepath.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winevdm.exe` | PE32 i386 | winevdm.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winhlp32.exe` | PE32 i386 | winhlp32.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winmgmt.exe` | PE32 i386 | winmgmt.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/winver.exe` | PE32 i386 | winver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/write.exe` | PE32 i386 | write.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/wscript.exe` | PE32 i386 | wscript.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/wusa.exe` | PE32 i386 | wusa.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/syswow64/xcopy.exe` | PE32 i386 | xcopy.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+| `Games/drive_c/windows/winhelp.exe` | BAD | winhelp.exe: invalid PE header; fail-closed; no port or frame claimed | none - no committed frame |
+| `Games/drive_c/windows/winhlp32.exe` | PE32 i386 | winhlp32.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
+
+### Full-frame gallery (real committed frames only)
+
+![Fresh native IGI level one frame; render evidence only, no](proof/screenshots/igi-level1-fresh-0002.png)
+
+*Fresh native IGI level one frame; render evidence only, no*
+
+![Fresh native IGI level five frame; render evidence only, no](proof/screenshots/igi-level5-fresh-0001.png)
+
+*Fresh native IGI level five frame; render evidence only, no*
+
+![Fresh native IGI level nine frame; render evidence only, no](proof/screenshots/igi-level9-fresh-0002.png)
+
+*Fresh native IGI level nine frame; render evidence only, no*
+
+![Native Cube render frame zero; render evidence only, no Windows](docs/screenshots/cube-native-frame-0000.png)
+
+*Native Cube render frame zero; render evidence only, no Windows*
+
+![Native Cube render frame one; render evidence only, no Windows](docs/screenshots/cube-native-frame-0001.png)
+
+*Native Cube render frame one; render evidence only, no Windows*
+
+![Native Tetris OUCC render frame; render evidence only, no Windows](docs/screenshots/native/tetris-oucc-new-01.png)
+
+*Native Tetris OUCC render frame; render evidence only, no Windows*
+
+![Native Cave Story render frame; render evidence only, no Windows](docs/screenshots/native/cavestory-native-01.png)
+
+*Native Cave Story render frame; render evidence only, no Windows*
+
+![Native AssaultCube setup frame; render evidence only, no Windows oracle.](proof/screenshots/ac-native-macos-setup-frame.png)
+
+*Native AssaultCube setup frame; render evidence only, no Windows oracle.*
+
+
 ## This repository (measured)
 
 | Name | OS | Arch | Port details | Frame proof | Working status |
@@ -223,35 +626,35 @@ Status text is quoted from each project's own README; the architecture and OS co
 28 unique images after removing byte-identical duplicates. A 1-colour frame is FAIL.
 
 <table>
-<tr><td align="center"><img src="../proof/screenshots/igi-level9-fresh-0002.png" alt="igi-level9-fresh-0002.png" width="160"><br><sub>igi-level9-fresh-0002.png</sub></td><td>640×480<br>6,814 colours</td></tr>
-<tr><td align="center"><img src="../evidence/CUA/ac-setup-cua.png" alt="ac-setup-cua.png" width="160"><br><sub>ac-setup-cua.png</sub></td><td>1024×768<br>17,689 colours</td></tr>
-<tr><td align="center"><img src="../proof/screenshots/ac-native-macos-setup-frame.png" alt="ac-native-macos-setup-frame.png" width="160"><br><sub>ac-native-macos-setup-frame.png</sub></td><td>1024×768<br>2,758 colours</td></tr>
-<tr><td align="center"><img src="../proof/screenshots/igi-level1-fresh-0002.png" alt="igi-level1-fresh-0002.png" width="160"><br><sub>igi-level1-fresh-0002.png</sub></td><td>640×480<br>6,814 colours</td></tr>
-<tr><td align="center"><img src="../proof/screenshots/igi-level5-fresh-0001.png" alt="igi-level5-fresh-0001.png" width="160"><br><sub>igi-level5-fresh-0001.png</sub></td><td>640×480<br>6,814 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-01-intro.png" alt="cavestory-doukutsu-01-intro.png" width="160"><br><sub>cavestory-doukutsu-01-intro.png</sub></td><td>640×480<br>47 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-02-intro.png" alt="cavestory-doukutsu-02-intro.png" width="160"><br><sub>cavestory-doukutsu-02-intro.png</sub></td><td>640×480<br>46 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-03-screen.png" alt="cavestory-doukutsu-03-screen.png" width="160"><br><sub>cavestory-doukutsu-03-screen.png</sub></td><td>640×480<br>16 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cube-native-frame-0000.png" alt="cube-native-frame-0000.png" width="160"><br><sub>cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cube-native-frame-0001.png" alt="cube-native-frame-0001.png" width="160"><br><sub>cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0000-blank.png" alt="doukutsu-sweep-frame-0000-blank.png" width="160"><br><sub>doukutsu-sweep-frame-0000-blank.png</sub></td><td>640×480<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0001.png" alt="doukutsu-sweep-frame-0001.png" width="160"><br><sub>doukutsu-sweep-frame-0001.png</sub></td><td>640×480<br>5 colours</td></tr>
-<tr><td align="center"><img src="screenshots/frame-0000-frame-0000.bmp" alt="frame-0000-frame-0000.bmp" width="160"><br><sub>frame-0000-frame-0000.bmp</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/game-recomp-cli-help.png" alt="game-recomp-cli-help.png" width="160"><br><sub>game-recomp-cli-help.png</sub></td><td>1945×1880<br>5546 colours</td></tr>
-<tr><td align="center"><img src="screenshots/game-recomp-gui-dark.png" alt="game-recomp-gui-dark.png" width="160"><br><sub>game-recomp-gui-dark.png</sub></td><td>2760×1816<br>5368 colours</td></tr>
-<tr><td align="center"><img src="screenshots/game-recomp-gui-light.png" alt="game-recomp-gui-light.png" width="160"><br><sub>game-recomp-gui-light.png</sub></td><td>2760×1816<br>6396 colours</td></tr>
-<tr><td align="center"><img src="screenshots/game-recomp-gui-nord-frost.png" alt="game-recomp-gui-nord-frost.png" width="160"><br><sub>game-recomp-gui-nord-frost.png</sub></td><td>2760×1816<br>6175 colours</td></tr>
-<tr><td align="center"><img src="screenshots/igi-window-level5-splash.png" alt="igi-window-level5-splash.png" width="160"><br><sub>igi-window-level5-splash.png</sub></td><td>640×480<br>6814 colours</td></tr>
-<tr><td align="center"><img src="screenshots/ikachan-blank-frame.png" alt="ikachan-blank-frame.png" width="160"><br><sub>ikachan-blank-frame.png</sub></td><td>351×238<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/macos-ikachan-blank.bmp" alt="macos-ikachan-blank.bmp" width="160"><br><sub>macos-ikachan-blank.bmp</sub></td><td>351×238<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0000.bmp" alt="screenshots-000-Doukutsu-frame-0000.bmp" width="160"><br><sub>screenshots-000-Doukutsu-frame-0000.bmp</sub></td><td>640×480<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0001.bmp" alt="screenshots-000-Doukutsu-frame-0001.bmp" width="160"><br><sub>screenshots-000-Doukutsu-frame-0001.bmp</sub></td><td>640×480<br>5 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0000.png" alt="screenshots-cube-native-frame-0000.png" width="160"><br><sub>screenshots-cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.bmp" alt="screenshots-cube-native-frame-0001.bmp" width="160"><br><sub>screenshots-cube-native-frame-0001.bmp</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.png" alt="screenshots-cube-native-frame-0001.png" width="160"><br><sub>screenshots-cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="160"><br><sub>screenshots-frame-0000.bmp</sub></td><td>580×456<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="160"><br><sub>screenshots-frame-0001.bmp</sub></td><td>580×456<br>2 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-ikachan-native-frame-0000.png" alt="screenshots-ikachan-native-frame-0000.png" width="160"><br><sub>screenshots-ikachan-native-frame-0000.png</sub></td><td>351×238<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-tm-forever-original-desktop-no-window.png" alt="screenshots-tm-forever-original-desktop-no-window.png" width="160"><br><sub>screenshots-tm-forever-original-desktop-no-window.png</sub></td><td>3360×2100<br>3257 colours</td></tr>
+<tr><td align="center"><img src="../proof/screenshots/igi-level9-fresh-0002.png" alt="igi-level9-fresh-0002.png" width="100%"><br><sub>igi-level9-fresh-0002.png</sub></td><td>640×480<br>6,814 colours</td></tr>
+<tr><td align="center"><img src="../evidence/CUA/ac-setup-cua.png" alt="ac-setup-cua.png" width="100%"><br><sub>ac-setup-cua.png</sub></td><td>1024×768<br>17,689 colours</td></tr>
+<tr><td align="center"><img src="../proof/screenshots/ac-native-macos-setup-frame.png" alt="ac-native-macos-setup-frame.png" width="100%"><br><sub>ac-native-macos-setup-frame.png</sub></td><td>1024×768<br>2,758 colours</td></tr>
+<tr><td align="center"><img src="../proof/screenshots/igi-level1-fresh-0002.png" alt="igi-level1-fresh-0002.png" width="100%"><br><sub>igi-level1-fresh-0002.png</sub></td><td>640×480<br>6,814 colours</td></tr>
+<tr><td align="center"><img src="../proof/screenshots/igi-level5-fresh-0001.png" alt="igi-level5-fresh-0001.png" width="100%"><br><sub>igi-level5-fresh-0001.png</sub></td><td>640×480<br>6,814 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cavestory-doukutsu-01-intro.png" alt="cavestory-doukutsu-01-intro.png" width="100%"><br><sub>cavestory-doukutsu-01-intro.png</sub></td><td>640×480<br>47 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cavestory-doukutsu-02-intro.png" alt="cavestory-doukutsu-02-intro.png" width="100%"><br><sub>cavestory-doukutsu-02-intro.png</sub></td><td>640×480<br>46 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cavestory-doukutsu-03-screen.png" alt="cavestory-doukutsu-03-screen.png" width="100%"><br><sub>cavestory-doukutsu-03-screen.png</sub></td><td>640×480<br>16 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cube-native-frame-0000.png" alt="cube-native-frame-0000.png" width="100%"><br><sub>cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/cube-native-frame-0001.png" alt="cube-native-frame-0001.png" width="100%"><br><sub>cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0000-blank.png" alt="doukutsu-sweep-frame-0000-blank.png" width="100%"><br><sub>doukutsu-sweep-frame-0000-blank.png</sub></td><td>640×480<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0001.png" alt="doukutsu-sweep-frame-0001.png" width="100%"><br><sub>doukutsu-sweep-frame-0001.png</sub></td><td>640×480<br>5 colours</td></tr>
+<tr><td align="center"><img src="screenshots/frame-0000-frame-0000.bmp" alt="frame-0000-frame-0000.bmp" width="100%"><br><sub>frame-0000-frame-0000.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/game-recomp-cli-help.png" alt="game-recomp-cli-help.png" width="100%"><br><sub>game-recomp-cli-help.png</sub></td><td>1945×1880<br>5546 colours</td></tr>
+<tr><td align="center"><img src="screenshots/game-recomp-gui-dark.png" alt="game-recomp-gui-dark.png" width="100%"><br><sub>game-recomp-gui-dark.png</sub></td><td>2760×1816<br>5368 colours</td></tr>
+<tr><td align="center"><img src="screenshots/game-recomp-gui-light.png" alt="game-recomp-gui-light.png" width="100%"><br><sub>game-recomp-gui-light.png</sub></td><td>2760×1816<br>6396 colours</td></tr>
+<tr><td align="center"><img src="screenshots/game-recomp-gui-nord-frost.png" alt="game-recomp-gui-nord-frost.png" width="100%"><br><sub>game-recomp-gui-nord-frost.png</sub></td><td>2760×1816<br>6175 colours</td></tr>
+<tr><td align="center"><img src="screenshots/igi-window-level5-splash.png" alt="igi-window-level5-splash.png" width="100%"><br><sub>igi-window-level5-splash.png</sub></td><td>640×480<br>6814 colours</td></tr>
+<tr><td align="center"><img src="screenshots/ikachan-blank-frame.png" alt="ikachan-blank-frame.png" width="100%"><br><sub>ikachan-blank-frame.png</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/macos-ikachan-blank.bmp" alt="macos-ikachan-blank.bmp" width="100%"><br><sub>macos-ikachan-blank.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0000.bmp" alt="screenshots-000-Doukutsu-frame-0000.bmp" width="100%"><br><sub>screenshots-000-Doukutsu-frame-0000.bmp</sub></td><td>640×480<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0001.bmp" alt="screenshots-000-Doukutsu-frame-0001.bmp" width="100%"><br><sub>screenshots-000-Doukutsu-frame-0001.bmp</sub></td><td>640×480<br>5 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0000.png" alt="screenshots-cube-native-frame-0000.png" width="100%"><br><sub>screenshots-cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.bmp" alt="screenshots-cube-native-frame-0001.bmp" width="100%"><br><sub>screenshots-cube-native-frame-0001.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.png" alt="screenshots-cube-native-frame-0001.png" width="100%"><br><sub>screenshots-cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="100%"><br><sub>screenshots-frame-0000.bmp</sub></td><td>580×456<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="100%"><br><sub>screenshots-frame-0001.bmp</sub></td><td>580×456<br>2 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-ikachan-native-frame-0000.png" alt="screenshots-ikachan-native-frame-0000.png" width="100%"><br><sub>screenshots-ikachan-native-frame-0000.png</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center"><img src="screenshots/screenshots-tm-forever-original-desktop-no-window.png" alt="desktop capture with no game window - not frame proof" width="100%"><br><sub>screenshots-tm-forever-original-desktop-no-window.png</sub></td><td>3360×2100<br>3257 colours</td></tr>
 </table>
 
 ## Frame inventory
@@ -286,7 +689,7 @@ Status text is quoted from each project's own README; the architecture and OS co
 | `screenshots-frame-0000.bmp` | 580×456 | 1 | `1b2cab9f8c1d1ac541bc03551fa1f0aed380c440566c32bc579f0b65c38b3d28` | FAIL — blank, never counted as evidence |
 | `screenshots-frame-0001.bmp` | 580×456 | 2 | `11116c2709934dac8a2ae03b758922e1c46c840012fffda777c26e6ef17c8843` | PARTIAL — real non-blank native render |
 | `screenshots-ikachan-native-frame-0000.png` | 351×238 | 1 | `967db05021e1d219c3ad2e5ff91deab9e3a5499983820115f856a224b8392581` | FAIL — blank, never counted as evidence |
-| `screenshots-tm-forever-original-desktop-no-window.png` | 3360×2100 | 3257 | `8fb8df33a567d0509cf33276aefec98ee189f6ca005328720a9350c972e00847` | PARTIAL — real non-blank native render |
+| `screenshots-tm-forever-original-desktop-no-window.png` | 3360×2100 | 3257 | `8fb8df33a567d0509cf33276aefec98ee189f6ca005328720a9350c972e00847` | NOT PROOF — desktop capture with no game window; never counted as a render |
 
 ## Tested games without captured frames
 
