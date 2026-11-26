@@ -41,6 +41,10 @@ Evidence-backed tracker-complete release. 88 reviewed PRs landed since 0.2.0.
 ## [Unreleased]
 
 ### Fixed
+- dos32: `fix_case` no longer faults on an empty or `NULL` path or on a relative
+  name without a separator; the walk is bounded by the path's own terminator
+  and a component is copied only when its length matches the directory entry
+  (#335).
 - Adapted upstream PCRecomp #195 (`a67767b`): mouse mapping now reaches the
   right and bottom edges of a scaled/HiDPI picture instead of stopping a pixel
   or two short. Added a deterministic `screen_map_selftest` regression.
