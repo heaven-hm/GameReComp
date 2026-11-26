@@ -297,7 +297,6 @@ failure, no native binary, or no build); no screenshot can be shown for them.
   Highball controls; 90 BLOCKED, 9 console PASS, 1 nondeterminism FAIL.
   Per-game evidence: `ENGINE100/FINAL_REPORT.md` (outside this repository).
 - **Teeworlds**: recompile retry produced no native binary (2-hour recover timeout / exit 2).
-- **AssaultCube**: native source build produced real CUA/native frames; see measured row.
 - **TrackMania ESWC / Forever**: no native binary; engine controls BLOCKED. IGI has native frames in `proof/screenshots/`.
 - **New downloads** (Chocolate Strife, Crispy Strife, VCMI): controls BLOCKED.
 
