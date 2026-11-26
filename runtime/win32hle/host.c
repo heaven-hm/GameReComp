@@ -127,6 +127,7 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_msvcrt);
     win32hle_register(win32hle_kernel32_atom);
     win32hle_register(win32hle_dinput);
+    win32hle_register(win32hle_winamp_extra);
     win32hle_register(win32hle_bink);
     win32hle_register(win32hle_mss);
     win32hle_register(win32hle_wininet);

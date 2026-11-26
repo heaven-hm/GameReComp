@@ -1,0 +1,14 @@
+
+project:      /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/e2e-batch/IDM
+input:        windows/x86 (IDMan.exe)
+output:       macos/arm64 native
+source code:  /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/e2e-batch/IDM/src/recomp/gen
+stages:       inspect(ok), report(ok)
+score:        20/100
+verification: not-run
+report:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/e2e-batch/IDM/reports/report.html
+
+==> inspect
+    ok         1.9s  inspect: i386 PE32, 520 imports, entry 0x00684DEC
+==> report
+    ok         0.0s  report: reports in /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/e2e-batch/IDM/reports

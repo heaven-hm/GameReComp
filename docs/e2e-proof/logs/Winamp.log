@@ -1,0 +1,14 @@
+
+project:      /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/e2e-batch/Winamp
+input:        windows/x86 (winamp.exe)
+output:       macos/arm64 native
+source code:  /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/e2e-batch/Winamp/src/recomp/gen
+stages:       inspect(ok), report(ok)
+score:        20/100
+verification: not-run
+report:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/e2e-batch/Winamp/reports/report.html
+
+==> inspect
+    ok         0.3s  inspect: i386 PE32, 679 imports, entry 0x004BB7D9
+==> report
+    ok         0.0s  report: reports in /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/e2e-batch/Winamp/reports
