@@ -142,9 +142,10 @@ static inline void wr_gs32(uint64_t off, uint32_t v) {
     __asm__ __volatile__("movl %0, %%gs:(%1)" :: "r"(v), "r"(off));
 }
 #else
-/* Apple Silicon has no GS segment. A simulated, process-wide TEB/PEB lives in
- * cpu64.c so every translation unit sees the same one. It is deliberately
- * minimal: gs:[0x30] (the PEB) is what MSVC CRT startup reads here. */
+/* Apple Silicon has no GS segment. cpu64.c models one: a per-thread TEB (each
+ * host thread gets its own, as Win64 does) whose gs:[0x30] points at the single
+ * process-wide PEB. It is deliberately minimal: gs:[0x30] (the PEB) is what
+ * MSVC CRT startup reads here. GS offsets are bounds-checked before use. */
 uint64_t cpu64_rd_gs64(uint64_t off);
 uint32_t cpu64_rd_gs32(uint64_t off);
 void cpu64_wr_gs64(uint64_t off, uint64_t v);
