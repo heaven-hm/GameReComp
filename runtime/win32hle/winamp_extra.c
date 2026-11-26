@@ -34,16 +34,16 @@ static void ex_CharPrevW(void) {
     uint32_t cur = A32(1);
     RET(cur >= 2 ? cur - 2 : A32(0), 2);
 }
-static void ex_CharNextW(void)                { RET(A32(1) + 2, 2); }
+static void ex_CharNextW(void)                { RET(A32(0) + 2, 1); }
 static void ex_AppendMenuW(void)              { RET(0u, 4); }
-static void ex_CallWindowProcW(void)          { RET(0u, 4); }
+static void ex_CallWindowProcW(void)          { RET(0u, 5); }
 static void ex_GetWindowLongW(void)           { RET(0u, 2); }
 static void ex_SetClassLongW(void)            { RET(0u, 3); }
 static void ex_SystemParametersInfoW(void)    { RET(0u, 4); }
 static void ex_DialogBoxParamW(void)          { RET(0u, 5); }
 static void ex_SendMessageTimeoutW(void)      { RET(0u, 7); }
 static void ex_FindWindowExW(void)            { RET(0u, 4); }
-static void ex_SetWindowLongW(void)           { RET(0u, 4); }
+static void ex_SetWindowLongW(void)           { RET(0u, 3); }
 static void ex_LoadImageW(void)               { RET(0u, 6); }
 
 /* GDI32 */
@@ -57,12 +57,12 @@ static void ex_lstrcpynW(void)                { RET(A32(0), 3); }
 static void ex_GetVersionExW(void)            { RET(0u, 1); }
 static void ex_CopyFileW(void)                { RET(0u, 3); }
 static void ex_MoveFileW(void)                { RET(0u, 2); }
-static void ex_SearchPathW(void)              { RET(0u, 5); }
+static void ex_SearchPathW(void)              { RET(0u, 6); }
 static void ex_lstrcmpiW(void)                { RET(0u, 2); }
 static void ex_lstrcmpW(void)                 { RET(0u, 2); }
 static void ex_ExpandEnvironmentStringsW(void){ RET(0u, 3); }
 static void ex_WritePrivateProfileStringW(void){ RET(1u, 4); }
-static void ex_GetPrivateProfileStringW(void) { RET(0u, 5); }
+static void ex_GetPrivateProfileStringW(void) { RET(0u, 6); }
 
 const win32hle_shim win32hle_winamp_extra[] = {
     { "RegEnumKeyW", ex_RegEnumKeyW },

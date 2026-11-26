@@ -4,7 +4,7 @@
 
 # GameReComp
 
-**Windows games → editable C source → native Linux/macOS builds**
+**Windows PE32 i386 games → editable C source → host-native Linux/macOS builds (all OS/arch inputs accepted)**
 
 Recompile legacy Windows PC games using [PCRecomp](https://github.com/sp00nznet/pcrecomp), [rev.ng](https://github.com/revng/revng), and reusable runtime shims.
 

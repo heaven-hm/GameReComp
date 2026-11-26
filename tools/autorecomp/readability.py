@@ -342,6 +342,8 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
         pe = self._pe_override
         if pe is None and len(command) > 1 and command[1]:
             pe = Path(command[1])
+        if pe is None and isinstance(report, dict) and report.get("input"):
+            pe = Path(report["input"])
         pe_s = str(pe) if pe else None
         if pe_s and not Path(pe_s).is_file():
             raise ReadabilityError(f"original executable not found: {pe_s}")
@@ -411,17 +413,21 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
 
         if provider["kind"] == "command-template":
             try:
+                parts = shlex.split(provider["command"])
+                if not any("{pe}" in a or "{outdir}" in a for a in parts):
+                    parts = [*parts, str(pe)]
                 cmd = [part.format(pe=pe, outdir=str(out_dir))
-                       for part in shlex.split(provider["command"])]
-            except (ValueError, KeyError) as exc:
+                       for part in parts]
+            except (ValueError, KeyError, IndexError) as exc:
                 self.revng_status = "failed"
                 self._stage("revng", "failed",
                             f"bad REVNG_DECOMPILE_CMD template: {exc}",
                             seconds=round(time.time() - t0, 2))
                 return False
         else:
-            cmd = [provider["command"], "decompile", pe,
-                   "--output-dir", str(out_dir)]
+            cmd = [provider["command"], "quick", "artifact",
+                   "emit-c-as-single-file", pe, "-o",
+                   str(out_dir / "decompiled.c")]
 
         timeout = self.deadline.clamp(self.provider_timeout * 2, floor=10)
         with open(log_path, "w") as log:

@@ -1,3 +1,4 @@
+use std::fs;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -104,7 +105,10 @@ fn u32_le(b: &[u8], off: usize) -> u32 {
 
 /// Resolve a macOS `.app` bundle directory to its Mach-O executable.
 pub fn resolve_app_bundle(path: &Path) -> PathBuf {
-    if !path.is_dir() || path.extension().and_then(|e| e.to_str()) != Some("app") {
+    let is_app = path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("app"));
+    if !path.is_dir() || !is_app {
         return path.to_path_buf();
     }
     let plist = path.join("Contents").join("Info.plist");
@@ -124,18 +128,34 @@ pub fn resolve_app_bundle(path: &Path) -> PathBuf {
             .unwrap_or("Contents")
             .to_string()
     });
-    path.join("Contents").join("MacOS").join(name)
+    let macos = path.join("Contents").join("MacOS");
+    let candidate = macos.join(&name);
+    if candidate.is_file() {
+        return candidate;
+    }
+    // Binary Info.plist or a renamed executable: use the first real file.
+    if let Ok(entries) = fs::read_dir(&macos) {
+        if let Some(first) = entries.filter_map(Result::ok)
+            .map(|e| e.path())
+            .find(|p| p.is_file())
+        {
+            return first;
+        }
+    }
+    macos.join(name)
 }
 
 /// Detect Mach-O / ELF headers so a macOS/Linux input gets an honest reason.
 fn native_format_info(bytes: &[u8]) -> Option<PeInfo> {
-    const MACHO_MAGICS: [(&[u8], &str); 6] = [
+    const MACHO_MAGICS: [(&[u8], &str); 8] = [
         (b"\xfe\xed\xfa\xce", "Mach-O 32-bit big-endian"),
         (b"\xce\xfa\xed\xfe", "Mach-O 32-bit little-endian"),
         (b"\xfe\xed\xfa\xcf", "Mach-O 64-bit big-endian"),
         (b"\xcf\xfa\xed\xfe", "Mach-O 64-bit little-endian"),
         (b"\xca\xfe\xba\xbe", "Mach-O universal"),
         (b"\xbe\xba\xfe\xca", "Mach-O universal"),
+        (b"\xca\xfe\xba\xbf", "Mach-O universal 64-bit"),
+        (b"\xbf\xba\xfe\xca", "Mach-O universal 64-bit"),
     ];
     for (magic, label) in MACHO_MAGICS {
         if bytes.starts_with(magic) {
@@ -175,12 +195,16 @@ pub fn inspect_pe(path: &Path) -> PeInfo {
         return info;
     }
     let mut head = [0u8; 0x40];
-    if f.read_exact(&mut head).is_err() {
+    if f.read_exact(&mut head[..4]).is_err() {
         info.error = "cannot read the file".to_string();
         return info;
     }
-    if let Some(native) = native_format_info(&head) {
+    if let Some(native) = native_format_info(&head[..4]) {
         return native;
+    }
+    if f.read_exact(&mut head[4..]).is_err() {
+        info.error = "cannot read the file".to_string();
+        return info;
     }
     let dos_head = head;
     let pe_off = match validate_dos_header(size, &dos_head) {

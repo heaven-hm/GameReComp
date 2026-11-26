@@ -65,7 +65,7 @@ static void ex_idm_CharUpperBuffW(void) { RET(0u, 2); }
 static void ex_idm_CopyAcceleratorTableA(void) { RET(0u, 3); }
 static void ex_idm_CopyIcon(void) { RET(0u, 1); }
 static void ex_idm_DialogBoxIndirectParamW(void) { RET(0u, 5); }
-static void ex_idm_DrawStateA(void) { RET(0u, 9); }
+static void ex_idm_DrawStateA(void) { RET(0u, 10); }
 static void ex_idm_DrawTextExA(void) { RET(0u, 6); }
 static void ex_idm_ExitWindowsEx(void) { RET(0u, 2); }
 static void ex_idm_GetClassInfoExA(void) { RET(0u, 3); }
@@ -75,7 +75,7 @@ static void ex_idm_GetDlgItemTextW(void) { RET(0u, 4); }
 static void ex_idm_GetMenuCheckMarkDimensions(void) { RET(0u, 0); }
 static void ex_idm_GetMenuItemInfoW(void) { RET(0u, 4); }
 static void ex_idm_GetNextDlgGroupItem(void) { RET(0u, 3); }
-static void ex_idm_GrayStringA(void) { RET(0u, 8); }
+static void ex_idm_GrayStringA(void) { RET(0u, 9); }
 static void ex_idm_InvalidateRgn(void) { RET(0u, 3); }
 static void ex_idm_MessageBoxW(void) { RET(0u, 4); }
 static void ex_idm_ModifyMenuW(void) { RET(0u, 5); }

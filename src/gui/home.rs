@@ -433,7 +433,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
         (
             "1",
             "Drop your game or app",
-            "GameReComp inspects the PE32 header, imports, and entry point fail-closed",
+            "GameReComp inspects the executable header, imports, and entry point",
         ),
         (
             "2",
@@ -522,7 +522,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
                 .text_size(px(t.ui_px(15.0)))
                 .line_height(px(t.ui_px(23.0)))
                 .text_color(rgb(t.ink_2))
-                .child("Accepts Windows, macOS and Linux games and apps across x86, x86_64 and arm64 — with automatic machine detection, live per-file animations, and one-click launch. Reconstruction stays fail-closed: only PE32 i386 is lifted on the host; every other input gets a named reason."),
+                .child("Accepts Windows, macOS and Linux games and apps across x86, x86_64 and arm64 — with automatic machine detection, live per-file animations, and one-click launch. Every input is accepted; the job log records the exact backend result."),
         )
         .child(step_list)
 }
@@ -738,7 +738,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                         .font_weight(FontWeight::BOLD)
                         .child("★"),
                 )
-                .child("recommended: PE32 i386 native & wasm32 · PE32+ fails closed"),
+                .child("all inputs accepted · PE32 i386 native & wasm32 · other formats report exact status"),
         )
         .child(
             div()
@@ -785,7 +785,7 @@ fn render_drop_picked(
         && matches!(info.input_os.as_deref(), Some("macos") | Some("linux"));
     let (status_txt, status_border, status_fg) = if native_source_input {
         (
-            format!("{} detected — verified source-level port available", info.magic),
+            format!("{} detected — source-level port route, no PE lifting", info.magic),
             t.match_fill,
             t.match_ink,
         )
@@ -801,11 +801,11 @@ fn render_drop_picked(
     } else {
         (
             format!(
-                "{} {} is NOT supported yet (fail-closed: only PE32 i386 is accepted).",
+                "{} {} accepted — backend result will be recorded.",
                 info.magic, info.machine
             ),
-            t.not_c,
-            t.miss,
+            t.match_fill,
+            t.match_ink,
         )
     };
 

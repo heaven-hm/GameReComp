@@ -1079,7 +1079,7 @@ fn render_typography_settings(
                 .font_weight(FontWeight::BOLD)
                 .text_size(px(t.ui_px(15.0)))
                 .text_color(rgb(t.ink))
-                .child("Live Preview · Pick your game and turn it to native port."),
+                .child("Live Preview · Any game or app, any OS, any architecture — PE32 i386 rebuilds; other inputs report exact status."),
         )
         .child(
             div()

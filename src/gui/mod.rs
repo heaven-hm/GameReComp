@@ -820,7 +820,7 @@ impl GameReCompApp {
                         let _ = weak.update(cx, |this, cx| {
                             this.push_toast(
                                 "Some files skipped",
-                                &format!("Skipped {rejected_count} invalid or unsupported executable(s)."),
+                                &format!("{rejected_count} file(s) could not be read."),
                                 this.tokens().info,
                                 false,
                             );
@@ -842,19 +842,9 @@ impl GameReCompApp {
 
     pub fn enqueue_multiple_pes(&mut self, paths: Vec<PathBuf>) {
         let mut added = 0usize;
-        let mut skipped: Vec<String> = Vec::new();
+        let skipped: Vec<String> = Vec::new();
         for path in paths {
             if !path.is_file() {
-                continue;
-            }
-            let name = path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("file")
-                .to_string();
-            let info = inspect_pe(&path);
-            if !info.ok || !info.pe32_x86 {
-                skipped.push(name);
                 continue;
             }
             let mut opts = self.opts.clone();
@@ -878,8 +868,8 @@ impl GameReCompApp {
         if !skipped.is_empty() {
             let err_col = self.tokens().miss;
             self.push_toast(
-                "Skipped unsupported files",
-                &format!("Not PE32 i386: {}", skipped.join(", ")),
+                "Files not queued",
+                &format!("Not readable: {}", skipped.join(", ")),
                 err_col,
                 true,
             );
@@ -1698,7 +1688,7 @@ impl GameReCompApp {
                     0 => "Completed cleanly (verified pass)".to_string(),
                     3 => "Recompiled and ran (unverified / partial)".to_string(),
                     2 => "A pipeline stage failed — inspect log for details".to_string(),
-                    4 => "Unsupported input or target configuration".to_string(),
+                    4 => "Input or target cannot be rebuilt on this host — see log".to_string(),
                     _ => format!("Exited with status {code}"),
                 }
             };
@@ -3265,7 +3255,7 @@ impl GameReCompApp {
         };
         self.issue_draft = IssueDraft {
             game_name: game_name.clone(),
-            title: format!("[Support Request] {game_name}: unsupported PE / preflight failure"),
+            title: format!("[Support Request] {game_name}: preflight failure"),
             pe_summary,
             target_summary: self.opts.resolved_target_summary(),
             failed_stage: "inspect".to_string(),
