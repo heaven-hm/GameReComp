@@ -22,10 +22,10 @@ if [ -z "$RUNTIME" ]; then
     fi
 fi
 IMAGE=${REVNG_IMAGE:-revng/revng:latest}
-PE_DIR=$(CDPATH= cd -- "$(dirname -- "$PE")" && pwd)
+PE_DIR=$(cd -- "$(dirname -- "$PE")" >/dev/null 2>&1 && pwd)
 PE_NAME=$(basename -- "$PE")
 mkdir -p -- "$OUT"
-OUT_DIR=$(CDPATH= cd -- "$OUT" && pwd)
+OUT_DIR=$(cd -- "$OUT" >/dev/null 2>&1 && pwd)
 
 # Current rev.ng CLI (revng/revng:latest) no longer has `revng decompile`;
 # the porcelain command is `quick artifact emit-c-as-single-file BINARY -o FILE`.
