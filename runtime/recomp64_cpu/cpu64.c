@@ -47,37 +47,66 @@
 /* ---- the one global the generated GVA() macro needs --------------------- */
 int64_t g_image_delta = 0;   /* live_base - PE ImageBase; 0 when MAP_FIXED works */
 
+/* ---- portable thread-local storage -------------------------------------
+ * A Win64 process has ONE PEB but ONE TEB PER THREAD. The simulated TEB below
+ * is therefore host-thread-local so concurrent guest threads cannot corrupt
+ * each other's SEH chain (gs:[0x00]), stack bounds (gs:[0x08]/[0x10]), thread
+ * id (gs:[0x48]) or TLS slots. Prefer standard C11 _Thread_local; keep MSVC's
+ * __declspec(thread) and pre-C11 GNU's __thread so every supported host builds.
+ * This mirrors the ES3_EH_TLS guard in eh64.c. */
+#if defined(_MSC_VER)
+#define CPU64_TLS __declspec(thread)
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define CPU64_TLS _Thread_local
+#elif defined(__GNUC__)
+#define CPU64_TLS __thread
+#else
+#define CPU64_TLS
+#endif
+
 /* ---- simulated TEB/PEB on hosts without a GS segment (Apple Silicon) ----
  * Win64 CRT startup reads gs:[0x30] for the PEB and PEB+0x10 for the image
- * base. x86 hosts use the real GS segment; here we keep one process-wide,
- * zeroed pair of pages and let the simulated TEB point at the PEB. */
+ * base. x86 hosts use the real GS segment; here each host thread gets its own
+ * zeroed TEB that points at the ONE process-wide PEB. */
 #if !defined(__x86_64__) && !defined(_MSC_VER)
-static uint8_t g_teb[0x1000] __attribute__((aligned(16)));
-static uint8_t g_peb[0x400]  __attribute__((aligned(16)));
+static CPU64_TLS uint8_t g_teb[0x1000] __attribute__((aligned(16)));
+static CPU64_TLS int g_teb_ready;               /* per-thread init guard */
+static uint8_t g_peb[0x400] __attribute__((aligned(16)));
+
+/* Guest GS offsets are full 64-bit values. The old `off + width <= sizeof` check
+ * WRAPS for off near UINT64_MAX (off + 8 becomes [0,7], off + 4 becomes [0,3]),
+ * passing the check and then indexing g_teb - n out of bounds. Compare against
+ * the LAST VALID OFFSET instead: sizeof(g_teb) - width is a positive constant,
+ * so it cannot underflow and the single unsigned comparison rejects every
+ * wrapped offset without ever computing off + width. */
+static int cpu64_gs_ok(uint64_t off, uint64_t width) {
+    return off <= (uint64_t)sizeof(g_teb) - width;
+}
 
 static void cpu64_teb_init(void) {
-    static int done;
-    if (done) return;
-    done = 1;
+    if (g_teb_ready) return;
+    g_teb_ready = 1;
     memset(g_teb, 0, sizeof g_teb);
-    memset(g_peb, 0, sizeof g_peb);
+    /* g_peb is zero-initialized once by .bss. Do NOT clear it here: unlike the
+     * TEB it is shared by all threads, and cpu64_set_peb_image_base() may have
+     * already written the process-wide image base at PEB+0x10. */
     *(uint64_t *)(void *)(g_teb + 0x30) = (uint64_t)(uintptr_t)g_peb; /* PEB */
 }
 uint64_t cpu64_rd_gs64(uint64_t off) {
     cpu64_teb_init();
-    return off + 8 <= sizeof g_teb ? rd64((uint64_t)(uintptr_t)g_teb + off) : 0;
+    return cpu64_gs_ok(off, 8) ? rd64((uint64_t)(uintptr_t)g_teb + off) : 0;
 }
 uint32_t cpu64_rd_gs32(uint64_t off) {
     cpu64_teb_init();
-    return off + 4 <= sizeof g_teb ? rd32((uint64_t)(uintptr_t)g_teb + off) : 0;
+    return cpu64_gs_ok(off, 4) ? rd32((uint64_t)(uintptr_t)g_teb + off) : 0;
 }
 void cpu64_wr_gs64(uint64_t off, uint64_t v) {
     cpu64_teb_init();
-    if (off + 8 <= sizeof g_teb) wr64((uint64_t)(uintptr_t)g_teb + off, v);
+    if (cpu64_gs_ok(off, 8)) wr64((uint64_t)(uintptr_t)g_teb + off, v);
 }
 void cpu64_wr_gs32(uint64_t off, uint32_t v) {
     cpu64_teb_init();
-    if (off + 4 <= sizeof g_teb) wr32((uint64_t)(uintptr_t)g_teb + off, v);
+    if (cpu64_gs_ok(off, 4)) wr32((uint64_t)(uintptr_t)g_teb + off, v);
 }
 void cpu64_set_peb_image_base(uint64_t va) {
     cpu64_teb_init();
