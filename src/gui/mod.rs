@@ -1110,8 +1110,9 @@ impl GameReCompApp {
 
     pub fn pick_pe_path(&mut self, path: PathBuf) {
         let info = inspect_pe(&path);
+        let display_path = crate::pe::resolve_app_bundle(&path);
         let default_dir = self.default_project_dir_for(&path);
-        self.opts.pe_file = path.display().to_string();
+        self.opts.pe_file = display_path.display().to_string();
         self.opts.project_dir = default_dir.display().to_string();
         self.picked_pe = path;
         self.picked_pe_info = info;
@@ -1125,7 +1126,7 @@ impl GameReCompApp {
             files: true,
             directories: false,
             multiple: false,
-            prompt: Some("Choose a 32-bit Windows PE executable (.exe)".into()),
+            prompt: Some("Choose a Windows .exe, macOS .app bundle, or Linux ELF executable".into()),
         });
         let weak = cx.entity().downgrade();
         window
@@ -1133,16 +1134,10 @@ impl GameReCompApp {
                 if let Ok(Ok(Some(mut files))) = rx.await {
                     if let Some(file) = files.pop() {
                         let _ = weak.update(cx, |this, cx| {
-                            if has_exe_extension(&file) {
-                                this.pick_pe_path(file);
-                            } else {
-                                this.push_toast(
-                                    "Choose a Windows executable",
-                                    "The selected file must have an .exe extension.",
-                                    this.tokens().not_c,
-                                    true,
-                                );
-                            }
+                            // Let inspect_pe explain the format: .app bundles resolve
+                            // to their Mach-O executable, and Mach-O/ELF inputs get a
+                            // named reason instead of a blanket extension rejection.
+                            this.pick_pe_path(file);
                             cx.notify();
                         });
                     }
@@ -4476,6 +4471,7 @@ fn remove_project_path(path: &Path, expected: FileIdentity) -> io::Result<()> {
     }
 }
 
+#[allow(dead_code)]
 fn has_exe_extension(path: &Path) -> bool {
     path.extension()
         .and_then(|extension| extension.to_str())
