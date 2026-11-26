@@ -16,6 +16,7 @@ Updated 2026-11-25T23:30:00Z by `python -m tools.gamesdb --matrix`; IGI fresh-fr
 
 | Name | OS | Arch | Port details | Frame proof | Working status |
 | --- | --- | --- | --- | --- | --- |
+| AssaultCube | Windows | i386 (PE32) | source-built native macOS arm64 binary `52a3a254…` in `proof/binaries/`; Apple clang++ + SDL2/enet/OpenAL; hash/log in `proof/ports/ac-native-port.json` | CUA 1024x768 17,689-colour frame + native frame | PARTIAL - source port renders; no Windows oracle |
 | BusyBox (busybox-w32.exe) | Windows | i386 (PE32) | 6989 fns recovered; 24 units / 181.3 MiB C; binary busybox_w32 42887 KiB; 311 imports bound [macOS arm64 (native)]; low-level 6989/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 0; no oracle supplied |
 | Cannonball | Windows | x86-64 | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | - | NOT RUN - verification did not run |
 | Cave Story (DoConfig.exe) | Windows | i386 (PE32) | 458 fns recovered; 2 units / 4.2 MiB C; binary DoConfig 1933 KiB [macOS arm64 (native)]; 90 imports bound; low-level 458/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 1; no oracle supplied |
@@ -34,9 +35,10 @@ Updated 2026-11-25T23:30:00Z by `python -m tools.gamesdb --matrix`; IGI fresh-fr
 | Data (setup.exe) | Windows | None | inspect failed: PEFormatError | - | NOT RUN - verification did not run |
 | Data (shipedit.exe) | Windows | None | inspect failed: PEFormatError | - | NOT RUN - verification did not run |
 | Data (tyrian.exe) | Windows | None | inspect failed: PEFormatError | - | NOT RUN - verification did not run |
-| Downloads (idman643build18.exe) | Windows | i386 (PE32) | 605 fns recovered; 2 units / 6.6 MiB C; binary idman643build18 14229 KiB [macOS arm64 (native)]; 104 imports bound; low-level 605/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 0; no oracle supplied |
+| Downloads (idman643build18.exe) | Windows | i386 (PE32) | 605 fns recovered; 2 units / 6.6 MiB C; binary idman643build18 14229 KiB [macOS arm64 (native)]; 104 imports bound; low-level 605/ high-level verified 0; hash and log in `proof/ports/idm-native-port.json` | none - process exits at its own Windows-version check | PARTIAL - build/launch proof committed; no scenario oracle |
 | GeneRally | Windows | i386 (PE32) | 2582 fns recovered; 46 units / 374.0 MiB C; binary GeneRally 91801 KiB [macOS arm64 (native)]; 148 imports bound, 58 unresolved; low-level 2582/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | GeneRally (TrackEditor.exe) | Windows | i386 (PE32) | 312 fns recovered; 2 units / 7.0 MiB C; binary TrackEditor 2894 KiB [macOS arm64 (native)]; 147 imports bound; low-level 312/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 0; no oracle supplied |
+| Ghostty (macOS source app) | macOS / Windows / Linux | arm64 / x86-64 | native Windows PE `0fbfaf30…` under Highball exit 0; native Linux ELF `6165fbec…` on glibc 2.43 exit 0; exact stdout in `evidence/GHOSTTY_WINDOWS/` | none - CUA capture showed desktop, not window | PARTIAL (process PASS) - no GUI frame proof |
 | Gunroar (gr.exe) | Windows | i386 (PE32) | 3318 fns recovered; 5 units / 19.8 MiB C; binary gr 9048 KiB [macOS arm64 (native)]; 136 imports bound; low-level 3318/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented |
 | Hero Core (herocore gm5.exe) | Windows | i386 (PE32) | 17053 fns recovered; 19 units / 66.4 MiB C; binary herocore_gm5 24744 KiB [macOS arm64 (native)]; 495 imports bound, 18 unresolved; low-level 17053/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Hero Core (herocore gm7.exe) | Windows | i386 (PE32) | 21674 fns recovered; 24 units / 87.0 MiB C; binary herocore_gm7 30408 KiB [macOS arm64 (native)]; 506 imports bound, 26 unresolved; low-level 21674/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
@@ -55,6 +57,8 @@ Updated 2026-11-25T23:30:00Z by `python -m tools.gamesdb --matrix`; IGI fresh-fr
 | Resource_Convertor (gconv.exe) | Windows | i386 (PE32) | 3441 fns recovered; 6 units / 38.7 MiB C; binary gconv 10392 KiB; 78 imports bound [macOS arm64 (native)]; low-level 3441/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 0; no oracle supplied |
 | Snake (snake-windows-x86_64.exe) | Windows | x86-64 | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | - | NOT RUN - verification did not run |
 | Snake | Windows | i386 (PE32) | 223 fns recovered; 2 units / 1.4 MiB C; binary snake 1309 KiB; 46 imports bound [macOS arm64 (native)]; low-level 223/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 0; no oracle supplied |
+| TrackMania Nations ESWC | Windows | i386 (PE32) | 84,249 fns recovered; 699 source units / 1.108 GB C; 741 objects built; low-memory retry BLOCKED in three oversized units (clang/GCC); no native binary; see `evidence/proofs/tmnations-eswc-lowmem-blocked.json` | none | BLOCKED - no native binary or frame; detailed in `proof/ESWC_LOWMEM_STATUS.md` |
+| TrackMania Nations Forever | Windows | i386 (PE32) | `TmForever.map` validated with 118,469 symbols; Highball boot control; no D3D9 backend; no native build | desktop-only control capture | BLOCKED - no native binary or frame |
 | Tetris (OUCC 1.3, downloaded) (tetris-win-32-en.exe) | Windows | i386 (PE32) | - | 2/2 non-blank frames | PARTIAL - launches, no scenario oracle - native rebuild rendered 2/2 non-blank frames; no Windows oracle and no gameplay verification; no pipeline score recorded |
 | Torus Trooper (tt.exe) | Windows | i386 (PE32) | 4367 fns recovered; 7 units / 40.8 MiB C; binary tt 11644 KiB [macOS arm64 (native)]; 58 imports bound; low-level 4367/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented |
 | Tumiki Fighters (tf.exe) | Windows | i386 (PE32) | 3768 fns recovered; 7 units / 37.6 MiB C; binary tf 9987 KiB [macOS arm64 (native)]; 58 imports bound; low-level 3768/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented |
@@ -143,6 +147,7 @@ Updated 2026-11-25T23:30:00Z by `python -m tools.gamesdb --matrix`; IGI fresh-fr
 | unequalsolver | Windows | i386 (PE32) | 822 fns recovered; 3 units / 12.4 MiB C; binary unequalsolver 2802 KiB; 60 imports bound [macOS arm64 (native)]; low-level 822/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and stayed alive until the 10s timeout; no crash observed, no oracle |
 | unruly | Windows | i386 (PE32) | 868 fns recovered; 3 units / 10.5 MiB C; binary unruly 3514 KiB; 189 imports bound [macOS arm64 (native)]; low-level 868/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 0; no oracle supplied |
 | unrulysolver | Windows | i386 (PE32) | 501 fns recovered; 2 units / 5.0 MiB C; binary unrulysolver 1853 KiB; 61 imports bound [macOS arm64 (native)]; low-level 501/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 0; no oracle supplied |
+| Winamp | Windows | i386 (PE32) | installer stub + real `winamp.exe` from NSIS; real app rebuilt with 735 imports bound permissively; dynamic `wasabi2.w5s` C++ plugin not lifted; see `evidence/WINAMP_APP/` and `reports/compatibility/winamp-companion/` | none - CUA capture shows desktop | FAIL - no frame; plugin lifting missing |
 | untangle | Windows | i386 (PE32) | 946 fns recovered; 3 units / 14.0 MiB C; binary untangle 4083 KiB; 192 imports bound [macOS arm64 (native)]; low-level 946/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 0; no oracle supplied |
 
 ## This repository (not measured)
@@ -215,9 +220,12 @@ Status text is quoted from each project's own README; the architecture and OS co
 
 ## Captured frames (all committed images, hashed as shipped)
 
-26 unique images after removing byte-identical duplicates. A 1-colour frame is FAIL.
+28 unique images after removing byte-identical duplicates. A 1-colour frame is FAIL.
 
 <table>
+<tr><td align="center"><img src="../proof/screenshots/igi-level9-fresh-0002.png" alt="igi-level9-fresh-0002.png" width="160"><br><sub>igi-level9-fresh-0002.png</sub></td><td>640×480<br>6,814 colours</td></tr>
+<tr><td align="center"><img src="../evidence/CUA/ac-setup-cua.png" alt="ac-setup-cua.png" width="160"><br><sub>ac-setup-cua.png</sub></td><td>1024×768<br>17,689 colours</td></tr>
+<tr><td align="center"><img src="../proof/screenshots/ac-native-macos-setup-frame.png" alt="ac-native-macos-setup-frame.png" width="160"><br><sub>ac-native-macos-setup-frame.png</sub></td><td>1024×768<br>2,758 colours</td></tr>
 <tr><td align="center"><img src="../proof/screenshots/igi-level1-fresh-0002.png" alt="igi-level1-fresh-0002.png" width="160"><br><sub>igi-level1-fresh-0002.png</sub></td><td>640×480<br>6,814 colours</td></tr>
 <tr><td align="center"><img src="../proof/screenshots/igi-level5-fresh-0001.png" alt="igi-level5-fresh-0001.png" width="160"><br><sub>igi-level5-fresh-0001.png</sub></td><td>640×480<br>6,814 colours</td></tr>
 <tr><td align="center"><img src="screenshots/cavestory-doukutsu-01-intro.png" alt="cavestory-doukutsu-01-intro.png" width="160"><br><sub>cavestory-doukutsu-01-intro.png</sub></td><td>640×480<br>47 colours</td></tr>
@@ -250,6 +258,11 @@ Status text is quoted from each project's own README; the architecture and OS co
 
 | File | Size | Distinct RGB colours | SHA-256 of committed file | Verdict |
 |---|---|---|---|---|
+| `igi-level1-fresh-0002.png` | 640×480 | 6,814 | `b88f6d616981ffe6541e021a1b94f8590e6fd32adc6b0606912c1c52e4c21cf4` | PARTIAL — real non-blank native render |
+| `igi-level5-fresh-0001.png` | 640×480 | 6,814 | `602b806620f0bf8f23a0b01fd1d7f3d6440fd026dee106edc1ca95ba6b9b5d1a` | PARTIAL — real non-blank native render |
+| `igi-level9-fresh-0002.png` | 640×480 | 6,814 | `b88f6d616981ffe6541e021a1b94f8590e6fd32adc6b0606912c1c52e4c21cf4` | PARTIAL — byte-identical to level 1; real render |
+| `ac-setup-cua.png` | 1024×768 | 17,689 | `6b341ca298e969ffecb7a97b33ec4b295ab8e7f3a11eba34be4491b1926e2f03` | PARTIAL — real CUA-captured gameplay frame |
+| `ac-native-macos-setup-frame.png` | 1024×768 | 2,758 | `67b64561fcdc4fc97953399ddf494996a1511cbfc7c3464060535b6fd4fcc6cd` | PARTIAL — real native render |
 | `cavestory-doukutsu-01-intro.png` | 640×480 | 47 | `2bb1b42e7cd652851b5fd909eee365fb4a6d0c2db39c5e4d9f60c5e66f277204` | PARTIAL — real non-blank native render |
 | `cavestory-doukutsu-02-intro.png` | 640×480 | 46 | `503559ab2e1b95963dacbe03b6533012e3ed852a18a339925a058ccfb1d59ba0` | PARTIAL — real non-blank native render |
 | `cavestory-doukutsu-03-screen.png` | 640×480 | 16 | `8c9a36bf692ba0cd4fc20fc7802b2c4eeccb9464625d82dce01e236cc48d86d0` | PARTIAL — real non-blank native render |
@@ -283,9 +296,8 @@ failure, no native binary, or no build); no screenshot can be shown for them.
 - **100-game engine stress run**: 100 games executed as identical-binary
   Highball controls; 90 BLOCKED, 9 console PASS, 1 nondeterminism FAIL.
   Per-game evidence: `ENGINE100/FINAL_REPORT.md` (outside this repository).
-- **AssaultCube / Teeworlds**: recompile retries produced no native binary
-  (2-hour recover timeout / exit 2).
-- **TrackMania ESWC / Forever / IGI**: engine controls returned BLOCKED.
+- **Teeworlds**: recompile retry produced no native binary (2-hour recover timeout / exit 2).
+- **TrackMania ESWC / Forever**: no native binary; engine controls BLOCKED. IGI has native frames in `proof/screenshots/`.
 - **New downloads** (Chocolate Strife, Crispy Strife, VCMI): controls BLOCKED.
 
 See [verification methodology](VERIFICATION.md). No original-Windows frame oracle exists here (#145/#171); captures are native-only and labelled PARTIAL or FAIL.
