@@ -123,15 +123,72 @@ static void unwind_to(uint32_t rec, uint32_t fi, int to) {
     }
 }
 
-/* The ThrowInfo's CatchableType that a catch of `type` takes, or 0. */
-static uint32_t catchable(uint32_t info, uint32_t type) {
-    uint32_t arr = MEM32(info + 12);
-    int n = (int)MEM32(arr);
+#define EH_MAX_CATCHABLE 4096u
+
+/* Every field of a ThrowInfo is guest-controlled. Validate a dword pointer
+ * before MEM32 sees it: null used to reach MEM32(0), unaligned crossed an x86
+ * dword, and an address outside a mapped guest image could name host memory.
+ * The exact refusal is returned so dispatch can report it instead of hiding
+ * corrupt metadata as "no matching catch". */
+static int eh_guest_dword(uint32_t va, uint32_t* out, const char** why) {
+    if (!va) {
+        if (why) *why = "null pointer in C++ ThrowInfo";
+        return 0;
+    }
+    if (va & 3u) {
+        if (why) *why = "misaligned pointer in C++ ThrowInfo";
+        return 0;
+    }
+    if (va > 0xFFFFFFFCu || !native32_in_guest(va) || !native32_in_guest(va + 3u)) {
+        if (why) *why = "C++ ThrowInfo pointer outside guest image span";
+        return 0;
+    }
+    if (out) *out = MEM32(va);
+    return 1;
+}
+
+/* Type names are byte strings: inside the guest image, but not dword-aligned. */
+static int eh_guest_name(uint32_t va, const char** why) {
+    if (!va) {
+        if (why) *why = "null type name in C++ ThrowInfo";
+        return 0;
+    }
+    if (!native32_in_guest(va)) {
+        if (why) *why = "type name outside guest image span";
+        return 0;
+    }
+    return 1;
+}
+
+/* The ThrowInfo's CatchableType that a catch of `type` takes, or 0. On a
+ * refusal `why` names the defect; 0 with no reason is an ordinary no-match. */
+static uint32_t catchable(uint32_t info, uint32_t type, const char** why) {
+    uint32_t ignored = 0, arr = 0, raw = 0;
+    if (!eh_guest_dword(info, &ignored, why)) return 0;     /* before info + 12 */
+    if (!eh_guest_dword(info + 12u, &arr, why)) return 0;
+    if (!eh_guest_dword(arr, &raw, why)) return 0;
+    int n = (int)raw;
+    if (n < 0 || (uint32_t)n > EH_MAX_CATCHABLE) {
+        if (why) *why = "hostile C++ catchable count";
+        return 0;
+    }
+    if (type && !eh_guest_dword(type, &ignored, why)) return 0;
     for (int i = 0; i < n; i++) {
-        uint32_t ct = MEM32(arr + 4 + 4 * i);
-        uint32_t td = MEM32(ct + 4);
-        if (td == type || !strcmp((const char*)(uintptr_t)(td + 8), (const char*)(uintptr_t)(type + 8)))
-            return ct;
+        uint32_t ct = 0, td = 0;
+        if (!eh_guest_dword(arr + 4u + 4u * (uint32_t)i, &ct, why)) return 0;
+        if (!eh_guest_dword(ct, &ignored, why)) return 0;    /* before ct + 4 */
+        if (!eh_guest_dword(ct + 4u, &td, why)) return 0;
+        /* A named catch with no descriptor is malformed: never strcmp from it. */
+        if (!td) {
+            if (why) *why = "null TypeDescriptor in C++ ThrowInfo";
+            return 0;
+        }
+        if (td == type) return ct;
+        if (!type) continue;
+        if (!eh_guest_dword(td, &ignored, why)) return 0;   /* before td + 8 */
+        if (!eh_guest_name(td + 8u, why) || !eh_guest_name(type + 8u, why)) return 0;
+        if (!strcmp((const char*)(uintptr_t)(td + 8u),
+                    (const char*)(uintptr_t)(type + 8u))) return ct;
     }
     return 0;
 }
@@ -155,7 +212,7 @@ static void bind_catch_object(uint32_t handler, uint32_t ct, uint32_t obj, uint3
     }
 }
 
-static int dispatch(uint32_t obj, uint32_t info) {
+static int dispatch(uint32_t obj, uint32_t info, const char** why) {
     uint32_t top = MEM32(g_fs_base);
     for (uint32_t rec = top; rec && rec != 0xFFFFFFFFu; rec = MEM32(rec)) {
         uint32_t fi = funcinfo(MEM32(rec + 4));
@@ -170,7 +227,10 @@ static int dispatch(uint32_t obj, uint32_t info) {
             for (int c = 0; c < ncatch; c++) {
                 uint32_t h = MEM32(tb + 16) + 16 * c;
                 uint32_t type = MEM32(h + 4);
-                uint32_t ct = type ? catchable(info, type) : 0;
+                uint32_t ct = type ? catchable(info, type, why) : 0;
+                /* A malformed throw table is a refusal, not a miss: refusing
+                 * here keeps the rest of the dispatch from trusting it. */
+                if (type && !ct && why && *why) return 0;
                 if (type && !ct) continue;
                 /* Caught: unwind everything above, then this frame to the try. */
                 for (uint32_t r = top; r != rec; r = MEM32(r)) {
@@ -211,9 +271,11 @@ typedef void (__stdcall *cxx_throw_t)(void*, void*);
 /* _CxxThrowException(object, ThrowInfo), stdcall, in the lifted model. */
 void native32_shim_CxxThrowException(void) {
     uint32_t obj = MEM32(g_esp + 4), info = MEM32(g_esp + 8);
+    const char* why = NULL;
     if (!info) obj = t_cur_obj, info = t_cur_info;          /* `throw;` */
     g_esp += 4;                                             /* the call's return address */
-    if (info) dispatch(obj, info);
+    if (info) dispatch(obj, info, &why);
+    if (why) fprintf(stderr, "[eh32] C++ throw refused: %s\n", why);
     /* Nothing in the guest catches it: the host's crash report does. */
     static cxx_throw_t real;
     if (!real) real = (cxx_throw_t)GetProcAddress(LoadLibraryA("msvcrt.dll"), "_CxxThrowException");
