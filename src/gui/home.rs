@@ -821,8 +821,8 @@ fn render_drop_picked(
     // usable: the backend refuses it with a named reason and the GUI shows
     // that reason in the job telemetry. Disabling it silently looked broken.
     let native_source_input = matches!(info.input_os.as_deref(), Some("macos") | Some("linux"));
-    let can_start = native_source_input
-        || (info.ok && info.pe32_x86 && app.picked_owned_checked);
+    let can_start = !app.picked_pe.as_os_str().is_empty()
+        && (app.picked_owned_checked || info.ok || native_source_input);
 
     let mut box_div = div().w_full().flex().flex_col().gap(px(12.0));
 
