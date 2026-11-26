@@ -38,7 +38,7 @@
     "winsock-2-directplay": "UNSUPPORTED",
     "xinput-raw-input": "UNSUPPORTED"
   },
-  "head_at_generation": "40bbe4504bd7f90ab76a58d896739c71b853c3df",
+  "head_at_generation": "879363673c0bc557bdc175481b1713e21229703e",
   "host_arch": "arm64",
   "host_os": "Darwin",
   "input_sha256_by_path": {
@@ -63,7 +63,7 @@
     "runtime/win32hle/gdi32.c": "9035eaf5dd59a4c8045b337f7adbca15c48cad62a3af24733899116be4407ed4",
     "runtime/win32hle/gdidc.c": "743f4a3d8e92289c40650717581a09501bf07f22d4d87cf75deb6b95b5d68456",
     "runtime/win32hle/gl32.c": "5cdbcdba4ea5b175902415cf5e4b02d2e0e504078aea86b815111ac345fbb018",
-    "runtime/win32hle/host.c": "203878e7548089e76a325be35e425db24a9c46ec8498344d6101c48fa898a202",
+    "runtime/win32hle/host.c": "dae889635ce8491df6258fc64ae99a6318d8b83ec935362013787c4eeed50f72",
     "runtime/win32hle/kernel32.c": "bfabb4b02211a0bcde8a5713ee718917c941be62139287e038aa205f49ca0d86",
     "runtime/win32hle/module.c": "d8742baf1a602757f4bcad5919761407b5a4c0e3755ea83ad7b89d7bbe800e8a",
     "runtime/win32hle/mss.c": "3bc4d3883c554631a2c4c9ba98f266f4f152ed4d48980bcabb0a0fa86186ee08",
