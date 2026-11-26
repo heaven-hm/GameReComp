@@ -37,6 +37,67 @@ FILE_COMPRESSED = 4
 FILE_INVALID = 8
 
 
+def _safe_output_path(output_dir, directory, name):
+    """Resolve a cabinet member's destination, refusing anything that escapes.
+
+    The ``.hdr`` directory/name strings are untrusted metadata: a crafted
+    archive can contain ``..`` components, an absolute path (which would make
+    ``os.path.join`` discard ``output_dir`` outright) or a Windows drive
+    prefix.  A symlink already inside the extraction tree can redirect a write
+    even when the path is lexically clean.
+
+    Lexical checks run first; then both the root and the candidate are
+    canonicalized so symlinks are resolved, and the candidate is accepted only
+    when it is strictly below the root.  Every rejection raises ``ValueError``
+    with an exact, specific diagnostic and no path is ever returned that could
+    be written outside ``output_dir`` (issue #344).
+    """
+    def reject(reason):
+        raise ValueError("unsafe archive member: " + reason)
+
+    if not name:
+        reject("empty file name")
+
+    raw_path = "/".join(
+        part.replace("\\", "/") for part in (directory, name) if part
+    )
+
+    # InstallShield stores paths with backslashes; treat both separators as
+    # path separators irrespective of the host OS.
+    parts = []
+    for label, raw in (("directory", directory), ("name", name)):
+        if not raw:
+            continue
+        if "\x00" in raw:
+            reject("NUL byte in " + label)
+        if raw.startswith("/") or raw.startswith("\\"):
+            reject("absolute path: " + repr(raw))
+        if re.match(r"^[A-Za-z]:", raw):
+            reject("drive letter in path: " + repr(raw[:2]))
+        for component in raw.replace("\\", "/").split("/"):
+            if component == "..":
+                reject("parent directory component ('..') in path: "
+                       + repr(raw_path))
+            if component in ("", "."):
+                continue
+            parts.append(component)
+
+    if not parts:
+        reject("empty file name")
+
+    base = os.path.realpath(output_dir)
+    target = os.path.realpath(os.path.join(base, *parts))
+    if target == base:
+        reject("destination is the extraction root")
+    try:
+        contained = os.path.commonpath([base, target]) == base
+    except ValueError:  # different drives (Windows) -> not contained
+        contained = False
+    if not contained:
+        reject("destination escapes extraction root: " + repr(target))
+    return target
+
+
 def _volume_handle(handles, path):
     """Open each volume once and keep it; a set can have several."""
     h = handles.get(path)
@@ -408,13 +469,11 @@ class ISCabinet:
                     skipped += 1
                     continue
 
-                # Build output path
-                if fd.directory:
-                    rel_path = os.path.join(fd.directory.replace('\\', os.sep), fd.name)
-                else:
-                    rel_path = fd.name
-
-                out_path = os.path.join(output_dir, rel_path)
+                # Build and validate the output path (issue #344: ZipSlip).
+                # _safe_output_path raises ValueError before any directory or
+                # file is created if the member would escape output_dir.
+                out_path = _safe_output_path(output_dir, fd.directory, fd.name)
+                rel_path = os.path.relpath(out_path, os.path.realpath(output_dir))
                 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
                 if fd.is_compressed:
@@ -472,12 +531,9 @@ class ISCabinet:
         try:
             for i, fd in enumerate(cab_files):
                 cab = _volume_handle(handles, self.volume_for(self.files.index(fd)))
-                if fd.directory:
-                    rel_path = os.path.join(fd.directory.replace('\\', os.sep), fd.name)
-                else:
-                    rel_path = fd.name
-
-                out_path = os.path.join(output_dir, rel_path)
+                # Same fail-closed containment check as extract_all (issue #344).
+                out_path = _safe_output_path(output_dir, fd.directory, fd.name)
+                rel_path = os.path.relpath(out_path, os.path.realpath(output_dir))
                 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
                 try:
