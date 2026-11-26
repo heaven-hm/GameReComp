@@ -1,0 +1,32 @@
+{
+  "path": "/Users/haseeb-mir/Documents/Code/GameReComp/highlevel/doukutsu/.revng-project/Doukutsu.exe",
+  "size": 1478656,
+  "sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+  "md5": "38695d3d69d7a0ada8178072dad4c58b",
+  "sha1": "bb2d0441e073da9c584f23c2ad8c7ab8aac293bf",
+  "machine": "i386",
+  "pe_type": "PE32",
+  "subsystem": "Windows GUI",
+  "image_base": "0x00400000",
+  "entry_point": "0x00481D27",
+  "linker_version": "7.10",
+  "code_range": [
+    "0x00401000",
+    "0x0048C000"
+  ],
+  "import_dlls": [
+    "KERNEL32.dll",
+    "USER32.dll",
+    "GDI32.dll",
+    "SHELL32.dll",
+    "DDRAW.dll",
+    "DINPUT.dll",
+    "DSOUND.dll",
+    "VERSION.dll",
+    "SHLWAPI.dll",
+    "IMM32.dll",
+    "WINMM.dll"
+  ],
+  "import_count": 143,
+  "iat_entries": 143
+}

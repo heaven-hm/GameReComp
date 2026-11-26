@@ -1,0 +1,66 @@
+[
+  {
+    "case": "Notes \u2192 Windows x86",
+    "input": "/System/Applications/Notes.app",
+    "target": "windows/x86",
+    "exit": 1,
+    "reason": "PE: not usable: macOS Mach-O input: PE32 lifting does not apply; use the verified source-level port",
+    "log": "docs/cross-os-proof/logs/Notes_to_Windows_x86.log"
+  },
+  {
+    "case": "Notes \u2192 Windows x64",
+    "input": "/System/Applications/Notes.app",
+    "target": "windows/x86_64",
+    "exit": 1,
+    "reason": "PE: not usable: macOS Mach-O input: PE32 lifting does not apply; use the verified source-level port",
+    "log": "docs/cross-os-proof/logs/Notes_to_Windows_x64.log"
+  },
+  {
+    "case": "Calculator \u2192 Windows x86",
+    "input": "/System/Applications/Calculator.app",
+    "target": "windows/x86",
+    "exit": 1,
+    "reason": "PE: not usable: macOS Mach-O input: PE32 lifting does not apply; use the verified source-level port",
+    "log": "docs/cross-os-proof/logs/Calculator_to_Windows_x86.log"
+  },
+  {
+    "case": "Calculator \u2192 Windows x64",
+    "input": "/System/Applications/Calculator.app",
+    "target": "windows/x86_64",
+    "exit": 1,
+    "reason": "PE: not usable: macOS Mach-O input: PE32 lifting does not apply; use the verified source-level port",
+    "log": "docs/cross-os-proof/logs/Calculator_to_Windows_x64.log"
+  },
+  {
+    "case": "Doukutsu x86 \u2192 macOS arm64",
+    "input": "/Users/haseeb-mir/Documents/Code/GameReComp/highlevel/doukutsu/.revng-project/Doukutsu.exe",
+    "target": "macos/arm64",
+    "exit": 0,
+    "reason": "    ok         0.0s  report: reports in /Users/haseeb-mir/Documents/Code/GameReComp/docs/cross-os-proof/logs/Doukutsu_x86_to_macOS_arm64/reports",
+    "log": "docs/cross-os-proof/logs/Doukutsu_x86_to_macOS_arm64.log"
+  },
+  {
+    "case": "Doukutsu x86 \u2192 macOS x86_64",
+    "input": "/Users/haseeb-mir/Documents/Code/GameReComp/highlevel/doukutsu/.revng-project/Doukutsu.exe",
+    "target": "macos/x86_64",
+    "exit": 4,
+    "reason": "error: cross-target build requested (macos/x86_64) on host (macos/arm64); the pipeline compiles with the host toolchain only -- run it on the target OS or omit --target-os/--target-arch",
+    "log": "docs/cross-os-proof/logs/Doukutsu_x86_to_macOS_x86_64.log"
+  },
+  {
+    "case": "PE32+ fixture \u2192 macOS arm64",
+    "input": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/cross-os-proof/fixtures/pe32plus-minimal.exe",
+    "target": "macos/arm64",
+    "exit": 4,
+    "reason": "error: unsupported input architecture: x86_64 (this pipeline reconstructs PE32 x86 guests; a 64-bit build of the same game, if one exists, would be a different binary to reconstruct -- 64-bit guest support is planned, not implemented)",
+    "log": "docs/cross-os-proof/logs/PE32+_fixture_to_macOS_arm64.log"
+  },
+  {
+    "case": "PE32+ fixture \u2192 macOS x86_64",
+    "input": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/cross-os-proof/fixtures/pe32plus-minimal.exe",
+    "target": "macos/x86_64",
+    "exit": 4,
+    "reason": "error: cross-target build requested (macos/x86_64) on host (macos/arm64); the pipeline compiles with the host toolchain only -- run it on the target OS or omit --target-os/--target-arch",
+    "log": "docs/cross-os-proof/logs/PE32+_fixture_to_macOS_x86_64.log"
+  }
+]
