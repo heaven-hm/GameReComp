@@ -399,10 +399,30 @@ pub fn parse_env_file(text: &str) -> Vec<(String, String)> {
     out
 }
 
+/// Locate the Python pipeline bundled inside a macOS `.app` bundle.
+///
+/// A bundled GUI runs from `<App>.app/Contents/MacOS/game-recomp-gui`, where the
+/// repo's Python sources are shipped at `<App>.app/Contents/Resources/repo`.
+/// Without this, `resolve_repo_root` falls back to `/` and every recompile
+/// fails with `ModuleNotFoundError: No module named 'tools'`.
+fn bundled_repo_root(exe: &Path) -> Option<PathBuf> {
+    let contents = exe.parent()?.parent()?;
+    let candidate = contents.join("Resources").join("repo");
+    if candidate.join("tools").join("autorecomp").is_dir() {
+        return Some(candidate);
+    }
+    None
+}
+
 pub fn resolve_repo_root(explicit_repo: Option<&Path>) -> PathBuf {
     if let Some(p) = explicit_repo {
         if !p.as_os_str().is_empty() {
             return p.to_path_buf();
+        }
+    }
+    if let Ok(exe) = env::current_exe() {
+        if let Some(found) = bundled_repo_root(&exe) {
+            return found;
         }
     }
     if let Ok(cwd) = env::current_dir() {
@@ -764,6 +784,17 @@ mod tests {
                 ("REVENG_AI_CMD".to_string(), "claude -p".to_string()),
             ]
         );
+    }
+
+    #[test]
+    fn finds_bundled_repo_root_in_macos_app() {
+        let base = env::temp_dir().join(format!("gamerecomp-bundle-root-{}", std::process::id()));
+        let exe = base.join("Contents").join("MacOS").join("game-recomp-gui");
+        let repo = base.join("Contents").join("Resources").join("repo");
+        let _ = fs::create_dir_all(repo.join("tools").join("autorecomp"));
+        let found = bundled_repo_root(&exe);
+        assert_eq!(found.as_deref(), Some(repo.as_path()));
+        let _ = fs::remove_dir_all(&base);
     }
 
     #[test]
