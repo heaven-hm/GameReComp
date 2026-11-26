@@ -167,9 +167,25 @@ def detect_revng():
                 "command": template, "source": "REVNG_DECOMPILE_CMD"}
     exe = os.environ.get("REVNG_BIN") or shutil.which("revng")
     if not exe:
+        # macOS/Windows have no native rev.ng: the upstream Linux/amd64
+        # container is the supported route. The wrapper is shipped with the
+        # repo so the GUI can run the pass without extra environment setup.
+        wrapper = (Path(__file__).resolve().parents[2] / "tools" /
+                   "revng-container.sh")
+        runtime = os.environ.get("REVNG_DOCKER")
+        if not runtime:
+            runtime = "docker" if shutil.which("docker") else (
+                "podman" if shutil.which("podman") else None)
+        if wrapper.is_file() and runtime:
+            return {"name": "revng", "available": True,
+                    "kind": "command-template", "command":
+                    f"{wrapper} {{pe}} {{outdir}}",
+                    "source": f"container:{runtime}",
+                    "image": os.environ.get("REVNG_IMAGE", "revng/revng:latest")}
         return {"name": "revng", "available": False, "kind": "binary",
                 "reason": "revng not found: install rev.ng, set REVNG_BIN, "
-                          "or provide REVNG_DECOMPILE_CMD"}
+                          "provide REVNG_DECOMPILE_CMD, or install Docker/Podman "
+                          "to run the revng/revng container"}
     version = None
     try:
         proc = subprocess.run([exe, "--version"], capture_output=True, text=True,

@@ -584,6 +584,7 @@ fn render_overview_tab(
         let proj_dir_data = model.dir.clone();
         let proj_title_data = model.display_title().to_string();
         let proj_dir_ai = model.dir.clone();
+        let proj_dir_revng = model.dir.clone();
         let proj_dir_open = model.dir.clone();
         let mut actions = div().flex().flex_wrap().items_center().gap(px(8.0));
         if let Some(bin) = bin_opt {
@@ -631,6 +632,14 @@ fn render_overview_tab(
                 .on_click(cx.listener(move |this, _, _, cx| {
                     this.start_readability_agent_for_dir(proj_dir_ai.clone(), None, cx);
                 })),
+            )
+            .child(
+                style::ghost_btn("post_revng_btn", t, "🔬 Rev.ng Source Pass")
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.start_readability_agent_for_dir_with(
+                            proj_dir_revng.clone(), None, "revng", cx,
+                        );
+                    })),
             )
             .child(
                 style::ghost_btn("post_open_dir_btn", t, "Open Output Folder").on_click(
@@ -2020,6 +2029,7 @@ fn render_agents_tab(
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
     let ai_cmd = app.effective_ai_cmd();
+    let revng_dir = model.dir.clone();
     let agent_job = app.jobs.iter().rev().find(|j| {
         j.is_running()
             && j.kind == WorkerKind::Readability
@@ -2074,17 +2084,30 @@ fn render_agents_tab(
                         }),
                 )
                 .child(if agent_running {
-                    style::danger_btn("ag_stop_btn", t, "■ Stop").on_click(cx.listener(
-                        move |this, _, _, cx| {
-                            this.stop_job(agent_job_id);
-                            cx.notify();
-                        },
-                    ))
+                    div().child(
+                        style::danger_btn("ag_stop_btn", t, "■ Stop").on_click(cx.listener(
+                            move |this, _, _, cx| {
+                                this.stop_job(agent_job_id);
+                                cx.notify();
+                            },
+                        )),
+                    )
                 } else {
-                    style::primary_btn("ag_start_btn", t, "✨ Improve C Readability (AI)", true)
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.start_readability_agent(cx);
-                        }))
+                    div().flex().flex_wrap().items_center().gap(px(8.0))
+                        .child(
+                            style::primary_btn("ag_start_btn", t, "✨ Improve C Readability (AI)", true)
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.start_readability_agent(cx);
+                                })),
+                        )
+                        .child(
+                            style::ghost_btn("ag_revng_btn", t, "🔬 Rev.ng Source Pass")
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.start_readability_agent_for_dir_with(
+                                        revng_dir.clone(), None, "revng", cx,
+                                    );
+                                })),
+                        )
                 }),
         )
         .child(

@@ -1729,6 +1729,19 @@ impl GameReCompApp {
         target_fn: Option<String>,
         cx: &mut Context<Self>,
     ) {
+        self.start_readability_agent_for_dir_with(dir, target_fn, "ai", cx);
+    }
+
+    /// Run the readability harness with a named provider set: "ai", "revng",
+    /// or "all". Rev.ng needs no AI command and is available through the
+    /// bundled container wrapper on macOS.
+    pub fn start_readability_agent_for_dir_with(
+        &mut self,
+        dir: PathBuf,
+        target_fn: Option<String>,
+        providers: &str,
+        cx: &mut Context<Self>,
+    ) {
         let dir_key = normalized_path(&dir);
         if self.deleting_projects.contains(&dir_key)
             || self
@@ -1745,7 +1758,10 @@ impl GameReCompApp {
             cx.notify();
             return;
         }
-        let Some(ai_cmd) = self.effective_ai_cmd() else {
+        let providers = providers.to_string();
+        let uses_ai = providers == "ai" || providers == "all";
+        let ai_cmd = self.effective_ai_cmd().unwrap_or_default();
+        if uses_ai && ai_cmd.is_empty() {
             self.push_toast(
                 "Optional AI agent not configured",
                 "AI is optional and only improves readable C source code. Choose a preset or set REVENG_AI_CMD in Agents & models first.",
@@ -1755,7 +1771,7 @@ impl GameReCompApp {
             self.route = Route::Agents;
             cx.notify();
             return;
-        };
+        }
         if self.jobs.iter().any(|j| {
             j.is_active()
                 && j.kind == WorkerKind::Readability
@@ -1785,16 +1801,20 @@ impl GameReCompApp {
             "tools.autorecomp.readability".to_string(),
             dir.display().to_string(),
             "--providers".to_string(),
-            "ai".to_string(),
+            providers.clone(),
         ];
         if let Some(ref f) = target_fn {
             args.push("--function".to_string());
             args.push(f.clone());
         }
 
-        let stage = match target_fn {
-            Some(ref f) => format!("C readability ({f})"),
-            None => "C source readability".to_string(),
+        let stage = if providers == "revng" {
+            "Rev.ng source pass".to_string()
+        } else {
+            match target_fn {
+                Some(ref f) => format!("C readability ({f})"),
+                None => "C source readability".to_string(),
+            }
         };
         let proj_name = dir
             .file_name()
@@ -1820,22 +1840,26 @@ impl GameReCompApp {
             auto_ai_readability: false,
             is_dry_run: false,
             status: JobStatus::Running,
-            stage,
+            stage: stage.clone(),
             started: Instant::now(),
             paused_at: None,
             paused_total: Duration::ZERO,
             finished_secs: None,
             current_file: String::new(),
-            current_task_detail:
+            current_task_detail: if providers == "revng" {
+                "Rev.ng pass — decompiling the original PE into typed C candidates".to_string()
+            } else {
                 "Optional AI pass — improving readable C source code (compile- & evidence-verified)"
-                    .to_string(),
+                    .to_string()
+            },
             compile_pct: None,
             processed_files: Vec::new(),
             live_stages: fresh_live_stages(),
-            live_logs: vec![format!(
-                "$ REVENG_AI_CMD=\"{ai_cmd}\" python3 {}",
-                args.join(" ")
-            )],
+            live_logs: vec![if ai_cmd.is_empty() {
+                format!("$ python3 {}", args.join(" "))
+            } else {
+                format!("$ REVENG_AI_CMD=\"{ai_cmd}\" python3 {}", args.join(" "))
+            }],
             child: child_slot,
             cancel_requested,
             pgid: pgid_slot,
@@ -1844,7 +1868,7 @@ impl GameReCompApp {
         self.selected_job_id = Some(id);
         self.push_feed(
             "agent",
-            &format!("started optional AI C readability pass on {proj_name}"),
+            &format!("started {stage} on {proj_name}"),
             false,
         );
         cx.notify();
