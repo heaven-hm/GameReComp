@@ -94,7 +94,7 @@ pub fn render_home(
     };
 
     let sample_title = if app.projects.is_empty() {
-        "Try the PE32 fixture"
+        "Try a sample fixture"
     } else {
         "Explore a project"
     };
@@ -113,7 +113,7 @@ pub fn render_home(
                 t,
                 true,
                 "Batch recompile a folder",
-                "Scan a folder of Windows PE32 games or apps, recompile each, and verify standalone runs.",
+                "Scan a folder of Windows, macOS or Linux games/apps, recompile each, and verify standalone runs.",
             )
             .on_click(cx.listener(|this, _, window, cx| {
                 this.browse_for_batch_folder(window, cx);
@@ -396,7 +396,7 @@ pub fn render_home(
                                     .child("Right-click card for Run, Rename, Pause/Resume, or Delete"),
                             )
                             .child(
-                                style::ghost_btn("home_add_game_btn", t, "+ Add Game (.exe)")
+                                style::ghost_btn("home_add_game_btn", t, "+ Add Game / App")
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.browse_for_pe(window, cx);
                                     })),

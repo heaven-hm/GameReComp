@@ -1903,7 +1903,7 @@ dependencies = [
 
 [[package]]
 name = "game-recomp"
-version = "0.3.0"
+version = "0.3.3"
 dependencies = [
  "chrono",
  "clap",

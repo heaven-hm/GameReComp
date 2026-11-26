@@ -188,8 +188,8 @@ pub fn render_sidebar(
                 menu_item(
                     "new_menu_file",
                     t,
-                    "Open a game or app (.exe)",
-                    "32-bit Windows PE executable you own",
+                    "Open a game or app",
+                    "Windows, macOS or Linux executable you own",
                 )
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.show_new_menu = false;
