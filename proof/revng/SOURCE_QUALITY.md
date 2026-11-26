@@ -1,18 +1,26 @@
 # rev.ng source quality — real CI evidence (issue #25)
 
 **Conclusion: rev.ng did NOT produce measurably improved source on this
-fixture.** The active job ran for real; its conclusion was `failure` and the
-fail-closed summary status was `NOT TESTED`. Nothing here grants a PASS, and
+fixture.** The active job ran for real and its measured conclusion is
+`SCOPED_NOT_PROVEN`: the workflow is green because a genuine `NOT PROVEN` is a
+recorded result, not an infrastructure error. Nothing here grants a PASS, and
 issue #25 stays OPEN.
 
-- Run URL: https://github.com/heaven-hm/GameReComp/actions/runs/45698198795
-- Run ID: `45698198795` (`workflow_dispatch`, head `2b43df712df9385c9916efce8c3bf95b5b42c2fa`)
-- GitHub conclusion: `failure`; job `revng-evidence` exit code 1
+- Run URL: https://github.com/heaven-hm/GameReComp/actions/runs/45778254804
+- Run ID: `45778254804` (`workflow_dispatch`, head `fa6408b4d64550edd6cc6c3cc64627cece077ff1`)
+- GitHub conclusion: `success`; job `revng-evidence` exit code 0. The
+  source-quality evaluator itself still returned rc=1; the summary recorded
+  `status=SCOPED_NOT_PROVEN`, `scoped_verdict=NOT PROVEN` and the exact scoped
+  reason, then exited 0. See `reports/revng/revng-ci-summary.json` in the run
+  artifact.
 - Machine-readable verdict: `NOT PROVEN` in `proof/revng/SOURCE_QUALITY.json`
   (sealed, `sha256` recomputed and verified)
-- First real attempt `45695146599` failed earlier at the adapter/compile stage
-  (`recomp_funcs.h` include path, doubled `U` suffix, void-return cast). The
-  single corrective iteration is PR #301; the numbers below are from the rerun.
+- Earlier real attempts: `45695146599` failed at the adapter/compile stage
+  (`recomp_funcs.h` include path, doubled `U` suffix, void-return cast; fixed in
+  PR #301); `45764193627`, `45766972844` and `45768357859` failed only at the
+  final step because the measured `NOT PROVEN` was treated as an error and the
+  evaluator compared `0x401000` literally against difftest's `0x00401000`.
+  Issue #339 fixes both; the numbers below are from the corrected rerun.
 
 ## Measured pin and host facts
 
@@ -59,19 +67,21 @@ Exact reason codes recorded in the sealed JSON:
 - `READABILITY_NOT_BETTER` — revng had 0 named locals versus 5 in the baseline
   and a lower non-mechanical identifier ratio (0.333333 vs 0.36). It did not
   recover more structured control flow for this tiny function.
-- `DIFFTEST_ADDRESS_MISMATCH` — a cosmetic evaluation issue in this run:
-  difftest writes `0x00401000` and the evaluator compared it literally to
-  `0x401000`. This does not change the verdict, which is already NOT PROVEN on
-  divergence, selection and readability.
+- No `DIFFTEST_ADDRESS_MISMATCH` is present in the corrected report. Addresses
+  are now compared numerically, so difftest's `0x00401000` and the requested
+  `0x401000` are the same function; a genuinely different or malformed address
+  still fails closed.
 
 No compile failure, hash mismatch, missing C output or download failure
-occurred in this run. The job still failed closed because a real revng PASS
-was not established.
+occurred in this run. The evaluator still refuses a revng PASS; the workflow
+records that measured refusal as a scoped verdict instead of a job error.
 
 ## Scope
 
 The result is scoped to this exact fixture, function address and the two C
 hashes above. It is not `HIGH_LEVEL_VERIFIED`, not gameplay equivalence, not
 100%, and not a general claim about rev.ng source quality on other functions.
+`SCOPED_NOT_PROVEN` is not a PASS for revng, PCRecomp or the adapter; it only
+reports that this measured evidence did not establish improved revng source.
 The adapter used here is a one-function test harness, not a new dispatch path;
 the default PCRecomp-only build is unchanged. Issue #25 remains OPEN.
