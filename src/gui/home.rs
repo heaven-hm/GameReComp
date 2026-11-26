@@ -809,7 +809,12 @@ fn render_drop_picked(
         )
     };
 
-    let can_start = info.ok && info.pe32_x86 && app.picked_owned_checked;
+    // A macOS/Linux app is not a PE32 input, but the button must still be
+    // usable: the backend refuses it with a named reason and the GUI shows
+    // that reason in the job telemetry. Disabling it silently looked broken.
+    let native_source_input = matches!(info.input_os.as_deref(), Some("macos") | Some("linux"));
+    let can_start = native_source_input
+        || (info.ok && info.pe32_x86 && app.picked_owned_checked);
 
     let mut box_div = div().w_full().flex().flex_col().gap(px(12.0));
 
@@ -1325,7 +1330,9 @@ fn render_drop_picked(
         })),
     );
 
-    let start_label = if active_now == 0 {
+    let start_label = if native_source_input {
+        "▶  Try source-level port"
+    } else if active_now == 0 {
         "▶  Start recompiling"
     } else if active_now < eff_limit {
         "▶  Start in parallel"
