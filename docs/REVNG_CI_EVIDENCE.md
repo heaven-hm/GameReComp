@@ -64,6 +64,9 @@ pin: the job stops and the verdict stays `NOT TESTED`.
     measured with `tools/autorecomp/readability.py` and defined in
     `docs/SOURCE_PROVENANCE.md`: named locals/parameters, non-goto control
     flow, recovered types/structs and non-mechanical identifier ratio.
+    Addresses are compared numerically, so the difftest report's canonical
+    `0x00401000` and the requested `0x401000` are recognised as the same VA;
+    a genuinely different or unparseable address still fails closed.
 
 ## Verdicts and what they mean
 
@@ -73,23 +76,53 @@ pin: the job stops and the verdict stays `NOT TESTED`.
   least as good with at least one strict improvement in naming and identifier
   quality. It is scoped to the one fixture, one address and the exact C hashes
   in the report.
-- `NOT PROVEN` is the default and the exit-1 path. Each unmet gate is recorded
-  as an exact reason code (`REVNG_COMPILE_NOT_PROVEN`,
+- `NOT PROVEN` is the default evaluator verdict and its exit-1 path. Each
+  unmet gate is recorded as an exact reason code (`REVNG_COMPILE_NOT_PROVEN`,
   `REVNG_DIFFTEST_DIVERGED_CASES`, `READABILITY_NOT_BETTER`,
   `FIXTURE_HASH_MISMATCH`, ...). A missing C file, a download failure, a hash
   mismatch, a divergence or a missing report can never become a PASS.
-- The job summary derives `PASS` from a real Linux host, nine measured rc=0
-  stages, a promoted revng decision and a sealed `SOURCE_IMPROVED` report.
-  Otherwise it emits `NOT TESTED` and exits non-zero.
+- The job summary derives `PASS` only from a real Linux host, nine measured
+  rc=0 stages, a promoted revng decision and a sealed `SOURCE_IMPROVED` report.
+  An infrastructure failure (an unmeasured stage, a Linux-host violation, a
+  missing or unsealed quality report, an evaluator crash) still emits
+  `NOT TESTED` and fails the job.
+- A *fully measured, genuine* `NOT PROVEN` is different. The source-quality
+  step keeps its strict rc=1 (`continue-on-error` only prevents that measured
+  result from being mistaken for a workflow error); the summary step then
+  records `status=SCOPED_NOT_PROVEN` with `scoped_verdict=NOT PROVEN` and a
+  scoped reason, and exits 0. This requires: every other stage rc=0 on a
+  Linux host, the evaluator's own `revng source quality: NOT PROVEN` line, a
+  report whose `sha256` seal recomputes, a multilifter decision that really
+  skipped a diverged revng in favour of PCRecomp, and only measured gate-failure
+  reason codes. No PASS or general source-quality claim is recorded.
 - Artifacts are uploaded with `if: always()`: the summary, the source-quality
-  JSON, commands, hashes, logs, the PE and the C candidates. A failed run is
-  still inspectable.
+  JSON, commands, hashes, logs, the PE and the C candidates. Every run is
+  inspectable, including a scoped `NOT PROVEN`.
 
 **Scope limits.** No `HIGH_LEVEL_VERIFIED`, no gameplay equivalence, no
 100%, and no general "rev.ng produces better source" claim from one function.
 The adapter is not the project's dispatch path; the project's PCRecomp-only
 build remains unchanged. The job never calls `gh` and never closes or comments
 on an issue.
+
+## Why runs 45764193627 / 45766972844 / 45768357859 failed (issue #339)
+
+All three merges to `develop` failed only at the last two steps. The downloaded
+artifact of run `45768357859` shows that the earlier stages really measured:
+the pinned archive, PE fixture, both compile rc files, both difftest reports and
+the multilifter decision were all produced. Revng's candidate genuinely
+diverged on 8/8 driven cases (`agree-memory` only meant the named guest memory
+matched; eax did not), so the multilifter correctly promoted PCRecomp and the
+readability comparison was worse for revng (0 named locals vs 5, identifier
+ratio 0.333333 vs 0.36). `NOT PROVEN` was therefore the honest verdict; the
+bug was treating a measured result as a workflow error.
+
+The same report also contained two invented `DIFFTEST_ADDRESS_MISMATCH` reasons:
+difftest writes `0x00401000` while the job asks for `0x401000`. The evaluator
+now compares addresses numerically, so the reason list contains only measured
+gate failures. The workflow records this genuine result as a scoped
+`NOT PROVEN` and exits 0; `SOURCE_IMPROVED` still requires every gate and is
+never fabricated.
 
 ## Reproduction
 

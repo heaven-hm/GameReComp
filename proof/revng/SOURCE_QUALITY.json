@@ -193,14 +193,6 @@
       "detail": "/home/runner/work/_temp/revng-evidence/revng-difftest.json: DIFFTEST_DIVERGED_CASES: 8/8"
     },
     {
-      "code": "REVNG_DIFFTEST_ADDRESS_MISMATCH",
-      "detail": "/home/runner/work/_temp/revng-evidence/revng-difftest.json: DIFFTEST_ADDRESS_MISMATCH: expected 0x401000, got ['0x00401000']"
-    },
-    {
-      "code": "PCRECOMP_DIFFTEST_ADDRESS_MISMATCH",
-      "detail": "/home/runner/work/_temp/revng-evidence/baseline-difftest.json: DIFFTEST_ADDRESS_MISMATCH: expected 0x401000, got ['0x00401000']"
-    },
-    {
       "code": "DECISION_NOT_REVNG",
       "detail": "/home/runner/work/_temp/revng-evidence/decision.json"
     },
@@ -222,7 +214,7 @@
     }
   ],
   "schema": 1,
-  "sha256": "d31a76a6ebdd20882dbda11a43accb7529765a7c75df2b2ed926d288c1062bff",
+  "sha256": "a4505d63b7a090c781a60f2aa7935f08ab2933a3cf183885864dd4e0c7653fe7",
   "tool": "tools/revng_source_quality.py",
   "verdict": "NOT PROVEN"
 }
