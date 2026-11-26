@@ -38,7 +38,7 @@
     "winsock-2-directplay": "UNSUPPORTED",
     "xinput-raw-input": "UNSUPPORTED"
   },
-  "head_at_generation": "99e5ce98d272789bbbfdcd3d92152a9b99e8f031",
+  "head_at_generation": "40bbe4504bd7f90ab76a58d896739c71b853c3df",
   "host_arch": "arm64",
   "host_os": "Darwin",
   "input_sha256_by_path": {
