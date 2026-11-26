@@ -1192,8 +1192,9 @@ impl GameReCompApp {
 
     pub fn pick_pe_path(&mut self, path: PathBuf) {
         let info = inspect_pe(&path);
+        let display_path = crate::pe::resolve_app_bundle(&path);
         let default_dir = self.default_project_dir_for(&path);
-        self.opts.pe_file = path.display().to_string();
+        self.opts.pe_file = display_path.display().to_string();
         self.opts.project_dir = default_dir.display().to_string();
         self.picked_pe = path;
         self.picked_pe_info = info;

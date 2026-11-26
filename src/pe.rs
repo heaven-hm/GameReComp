@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -74,6 +74,9 @@ fn parse_pe_header_block(pe_head: &[u8]) -> PeInfo {
 
 /// Pure byte-slice PE header inspector (works on native and wasm32-unknown-unknown).
 pub fn inspect_pe_bytes(data: &[u8]) -> PeInfo {
+    if let Some(native) = native_format_info(data) {
+        return native;
+    }
     match validate_dos_header(data.len() as u64, data) {
         Ok(pe_off) => parse_pe_header_block(&data[pe_off..pe_off + 0x40]),
         Err(err) => PeInfo {
@@ -99,22 +102,91 @@ fn u32_le(b: &[u8], off: usize) -> u32 {
     }
 }
 
+/// Resolve a macOS `.app` bundle directory to its Mach-O executable.
+/// Returns the original path when it is not an app bundle.
+pub fn resolve_app_bundle(path: &Path) -> PathBuf {
+    if !path.is_dir() || path.extension().and_then(|e| e.to_str()) != Some("app") {
+        return path.to_path_buf();
+    }
+    let plist = path.join("Contents").join("Info.plist");
+    let text = std::fs::read_to_string(&plist).unwrap_or_default();
+    let mut name = None;
+    if let Some(pos) = text.find("<key>CFBundleExecutable</key>") {
+        let tail = &text[pos..];
+        if let (Some(a), Some(b)) = (tail.find("<string>"), tail.find("</string>")) {
+            if a < b {
+                name = Some(tail[a + 8..b].trim().to_string());
+            }
+        }
+    }
+    let name = name.unwrap_or_else(|| {
+        path.file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Contents")
+            .to_string()
+    });
+    path.join("Contents").join("MacOS").join(name)
+}
+
+/// Identify Mach-O / ELF headers before the PE header check so the GUI can
+/// explain a macOS/Linux input instead of reporting a misleading PE error.
+fn native_format_info(bytes: &[u8]) -> Option<PeInfo> {
+    const MACHO_MAGICS: [(&[u8], &str); 6] = [
+        (b"\xfe\xed\xfa\xce", "Mach-O 32-bit big-endian"),
+        (b"\xce\xfa\xed\xfe", "Mach-O 32-bit little-endian"),
+        (b"\xfe\xed\xfa\xcf", "Mach-O 64-bit big-endian"),
+        (b"\xcf\xfa\xed\xfe", "Mach-O 64-bit little-endian"),
+        (b"\xca\xfe\xba\xbe", "Mach-O universal"),
+        (b"\xbe\xba\xfe\xca", "Mach-O universal"),
+    ];
+    for (magic, label) in MACHO_MAGICS {
+        if bytes.starts_with(magic) {
+            let mut info = PeInfo {
+                magic: label.to_string(),
+                machine: "arm64 or x86_64".to_string(),
+                input_os: Some("macos".to_string()),
+                input_arch: Some("host".to_string()),
+                ..PeInfo::default()
+            };
+            info.error = "macOS Mach-O input: PE32 lifting does not apply; use the verified source-level port".to_string();
+            return Some(info);
+        }
+    }
+    if bytes.starts_with(b"\x7fELF") {
+        let mut info = PeInfo {
+            magic: "ELF".to_string(),
+            machine: "64-bit or 32-bit".to_string(),
+            input_os: Some("linux".to_string()),
+            input_arch: Some("host".to_string()),
+            ..PeInfo::default()
+        };
+        info.error = "Linux ELF input: PE32 lifting does not apply; use the verified source-level port".to_string();
+        return Some(info);
+    }
+    None
+}
+
 pub fn inspect_pe(path: &Path) -> PeInfo {
     let mut info = PeInfo::default();
-    let Ok(mut f) = File::open(path) else {
+    let resolved = resolve_app_bundle(path);
+    let Ok(mut f) = File::open(&resolved) else {
         info.error = "cannot read the file".to_string();
         return info;
     };
     let size = f.metadata().map(|m| m.len()).unwrap_or(0);
-    if size < 0x40 {
-        info.error = "file is shorter than a DOS header -- this is not a PE executable".to_string();
+    if size < 4 {
+        info.error = "file is too small to identify -- this is not a PE executable".to_string();
         return info;
     }
-    let mut dos_head = [0u8; 0x40];
-    if f.read_exact(&mut dos_head).is_err() {
+    let mut head = [0u8; 0x40];
+    if f.read_exact(&mut head).is_err() {
         info.error = "cannot read the file".to_string();
         return info;
     }
+    if let Some(native) = native_format_info(&head) {
+        return native;
+    }
+    let dos_head = head;
     let pe_off = match validate_dos_header(size, &dos_head) {
         Ok(off) => off,
         Err(err) => {
@@ -259,6 +331,28 @@ mod tests {
 
         let bad = inspect_pe_bytes(b"not a pe binary");
         assert!(!bad.ok);
+    }
+
+    #[test]
+    fn resolves_ghostty_app_bundle_and_detects_macho() {
+        let app = PathBuf::from("/Applications/Ghostty.app");
+        if !app.is_dir() {
+            return;
+        }
+        let exe = resolve_app_bundle(&app);
+        assert!(exe.ends_with("Contents/MacOS/ghostty"));
+        let info = inspect_pe(&app);
+        assert_eq!(info.input_os.as_deref(), Some("macos"));
+        assert!(info.magic.contains("Mach-O"));
+        assert!(!info.ok);
+    }
+
+    #[test]
+    fn detects_elf_input() {
+        let info = inspect_pe_bytes(b"\x7fELF\x02\x01\x01");
+        assert_eq!(info.input_os.as_deref(), Some("linux"));
+        assert_eq!(info.magic, "ELF");
+        assert!(!info.ok);
     }
 
     #[test]
