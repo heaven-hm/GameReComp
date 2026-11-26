@@ -76,9 +76,17 @@ static DWORD g_mach_tls = TLS_OUT_OF_INDEXES;
 
 /* A guest thread's TIB. Lifted code reads fs:[n] as MEM32(g_fs_base + n); the
  * real TEB stays the host's, so a guest SEH frame never lands on a chain
- * Windows walks. The PEB is the real one: code that reads fs:[30h] wants it. */
+ * Windows walks. The PEB is the real one: code that reads fs:[30h] wants it.
+ * Failure comes back as 0 rather than a dereference of NULL: a zero fs base
+ * would make every guest fs:[n] read land on address 0, replacing the guest
+ * ABI's ordinary error path (a return value / last error) with a crash. */
 static uint32_t make_tib(uint32_t lo, uint32_t hi) {
     uint32_t* t = (uint32_t*)VirtualAlloc(NULL, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!t) {
+        fprintf(stderr, "[native32] make_tib: VirtualAlloc(0x1000) for guest TIB failed (error %lu)\n",
+                (unsigned long)GetLastError());
+        return 0;
+    }
     t[0] = 0xFFFFFFFFu;                          /* ExceptionList: end of chain */
     t[1] = hi;                                   /* StackBase                   */
     t[2] = lo;                                   /* StackLimit                  */
@@ -160,8 +168,21 @@ void mach_enter(void) {
         ULONG guarantee = 64 * 1024;
         SetThreadStackGuarantee(&guarantee);
         m = (mstate*)calloc(1, sizeof *m);
+        if (!m) {
+            fprintf(stderr, "[native32] mach_enter: calloc(%u) for machine state failed\n",
+                    (unsigned)(sizeof *m));
+            LeaveCriticalSection(&g_mach);
+            ExitProcess(3);
+        }
         uint32_t lo = (uint32_t)(uintptr_t)VirtualAlloc(NULL, GUEST_STACK,
                           MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        if (!lo) {
+            fprintf(stderr, "[native32] mach_enter: VirtualAlloc(0x%X) for guest stack failed (error %lu)\n",
+                    GUEST_STACK, (unsigned long)GetLastError());
+            free(m);
+            LeaveCriticalSection(&g_mach);
+            ExitProcess(3);
+        }
         /* The bridge copies BRIDGE_SLOTS words up from esp whatever the
          * callee takes, so the first call made from an empty stack must not
          * read off the end of it. With 64 bytes of headroom it did, and faulted
@@ -169,6 +190,16 @@ void mach_enter(void) {
          * about two runs in three. */
         m->r.esp = lo + GUEST_STACK - BRIDGE_SLOTS * 4 - 64;
         m->r.fs = make_tib(lo, lo + GUEST_STACK);
+        if (!m->r.fs) {
+            /* make_tib has already named the failing allocation. A zero fs
+             * base is not a usable TIB, so stop before any lifted code runs;
+             * give the lock back so no other thread waits on a dead machine. */
+            fprintf(stderr, "[native32] mach_enter: no guest TIB, failing closed\n");
+            VirtualFree((void*)(uintptr_t)lo, 0, MEM_RELEASE);
+            free(m);
+            LeaveCriticalSection(&g_mach);
+            ExitProcess(3);
+        }
         m->r.fpu_cw = 0x027F;
         m->r.mxcsr = 0x1F80;              /* exceptions masked, round to nearest */
         TlsSetValue(g_mach_tls, m);
@@ -934,6 +965,11 @@ void native32_init(void) {
     g_mach_tls = TlsAlloc();
     g_tslot_fls = FlsAlloc(tslot_free);
     g_shim_page = (uint32_t)(uintptr_t)VirtualAlloc(NULL, 0x10000, MEM_RESERVE, PAGE_NOACCESS);
+    if (!g_shim_page) {
+        fprintf(stderr, "[native32] native32_init: VirtualAlloc(0x10000) for shim page failed (error %lu)\n",
+                (unsigned long)GetLastError());
+        ExitProcess(3);
+    }
     AddVectoredExceptionHandler(1, native32_veh);
 }
 
