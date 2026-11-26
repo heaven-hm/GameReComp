@@ -21,7 +21,9 @@ the exact reason codes. The report is self-sealed with the canonical digest
 from ``tools/issue25_evidence.py``; changing a number in it invalidates the
 seal. Nothing here runs rev.ng, changes issue state, or claims
 ``HIGH_LEVEL_VERIFIED``, gameplay equivalence, 100% or a general source-quality
-improvement.
+improvement. The CLI keeps the strict exit code (0 only for ``SOURCE_IMPROVED``);
+the workflow may separately record a genuinely measured ``NOT PROVEN`` as a
+scoped result, but this tool never softens its own verdict or seal.
 
     python3 tools/revng_source_quality.py \
         --fixture gate.exe --baseline-c baseline.c --revng-c revng.c \
@@ -118,6 +120,32 @@ def as_int(value: Any, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def address_value(value: Any) -> int | None:
+    """Parse a hex address numerically so ``0x401000`` == ``0x00401000``.
+
+    difftest prints addresses with a fixed zero-padded width while the caller
+    may pass the same VA in a shorter form. Comparing the raw strings would
+    invent an ADDRESS_MISMATCH reason on a report that actually measured the
+    requested function. An unparseable value is never treated as a match.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    try:
+        return int(text, 16) if text.lower().startswith("0x") else int(text, 10)
+    except ValueError:
+        return None
+
+
+def addresses_equal(expected: Any, actual: Any) -> bool:
+    left, right = address_value(expected), address_value(actual)
+    return left is not None and right is not None and left == right
 
 
 def _reason(reasons: list[dict[str, str]], code: str, detail: str) -> None:
@@ -274,8 +302,14 @@ def validate_difftest(path: Path, address: str | None) -> tuple[dict[str, Any], 
             problems.append("DIFFTEST_DIVERGED_FIELD: row reports diverged cases")
     if diverged:
         problems.append(f"DIFFTEST_DIVERGED_CASES: {diverged}/{total_cases}")
-    if address and addresses and address not in addresses:
-        problems.append(f"DIFFTEST_ADDRESS_MISMATCH: expected {address}, got {addresses}")
+    if address is not None:
+        if address_value(address) is None:
+            problems.append(f"DIFFTEST_ADDRESS_UNPARSEABLE: expected {address!r}")
+        elif addresses and not all(addresses_equal(address, item)
+                                   for item in addresses):
+            # Numeric comparison: the repository's difftest writes 0x00401000
+            # for the same VA the caller supplies as 0x401000.
+            problems.append(f"DIFFTEST_ADDRESS_MISMATCH: expected {address}, got {addresses}")
     summary.update({
         "verdicts": verdicts, "addresses": addresses,
         "cases_driven": total_cases, "diverged_cases": diverged,
@@ -283,7 +317,8 @@ def validate_difftest(path: Path, address: str | None) -> tuple[dict[str, Any], 
     return summary, problems
 
 
-def validate_decision(path: Path, revng_report: Mapping[str, Any]
+def validate_decision(path: Path, revng_report: Mapping[str, Any],
+                      address: str | None = None
                       ) -> tuple[dict[str, Any], list[str]]:
     """Require a real multilifter decision that promoted revng on this report."""
     problems: list[str] = []
@@ -317,6 +352,10 @@ def validate_decision(path: Path, revng_report: Mapping[str, Any]
         "diverged_cases": row.get("diverged_cases"),
         "total_cases": row.get("total_cases"),
     }
+    if address is not None and row.get("address") is not None and not \
+            addresses_equal(address, row["address"]):
+        problems.append(
+            f"DECISION_ADDRESS_MISMATCH: expected {address}, got {row['address']!r}")
     if row.get("status") != "PASS":
         problems.append(f"DECISION_REVNG_NOT_PASS: status={row.get('status')!r}")
     if as_int(row.get("diverged_cases"), -1) != 0:
@@ -376,7 +415,8 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                 f"{path}: {problem}")
 
     decision, problems = validate_decision(Path(args.decision),
-                                           difftest.get("revng", {}))
+                                           difftest.get("revng", {}),
+                                           args.address)
     for problem in problems:
         add(problem.split(":", 1)[0], str(args.decision))
 
