@@ -7,6 +7,7 @@ sweep through the entire code section and splits by known function boundaries.
 
 import sys
 import os
+import struct
 import re
 import time
 import json
