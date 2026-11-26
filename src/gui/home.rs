@@ -1489,7 +1489,7 @@ pub fn render_advanced_cli_options(
                 .items_center()
                 .gap(px(8.0))
                 .child(style::eyebrow(t, "INPUT OS:"))
-                .children(["auto", "windows"].into_iter().enumerate().map(|(i, v)| {
+                .children(["auto", "windows", "macos", "linux"].into_iter().enumerate().map(|(i, v)| {
                     style::option_pill(("in_os", i), t, v, opts.input_os == v).on_click(
                         cx.listener(move |this, _, _, cx| {
                             this.opts.input_os = v.to_string();
@@ -1499,7 +1499,7 @@ pub fn render_advanced_cli_options(
                 }))
                 .child(div().w(px(12.0)))
                 .child(style::eyebrow(t, "INPUT ARCH:"))
-                .children(["auto", "x86"].into_iter().enumerate().map(|(i, v)| {
+                .children(["auto", "x86", "x86_64", "arm64"].into_iter().enumerate().map(|(i, v)| {
                     style::option_pill(("in_arch", i), t, v, opts.input_arch == v).on_click(
                         cx.listener(move |this, _, _, cx| {
                             this.opts.input_arch = v.to_string();

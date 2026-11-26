@@ -382,3 +382,24 @@ class IdentityDefaultTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class InputIdentityChoiceTests(unittest.TestCase):
+    def test_all_input_os_and_arch_choices_are_accepted(self):
+        for os_choice in ("auto", "windows", "macos", "linux"):
+            for arch_choice in ("auto", "x86", "x86_64", "arm64"):
+                args = cli.build_parser().parse_args([
+                    str(FIXTURE_EXE), "--input-os", os_choice,
+                    "--input-arch", arch_choice,
+                ])
+                self.assertEqual(args.input_os, os_choice)
+                self.assertEqual(args.input_arch, arch_choice)
+
+    def test_nonexecutable_input_is_refused_with_named_reason(self):
+        with tempfile.NamedTemporaryFile(suffix=".elf") as f:
+            f.write(b"\x7fELF\x02\x01\x01")
+            f.flush()
+            identity, reason = cli._resolve_input(f.name, "linux", "x86_64")
+            self.assertIsNone(identity)
+            self.assertIn("ELF", reason)
+            self.assertIn("not supported", reason)
