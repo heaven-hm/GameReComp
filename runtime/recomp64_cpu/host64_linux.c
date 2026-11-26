@@ -68,10 +68,28 @@ static void hle_call(const char *name, CPU *c) {
     if (!strcmp(name, "WriteFile")) {
         FILE *out = c->rcx == 2 ? stderr : stdout;
         const void *buf = (const void *)(uintptr_t)c->rdx;
-        size_t n = (size_t)c->r8;
-        size_t wrote = fwrite(buf, 1, n, out);
+        /* Win64: nNumberOfBytesToWrite is a 32-bit DWORD carried in R8. The
+         * upper 32 bits are caller-undefined, so reading the full 64-bit
+         * register as size_t let garbage high bits make fwrite() walk gigabytes
+         * past buf (issue #345). Truncate exactly as the ABI requires. */
+        uint32_t n = (uint32_t)c->r8;
+        size_t wrote = 0;
+        if (n == 0) {
+            /* Zero-length writes succeed without touching lpBuffer. */
+            if (c->r9) wr32(c->r9, 0);
+            SET64(c->rax, 1u);   /* BOOL TRUE */
+            return;
+        }
+        if (!buf) {
+            /* lpBuffer is mandatory for a non-zero count. Fail closed instead
+             * of handing a NULL pointer to fwrite(). */
+            if (c->r9) wr32(c->r9, 0);
+            SET64(c->rax, 0u);   /* BOOL FALSE */
+            return;
+        }
+        wrote = fwrite(buf, 1, n, out);
         if (c->r9) wr32(c->r9, (uint32_t)wrote);
-        SET64(c->rax, wrote == n ? 1u : 0u);   /* BOOL TRUE */
+        SET64(c->rax, wrote == n ? 1u : 0u);
         return;
     }
     if (!strcmp(name, "FlushFileBuffers")) {
@@ -97,7 +115,17 @@ static int is_hle(uint64_t target) {
 }
 
 static void hle_enter(CPU *c, uint64_t target, int pop_return) {
-    uint32_t i = (uint32_t)((target - HLE_BASE) / HLE_STRIDE);
+    uint64_t off;
+    uint32_t i;
+    /* Fail closed on a misaligned or out-of-range indirect jump into the HLE
+     * window: an unchecked index could read past recomp_imports[] (issue #345).
+     * is_hle() bounds the normal path, but keep the check here so no future
+     * caller can bypass it. */
+    if (target < HLE_BASE) die("HLE target below base", target);
+    off = target - HLE_BASE;
+    if (off % HLE_STRIDE) die("misaligned HLE target", target);
+    i = (uint32_t)(off / HLE_STRIDE);
+    if (i >= (uint32_t)HLE_COUNT) die("HLE slot out of range", target);
     if (pop_return) c->rsp += 8;
     hle_call(recomp_imports[i].name, c);
 }
