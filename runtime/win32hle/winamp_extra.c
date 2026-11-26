@@ -48,6 +48,7 @@ static void ex_LoadImageW(void)               { RET(0u, 6); }
 
 /* GDI32 */
 static void ex_CreateFontIndirectW(void)      { RET(0u, 1); }
+static void ex_DrawTextW(void)               { RET(0u, 5); }
 
 /* KERNEL32 file/path/profile helpers */
 static void ex_GetTempFileNameW(void)         { RET(0u, 4); }
@@ -86,6 +87,7 @@ const win32hle_shim win32hle_winamp_extra[] = {
     { "SetWindowLongW", ex_SetWindowLongW },
     { "LoadImageW", ex_LoadImageW },
     { "CreateFontIndirectW", ex_CreateFontIndirectW },
+    { "DrawTextW", ex_DrawTextW },
     { "GetTempFileNameW", ex_GetTempFileNameW },
     { "RemoveDirectoryW", ex_RemoveDirectoryW },
     { "lstrcpynW", ex_lstrcpynW },
