@@ -430,7 +430,7 @@ def build_parser():
     parser.add_argument("--list-stages", action="store_true",
                         help="print the stage plan with weights and exit")
     parser.add_argument("--input-os", "--in-os", dest="input_os",
-                        choices=["auto", "windows"], default=None,
+                        choices=["auto", "windows", "macos", "linux"], default=None,
                         help="what the input binary is (omit to assume 'auto': "
                              "the PE header is read; an explicit declaration "
                              "that disagrees with the bytes is refused). "
@@ -438,7 +438,7 @@ def build_parser():
                              "--input-arch, --target-os and --target-arch, to "
                              "silence the missing-identity warning")
     parser.add_argument("--input-arch", "--in-arch", dest="input_arch",
-                        choices=["auto", "x86"], default=None,
+                        choices=["auto", "x86", "x86_64", "arm64"], default=None,
                         help="guest CPU architecture of the input (omit to "
                              "assume 'auto' from the PE header; the pipeline "
                              "reconstructs 32-bit x86 guests). Defaults to "

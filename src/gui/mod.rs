@@ -852,7 +852,7 @@ impl GameReCompApp {
             files: true,
             directories: false,
             multiple: true,
-            prompt: Some("Select one or more 32-bit Windows PE executables (.exe)".into()),
+            prompt: Some("Select game/app executables (.exe, Mach-O, ELF) - unsupported formats are refused with a clear reason".into()),
         });
         let weak = cx.entity().downgrade();
         window
@@ -882,7 +882,7 @@ impl GameReCompApp {
                     } else if rejected_count > 0 {
                         let _ = weak.update(cx, |this, cx| {
                             this.push_toast(
-                                "No Windows executables selected",
+                                "No executable selected",
                                 &format!("Skipped {rejected_count} item(s); select valid PE32 x86 executables."),
                                 this.tokens().not_c,
                                 true,
@@ -1207,7 +1207,7 @@ impl GameReCompApp {
             files: true,
             directories: false,
             multiple: false,
-            prompt: Some("Choose a 32-bit Windows PE executable (.exe)".into()),
+            prompt: Some("Choose a game/app executable (.exe, Mach-O, ELF) - unsupported formats are refused with a clear reason".into()),
         });
         let weak = cx.entity().downgrade();
         window
@@ -1219,7 +1219,7 @@ impl GameReCompApp {
                                 this.pick_pe_path(file);
                             } else {
                                 this.push_toast(
-                                    "Choose a Windows executable",
+                                    "Choose a game/app executable",
                                     "The selected file must have an .exe extension.",
                                     this.tokens().not_c,
                                     true,
