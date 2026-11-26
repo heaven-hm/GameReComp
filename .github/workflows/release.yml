@@ -20,6 +20,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
+      ARCHIVE: GameReComp-${{ inputs.tag || github.ref_name }}-${{ matrix.archive }}
     strategy:
       fail-fast: false
       matrix:
@@ -29,13 +30,13 @@ jobs:
             target: x86_64-unknown-linux-gnu
             bin: game-recomp-cli
             features: cli
-            archive: GameReComp-cli-${{ inputs.tag || github.ref_name }}-linux-x86_64.tar.gz
+            archive: linux-x86_64.tar.gz
           - artifact: gui-linux-x86_64
             runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             bin: game-recomp-gui
             features: gui
-            archive: GameReComp-gui-${{ inputs.tag || github.ref_name }}-linux-x86_64.tar.gz
+            archive: linux-x86_64.tar.gz
           # macos-14 was retired; those jobs were cancelled 1s after start
           # with zero steps in run 45361864557. Use the maintained ARM64 label.
           - artifact: cli-macos-arm64
@@ -43,26 +44,33 @@ jobs:
             target: aarch64-apple-darwin
             bin: game-recomp-cli
             features: cli
-            archive: GameReComp-cli-${{ inputs.tag || github.ref_name }}-macos-arm64.tar.gz
+            archive: macos-arm64.tar.gz
           - artifact: gui-macos-arm64
             runner: macos-latest
             target: aarch64-apple-darwin
             bin: game-recomp-gui
             features: gui
-            archive: GameReComp-gui-${{ inputs.tag || github.ref_name }}-macos-arm64.tar.gz
+            archive: macos-arm64.tar.gz
           - artifact: cli-windows-x86_64
             runner: windows-latest
             target: x86_64-pc-windows-msvc
             bin: game-recomp-cli
             features: cli
-            archive: GameReComp-cli-${{ inputs.tag || github.ref_name }}-windows-x86_64.zip
+            archive: windows-x86_64.zip
           - artifact: gui-windows-x86_64
             runner: windows-latest
             target: x86_64-pc-windows-msvc
             bin: game-recomp-gui
             features: gui
-            archive: GameReComp-gui-${{ inputs.tag || github.ref_name }}-windows-x86_64.zip
+            archive: windows-x86_64.zip
     steps:
+      - name: Validate release tag
+        shell: bash
+        run: |
+          if ! printf '%s\n' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "invalid release tag: expected vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
@@ -103,7 +111,7 @@ jobs:
           mkdir "$staging"
           cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" "$staging/"
           cp README.md CHANGELOG.md LICENSE "$staging/"
-          tar -czf "${{ matrix.archive }}" "$staging"
+          tar -czf "$ARCHIVE" "$staging"
 
       - name: Package Windows binary
         if: runner.os == 'Windows'
@@ -114,12 +122,12 @@ jobs:
           mkdir "$staging"
           cp "target/${{ matrix.target }}/release/${{ matrix.bin }}.exe" "$staging/"
           cp README.md CHANGELOG.md LICENSE "$staging/"
-          7z a "${{ matrix.archive }}" "$staging"
+          7z a "$ARCHIVE" "$staging"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.archive }}
+          path: ${{ env.ARCHIVE }}
 
   publish:
     name: Publish GitHub release
