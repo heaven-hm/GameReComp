@@ -654,7 +654,6 @@ Status text is quoted from each project's own README; the architecture and OS co
 <tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="100%"><br><sub>screenshots-frame-0000.bmp</sub></td><td>580×456<br>1 colours</td></tr>
 <tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="100%"><br><sub>screenshots-frame-0001.bmp</sub></td><td>580×456<br>2 colours</td></tr>
 <tr><td align="center"><img src="screenshots/screenshots-ikachan-native-frame-0000.png" alt="screenshots-ikachan-native-frame-0000.png" width="100%"><br><sub>screenshots-ikachan-native-frame-0000.png</sub></td><td>351×238<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-tm-forever-original-desktop-no-window.png" alt="desktop capture with no game window - not frame proof" width="100%"><br><sub>screenshots-tm-forever-original-desktop-no-window.png</sub></td><td>3360×2100<br>3257 colours</td></tr>
 </table>
 
 ## Frame inventory
@@ -689,7 +688,6 @@ Status text is quoted from each project's own README; the architecture and OS co
 | `screenshots-frame-0000.bmp` | 580×456 | 1 | `1b2cab9f8c1d1ac541bc03551fa1f0aed380c440566c32bc579f0b65c38b3d28` | FAIL — blank, never counted as evidence |
 | `screenshots-frame-0001.bmp` | 580×456 | 2 | `11116c2709934dac8a2ae03b758922e1c46c840012fffda777c26e6ef17c8843` | PARTIAL — real non-blank native render |
 | `screenshots-ikachan-native-frame-0000.png` | 351×238 | 1 | `967db05021e1d219c3ad2e5ff91deab9e3a5499983820115f856a224b8392581` | FAIL — blank, never counted as evidence |
-| `screenshots-tm-forever-original-desktop-no-window.png` | 3360×2100 | 3257 | `8fb8df33a567d0509cf33276aefec98ee189f6ca005328720a9350c972e00847` | NOT PROOF — desktop capture with no game window; never counted as a render |
 
 ## Tested games without captured frames
 
@@ -700,7 +698,7 @@ failure, no native binary, or no build); no screenshot can be shown for them.
   Highball controls; 90 BLOCKED, 9 console PASS, 1 nondeterminism FAIL.
   Per-game evidence: `ENGINE100/FINAL_REPORT.md` (outside this repository).
 - **Teeworlds**: recompile retry produced no native binary (2-hour recover timeout / exit 2).
-- **TrackMania ESWC / Forever**: no native binary; engine controls BLOCKED. IGI has native frames in `proof/screenshots/`.
+- **TrackMania ESWC / Forever**: no native binary and no committed frame. The desktop capture with no game window was removed as invalid evidence; engine controls BLOCKED. IGI has native frames in `proof/screenshots/`.
 - **New downloads** (Chocolate Strife, Crispy Strife, VCMI): controls BLOCKED.
 
 See [verification methodology](VERIFICATION.md). No original-Windows frame oracle exists here (#145/#171); captures are native-only and labelled PARTIAL or FAIL.
