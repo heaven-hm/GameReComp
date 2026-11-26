@@ -53,7 +53,7 @@
       "owner_issue": 1,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/kernel32.c",
           "runtime/win32hle/module.c"
@@ -126,7 +126,7 @@
       "owner_issue": 2,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/user32.c",
           "runtime/win32hle/gdi32.c",
@@ -191,7 +191,7 @@
       "owner_issue": 6,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/ddraw.c"
         ],
@@ -257,7 +257,7 @@
       "owner_issue": 2,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/d3d7.c",
           "runtime/win32hle/ddraw.c"
@@ -307,7 +307,7 @@
       "owner_issue": 6,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -354,7 +354,7 @@
       "owner_issue": 3,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -401,7 +401,7 @@
       "owner_issue": 5,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -448,7 +448,7 @@
       "owner_issue": 7,
       "pe_format": "PE32+",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -495,7 +495,7 @@
       "owner_issue": 6,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -555,7 +555,7 @@
       "owner_issue": 2,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/dinput.c"
         ],
@@ -604,7 +604,7 @@
       "owner_issue": 5,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -651,7 +651,7 @@
       "owner_issue": 11,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -710,7 +710,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/dsound.c"
         ],
@@ -776,7 +776,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/ole32.c",
           "runtime/win32hle/sdlmix.c"
@@ -836,7 +836,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/winmm.c"
         ],
@@ -894,7 +894,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/avifil32.c"
         ],
@@ -958,7 +958,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/bink.c",
           "runtime/win32hle/mss.c"
@@ -1018,7 +1018,7 @@
       "owner_issue": 12,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/wsock32.c"
         ],
@@ -1068,7 +1068,7 @@
       "owner_issue": 12,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -1130,7 +1130,7 @@
       "owner_issue": 8,
       "pe_format": "NE",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win16/host/win16_impl.c",
           "runtime/win16/host/win32_backend.c"
@@ -1201,7 +1201,7 @@
       "owner_issue": 9,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/pe_loader.c",
           "runtime/win32hle/eh32.c",
@@ -1252,7 +1252,7 @@
       "owner_issue": 13,
       "pe_format": "PE32+",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -1308,7 +1308,7 @@
       "owner_issue": 2,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/gl32.c"
         ],
@@ -1367,7 +1367,7 @@
       "owner_issue": 9,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/msvcrt.c"
         ],
@@ -1416,7 +1416,7 @@
       "owner_issue": 9,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -1470,7 +1470,7 @@
       "owner_issue": 12,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "50198b48f84799931450007e299c747514770e42",
+        "commit": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
         "files": [
           "runtime/win32hle/wininet.c"
         ],
@@ -2289,7 +2289,7 @@
   },
   "target": {
     "branch": "develop",
-    "head_at_generation": "50198b48f84799931450007e299c747514770e42",
+    "head_at_generation": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
     "host_arch": "arm64",
     "host_os": "Darwin",
     "pe_formats": [
