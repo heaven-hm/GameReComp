@@ -4860,7 +4860,7 @@ pub fn launch_gui(cfg: AppConfig, open_dir: Option<&Path>) -> i32 {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 window_min_size: Some(size(px(860.0), px(580.0))),
                 titlebar: Some(TitlebarOptions {
-                    title: Some("GameReComp — Pick your game and turn it to native port".into()),
+                    title: Some("GameReComp — Any game or app, any OS, any architecture".into()),
                     appears_transparent: false,
                     ..Default::default()
                 }),

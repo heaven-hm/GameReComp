@@ -514,7 +514,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
                 .text_size(px(t.ui_px(44.0)))
                 .line_height(px(t.ui_px(46.0)))
                 .text_color(rgb(t.ink))
-                .child("Pick your game\nand turn it to\nnative port."),
+                .child("Pick any game\nor app, any OS,\nany architecture."),
         )
         .child(
             div()
@@ -522,7 +522,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
                 .text_size(px(t.ui_px(15.0)))
                 .line_height(px(t.ui_px(23.0)))
                 .text_color(rgb(t.ink_2))
-                .child("Turn 32-bit Windows games and apps into standalone native ports for macOS, Linux, Windows, or WebAssembly — with automatic machine detection, live per-file animations, and one-click game launch."),
+                .child("Accepts Windows, macOS and Linux games and apps across x86, x86_64 and arm64 — with automatic machine detection, live per-file animations, and one-click launch. Reconstruction stays fail-closed: only PE32 i386 is lifted on the host; every other input gets a named reason."),
         )
         .child(step_list)
 }

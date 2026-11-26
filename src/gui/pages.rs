@@ -929,7 +929,7 @@ pub fn render_about_page(
         viewport_w,
         "ABOUT",
         "GameReComp",
-        "Pick your game and turn it to native port — static PE32 x86 recompilation to native executables and WebAssembly, built in Rust with GPUI Kit.",
+        "Any game or app, any OS, any architecture — accepts Windows, macOS and Linux inputs across x86, x86_64 and arm64; PE32 i386 reconstruction is fail-closed to the host.",
     )
     .child(
         div()
