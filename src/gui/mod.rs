@@ -2399,8 +2399,12 @@ impl GameReCompApp {
             .unwrap_or_default();
         let data_dir = if !meta.game_data_dir.trim().is_empty() {
             meta.game_data_dir.clone()
-        } else {
+        } else if !suggested_pe_dir.is_empty() {
             suggested_pe_dir.clone()
+        } else if dir.is_dir() {
+            normalized_path(&dir).display().to_string()
+        } else {
+            String::new()
         };
         let use_data_dir = (binary_path.is_some() || !has_wasm)
             && (preselect_data_dir || meta.launch_with_data_dir);
@@ -2426,31 +2430,51 @@ impl GameReCompApp {
             return;
         };
         let trimmed_data = modal.data_dir.trim().to_string();
+        // Prefer an explicitly chosen folder, then the original executable's
+        // folder, then the project folder. A missing folder must not block a
+        // rebuild that can run from its generated standalone binary.
+        let fallback_data_dir = [&modal.suggested_pe_dir]
+            .into_iter()
+            .map(|s| PathBuf::from(s.trim()))
+            .find(|p| p.is_dir())
+            .or_else(|| Some(modal.project_dir.clone()).filter(|p| p.is_dir()));
         let resolved_data = if trimmed_data.is_empty() {
             if modal.use_data_dir && launch_now {
-                self.push_toast(
-                    "Select a valid game folder",
-                    "Choose an existing game data/assets directory before launching.",
-                    self.tokens().not_c,
-                    true,
-                );
-                cx.notify();
-                return;
+                match fallback_data_dir {
+                    Some(dir) => Some(normalized_path(&dir)),
+                    None => {
+                        self.push_toast(
+                            "Select a valid game folder",
+                            "Choose an existing game data/assets directory before launching.",
+                            self.tokens().not_c,
+                            true,
+                        );
+                        cx.notify();
+                        return;
+                    }
+                }
+            } else {
+                None
             }
-            None
         } else {
             let candidate = normalized_path(Path::new(&trimmed_data));
             if modal.use_data_dir && launch_now && !candidate.is_dir() {
-                self.push_toast(
-                    "Select a valid game folder",
-                    "Choose an existing game data/assets directory before launching.",
-                    self.tokens().not_c,
-                    true,
-                );
-                cx.notify();
-                return;
+                match fallback_data_dir {
+                    Some(dir) => Some(normalized_path(&dir)),
+                    None => {
+                        self.push_toast(
+                            "Select a valid game folder",
+                            "Choose an existing game data/assets directory before launching.",
+                            self.tokens().not_c,
+                            true,
+                        );
+                        cx.notify();
+                        return;
+                    }
+                }
+            } else {
+                Some(candidate)
             }
-            Some(candidate)
         };
         if modal.use_data_dir && modal.has_wasm && modal.binary_path.is_none() {
             self.push_toast(
@@ -4416,7 +4440,7 @@ fn file_identity(path: &Path) -> io::Result<FileIdentity> {
     #[cfg(unix)]
     let (volume, file) = {
         use std::os::unix::fs::MetadataExt;
-        (metadata.dev(), metadata.ino())
+        (metadata.dev(), metadata.ino() as u128)
     };
     #[cfg(windows)]
     let (volume, file) = {

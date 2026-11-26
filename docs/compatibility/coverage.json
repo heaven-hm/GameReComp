@@ -1,0 +1,2301 @@
+{
+  "families": [
+    {
+      "abi_signature": "void __stdcall ExitProcess(UINT); FARPROC __stdcall GetProcAddress(HMODULE,LPCSTR)",
+      "api_family": "Win32 kernel32",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_kernel32 found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "bfabb4b02211a0bcde8a5713ee718917c941be62139287e038aa205f49ca0d86",
+          "kind": "source",
+          "note": "runtime/win32hle/kernel32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "d8742baf1a602757f4bcad5919761407b5a4c0e3755ea83ad7b89d7bbe800e8a",
+          "kind": "source",
+          "note": "runtime/win32hle/module.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "855254d890824368b74cb72620a08479ab9c267ba4caf892eea132024ee5e430",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-win32-kernel32 KERNEL32.dll!ExitProcess",
+          "result": "PASS"
+        }
+      ],
+      "expected_fixture_result": "PASS",
+      "expected_implemented_status": "declared",
+      "family_id": "win32-kernel32",
+      "fixture_id": "fx-win32-kernel32",
+      "fixture_result": "PASS",
+      "guest_interface": {
+        "dll": "KERNEL32.dll",
+        "imports": [
+          "ExitProcess",
+          "GetProcAddress"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "POSIX libc"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "Win32",
+      "known_limitations": [],
+      "notes": "Static registration plus the existing synthetic PE32 fixture; no original Windows oracle is claimed.",
+      "owner_issue": 1,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/kernel32.c",
+          "runtime/win32hle/module.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_kernel32"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "int __stdcall MessageBoxA(HWND,LPCSTR,LPCSTR,UINT); HDC __stdcall CreateCompatibleDC(HDC)",
+      "api_family": "USER32 / GDI32",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_user32 found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "fe0bb69563d3924dcaa4caee286305b779c7177e5d958412c78bdfea5eca434a",
+          "kind": "source",
+          "note": "runtime/win32hle/user32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "9035eaf5dd59a4c8045b337f7adbca15c48cad62a3af24733899116be4407ed4",
+          "kind": "source",
+          "note": "runtime/win32hle/gdi32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "743f4a3d8e92289c40650717581a09501bf07f22d4d87cf75deb6b95b5d68456",
+          "kind": "source",
+          "note": "runtime/win32hle/gdidc.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "8d96c192eeb4c299dc07c90efce026ab12529c44bd3249705f1f39644ac36cbe",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-win32-user32-gdi USER32.dll!MessageBoxA",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "win32-user32-gdi",
+      "fixture_id": "fx-win32-user32-gdi",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "USER32.dll",
+        "imports": [
+          "MessageBoxA",
+          "CreateCompatibleDC"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "SDL2",
+        "SDL2_ttf"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "Win32",
+      "known_limitations": [
+        "Software presenter only; no Windows host oracle",
+        "Non-client area and advanced GDI paths are not verified"
+      ],
+      "notes": "Window/DH module coverage is registered; framebuffer verification belongs to the owning graphics issue.",
+      "owner_issue": 2,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/user32.c",
+          "runtime/win32hle/gdi32.c",
+          "runtime/win32hle/gdidc.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_user32"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall DirectDrawCreate(GUID*,LPDIRECTDRAW*,IUnknown*)",
+      "api_family": "DirectDraw",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_ddraw found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "f325003e34e85b4018f3013c63fbbe20a3f38166ba546029f39c553f4831c8af",
+          "kind": "source",
+          "note": "runtime/win32hle/ddraw.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "38b63d487b0cafa9db83ae181faa9b9da3e8a490d07ce4c2eb4f6c353813aac5",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-directdraw-1-7 DDRAW.dll!DirectDrawCreate",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "directdraw-1-7",
+      "fixture_id": "fx-directdraw-1-7",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "DDRAW.dll",
+        "imports": [
+          "DirectDrawCreate",
+          "DirectDrawCreateEx"
+        ],
+        "method_slots": [
+          "IDirectDraw::SetDisplayMode",
+          "IDirectDraw7::CreateSurface"
+        ]
+      },
+      "host_dependencies": [
+        "SDL2",
+        "OpenGL"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "1-7",
+      "known_limitations": [
+        "System-memory surfaces only",
+        "Hardware overlays and palette animations are unverified"
+      ],
+      "notes": "D3D7 shares this COM surface path; do not double-count as D3D1-6 support.",
+      "owner_issue": 6,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/ddraw.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_ddraw"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall IDirect3DDevice7::DrawPrimitiveVB(...)",
+      "api_family": "Direct3D",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "05eca21b0110f819f97b49547eb3e8450f95f54e4b93fa8e73e41ed99c351db4",
+          "kind": "source",
+          "note": "runtime/win32hle/d3d7.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "f325003e34e85b4018f3013c63fbbe20a3f38166ba546029f39c553f4831c8af",
+          "kind": "source",
+          "note": "runtime/win32hle/ddraw.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "8400eb22bdf4e739885330ce2ac4258e15c4cef703ed62525fa8948407f6a4da",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-direct3d-7 D3D7.dll!Direct3DCreate7",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "direct3d-7",
+      "fixture_id": "fx-direct3d-7",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "D3D7.dll",
+        "imports": [
+          "Direct3DCreate7"
+        ],
+        "method_slots": [
+          "IDirect3DDevice7::DrawPrimitiveVB"
+        ]
+      },
+      "host_dependencies": [
+        "OpenGL"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "7",
+      "known_limitations": [
+        "Multi-stage textures, lighting/materials, device caps and state blocks are unavailable",
+        "Needs a real or software GL context"
+      ],
+      "notes": "COM vtable handlers are installed by the DirectDraw path, not a standalone import registration.",
+      "owner_issue": 2,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/d3d7.c",
+          "runtime/win32hle/ddraw.c"
+        ],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall Direct3DCreate6(...)",
+      "api_family": "Direct3D",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "9266e446fd0da964e8efefdf204e9554cf304ec6b916ba8b0e286ac204266316",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-direct3d-1-6 D3D6.dll!Direct3DCreate6",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "direct3d-1-6",
+      "fixture_id": "fx-direct3d-1-6",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "D3D6.dll",
+        "imports": [
+          "Direct3DCreate6"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "1-6",
+      "known_limitations": [
+        "No D3D1-6 HLE; the D3D7 path is not a substitute"
+      ],
+      "notes": "Explicit not-implemented entry; tracked by the owning issue.",
+      "owner_issue": 6,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "IDirect3D8 * __stdcall Direct3DCreate8(UINT)",
+      "api_family": "Direct3D",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "a1b267392b78a4e19bb673e7683d56b1420fd545dc3c9c9147373b53d8c447d2",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-direct3d-8 D3D8.dll!Direct3DCreate8",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "direct3d-8",
+      "fixture_id": "fx-direct3d-8",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "D3D8.dll",
+        "imports": [
+          "Direct3DCreate8"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "8",
+      "known_limitations": [
+        "No D3D8 HLE in this repository"
+      ],
+      "notes": "Explicit not-implemented entry; tracked by the owning issue.",
+      "owner_issue": 3,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "IDirect3D9 * __stdcall Direct3DCreate9(UINT)",
+      "api_family": "Direct3D",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "88e195092b60d98763fee76bd3d5b464078f6d8aabf5fe91c1156a21a9c9d2d7",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-direct3d-9 D3D9.dll!Direct3DCreate9",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "direct3d-9",
+      "fixture_id": "fx-direct3d-9",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "D3D9.dll",
+        "imports": [
+          "Direct3DCreate9"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "9",
+      "known_limitations": [
+        "No D3D9 HLE in this repository"
+      ],
+      "notes": "Explicit not-implemented entry; tracked by the owning issue.",
+      "owner_issue": 5,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall CreateDXGIFactory(REFIID,void**)",
+      "api_family": "Direct3D / DXGI",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "626d95ae2bab50a6d9718247e3406f5d4c1cb5cc749098dfcdb184dbda7e8e66",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-direct3d-9ex-10-11-dxgi DXGI.dll!CreateDXGIFactory",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "direct3d-9ex-10-11-dxgi",
+      "fixture_id": "fx-direct3d-9ex-10-11-dxgi",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "DXGI.dll",
+        "imports": [
+          "CreateDXGIFactory"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "9Ex/10/11",
+      "known_limitations": [
+        "Post-D3D9 graphics are not implemented"
+      ],
+      "notes": "Pe32+ format marker; not gated on a PE32+ host.",
+      "owner_issue": 7,
+      "pe_format": "PE32+",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "void __stdcall grGlideInit(void)",
+      "api_family": "Glide",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "e4eb37f03fca7931451b565d2f888587fbf1b8f412c6de07d93eef4f60d30163",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-glide-3dfx GLIDE2X.dll!grGlideInit",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "glide-3dfx",
+      "fixture_id": "fx-glide-3dfx",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "GLIDE2X.dll",
+        "imports": [
+          "grGlideInit"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "3dfx",
+      "known_limitations": [
+        "No 3dfx Glide HLE in this repository"
+      ],
+      "notes": "Explicit not-implemented entry; tracked by the owning issue.",
+      "owner_issue": 6,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall DirectInputCreateA(HINSTANCE,DWORD,LPDIRECTINPUT*,IUnknown*)",
+      "api_family": "DirectInput",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_dinput found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "94e5be5bbf811ca20d212147513e5d521e7b560385b49a31b11e7c83c050545f",
+          "kind": "source",
+          "note": "runtime/win32hle/dinput.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "d905bfee1af6443d1f26e5b493a53ba5a27968ef86458c541a752f6ba6b5711b",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-directinput-3-5-7 DINPUT.dll!DirectInputCreateA",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "directinput-3-5-7",
+      "fixture_id": "fx-directinput-3-5-7",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "DINPUT.dll",
+        "imports": [
+          "DirectInputCreateA",
+          "DirectInputCreateEx"
+        ],
+        "method_slots": [
+          "IDirectInput7::CreateDeviceEx",
+          "IDirectInputDevice::GetDeviceState"
+        ]
+      },
+      "host_dependencies": [
+        "SDL2"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "3/5/7",
+      "known_limitations": [
+        "Buffered GetDeviceData, joysticks and force feedback are not implemented",
+        "No original Windows input oracle"
+      ],
+      "notes": "Corrects the stale audit claim that DirectInput is absent: host.c registers win32hle_dinput and dinput.c installs COM vtables. Presence is not functional completeness.",
+      "owner_issue": 2,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/dinput.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_dinput"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall DirectInput8Create(HINSTANCE,DWORD,REFIID,void*,IUnknown*)",
+      "api_family": "DirectInput",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "4f8b8ad2c7e67abf6961bad7c68f3165a903c278894229ca472fbacc5731cb1e",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-directinput-8 DINPUT8.dll!DirectInput8Create",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "directinput-8",
+      "fixture_id": "fx-directinput-8",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "DINPUT8.dll",
+        "imports": [
+          "DirectInput8Create"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "8",
+      "known_limitations": [
+        "No DInput8 HLE in this repository"
+      ],
+      "notes": "Explicit not-implemented entry; tracked by the owning issue.",
+      "owner_issue": 5,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "DWORD __stdcall XInputGetState(DWORD,XINPUT_STATE*)",
+      "api_family": "XInput / Raw Input",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "e8b44072aead5b3911d7288c85bb70f4d01dbb3ca531d03196dfda4433e4e184",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-xinput-raw-input XINPUT1_4.dll!XInputGetState",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "xinput-raw-input",
+      "fixture_id": "fx-xinput-raw-input",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "XINPUT1_4.dll",
+        "imports": [
+          "XInputGetState"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "1.x",
+      "known_limitations": [
+        "No XInput/HID/Raw Input HLE in this repository"
+      ],
+      "notes": "Explicit not-implemented entry; tracked by the owning issue.",
+      "owner_issue": 11,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall DirectSoundCreate(GUID*,LPDIRECTSOUND*,IUnknown*)",
+      "api_family": "DirectSound",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_dsound found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "966d053bd49c54eb774075c6694e876039d0e480d375d3b5962d8b97eaa50610",
+          "kind": "source",
+          "note": "runtime/win32hle/dsound.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "4d0aa9dc33ebf585e743171bf2824a890fd0122d14311a4cc4641b01f959195a",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-directsound DSOUND.dll!DirectSoundCreate",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "directsound",
+      "fixture_id": "fx-directsound",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "DSOUND.dll",
+        "imports": [
+          "DirectSoundCreate",
+          "DirectSoundCreate8"
+        ],
+        "method_slots": [
+          "IDirectSoundBuffer::Play"
+        ]
+      },
+      "host_dependencies": [
+        "SDL2 audio"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "1/2/3",
+      "known_limitations": [
+        "3D buffers map to panning, not HRTF",
+        "No PCM oracle comparison"
+      ],
+      "notes": "COM vtable registration is part of host init.",
+      "owner_issue": 10,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/dsound.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_dsound"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall CoCreateInstance(REFCLSID,IUnknown*,DWORD,REFIID,void**)",
+      "api_family": "DirectMusic",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_ole32 found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "b10a1464c8e541b0b6c4420255b219a4bcef13e9d9edaa2d34b890409c342301",
+          "kind": "source",
+          "note": "runtime/win32hle/ole32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "8461112440e675288b5686b0f49684201f85a85e7c425c75a7e5d3a1d4b9cffa",
+          "kind": "source",
+          "note": "runtime/win32hle/sdlmix.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "56b57abd52fdd7ff4880223544ee6e1d242d4538a68a99095e67f2d1201f279f",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-directmusic OLE32.dll!CoCreateInstance",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "directmusic",
+      "fixture_id": "fx-directmusic",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "OLE32.dll",
+        "imports": [
+          "CoCreateInstance"
+        ],
+        "method_slots": [
+          "IDirectMusic::Enum instruments"
+        ]
+      },
+      "host_dependencies": [
+        "SDL2 audio"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "COM",
+      "known_limitations": [
+        "Several COM methods return E_NOTIMPL explicitly",
+        "Music (MOD/OGG/MP3) is deliberately absent from sdlmix.c"
+      ],
+      "notes": "DirectMusic COM table provenance is recorded in NOTICE and docs/IGI_RECOMP_REUSE.md.",
+      "owner_issue": 10,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/ole32.c",
+          "runtime/win32hle/sdlmix.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_ole32"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "MMRESULT __stdcall mciSendStringA(LPCSTR,LPSTR,UINT,HWND)",
+      "api_family": "WinMM",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_winmm found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "d7d63f55dbbd13ee8673c776f691e00b862f5f40dcd2b02a763f075799dbab3d",
+          "kind": "source",
+          "note": "runtime/win32hle/winmm.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "8ca6acc0214d8d18a575aac8697e372fb1ab9606fd171628388be41cf14a1341",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-winmm-mci WINMM.dll!waveOutOpen",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "winmm-mci",
+      "fixture_id": "fx-winmm-mci",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "WINMM.dll",
+        "imports": [
+          "waveOutOpen",
+          "mciSendStringA"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "SDL2 audio"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "MCI/wave",
+      "known_limitations": [
+        "MCI returns MCIERR_UNSUPPORTED_FUNCTION",
+        "Mixer enumeration reports no device"
+      ],
+      "notes": "Explicit unsupported returns are not counted as implemented MCI.",
+      "owner_issue": 10,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/winmm.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_winmm"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HRESULT __stdcall AVIFileInit(void)",
+      "api_family": "DirectShow / Video for Windows",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_avifil32 found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "883612525653598b23b25c36fb2a7551dbd1cfdc924c15cfac3034445777cd80",
+          "kind": "source",
+          "note": "runtime/win32hle/avifil32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "7f962fb52cf54afccd6b5390b6771d09c6b0ad07da8a9f446495208902fd7963",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-directshow-avi AVIFIL32.dll!AVIFileInit",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "directshow-avi",
+      "fixture_id": "fx-directshow-avi",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "AVIFIL32.dll",
+        "imports": [
+          "AVIFileInit"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "FFmpeg (optional)"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "VfW",
+      "known_limitations": [
+        "Legacy IC codecs resolve with explicit unsupported/file errors",
+        "AVI decoding is not implemented"
+      ],
+      "notes": "Presence of the shim table is discovery only, not decoder coverage.",
+      "owner_issue": 10,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/avifil32.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_avifil32"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HBINK __stdcall BinkOpen(const char*,unsigned)",
+      "api_family": "Bink / Miles",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_bink found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "d8bc98b6ae40fc38cdb059e9ebac99bcb04d11b35e33d95f64eccee9e6a03929",
+          "kind": "source",
+          "note": "runtime/win32hle/bink.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "3bc4d3883c554631a2c4c9ba98f266f4f152ed4d48980bcabb0a0fa86186ee08",
+          "kind": "source",
+          "note": "runtime/win32hle/mss.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "c813cfbb9bbcea098b9f7e6a44133c8f6b1dac9a8efe6264b62241ef1989f274",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-bink-miles BINKW32.dll!BinkOpen",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "bink-miles",
+      "fixture_id": "fx-bink-miles",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "BINKW32.dll",
+        "imports": [
+          "BinkOpen"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "FFmpeg (optional)"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "ASI",
+      "known_limitations": [
+        "Stubs without HLE_WITH_FFMPEG",
+        "No decoded frame/PCM oracle"
+      ],
+      "notes": "Optional host dependency must be recorded per run.",
+      "owner_issue": 10,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/bink.c",
+          "runtime/win32hle/mss.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_bink"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "int __stdcall WSAStartup(WORD,WSADATA*)",
+      "api_family": "Winsock",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_wsock32 found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "de6883462ee20d74f3743755ef256d5cef9ae11fa0ba762a3a02ca15a5c465cd",
+          "kind": "source",
+          "note": "runtime/win32hle/wsock32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "1128e2b18c25aca65f63744f4634842ce2bcd9651bbb5e2034576bcb1b5bc35d",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-winsock-1 WSOCK32.dll!WSAStartup",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "winsock-1",
+      "fixture_id": "fx-winsock-1",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "WSOCK32.dll",
+        "imports": [
+          "WSAStartup",
+          "socket"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "POSIX sockets"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "1.1",
+      "known_limitations": [
+        "No deterministic network oracle host",
+        "Ordinal aliases exist but are not exhaustively verified"
+      ],
+      "notes": "Registration alone does not imply network verification.",
+      "owner_issue": 12,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/wsock32.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_wsock32"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "SOCKET __stdcall WSASocketA(int,int,int,LPWSAPROTOCOL_INFOA,GROUP,DWORD)",
+      "api_family": "Winsock 2 / DirectPlay / IPX",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "a00cc62ab8221408816a4a838aac832a2fd2f52db90eba5258ac63da89881ac9",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-winsock-2-directplay WS2_32.dll!WSAStartup",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "winsock-2-directplay",
+      "fixture_id": "fx-winsock-2-directplay",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "WS2_32.dll",
+        "imports": [
+          "WSAStartup",
+          "WSASocketA"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "2/IPX",
+      "known_limitations": [
+        "No Winsock 2, DirectPlay or IPX HLE in this repository"
+      ],
+      "notes": "Explicit not-implemented entry; tracked by the owning issue.",
+      "owner_issue": 12,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "BOOL __far __pascal GetMessage(MSG*,HWND,WORD,WORD)",
+      "api_family": "Win16 / NE",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "7247bb7f733b519afb908a22f82487829f515e7f71a307795605476647ebbee0",
+          "kind": "source",
+          "note": "runtime/win16/host/win16_impl.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "8577fe806433205f216fca3118db91358356a8dfc59152dcf349536ce2ab5150",
+          "kind": "source",
+          "note": "runtime/win16/host/win32_backend.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "61efac09f4f36a4e8f0091d0477cbb99388c4a9c12cfcdc230a6dbd4b841f0eb",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-win16-ne USER32.EXE!GetMessage",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "win16-ne",
+      "fixture_id": "fx-win16-ne",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "USER32.EXE",
+        "imports": [
+          "GetMessage"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "SDL2"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "NE",
+      "known_limitations": [
+        "Lifter and host exist but no original Windows NE oracle",
+        "Synthetic NE fixture is metadata-only, not runnable"
+      ],
+      "notes": "Source files are the evidence; NE has no win32hle shim registration table.",
+      "owner_issue": 8,
+      "pe_format": "NE",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win16/host/win16_impl.c",
+          "runtime/win16/host/win32_backend.c"
+        ],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HMODULE __stdcall LoadLibraryA(LPCSTR)",
+      "api_family": "PE32 loader / SEH / C++ EH / multi-DLL",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_module found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "a55379549a5fd703e53449fb5ee8d9427f1daa2726dfa14447fb1921544e692c",
+          "kind": "source",
+          "note": "runtime/win32hle/pe_loader.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "d21fabe5c8bd8c776d75ebc0145cf2a7b120c1cf5f16eee132221cb4b2b17d00",
+          "kind": "source",
+          "note": "runtime/win32hle/eh32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "21934164b2eac02cc4eaefb5e64deb0e8c96eeb1b35c8ce020f6c0f9a1036b43",
+          "kind": "source",
+          "note": "runtime/native32/eh32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "578c05b7c3cf07298388b02decb541f68bd53af7b95b7153b4f5f1c8c697285e",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-pe32-loader KERNEL32.dll!LoadLibraryA",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "pe32-loader",
+      "fixture_id": "fx-pe32-loader",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "KERNEL32.dll",
+        "imports": [
+          "LoadLibraryA"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "POSIX libc"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "PE32",
+      "known_limitations": [
+        "Cross-module ABI and C++ EH are not fully verified",
+        "Unresolved imports remain a launch failure in strict mode"
+      ],
+      "notes": "Static binding evidence only; not a claim of full multi-module coverage.",
+      "owner_issue": 9,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/pe_loader.c",
+          "runtime/win32hle/eh32.c",
+          "runtime/native32/eh32.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_module"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "Microsoft x64 calling convention, 64-bit pointers",
+      "api_family": "PE32+ Win64",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "431bc9f7c674d274fed25a6513816954f834c87e2db8aa31e76f872a75d1de7c",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-pe32plus KERNEL32.dll!GetProcAddress",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "pe32plus",
+      "fixture_id": "fx-pe32plus",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "KERNEL32.dll",
+        "imports": [
+          "GetProcAddress"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "PE32+",
+      "known_limitations": [
+        "PE32+ production pipeline is gated behind a feasibility decision"
+      ],
+      "notes": "Synthetic PE32+ header fixture only.",
+      "owner_issue": 13,
+      "pe_format": "PE32+",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "void __stdcall glBegin(GLenum)",
+      "api_family": "OpenGL / GLU",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_gl32 found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "5cdbcdba4ea5b175902415cf5e4b02d2e0e504078aea86b815111ac345fbb018",
+          "kind": "source",
+          "note": "runtime/win32hle/gl32.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "197708ffbb432ae19b8f04b8739e8a7ffb2e2ec99a31be23a482ffeac16d2440",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-opengl OPENGL32.dll!glBegin",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "opengl",
+      "fixture_id": "fx-opengl",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "OPENGL32.dll",
+        "imports": [
+          "glBegin"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "OpenGL context (real or software GL)"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "1.x",
+      "known_limitations": [
+        "SDL dummy video is never counted as successful graphics",
+        "Per-driver failures are not enumerated"
+      ],
+      "notes": "Host dependency must be real GL; otherwise the row is HOST_NOT_TESTED.",
+      "owner_issue": 2,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/gl32.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_gl32"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "void __cdecl _initterm(_PVFV*,_PVFV*); void * __cdecl malloc(size_t)",
+      "api_family": "MSVCRT",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_msvcrt found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "8a6eb97033c372a6815336fc2da5aebcce913c123dd4e898ac9717da4ffd663c",
+          "kind": "source",
+          "note": "runtime/win32hle/msvcrt.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "cf98b1f2b5102ec48405de8c1176462fa4c74099d56e8e56735c96f6143fd003",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-msvcrt MSVCRT.dll!_initterm",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "msvcrt",
+      "fixture_id": "fx-msvcrt",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "MSVCRT.dll",
+        "imports": [
+          "_initterm",
+          "malloc"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [
+        "POSIX libc"
+      ],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "MSVC 6-2003",
+      "known_limitations": [
+        "Five data exports resolve to objects, not code",
+        "No independent CRT oracle"
+      ],
+      "notes": "Startup path is registered and selftested, not original-verified.",
+      "owner_issue": 9,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/msvcrt.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_msvcrt"
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "int __cdecl _initterm_e(_PVFV*,_PVFV*)",
+      "api_family": "MSVCP140 / VCRUNTIME140",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol None found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "db49429d514f83e342c0dc4b80078ac78bab1e800f7359ab8ffd981700949827",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-msvcp140-vcruntime140 MSVCP140.dll!?_Initterm_e",
+          "result": "UNSUPPORTED"
+        }
+      ],
+      "expected_fixture_result": "UNSUPPORTED",
+      "expected_implemented_status": "not-present",
+      "family_id": "msvcp140-vcruntime140",
+      "fixture_id": "fx-msvcp140-vcruntime140",
+      "fixture_result": "UNSUPPORTED",
+      "guest_interface": {
+        "dll": "MSVCP140.dll",
+        "imports": [
+          "?_Initterm_e"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "not-present",
+      "interface_iid": null,
+      "interface_version": "140",
+      "known_limitations": [
+        "No modern C++ runtime/STL bridge; partial support would be fake success"
+      ],
+      "notes": "Explicit not-implemented entry.",
+      "owner_issue": 9,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [],
+        "registered_in": null,
+        "registration_symbol": null
+      },
+      "unresolved_failures": []
+    },
+    {
+      "abi_signature": "HINTERNET __stdcall InternetOpenA(LPCSTR,DWORD,LPCSTR,LPCSTR,DWORD)",
+      "api_family": "WININET",
+      "evidence": [
+        {
+          "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+          "kind": "registry",
+          "note": "registration symbol win32hle_wininet found",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "c3f85a41b0f9acc091732650c51ef275cbc12c3b5ed1f9866fdc5b4a4fe51158",
+          "kind": "source",
+          "note": "runtime/win32hle/wininet.c",
+          "result": "NOT_RUN"
+        },
+        {
+          "input_sha256": "97062afb1dd10bc81782a048a13e10e6dfa9ffd33671f05633eb414eb4d2a23b",
+          "kind": "fixture",
+          "note": "tests/fixtures/make_compat_fixture.py:fx-wininet WININET.dll!InternetOpenA",
+          "result": "PARTIAL"
+        }
+      ],
+      "expected_fixture_result": "PARTIAL",
+      "expected_implemented_status": "declared",
+      "family_id": "wininet",
+      "fixture_id": "fx-wininet",
+      "fixture_result": "PARTIAL",
+      "guest_interface": {
+        "dll": "WININET.dll",
+        "imports": [
+          "InternetOpenA"
+        ],
+        "method_slots": []
+      },
+      "host_dependencies": [],
+      "implemented_status": "declared",
+      "interface_iid": null,
+      "interface_version": "1.0",
+      "known_limitations": [
+        "Session object only; no network access",
+        "No original-host verification"
+      ],
+      "notes": "Registration is newer than the older branch tips; missing there is reported honestly, not as PASS.",
+      "owner_issue": 12,
+      "pe_format": "PE32",
+      "source_provenance": {
+        "commit": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+        "files": [
+          "runtime/win32hle/wininet.c"
+        ],
+        "registered_in": "runtime/win32hle/host.c",
+        "registration_symbol": "win32hle_wininet"
+      },
+      "unresolved_failures": []
+    }
+  ],
+  "gate": {
+    "checks": {
+      "deleted_tests": [],
+      "fixture_mismatches": [],
+      "missing_inputs": [],
+      "missing_never_pass": [],
+      "new_critical_imports": [],
+      "schema_errors": [],
+      "schema_valid": true,
+      "unsupported_never_pass": []
+    },
+    "reason": "baseline matches observed static and synthetic evidence",
+    "verdict": "PASS"
+  },
+  "generator": "python3 -m tools.compatibility",
+  "inputs": {
+    "0581d6ba7eaaf3e88147579fe7386fb2d565c19c0915488d002a3f48abaa17dc": {
+      "bytes_sha256": "0581d6ba7eaaf3e88147579fe7386fb2d565c19c0915488d002a3f48abaa17dc",
+      "detail": "existing evidence report (read-only)",
+      "expected_result": "PASS",
+      "fixture_id": null,
+      "input_sha256": "0581d6ba7eaaf3e88147579fe7386fb2d565c19c0915488d002a3f48abaa17dc",
+      "kind": "report",
+      "observed_result": "PASS",
+      "path": "reports/games/regression-baseline.json",
+      "present": true,
+      "status": "ok"
+    },
+    "05eca21b0110f819f97b49547eb3e8450f95f54e4b93fa8e73e41ed99c351db4": {
+      "bytes_sha256": "05eca21b0110f819f97b49547eb3e8450f95f54e4b93fa8e73e41ed99c351db4",
+      "detail": "source provenance for direct3d-7",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "05eca21b0110f819f97b49547eb3e8450f95f54e4b93fa8e73e41ed99c351db4",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/d3d7.c",
+      "present": true,
+      "status": "ok"
+    },
+    "1128e2b18c25aca65f63744f4634842ce2bcd9651bbb5e2034576bcb1b5bc35d": {
+      "bytes_sha256": "1128e2b18c25aca65f63744f4634842ce2bcd9651bbb5e2034576bcb1b5bc35d",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-winsock-1 WSOCK32.dll!WSAStartup",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-winsock-1",
+      "input_sha256": "1128e2b18c25aca65f63744f4634842ce2bcd9651bbb5e2034576bcb1b5bc35d",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-winsock-1",
+      "present": true,
+      "status": "ok"
+    },
+    "197708ffbb432ae19b8f04b8739e8a7ffb2e2ec99a31be23a482ffeac16d2440": {
+      "bytes_sha256": "197708ffbb432ae19b8f04b8739e8a7ffb2e2ec99a31be23a482ffeac16d2440",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-opengl OPENGL32.dll!glBegin",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-opengl",
+      "input_sha256": "197708ffbb432ae19b8f04b8739e8a7ffb2e2ec99a31be23a482ffeac16d2440",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-opengl",
+      "present": true,
+      "status": "ok"
+    },
+    "1e68ab22ec2329eda59efd75b1c5885a2c52c6e34a3d74af170ab4dfd7836fc7": {
+      "bytes_sha256": "1e68ab22ec2329eda59efd75b1c5885a2c52c6e34a3d74af170ab4dfd7836fc7",
+      "detail": "canonical compatibility baseline",
+      "expected_result": "PASS",
+      "fixture_id": null,
+      "input_sha256": "1e68ab22ec2329eda59efd75b1c5885a2c52c6e34a3d74af170ab4dfd7836fc7",
+      "kind": "tool",
+      "observed_result": "PASS",
+      "path": "docs/compatibility/baseline.json",
+      "present": true,
+      "status": "ok"
+    },
+    "21934164b2eac02cc4eaefb5e64deb0e8c96eeb1b35c8ce020f6c0f9a1036b43": {
+      "bytes_sha256": "21934164b2eac02cc4eaefb5e64deb0e8c96eeb1b35c8ce020f6c0f9a1036b43",
+      "detail": "source provenance for pe32-loader",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "21934164b2eac02cc4eaefb5e64deb0e8c96eeb1b35c8ce020f6c0f9a1036b43",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/native32/eh32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "38b63d487b0cafa9db83ae181faa9b9da3e8a490d07ce4c2eb4f6c353813aac5": {
+      "bytes_sha256": "38b63d487b0cafa9db83ae181faa9b9da3e8a490d07ce4c2eb4f6c353813aac5",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-directdraw-1-7 DDRAW.dll!DirectDrawCreate",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-directdraw-1-7",
+      "input_sha256": "38b63d487b0cafa9db83ae181faa9b9da3e8a490d07ce4c2eb4f6c353813aac5",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-directdraw-1-7",
+      "present": true,
+      "status": "ok"
+    },
+    "3bc4d3883c554631a2c4c9ba98f266f4f152ed4d48980bcabb0a0fa86186ee08": {
+      "bytes_sha256": "3bc4d3883c554631a2c4c9ba98f266f4f152ed4d48980bcabb0a0fa86186ee08",
+      "detail": "source provenance for bink-miles",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "3bc4d3883c554631a2c4c9ba98f266f4f152ed4d48980bcabb0a0fa86186ee08",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/mss.c",
+      "present": true,
+      "status": "ok"
+    },
+    "431bc9f7c674d274fed25a6513816954f834c87e2db8aa31e76f872a75d1de7c": {
+      "bytes_sha256": "431bc9f7c674d274fed25a6513816954f834c87e2db8aa31e76f872a75d1de7c",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-pe32plus KERNEL32.dll!GetProcAddress",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-pe32plus",
+      "input_sha256": "431bc9f7c674d274fed25a6513816954f834c87e2db8aa31e76f872a75d1de7c",
+      "kind": "fixture-pe32plus",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-pe32plus",
+      "present": true,
+      "status": "ok"
+    },
+    "4d0aa9dc33ebf585e743171bf2824a890fd0122d14311a4cc4641b01f959195a": {
+      "bytes_sha256": "4d0aa9dc33ebf585e743171bf2824a890fd0122d14311a4cc4641b01f959195a",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-directsound DSOUND.dll!DirectSoundCreate",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-directsound",
+      "input_sha256": "4d0aa9dc33ebf585e743171bf2824a890fd0122d14311a4cc4641b01f959195a",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-directsound",
+      "present": true,
+      "status": "ok"
+    },
+    "4f8b8ad2c7e67abf6961bad7c68f3165a903c278894229ca472fbacc5731cb1e": {
+      "bytes_sha256": "4f8b8ad2c7e67abf6961bad7c68f3165a903c278894229ca472fbacc5731cb1e",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-directinput-8 DINPUT8.dll!DirectInput8Create",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-directinput-8",
+      "input_sha256": "4f8b8ad2c7e67abf6961bad7c68f3165a903c278894229ca472fbacc5731cb1e",
+      "kind": "fixture-pe32",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-directinput-8",
+      "present": true,
+      "status": "ok"
+    },
+    "56b57abd52fdd7ff4880223544ee6e1d242d4538a68a99095e67f2d1201f279f": {
+      "bytes_sha256": "56b57abd52fdd7ff4880223544ee6e1d242d4538a68a99095e67f2d1201f279f",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-directmusic OLE32.dll!CoCreateInstance",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-directmusic",
+      "input_sha256": "56b57abd52fdd7ff4880223544ee6e1d242d4538a68a99095e67f2d1201f279f",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-directmusic",
+      "present": true,
+      "status": "ok"
+    },
+    "578c05b7c3cf07298388b02decb541f68bd53af7b95b7153b4f5f1c8c697285e": {
+      "bytes_sha256": "578c05b7c3cf07298388b02decb541f68bd53af7b95b7153b4f5f1c8c697285e",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-pe32-loader KERNEL32.dll!LoadLibraryA",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-pe32-loader",
+      "input_sha256": "578c05b7c3cf07298388b02decb541f68bd53af7b95b7153b4f5f1c8c697285e",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-pe32-loader",
+      "present": true,
+      "status": "ok"
+    },
+    "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3": {
+      "bytes_sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+      "detail": "tests/fixtures/make_pe32_fixture.py:build_pe",
+      "expected_result": "PASS",
+      "fixture_id": "fx-existing-pe32-minimal",
+      "input_sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+      "kind": "fixture-pe32",
+      "observed_result": "PASS",
+      "path": "tests/fixtures/pe32-minimal.exe",
+      "present": true,
+      "status": "ok"
+    },
+    "595ce66a95cda2f4d5cf0fee7f19b8213b950658ed03efd9f4981414fba8c999": {
+      "bytes_sha256": null,
+      "detail": "intentional missing input: never PASS",
+      "expected_result": "MISSING_INPUT",
+      "fixture_id": "fx-missing-input-probe",
+      "input_sha256": "595ce66a95cda2f4d5cf0fee7f19b8213b950658ed03efd9f4981414fba8c999",
+      "kind": "fixture-pe32",
+      "observed_result": "MISSING_INPUT",
+      "path": "tests/fixtures/__missing__/no-such-input.exe",
+      "present": false,
+      "status": "MISSING_INPUT"
+    },
+    "5cdbcdba4ea5b175902415cf5e4b02d2e0e504078aea86b815111ac345fbb018": {
+      "bytes_sha256": "5cdbcdba4ea5b175902415cf5e4b02d2e0e504078aea86b815111ac345fbb018",
+      "detail": "source provenance for opengl",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "5cdbcdba4ea5b175902415cf5e4b02d2e0e504078aea86b815111ac345fbb018",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/gl32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "615494cb5d19ddc3944afdf36b169c671192adabbb848ad9ca20d4112b5c165e": {
+      "bytes_sha256": "615494cb5d19ddc3944afdf36b169c671192adabbb848ad9ca20d4112b5c165e",
+      "detail": "existing tool/report integration point",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "615494cb5d19ddc3944afdf36b169c671192adabbb848ad9ca20d4112b5c165e",
+      "kind": "integration",
+      "observed_result": "NOT_RUN",
+      "path": "docs/RUNTIME_COMPAT.md",
+      "present": true,
+      "status": "ok"
+    },
+    "61efac09f4f36a4e8f0091d0477cbb99388c4a9c12cfcdc230a6dbd4b841f0eb": {
+      "bytes_sha256": "61efac09f4f36a4e8f0091d0477cbb99388c4a9c12cfcdc230a6dbd4b841f0eb",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-win16-ne USER32.EXE!GetMessage",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-win16-ne",
+      "input_sha256": "61efac09f4f36a4e8f0091d0477cbb99388c4a9c12cfcdc230a6dbd4b841f0eb",
+      "kind": "fixture-ne",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-win16-ne",
+      "present": true,
+      "status": "ok"
+    },
+    "626d95ae2bab50a6d9718247e3406f5d4c1cb5cc749098dfcdb184dbda7e8e66": {
+      "bytes_sha256": "626d95ae2bab50a6d9718247e3406f5d4c1cb5cc749098dfcdb184dbda7e8e66",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-direct3d-9ex-10-11-dxgi DXGI.dll!CreateDXGIFactory",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-direct3d-9ex-10-11-dxgi",
+      "input_sha256": "626d95ae2bab50a6d9718247e3406f5d4c1cb5cc749098dfcdb184dbda7e8e66",
+      "kind": "fixture-pe32plus",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-direct3d-9ex-10-11-dxgi",
+      "present": true,
+      "status": "ok"
+    },
+    "6b0a78acc78718acb446936ad9aacbd3e3777407c4b57401086eb098dcdc25e7": {
+      "bytes_sha256": "6b0a78acc78718acb446936ad9aacbd3e3777407c4b57401086eb098dcdc25e7",
+      "detail": "existing evidence report (read-only)",
+      "expected_result": "PASS",
+      "fixture_id": null,
+      "input_sha256": "6b0a78acc78718acb446936ad9aacbd3e3777407c4b57401086eb098dcdc25e7",
+      "kind": "report",
+      "observed_result": "PASS",
+      "path": "reports/games/results.json",
+      "present": true,
+      "status": "ok"
+    },
+    "7247bb7f733b519afb908a22f82487829f515e7f71a307795605476647ebbee0": {
+      "bytes_sha256": "7247bb7f733b519afb908a22f82487829f515e7f71a307795605476647ebbee0",
+      "detail": "source provenance for win16-ne",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "7247bb7f733b519afb908a22f82487829f515e7f71a307795605476647ebbee0",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win16/host/win16_impl.c",
+      "present": true,
+      "status": "ok"
+    },
+    "743f4a3d8e92289c40650717581a09501bf07f22d4d87cf75deb6b95b5d68456": {
+      "bytes_sha256": "743f4a3d8e92289c40650717581a09501bf07f22d4d87cf75deb6b95b5d68456",
+      "detail": "source provenance for win32-user32-gdi",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "743f4a3d8e92289c40650717581a09501bf07f22d4d87cf75deb6b95b5d68456",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/gdidc.c",
+      "present": true,
+      "status": "ok"
+    },
+    "7f962fb52cf54afccd6b5390b6771d09c6b0ad07da8a9f446495208902fd7963": {
+      "bytes_sha256": "7f962fb52cf54afccd6b5390b6771d09c6b0ad07da8a9f446495208902fd7963",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-directshow-avi AVIFIL32.dll!AVIFileInit",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-directshow-avi",
+      "input_sha256": "7f962fb52cf54afccd6b5390b6771d09c6b0ad07da8a9f446495208902fd7963",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-directshow-avi",
+      "present": true,
+      "status": "ok"
+    },
+    "8400eb22bdf4e739885330ce2ac4258e15c4cef703ed62525fa8948407f6a4da": {
+      "bytes_sha256": "8400eb22bdf4e739885330ce2ac4258e15c4cef703ed62525fa8948407f6a4da",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-direct3d-7 D3D7.dll!Direct3DCreate7",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-direct3d-7",
+      "input_sha256": "8400eb22bdf4e739885330ce2ac4258e15c4cef703ed62525fa8948407f6a4da",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-direct3d-7",
+      "present": true,
+      "status": "ok"
+    },
+    "8461112440e675288b5686b0f49684201f85a85e7c425c75a7e5d3a1d4b9cffa": {
+      "bytes_sha256": "8461112440e675288b5686b0f49684201f85a85e7c425c75a7e5d3a1d4b9cffa",
+      "detail": "source provenance for directmusic",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "8461112440e675288b5686b0f49684201f85a85e7c425c75a7e5d3a1d4b9cffa",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/sdlmix.c",
+      "present": true,
+      "status": "ok"
+    },
+    "855254d890824368b74cb72620a08479ab9c267ba4caf892eea132024ee5e430": {
+      "bytes_sha256": "855254d890824368b74cb72620a08479ab9c267ba4caf892eea132024ee5e430",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-win32-kernel32 KERNEL32.dll!ExitProcess",
+      "expected_result": "PASS",
+      "fixture_id": "fx-win32-kernel32",
+      "input_sha256": "855254d890824368b74cb72620a08479ab9c267ba4caf892eea132024ee5e430",
+      "kind": "fixture-pe32",
+      "observed_result": "PASS",
+      "path": "synthetic:fx-win32-kernel32",
+      "present": true,
+      "status": "ok"
+    },
+    "8577fe806433205f216fca3118db91358356a8dfc59152dcf349536ce2ab5150": {
+      "bytes_sha256": "8577fe806433205f216fca3118db91358356a8dfc59152dcf349536ce2ab5150",
+      "detail": "source provenance for win16-ne",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "8577fe806433205f216fca3118db91358356a8dfc59152dcf349536ce2ab5150",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win16/host/win32_backend.c",
+      "present": true,
+      "status": "ok"
+    },
+    "883612525653598b23b25c36fb2a7551dbd1cfdc924c15cfac3034445777cd80": {
+      "bytes_sha256": "883612525653598b23b25c36fb2a7551dbd1cfdc924c15cfac3034445777cd80",
+      "detail": "source provenance for directshow-avi",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "883612525653598b23b25c36fb2a7551dbd1cfdc924c15cfac3034445777cd80",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/avifil32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "88e195092b60d98763fee76bd3d5b464078f6d8aabf5fe91c1156a21a9c9d2d7": {
+      "bytes_sha256": "88e195092b60d98763fee76bd3d5b464078f6d8aabf5fe91c1156a21a9c9d2d7",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-direct3d-9 D3D9.dll!Direct3DCreate9",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-direct3d-9",
+      "input_sha256": "88e195092b60d98763fee76bd3d5b464078f6d8aabf5fe91c1156a21a9c9d2d7",
+      "kind": "fixture-pe32",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-direct3d-9",
+      "present": true,
+      "status": "ok"
+    },
+    "8a6eb97033c372a6815336fc2da5aebcce913c123dd4e898ac9717da4ffd663c": {
+      "bytes_sha256": "8a6eb97033c372a6815336fc2da5aebcce913c123dd4e898ac9717da4ffd663c",
+      "detail": "source provenance for msvcrt",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "8a6eb97033c372a6815336fc2da5aebcce913c123dd4e898ac9717da4ffd663c",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/msvcrt.c",
+      "present": true,
+      "status": "ok"
+    },
+    "8ca6acc0214d8d18a575aac8697e372fb1ab9606fd171628388be41cf14a1341": {
+      "bytes_sha256": "8ca6acc0214d8d18a575aac8697e372fb1ab9606fd171628388be41cf14a1341",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-winmm-mci WINMM.dll!waveOutOpen",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-winmm-mci",
+      "input_sha256": "8ca6acc0214d8d18a575aac8697e372fb1ab9606fd171628388be41cf14a1341",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-winmm-mci",
+      "present": true,
+      "status": "ok"
+    },
+    "8d96c192eeb4c299dc07c90efce026ab12529c44bd3249705f1f39644ac36cbe": {
+      "bytes_sha256": "8d96c192eeb4c299dc07c90efce026ab12529c44bd3249705f1f39644ac36cbe",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-win32-user32-gdi USER32.dll!MessageBoxA",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-win32-user32-gdi",
+      "input_sha256": "8d96c192eeb4c299dc07c90efce026ab12529c44bd3249705f1f39644ac36cbe",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-win32-user32-gdi",
+      "present": true,
+      "status": "ok"
+    },
+    "9035eaf5dd59a4c8045b337f7adbca15c48cad62a3af24733899116be4407ed4": {
+      "bytes_sha256": "9035eaf5dd59a4c8045b337f7adbca15c48cad62a3af24733899116be4407ed4",
+      "detail": "source provenance for win32-user32-gdi",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "9035eaf5dd59a4c8045b337f7adbca15c48cad62a3af24733899116be4407ed4",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/gdi32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "9266e446fd0da964e8efefdf204e9554cf304ec6b916ba8b0e286ac204266316": {
+      "bytes_sha256": "9266e446fd0da964e8efefdf204e9554cf304ec6b916ba8b0e286ac204266316",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-direct3d-1-6 D3D6.dll!Direct3DCreate6",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-direct3d-1-6",
+      "input_sha256": "9266e446fd0da964e8efefdf204e9554cf304ec6b916ba8b0e286ac204266316",
+      "kind": "fixture-pe32",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-direct3d-1-6",
+      "present": true,
+      "status": "ok"
+    },
+    "9492dac59736e4b5e4b279a59c05a816546239eb12da5818a95e5957fb43721a": {
+      "bytes_sha256": "9492dac59736e4b5e4b279a59c05a816546239eb12da5818a95e5957fb43721a",
+      "detail": "inventory generator",
+      "expected_result": "PASS",
+      "fixture_id": null,
+      "input_sha256": "9492dac59736e4b5e4b279a59c05a816546239eb12da5818a95e5957fb43721a",
+      "kind": "tool",
+      "observed_result": "PASS",
+      "path": "tools/compatibility.py",
+      "present": true,
+      "status": "ok"
+    },
+    "94e5be5bbf811ca20d212147513e5d521e7b560385b49a31b11e7c83c050545f": {
+      "bytes_sha256": "94e5be5bbf811ca20d212147513e5d521e7b560385b49a31b11e7c83c050545f",
+      "detail": "source provenance for directinput-3-5-7",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "94e5be5bbf811ca20d212147513e5d521e7b560385b49a31b11e7c83c050545f",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/dinput.c",
+      "present": true,
+      "status": "ok"
+    },
+    "966d053bd49c54eb774075c6694e876039d0e480d375d3b5962d8b97eaa50610": {
+      "bytes_sha256": "966d053bd49c54eb774075c6694e876039d0e480d375d3b5962d8b97eaa50610",
+      "detail": "source provenance for directsound",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "966d053bd49c54eb774075c6694e876039d0e480d375d3b5962d8b97eaa50610",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/dsound.c",
+      "present": true,
+      "status": "ok"
+    },
+    "97062afb1dd10bc81782a048a13e10e6dfa9ffd33671f05633eb414eb4d2a23b": {
+      "bytes_sha256": "97062afb1dd10bc81782a048a13e10e6dfa9ffd33671f05633eb414eb4d2a23b",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-wininet WININET.dll!InternetOpenA",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-wininet",
+      "input_sha256": "97062afb1dd10bc81782a048a13e10e6dfa9ffd33671f05633eb414eb4d2a23b",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-wininet",
+      "present": true,
+      "status": "ok"
+    },
+    "a00cc62ab8221408816a4a838aac832a2fd2f52db90eba5258ac63da89881ac9": {
+      "bytes_sha256": "a00cc62ab8221408816a4a838aac832a2fd2f52db90eba5258ac63da89881ac9",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-winsock-2-directplay WS2_32.dll!WSAStartup",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-winsock-2-directplay",
+      "input_sha256": "a00cc62ab8221408816a4a838aac832a2fd2f52db90eba5258ac63da89881ac9",
+      "kind": "fixture-pe32",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-winsock-2-directplay",
+      "present": true,
+      "status": "ok"
+    },
+    "a1b267392b78a4e19bb673e7683d56b1420fd545dc3c9c9147373b53d8c447d2": {
+      "bytes_sha256": "a1b267392b78a4e19bb673e7683d56b1420fd545dc3c9c9147373b53d8c447d2",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-direct3d-8 D3D8.dll!Direct3DCreate8",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-direct3d-8",
+      "input_sha256": "a1b267392b78a4e19bb673e7683d56b1420fd545dc3c9c9147373b53d8c447d2",
+      "kind": "fixture-pe32",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-direct3d-8",
+      "present": true,
+      "status": "ok"
+    },
+    "a55379549a5fd703e53449fb5ee8d9427f1daa2726dfa14447fb1921544e692c": {
+      "bytes_sha256": "a55379549a5fd703e53449fb5ee8d9427f1daa2726dfa14447fb1921544e692c",
+      "detail": "source provenance for pe32-loader",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "a55379549a5fd703e53449fb5ee8d9427f1daa2726dfa14447fb1921544e692c",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/pe_loader.c",
+      "present": true,
+      "status": "ok"
+    },
+    "b0a9721fb145c3e3466cd29fd3c7ffbadbac3e70cc43724512acc7a49e3b7d83": {
+      "bytes_sha256": "b0a9721fb145c3e3466cd29fd3c7ffbadbac3e70cc43724512acc7a49e3b7d83",
+      "detail": "existing tool/report integration point",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "b0a9721fb145c3e3466cd29fd3c7ffbadbac3e70cc43724512acc7a49e3b7d83",
+      "kind": "integration",
+      "observed_result": "NOT_RUN",
+      "path": "tools/autorecomp/diagnose.py",
+      "present": true,
+      "status": "ok"
+    },
+    "b105bd25ec878c320f41716ba33a290ca9b9b70e87c995c995e56f81e815a1ce": {
+      "bytes_sha256": "b105bd25ec878c320f41716ba33a290ca9b9b70e87c995c995e56f81e815a1ce",
+      "detail": "existing evidence report (read-only)",
+      "expected_result": "PASS",
+      "fixture_id": null,
+      "input_sha256": "b105bd25ec878c320f41716ba33a290ca9b9b70e87c995c995e56f81e815a1ce",
+      "kind": "report",
+      "observed_result": "PASS",
+      "path": "reports/games/diagnostic-sweep.json",
+      "present": true,
+      "status": "ok"
+    },
+    "b10a1464c8e541b0b6c4420255b219a4bcef13e9d9edaa2d34b890409c342301": {
+      "bytes_sha256": "b10a1464c8e541b0b6c4420255b219a4bcef13e9d9edaa2d34b890409c342301",
+      "detail": "source provenance for directmusic",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "b10a1464c8e541b0b6c4420255b219a4bcef13e9d9edaa2d34b890409c342301",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/ole32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "bfabb4b02211a0bcde8a5713ee718917c941be62139287e038aa205f49ca0d86": {
+      "bytes_sha256": "bfabb4b02211a0bcde8a5713ee718917c941be62139287e038aa205f49ca0d86",
+      "detail": "source provenance for win32-kernel32",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "bfabb4b02211a0bcde8a5713ee718917c941be62139287e038aa205f49ca0d86",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/kernel32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "c3f85a41b0f9acc091732650c51ef275cbc12c3b5ed1f9866fdc5b4a4fe51158": {
+      "bytes_sha256": "c3f85a41b0f9acc091732650c51ef275cbc12c3b5ed1f9866fdc5b4a4fe51158",
+      "detail": "source provenance for wininet",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "c3f85a41b0f9acc091732650c51ef275cbc12c3b5ed1f9866fdc5b4a4fe51158",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/wininet.c",
+      "present": true,
+      "status": "ok"
+    },
+    "c43151025eac92b67696353ba9b4922984c24330682188fc61ef9169510b500c": {
+      "bytes_sha256": "c43151025eac92b67696353ba9b4922984c24330682188fc61ef9169510b500c",
+      "detail": "existing tool/report integration point",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "c43151025eac92b67696353ba9b4922984c24330682188fc61ef9169510b500c",
+      "kind": "integration",
+      "observed_result": "NOT_RUN",
+      "path": "tools/gamesdb.py",
+      "present": true,
+      "status": "ok"
+    },
+    "c4f1be44595435b2a1bfc815245d6670d60c08c4dd05e340903bb3f2431baeaa": {
+      "bytes_sha256": "c4f1be44595435b2a1bfc815245d6670d60c08c4dd05e340903bb3f2431baeaa",
+      "detail": "existing tool/report integration point",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "c4f1be44595435b2a1bfc815245d6670d60c08c4dd05e340903bb3f2431baeaa",
+      "kind": "integration",
+      "observed_result": "NOT_RUN",
+      "path": "docs/GAME_MATRIX.md",
+      "present": true,
+      "status": "ok"
+    },
+    "c813cfbb9bbcea098b9f7e6a44133c8f6b1dac9a8efe6264b62241ef1989f274": {
+      "bytes_sha256": "c813cfbb9bbcea098b9f7e6a44133c8f6b1dac9a8efe6264b62241ef1989f274",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-bink-miles BINKW32.dll!BinkOpen",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-bink-miles",
+      "input_sha256": "c813cfbb9bbcea098b9f7e6a44133c8f6b1dac9a8efe6264b62241ef1989f274",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-bink-miles",
+      "present": true,
+      "status": "ok"
+    },
+    "cf98b1f2b5102ec48405de8c1176462fa4c74099d56e8e56735c96f6143fd003": {
+      "bytes_sha256": "cf98b1f2b5102ec48405de8c1176462fa4c74099d56e8e56735c96f6143fd003",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-msvcrt MSVCRT.dll!_initterm",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-msvcrt",
+      "input_sha256": "cf98b1f2b5102ec48405de8c1176462fa4c74099d56e8e56735c96f6143fd003",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-msvcrt",
+      "present": true,
+      "status": "ok"
+    },
+    "d21fabe5c8bd8c776d75ebc0145cf2a7b120c1cf5f16eee132221cb4b2b17d00": {
+      "bytes_sha256": "d21fabe5c8bd8c776d75ebc0145cf2a7b120c1cf5f16eee132221cb4b2b17d00",
+      "detail": "source provenance for pe32-loader",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "d21fabe5c8bd8c776d75ebc0145cf2a7b120c1cf5f16eee132221cb4b2b17d00",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/eh32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "d7d63f55dbbd13ee8673c776f691e00b862f5f40dcd2b02a763f075799dbab3d": {
+      "bytes_sha256": "d7d63f55dbbd13ee8673c776f691e00b862f5f40dcd2b02a763f075799dbab3d",
+      "detail": "source provenance for winmm-mci",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "d7d63f55dbbd13ee8673c776f691e00b862f5f40dcd2b02a763f075799dbab3d",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/winmm.c",
+      "present": true,
+      "status": "ok"
+    },
+    "d8742baf1a602757f4bcad5919761407b5a4c0e3755ea83ad7b89d7bbe800e8a": {
+      "bytes_sha256": "d8742baf1a602757f4bcad5919761407b5a4c0e3755ea83ad7b89d7bbe800e8a",
+      "detail": "source provenance for win32-kernel32",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "d8742baf1a602757f4bcad5919761407b5a4c0e3755ea83ad7b89d7bbe800e8a",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/module.c",
+      "present": true,
+      "status": "ok"
+    },
+    "d8bc98b6ae40fc38cdb059e9ebac99bcb04d11b35e33d95f64eccee9e6a03929": {
+      "bytes_sha256": "d8bc98b6ae40fc38cdb059e9ebac99bcb04d11b35e33d95f64eccee9e6a03929",
+      "detail": "source provenance for bink-miles",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "d8bc98b6ae40fc38cdb059e9ebac99bcb04d11b35e33d95f64eccee9e6a03929",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/bink.c",
+      "present": true,
+      "status": "ok"
+    },
+    "d905bfee1af6443d1f26e5b493a53ba5a27968ef86458c541a752f6ba6b5711b": {
+      "bytes_sha256": "d905bfee1af6443d1f26e5b493a53ba5a27968ef86458c541a752f6ba6b5711b",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-directinput-3-5-7 DINPUT.dll!DirectInputCreateA",
+      "expected_result": "PARTIAL",
+      "fixture_id": "fx-directinput-3-5-7",
+      "input_sha256": "d905bfee1af6443d1f26e5b493a53ba5a27968ef86458c541a752f6ba6b5711b",
+      "kind": "fixture-pe32",
+      "observed_result": "PARTIAL",
+      "path": "synthetic:fx-directinput-3-5-7",
+      "present": true,
+      "status": "ok"
+    },
+    "db49429d514f83e342c0dc4b80078ac78bab1e800f7359ab8ffd981700949827": {
+      "bytes_sha256": "db49429d514f83e342c0dc4b80078ac78bab1e800f7359ab8ffd981700949827",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-msvcp140-vcruntime140 MSVCP140.dll!?_Initterm_e",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-msvcp140-vcruntime140",
+      "input_sha256": "db49429d514f83e342c0dc4b80078ac78bab1e800f7359ab8ffd981700949827",
+      "kind": "fixture-pe32",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-msvcp140-vcruntime140",
+      "present": true,
+      "status": "ok"
+    },
+    "de6883462ee20d74f3743755ef256d5cef9ae11fa0ba762a3a02ca15a5c465cd": {
+      "bytes_sha256": "de6883462ee20d74f3743755ef256d5cef9ae11fa0ba762a3a02ca15a5c465cd",
+      "detail": "source provenance for winsock-1",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "de6883462ee20d74f3743755ef256d5cef9ae11fa0ba762a3a02ca15a5c465cd",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/wsock32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "e4eb37f03fca7931451b565d2f888587fbf1b8f412c6de07d93eef4f60d30163": {
+      "bytes_sha256": "e4eb37f03fca7931451b565d2f888587fbf1b8f412c6de07d93eef4f60d30163",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-glide-3dfx GLIDE2X.dll!grGlideInit",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-glide-3dfx",
+      "input_sha256": "e4eb37f03fca7931451b565d2f888587fbf1b8f412c6de07d93eef4f60d30163",
+      "kind": "fixture-pe32",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-glide-3dfx",
+      "present": true,
+      "status": "ok"
+    },
+    "e8b44072aead5b3911d7288c85bb70f4d01dbb3ca531d03196dfda4433e4e184": {
+      "bytes_sha256": "e8b44072aead5b3911d7288c85bb70f4d01dbb3ca531d03196dfda4433e4e184",
+      "detail": "tests/fixtures/make_compat_fixture.py:fx-xinput-raw-input XINPUT1_4.dll!XInputGetState",
+      "expected_result": "UNSUPPORTED",
+      "fixture_id": "fx-xinput-raw-input",
+      "input_sha256": "e8b44072aead5b3911d7288c85bb70f4d01dbb3ca531d03196dfda4433e4e184",
+      "kind": "fixture-pe32",
+      "observed_result": "UNSUPPORTED",
+      "path": "synthetic:fx-xinput-raw-input",
+      "present": true,
+      "status": "ok"
+    },
+    "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a": {
+      "bytes_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+      "detail": "shim registration source (static audit)",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+      "kind": "registry",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/host.c",
+      "present": true,
+      "status": "ok"
+    },
+    "f13ebddc7580d53df345093876f0ce4e6b02195cb18cdc9645313b68c4c4ce72": {
+      "bytes_sha256": "f13ebddc7580d53df345093876f0ce4e6b02195cb18cdc9645313b68c4c4ce72",
+      "detail": "existing evidence report (read-only)",
+      "expected_result": "PASS",
+      "fixture_id": null,
+      "input_sha256": "f13ebddc7580d53df345093876f0ce4e6b02195cb18cdc9645313b68c4c4ce72",
+      "kind": "report",
+      "observed_result": "PASS",
+      "path": "reports/certified/index.json",
+      "present": true,
+      "status": "ok"
+    },
+    "f1f69c853ec98ab3556f30161788f1c5e31a2b09705e1f4c397b66800d7101d7": {
+      "bytes_sha256": "f1f69c853ec98ab3556f30161788f1c5e31a2b09705e1f4c397b66800d7101d7",
+      "detail": "existing tool/report integration point",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "f1f69c853ec98ab3556f30161788f1c5e31a2b09705e1f4c397b66800d7101d7",
+      "kind": "integration",
+      "observed_result": "NOT_RUN",
+      "path": "tools/corpus/inventory.py",
+      "present": true,
+      "status": "ok"
+    },
+    "f325003e34e85b4018f3013c63fbbe20a3f38166ba546029f39c553f4831c8af": {
+      "bytes_sha256": "f325003e34e85b4018f3013c63fbbe20a3f38166ba546029f39c553f4831c8af",
+      "detail": "source provenance for directdraw-1-7",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "f325003e34e85b4018f3013c63fbbe20a3f38166ba546029f39c553f4831c8af",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/ddraw.c",
+      "present": true,
+      "status": "ok"
+    },
+    "f4c41d9f23753aa29351a518a024c2cbac5e227e03b2b7269a4441d1df5ea349": {
+      "bytes_sha256": "f4c41d9f23753aa29351a518a024c2cbac5e227e03b2b7269a4441d1df5ea349",
+      "detail": "canonical compatibility schema",
+      "expected_result": "PASS",
+      "fixture_id": null,
+      "input_sha256": "f4c41d9f23753aa29351a518a024c2cbac5e227e03b2b7269a4441d1df5ea349",
+      "kind": "schema",
+      "observed_result": "PASS",
+      "path": "docs/compatibility/coverage.schema.json",
+      "present": true,
+      "status": "ok"
+    },
+    "fe0bb69563d3924dcaa4caee286305b779c7177e5d958412c78bdfea5eca434a": {
+      "bytes_sha256": "fe0bb69563d3924dcaa4caee286305b779c7177e5d958412c78bdfea5eca434a",
+      "detail": "source provenance for win32-user32-gdi",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "fe0bb69563d3924dcaa4caee286305b779c7177e5d958412c78bdfea5eca434a",
+      "kind": "source",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/user32.c",
+      "present": true,
+      "status": "ok"
+    }
+  },
+  "schema_version": "1.0.0",
+  "summary": {
+    "families": 26,
+    "inputs": 65,
+    "missing_inputs": 1,
+    "not_run": 30,
+    "partial": 15,
+    "pass": 1,
+    "unsupported": 10
+  },
+  "target": {
+    "branch": "develop",
+    "head_at_generation": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+    "host_arch": "arm64",
+    "host_os": "Darwin",
+    "pe_formats": [
+      "PE32",
+      "NE",
+      "PE32+"
+    ]
+  }
+}

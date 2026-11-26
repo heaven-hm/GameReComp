@@ -42,6 +42,19 @@ else
     bad "synthetic PE32 fixture reproducible" "$(tail -2 /tmp/verify-fixture.log | tr '\n' ' ')"
 fi
 
+# ------------------------------------------------------- compatibility (#14)
+head1 "compatibility"
+if python3 -m tools.compatibility --check --quiet > /tmp/verify-compat.log 2>&1; then
+    ok "compatibility inventory gate" "docs/compatibility/coverage.json"
+else
+    compat_rc=$?
+    if [ "$compat_rc" -eq 2 ]; then
+        skip "compatibility inventory gate" "NOT_RUN: required inputs absent (never PASS)"
+    else
+        bad "compatibility inventory gate" "$(head -5 /tmp/verify-compat.log | tr '\n' ' ')"
+    fi
+fi
+
 # --------------------------------------------------------------- runtime
 head1 "runtime"
 if command -v pkg-config > /dev/null 2>&1 && pkg-config --exists sdl2; then
