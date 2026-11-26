@@ -414,6 +414,8 @@ pub struct GameReCompApp {
     pub jobs: Vec<ActiveJob>,
     /// Standalone launches kept alive (and reaped) after the GUI reports them.
     pub launched_children: Vec<Child>,
+    /// stdout/stderr lines from a live guest, consumed by the UI timer.
+    pub launch_log: Arc<Mutex<Vec<String>>>,
     pub queued_pipelines: Vec<QueuedJob>,
     pub queued_batches: Vec<QueuedBatch>,
     pub selected_job_id: Option<u64>,
@@ -550,6 +552,7 @@ impl GameReCompApp {
             picked_owned_checked: false,
             jobs: Vec::new(),
             launched_children: Vec::new(),
+            launch_log: Arc::new(Mutex::new(Vec::new())),
             queued_pipelines: Vec::new(),
             queued_batches: Vec::new(),
             selected_job_id: None,
@@ -2442,6 +2445,31 @@ impl GameReCompApp {
                         code != 0,
                     );
                 } else {
+                    let stdout = child.stdout.take();
+                    let stderr = child.stderr.take();
+                    let log = Arc::clone(&self.launch_log);
+                    thread::spawn(move || {
+                        for line in BufReader::new(stdout.expect("piped stdout")).lines() {
+                            match line {
+                                Ok(text) => {
+                                    if let Ok(mut buf) = log.lock() {
+                                        buf.push(text);
+                                    }
+                                }
+                                Err(_) => break,
+                            }
+                        }
+                        for line in BufReader::new(stderr.expect("piped stderr")).lines() {
+                            match line {
+                                Ok(text) => {
+                                    if let Ok(mut buf) = log.lock() {
+                                        buf.push(text);
+                                    }
+                                }
+                                Err(_) => break,
+                            }
+                        }
+                    });
                     self.launched_children.push(child);
                 }
                 if early_exit.is_some() {
@@ -3655,6 +3683,31 @@ impl GameReCompApp {
             );
             changed = true;
         }
+        let new_lines: Vec<String> = self.launch_log.lock()
+            .map(|mut buf| buf.drain(..).collect())
+            .unwrap_or_default();
+        for line in new_lines {
+            let error = line.contains("FATAL") || line.contains("error") || line.contains("abort");
+            self.push_feed("game", &line, !error);
+            if error {
+                self.push_toast("Rebuilt game error", &line, self.tokens().not_c, true);
+            }
+            changed = true;
+        }
+        let mut still_running = Vec::new();
+        for mut child in std::mem::take(&mut self.launched_children) {
+            match child.try_wait() {
+                Ok(None) => still_running.push(child),
+                Ok(Some(status)) => {
+                    let line = format!("[game] process exited with status {}", status.code().unwrap_or(-1));
+                    self.push_feed("game", &line, status.success());
+                    changed = true;
+                }
+                Err(_) => {}
+            }
+        }
+        self.launched_children = still_running;
+
         let running = self.has_running_jobs();
         if running {
             self.anim_frame = self.anim_frame.wrapping_add(1);
