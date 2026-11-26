@@ -551,8 +551,16 @@ fn render_dropzone_card(
         .on_drop::<ExternalPaths>(cx.listener(|this, paths: &ExternalPaths, window, cx| {
             let dropped = paths.paths();
             if dropped.len() > 1 {
-                let files: Vec<std::path::PathBuf> =
-                    dropped.iter().filter(|p| p.is_file()).cloned().collect();
+                let files: Vec<std::path::PathBuf> = dropped
+                    .iter()
+                    .filter(|p| {
+                        p.is_file()
+                            || p.extension()
+                                .and_then(|e| e.to_str())
+                                .is_some_and(|e| e.eq_ignore_ascii_case("app"))
+                    })
+                    .cloned()
+                    .collect();
                 if !files.is_empty() {
                     this.enqueue_multiple_pes(files);
                 } else if let Some(first_dir) = dropped.iter().find(|p| p.is_dir()).cloned() {
@@ -560,7 +568,7 @@ fn render_dropzone_card(
                 }
                 cx.notify();
             } else if let Some(first) = dropped.first().cloned() {
-                if first.extension().and_then(|e| e.to_str()) == Some("app") {
+                if first.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("app")) {
                     this.pick_pe_path(first);
                 } else if first.is_dir() {
                     if first.join("project.json").is_file()

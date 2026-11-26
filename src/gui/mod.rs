@@ -776,24 +776,16 @@ impl GameReCompApp {
     pub fn browse_for_multiple_pes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let rx = cx.prompt_for_paths(PathPromptOptions {
             files: true,
-            directories: false,
+            directories: true,
             multiple: true,
-            prompt: Some("Select one or more 32-bit Windows PE executables (.exe)".into()),
+            prompt: Some("Select games or apps: Windows .exe, macOS .app, Linux ELF, or project folders".into()),
         });
         let weak = cx.entity().downgrade();
         window
             .spawn(cx, async move |cx| {
                 if let Ok(Ok(Some(files))) = rx.await {
                     let selected_count = files.len();
-                    let exes: Vec<PathBuf> = files
-                        .into_iter()
-                        .filter(|p| {
-                            p.is_file()
-                                && p.is_file().then(|| inspect_pe(p)).is_some_and(|info| {
-                                    info.ok && info.pe32_x86
-                                })
-                        })
-                        .collect();
+                    let exes: Vec<PathBuf> = files;
                     let accepted_count = exes.len();
                     let rejected_count = selected_count.saturating_sub(accepted_count);
                     if !exes.is_empty() {
@@ -844,7 +836,10 @@ impl GameReCompApp {
         let mut added = 0usize;
         let skipped: Vec<String> = Vec::new();
         for path in paths {
-            if !path.is_file() {
+            let is_app = path.extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| e.eq_ignore_ascii_case("app"));
+            if !path.is_file() && !is_app {
                 continue;
             }
             let mut opts = self.opts.clone();
@@ -1117,9 +1112,9 @@ impl GameReCompApp {
     pub fn browse_for_pe(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let rx = cx.prompt_for_paths(PathPromptOptions {
             files: true,
-            directories: false,
+            directories: true,
             multiple: false,
-            prompt: Some("Choose a Windows .exe, macOS .app bundle, or Linux ELF executable".into()),
+            prompt: Some("Choose a Windows .exe, macOS .app bundle, Linux ELF executable, or project folder".into()),
         });
         let weak = cx.entity().downgrade();
         window
