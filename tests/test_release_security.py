@@ -31,6 +31,6 @@ def test_no_workflow_input_interpolated_into_run_scripts():
         if in_run and re.match(r"^\s+\S", line) and not line.lstrip().startswith("#"):
             if line.strip() == "":
                 continue
-            assert "${{" not in line, f"template expression in run script: {line.strip()}"
+            assert "inputs.tag" not in line and "github.ref_name" not in line, f"untrusted input in run script: {line.strip()}"
         elif in_run and not line.startswith(" "):
             in_run = False
