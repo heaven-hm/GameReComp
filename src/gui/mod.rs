@@ -3738,6 +3738,7 @@ impl GameReCompApp {
         }
 
         let mut feed_events: Vec<(String, String, bool)> = Vec::new();
+        let mut error_toasts: Vec<(String, String)> = Vec::new();
         let mut finished_events: Vec<FinishedEvent> = Vec::new();
 
         for job in &mut self.jobs {
@@ -3791,6 +3792,13 @@ impl GameReCompApp {
                             job.compile_pct = Some(1.0);
                         }
                         job.current_task_detail = format!("{st}: {status} ({secs:.1}s) {detail}");
+                        if status == "failed" {
+                            job.failure_summary = format!("{st} failed: {detail}");
+                            error_toasts.push((
+                                "Recompilation stage failed".to_string(),
+                                format!("{st}: {detail}"),
+                            ));
+                        }
                         feed_events.push((
                             format!("{} · {st}", job.name),
                             format!("{status} ({secs:.1}s) {detail}"),
@@ -3854,7 +3862,33 @@ impl GameReCompApp {
                         job.has_wasm = has_wasm;
                         let ok = code == 0 || code == 3;
                         if !ok {
-                            job.failure_summary = summary.clone();
+                            let error_lines: Vec<String> = job
+                                .live_logs
+                                .iter()
+                                .rev()
+                                .filter(|l| {
+                                    let t = l.trim();
+                                    t.contains("error")
+                                        || t.contains("Error")
+                                        || t.contains("failed")
+                                        || t.contains("FATAL")
+                                        || t.contains("Traceback")
+                                        || t.starts_with("File ")
+                                        || t.contains("Exception")
+                                })
+                                .take(14)
+                                .cloned()
+                                .collect::<Vec<String>>();
+                            let mut error_lines = error_lines;
+                            error_lines.reverse();
+                            job.failure_summary = if error_lines.is_empty() {
+                                summary.clone()
+                            } else {
+                                format!("{}\n{}", summary, error_lines.join("\n"))
+                            };
+                            job.current_task_detail = job.failure_summary.clone();
+                            let short: String = job.failure_summary.chars().take(500).collect();
+                            error_toasts.push(("Recompilation failed".to_string(), short));
                         }
                         let stopped = job.cancel_requested.load(Ordering::SeqCst);
                         if stopped {
@@ -3900,6 +3934,11 @@ impl GameReCompApp {
                     }
                 }
             }
+        }
+
+        for (title, detail) in error_toasts {
+            let col = self.tokens().not_c;
+            self.push_toast(&title, &detail, col, true);
         }
 
         for (actor, msg, is_ok) in feed_events {
