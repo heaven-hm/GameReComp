@@ -22,6 +22,13 @@ typedef struct {
 } recomp_sechdr_t;
 #pragma pack(pop)
 
+/* Offsets/extents used below. Sizes from the file are untrusted; all the
+ * arithmetic that combines them is done in uint64_t before it is checked
+ * against the actual file size. */
+#define RECOMP_DOS_LFANEW_OFF 0x3Cu
+#define RECOMP_NT_BYTES       24u  /* signature (4) + COFF file header (20) */
+#define RECOMP_OPT_MIN        64u  /* reaches SizeOfHeaders at optional +60 */
+
 uint32_t recomp_load_image(const char* path, uint32_t image_base) {
     FILE* f = fopen(path, "rb");
     if (!f) { fprintf(stderr, "[loader] cannot open %s\n", path); return 0; }
@@ -35,21 +42,59 @@ uint32_t recomp_load_image(const char* path, uint32_t image_base) {
     fclose(f);
 
     if (buf[0] != 'M' || buf[1] != 'Z') { free(buf); fprintf(stderr, "[loader] not MZ\n"); return 0; }
-    uint32_t e_lfanew = *(uint32_t*)(buf + 0x3C);
+    uint32_t e_lfanew = *(uint32_t*)(buf + RECOMP_DOS_LFANEW_OFF);
+    /* No pointer derived from e_lfanew may be formed until it is proven to
+     * leave room for the NT header and the shortest optional header we read. */
+    if (e_lfanew < 0x40u ||
+        (uint64_t)e_lfanew + RECOMP_NT_BYTES + RECOMP_OPT_MIN > (uint64_t)sz) {
+        fprintf(stderr, "[loader] bad e_lfanew 0x%08X for file of %ld bytes\n",
+                e_lfanew, sz);
+        free(buf);
+        return 0;
+    }
     uint8_t* nt = buf + e_lfanew;
     if (nt[0] != 'P' || nt[1] != 'E') { free(buf); fprintf(stderr, "[loader] not PE\n"); return 0; }
 
     uint16_t nsec   = *(uint16_t*)(nt + 6);
     uint16_t opt_sz = *(uint16_t*)(nt + 20);
-    recomp_sechdr_t* sec = (recomp_sechdr_t*)(nt + 24 + opt_sz);
+    if (opt_sz < RECOMP_OPT_MIN) {
+        fprintf(stderr, "[loader] optional header size %u < %u\n",
+                (unsigned)opt_sz, (unsigned)RECOMP_OPT_MIN);
+        free(buf); return 0;
+    }
+    uint64_t opt_off = (uint64_t)e_lfanew + RECOMP_NT_BYTES;
+    if ((uint64_t)opt_sz > (uint64_t)sz - opt_off) {
+        fprintf(stderr, "[loader] optional header truncated: %u bytes at offset %llu of %ld\n",
+                (unsigned)opt_sz, (unsigned long long)opt_off, sz);
+        free(buf); return 0;
+    }
+    uint64_t sec_off = opt_off + opt_sz;
+    uint64_t sec_bytes = (uint64_t)nsec * (uint64_t)sizeof(recomp_sechdr_t);
+    if (sec_bytes > (uint64_t)sz - sec_off) {
+        fprintf(stderr, "[loader] section table truncated: %u sections (%llu bytes) at offset %llu of %ld\n",
+                (unsigned)nsec, (unsigned long long)sec_bytes,
+                (unsigned long long)sec_off, sz);
+        free(buf); return 0;
+    }
+    recomp_sechdr_t* sec = (recomp_sechdr_t*)(buf + (size_t)sec_off);
 
-    uint32_t max_end = 0;
-    for (int i = 0; i < nsec; i++) {
-        uint32_t vs  = sec[i].vsize ? sec[i].vsize : sec[i].rsize;
-        uint32_t end = sec[i].vaddr + vs;
+    /* vaddr + size and the page round-up can each exceed 32 bits on a hostile
+     * header; the loader's result type cannot represent such a span, so reject
+     * it rather than wrapping to 0 (or past image_base + span). */
+    uint64_t max_end = 0;
+    for (uint32_t i = 0; i < nsec; i++) {
+        uint64_t vs = sec[i].vsize ? (uint64_t)sec[i].vsize : (uint64_t)sec[i].rsize;
+        uint64_t end = (uint64_t)sec[i].vaddr + vs;
         if (end > max_end) max_end = end;
     }
-    uint32_t span = (max_end + 0xFFFu) & ~0xFFFu;
+    uint64_t span64 = (max_end + 0xFFFu) & ~(uint64_t)0xFFFu;
+    if (span64 == 0 || span64 > 0xFFFFFFFFu ||
+        (uint64_t)image_base + span64 > 0x100000000ULL) {
+        fprintf(stderr, "[loader] image span overflow: max_end 0x%016llX span 0x%016llX base 0x%08X\n",
+                (unsigned long long)max_end, (unsigned long long)span64, image_base);
+        free(buf); return 0;
+    }
+    uint32_t span = (uint32_t)span64;
 
     void* view = VirtualAlloc((void*)(uintptr_t)image_base, span,
                               MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
@@ -74,12 +119,20 @@ uint32_t recomp_load_image(const char* path, uint32_t image_base) {
      * that whole region zeroed. */
     {
         uint32_t hdr = *(uint32_t*)(nt + 24 + 60);   /* OptionalHeader.SizeOfHeaders */
-        if (hdr > (uint32_t)sz) hdr = (uint32_t)sz;
-        if (hdr > span) hdr = span;
+        if (hdr > (uint32_t)sz) {
+            fprintf(stderr, "[loader] SizeOfHeaders 0x%08X exceeds file size 0x%08lX; clamped\n",
+                    hdr, (unsigned long)sz);
+            hdr = (uint32_t)sz;
+        }
+        if (hdr > span) {
+            fprintf(stderr, "[loader] SizeOfHeaders 0x%08X exceeds span 0x%08X; clamped\n",
+                    hdr, span);
+            hdr = span;
+        }
         memcpy(view, buf, hdr);
     }
 
-    for (int i = 0; i < nsec; i++) {
+    for (uint32_t i = 0; i < nsec; i++) {
         /* "Uninitialized" is PointerToRawData == 0 -- no file backing -- not
          * SizeOfRawData == 0. MSVC happens to set both to 0 for .bss, so the
          * size test worked by coincidence; Watcom does not. It puts the *memory*
@@ -95,13 +148,32 @@ uint32_t recomp_load_image(const char* path, uint32_t image_base) {
          * page come from the file. Tiberian Sun's Game.exe keeps a patch's code
          * there (0x006C9A10, past .text's 0x006C9A0D), and cut at VirtualSize
          * it ran as zeroes, `add [eax], al`, and faulted. */
-        if (sec[i].vsize && ((sec[i].vsize + 0xFFFu) & ~0xFFFu) < n) n = (sec[i].vsize + 0xFFFu) & ~0xFFFu;
+        if (sec[i].vsize) {
+            uint64_t rounded = ((uint64_t)sec[i].vsize + 0xFFFu) & ~(uint64_t)0xFFFu;
+            if (rounded < (uint64_t)n) n = (uint32_t)rounded;
+        }
         /* Never read past what the file actually holds: these headers come from
          * disk and a truncated or hostile one must not turn into an overread. */
-        if (sec[i].roff >= (uint32_t)sz) continue;
-        if (n > (uint32_t)sz - sec[i].roff) n = (uint32_t)sz - sec[i].roff;
-        if (sec[i].vaddr >= span) continue;
-        if (n > span - sec[i].vaddr) n = span - sec[i].vaddr;
+        if (sec[i].roff >= (uint32_t)sz) {
+            fprintf(stderr, "[loader] section %u raw offset 0x%08X outside file; skipped\n",
+                    i, sec[i].roff);
+            continue;
+        }
+        if (n > (uint32_t)sz - sec[i].roff) {
+            fprintf(stderr, "[loader] section %u raw data truncated to %u bytes\n",
+                    i, (uint32_t)sz - sec[i].roff);
+            n = (uint32_t)sz - sec[i].roff;
+        }
+        if (sec[i].vaddr >= span) {
+            fprintf(stderr, "[loader] section %u VA 0x%08X outside span 0x%08X; skipped\n",
+                    i, sec[i].vaddr, span);
+            continue;
+        }
+        if (n > span - sec[i].vaddr) {
+            fprintf(stderr, "[loader] section %u data truncated to %u bytes\n",
+                    i, span - sec[i].vaddr);
+            n = span - sec[i].vaddr;
+        }
         memcpy((void*)(uintptr_t)va, buf + sec[i].roff, n);
     }
     free(buf);
