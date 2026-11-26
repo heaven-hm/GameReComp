@@ -143,8 +143,8 @@ def test_job_is_pinned_to_a_real_linux_runner():
 
 def test_checkout_deps_refusals_and_native_build_are_real_steps():
     text = _text()
-    assert "uses: actions/checkout@v4" in text
-    assert "uses: actions/setup-python@v5" in text
+    assert re.search(r"uses: actions/checkout@[0-9a-f]{40} # v4", text)
+    assert re.search(r"uses: actions/setup-python@[0-9a-f]{40} # v5", text)
     sdl2 = _step("Install SDL2 (Linux native build)")["run"]
     for package in ("libsdl2-dev", "libsdl2-ttf-dev"):
         assert package in sdl2, f"native Linux compile needs {package!r}"
@@ -239,7 +239,7 @@ def test_no_fake_pass_and_fail_closed_status():
 
 def test_artifact_upload_carries_summary_logs_and_native_binary():
     upload = _step(UPLOAD_STEP)
-    assert upload["head"].count("uses: actions/upload-artifact@v4") == 1
+    assert len(re.findall(r"uses: actions/upload-artifact@[0-9a-f]{40} # v4", upload["head"])) == 1
     assert "if: always()" in upload["head"]
     assert "if-no-files-found: warn" in upload["head"]
     assert "linux-evidence-summary" in upload["head"]

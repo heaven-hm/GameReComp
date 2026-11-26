@@ -274,7 +274,7 @@ def test_all_stages_are_measured_and_artifacts_always_uploaded():
     assert "rc = 'NOT TESTED'" in emitter
     assert "log = 'NOT TESTED'" in emitter
     upload = _step(UPLOAD_STEP)
-    assert upload["head"].count("uses: actions/upload-artifact@v4") == 1
+    assert len(re.findall(r"uses: actions/upload-artifact@[0-9a-f]{40} # v4", upload["head"])) == 1
     assert "if: always()" in upload["head"]
     assert "if-no-files-found: warn" in upload["head"]
     assert "revng-evidence" in upload["head"]
