@@ -354,10 +354,25 @@ pub fn parse_env_file(text: &str) -> Vec<(String, String)> {
     out
 }
 
+/// Locate the Python pipeline bundled inside a macOS `.app` bundle.
+fn bundled_repo_root(exe: &Path) -> Option<PathBuf> {
+    let contents = exe.parent()?.parent()?;
+    let candidate = contents.join("Resources").join("repo");
+    if candidate.join("tools").join("autorecomp").is_dir() {
+        return Some(candidate);
+    }
+    None
+}
+
 pub fn resolve_repo_root(explicit_repo: Option<&Path>) -> PathBuf {
     if let Some(p) = explicit_repo {
         if !p.as_os_str().is_empty() {
             return p.to_path_buf();
+        }
+    }
+    if let Ok(exe) = env::current_exe() {
+        if let Some(found) = bundled_repo_root(&exe) {
+            return found;
         }
     }
     if let Ok(cwd) = env::current_dir() {
