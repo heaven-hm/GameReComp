@@ -100,6 +100,7 @@ pub enum WorkerKind {
     Pipeline,
     Readability,
     Batch,
+    Verify,
 }
 
 impl WorkerKind {
@@ -108,6 +109,7 @@ impl WorkerKind {
             WorkerKind::Pipeline => "Pipeline",
             WorkerKind::Readability => "Agent",
             WorkerKind::Batch => "Batch",
+            WorkerKind::Verify => "Verify",
         }
     }
 }
@@ -1714,6 +1716,142 @@ impl GameReCompApp {
             Some(target_fn)
         };
         self.start_readability_agent_for_dir(dir, target, cx);
+    }
+
+    /// Run the general Unicorn (source parity) + Frida (run parity) verifier for
+    /// a project. Both percentages are written to reports/verify.json and shown
+    /// as separate KPIs; failures keep their full detail.
+    pub fn start_verification_for_dir(&mut self, dir: PathBuf, cx: &mut Context<Self>) {
+        if self.jobs.iter().any(|j| {
+            j.is_active()
+                && j.kind == WorkerKind::Verify
+                && j.project_dir.as_deref() == Some(dir.as_path())
+        }) {
+            self.push_toast(
+                "Verification already running",
+                "Wait for the current Unicorn/Frida verification to finish.",
+                self.tokens().info,
+                false,
+            );
+            return;
+        }
+        let id = self.alloc_job_id();
+        let repo_root = self.cfg.repo_root.clone();
+        let name = dir
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("project")
+            .to_string();
+        let report_path = dir.join("reports").join("verify.json");
+        let mut args = vec![
+            "-m".to_string(),
+            "tools.autorecomp.verify".to_string(),
+            dir.display().to_string(),
+            "--max-functions".to_string(),
+            "4".to_string(),
+            "--cases".to_string(),
+            "2".to_string(),
+            "--timeout".to_string(),
+            "20".to_string(),
+            "--json".to_string(),
+            report_path.display().to_string(),
+        ];
+        if let Some(args_extra) = self.verify_args_for_dir(&dir) {
+            args.extend(args_extra);
+        }
+        let preview = format!("python3 {}", args.join(" "));
+        let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
+        let child_for_thread = Arc::clone(&child_slot);
+        let cancel_requested = Arc::new(AtomicBool::new(false));
+        let cancel_for_thread = Arc::clone(&cancel_requested);
+        let pgid_slot: Arc<Mutex<Option<u32>>> = Arc::new(Mutex::new(None));
+        let pgid_for_thread = Arc::clone(&pgid_slot);
+        let (tx, rx) = mpsc::channel();
+        self.jobs.push(ActiveJob {
+            id,
+            kind: WorkerKind::Verify,
+            name: format!("Verify: {name}"),
+            pe_path: String::new(),
+            pe_summary: String::new(),
+            target_label: "Unicorn + Frida".to_string(),
+            project_dir: Some(dir.clone()),
+            built_binary: None,
+            has_wasm: false,
+            failure_summary: String::new(),
+            auto_launch_after_build: false,
+            auto_ai_readability: false,
+            is_dry_run: false,
+            status: JobStatus::Running,
+            stage: "source-parity".to_string(),
+            started: Instant::now(),
+            paused_at: None,
+            paused_total: Duration::ZERO,
+            finished_secs: None,
+            current_file: name.clone(),
+            current_task_detail: "Unicorn: original bytes vs generated C; then Frida run parity"
+                .to_string(),
+            compile_pct: None,
+            processed_files: Vec::new(),
+            live_stages: vec![
+                LiveStageRow {
+                    name: "source-parity",
+                    state: StageExecState::Running(Instant::now()),
+                    detail: String::new(),
+                },
+                LiveStageRow {
+                    name: "run-parity",
+                    state: StageExecState::Pending,
+                    detail: String::new(),
+                },
+            ],
+            live_logs: vec![format!("$ {preview}")],
+            child: child_slot,
+            cancel_requested,
+            pgid: pgid_slot,
+            rx: Some(rx),
+        });
+        self.selected_job_id = Some(id);
+        self.push_feed(
+            "verify",
+            &format!("verifying {name} with Unicorn + Frida"),
+            false,
+        );
+        cx.notify();
+
+        thread::spawn(move || {
+            let mut cmd = Command::new("python3");
+            cmd.args(&args)
+                .current_dir(repo_root)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            let code = run_streaming_child_inner(
+                cmd,
+                child_for_thread,
+                pgid_for_thread,
+                cancel_for_thread,
+                &tx,
+            );
+            let _ = tx.send(WorkerMsg::Finished {
+                kind: WorkerKind::Verify,
+                code,
+                project_dir: Some(dir),
+                built_binary: None,
+                has_wasm: false,
+                summary: format!("Verification finished (exit {code})"),
+            });
+        });
+    }
+
+    /// Optional same-arguments run-parity inputs, supplied by project metadata.
+    fn verify_args_for_dir(&self, dir: &Path) -> Option<Vec<String>> {
+        let meta = dir.join("verify-args.txt");
+        let text = std::fs::read_to_string(meta).ok()?;
+        let words: Vec<String> = text.split_whitespace().map(|s| s.to_string()).collect();
+        if words.is_empty() {
+            None
+        } else {
+            Some(words)
+        }
     }
 
     pub fn start_readability_agent_for_dir(
@@ -4043,6 +4181,9 @@ impl GameReCompApp {
                     self.reload_active_project_async(window, cx);
                 }
                 WorkerKind::Batch => {}
+                WorkerKind::Verify => {
+                    self.reload_active_project_async(window, cx);
+                }
             }
             let _ = ev.job_id;
         }

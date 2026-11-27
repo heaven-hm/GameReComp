@@ -589,6 +589,7 @@ fn render_overview_tab(
         let proj_title_data = model.display_title().to_string();
         let proj_dir_ai = model.dir.clone();
         let proj_dir_revng = model.dir.clone();
+        let proj_dir_verify = model.dir.clone();
         let proj_dir_open = model.dir.clone();
         let mut actions = div().flex().flex_wrap().items_center().gap(px(8.0));
         if let Some(bin) = bin_opt {
@@ -638,11 +639,22 @@ fn render_overview_tab(
                 })),
             )
             .child(
-                style::ghost_btn("post_revng_btn", t, "🔬 Rev.ng Source Pass")
-                    .on_click(cx.listener(move |this, _, _, cx| {
+                style::ghost_btn("post_revng_btn", t, "🔬 Rev.ng Source Pass").on_click(
+                    cx.listener(move |this, _, _, cx| {
                         this.start_readability_agent_for_dir_with(
-                            proj_dir_revng.clone(), None, "revng", cx,
+                            proj_dir_revng.clone(),
+                            None,
+                            "revng",
+                            cx,
                         );
+                    }),
+                ),
+            )
+            .child(
+                style::primary_btn("post_verify_btn", t, "🧪 Verify (Unicorn + Frida)", true)
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.start_verification_for_dir(proj_dir_verify.clone(), cx);
+                        cx.notify();
                     })),
             )
             .child(
@@ -935,6 +947,82 @@ fn render_overview_tab(
                 ),
         )
         .child(
+            style::ruled_kpi(t, "SOURCE CODE VERIFICATION")
+                .child(
+                    div()
+                        .flex()
+                        .items_baseline()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .font_family(t.ui_font)
+                                .font_weight(FontWeight::EXTRA_BOLD)
+                                .text_size(px(t.ui_px(42.0)))
+                                .line_height(px(42.0))
+                                .text_color(if model.source_percent >= 99.0 {
+                                    rgb(t.match_ink)
+                                } else if model.source_percent > 0.0 {
+                                    rgb(t.work)
+                                } else {
+                                    rgb(t.muted)
+                                })
+                                .child(format!("{:.1}", model.source_percent)),
+                        )
+                        .child(
+                            div()
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(14.0)))
+                                .text_color(rgb(t.muted))
+                                .child("%"),
+                        ),
+                )
+                .child(
+                    div()
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.0)))
+                        .text_color(rgb(t.muted))
+                        .child("Unicorn: original x86 bytes vs generated C"),
+                ),
+        )
+        .child(
+            style::ruled_kpi(t, "RUN VERIFICATION")
+                .child(
+                    div()
+                        .flex()
+                        .items_baseline()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .font_family(t.ui_font)
+                                .font_weight(FontWeight::EXTRA_BOLD)
+                                .text_size(px(t.ui_px(42.0)))
+                                .line_height(px(42.0))
+                                .text_color(if model.run_percent >= 99.0 {
+                                    rgb(t.match_ink)
+                                } else if model.run_percent > 0.0 {
+                                    rgb(t.work)
+                                } else {
+                                    rgb(t.not_c)
+                                })
+                                .child(format!("{:.1}", model.run_percent)),
+                        )
+                        .child(
+                            div()
+                                .font_family(t.mono_font)
+                                .text_size(px(t.ui_px(14.0)))
+                                .text_color(rgb(t.muted))
+                                .child("%"),
+                        ),
+                )
+                .child(
+                    div()
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(12.0)))
+                        .text_color(rgb(t.muted))
+                        .child("Frida: same input, same observable output"),
+                ),
+        )
+        .child(
             style::ruled_kpi(t, "FUNCTIONS")
                 .child(
                     div()
@@ -1029,6 +1117,48 @@ fn render_overview_tab(
         );
 
     col = col.child(kpi_row);
+
+    // Verification detail: show the named checks and the exact reason a check
+    // was blocked or diverged. A toast is never the only explanation.
+    let verify_lines: Vec<String> = {
+        let mut lines = model.verify_errors.clone();
+        if lines.is_empty() {
+            lines.push("No verification report yet. Run 'Verify (Unicorn + Frida)'.".to_string());
+        }
+        if let Some(job) = app.jobs.iter().rev().find(|j| {
+            j.kind == WorkerKind::Verify && j.project_dir.as_deref() == Some(model.dir.as_path())
+        }) {
+            lines.extend(job.live_logs.iter().rev().take(12).cloned());
+            if !job.failure_summary.is_empty() {
+                lines.push(format!("JOB FAILURE: {}", job.failure_summary));
+            }
+        }
+        lines
+    };
+    col = col.child(
+        style::panel_box(t)
+            .w_full()
+            .p(px(14.0))
+            .flex()
+            .flex_col()
+            .gap(px(6.0))
+            .child(
+                div()
+                    .font_family(t.ui_font)
+                    .font_weight(FontWeight::BOLD)
+                    .text_size(px(t.ui_px(13.0)))
+                    .text_color(rgb(t.ink))
+                    .child("Verification detail — measured checks, no fabricated PASS"),
+            )
+            .child(
+                div()
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(11.0)))
+                    .text_color(rgb(t.muted))
+                    .whitespace_normal()
+                    .child(verify_lines.join("\n")),
+            ),
+    );
 
     // -------------------------------------------------------- Next Step Callout Banner
     let mut stage_checks = div().flex().flex_wrap().gap(px(12.0));

@@ -155,6 +155,12 @@ pub struct ProjectModel {
     pub frames_dir: Option<PathBuf>,
     pub has_html_report: bool,
     pub has_wasm_build: bool,
+    /// Measured verification percentages from reports/verify.json (Unicorn source
+    /// parity and Frida run parity). They are never inferred from a build.
+    pub source_percent: f32,
+    pub run_percent: f32,
+    pub verify_summary: String,
+    pub verify_errors: Vec<String>,
     pub diag: ReportDiagnostics,
     pub ui_meta: ProjectUiMeta,
 }
@@ -199,6 +205,52 @@ impl ProjectModel {
                 || dir.join("index.html").is_file(),
             ..Default::default()
         };
+
+        if let Some(v) = read_json_value(&dir.join("reports").join("verify.json")) {
+            model.source_percent = v
+                .get("source_percent")
+                .and_then(|x| x.as_f64())
+                .unwrap_or(0.0) as f32;
+            model.run_percent = v.get("run_percent").and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
+            let mut lines = Vec::new();
+            for key in ["source", "run"] {
+                if let Some(sec) = v.get(key) {
+                    if let Some(detail) = sec.get("detail").and_then(|x| x.as_str()) {
+                        lines.push(format!("{}: {}", key, detail));
+                    }
+                    if let Some(reason) = sec.get("reason").and_then(|x| x.as_str()) {
+                        if !reason.is_empty() {
+                            lines.push(format!("{} blocked: {}", key, reason));
+                        }
+                    }
+                }
+            }
+            if let Some(rows) = v
+                .get("source")
+                .and_then(|s| s.get("addresses"))
+                .and_then(|a| a.as_array())
+            {
+                for row in rows {
+                    let verdict = row.get("verdict").and_then(|x| x.as_str()).unwrap_or("");
+                    if !verdict.starts_with("agree") {
+                        let addr = row.get("address").and_then(|x| x.as_str()).unwrap_or("?");
+                        let detail = row.get("detail").and_then(|x| x.as_str()).unwrap_or("");
+                        lines.push(format!("{} {}: {}", addr, verdict, detail));
+                    }
+                }
+            }
+            model.verify_errors = lines;
+            model.verify_summary = format!(
+                "source {:.1}% · run {:.1}%{}",
+                model.source_percent,
+                model.run_percent,
+                if v.get("verified").and_then(|x| x.as_bool()).unwrap_or(false) {
+                    " · VERIFIED"
+                } else {
+                    " · not verified"
+                }
+            );
+        }
 
         if let Some(stages_arr) = report.get("stages").and_then(|v| v.as_array()) {
             for s in stages_arr {
