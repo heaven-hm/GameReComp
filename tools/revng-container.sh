@@ -47,7 +47,10 @@ OUT_DIR=$(cd -- "$OUT" >/dev/null 2>&1 && pwd)
 
 # Current rev.ng CLI (revng/revng:latest) no longer has `revng decompile`;
 # the porcelain command is `quick artifact emit-c-as-single-file BINARY -o FILE`.
+# The current image accepts -o but silently produces no file with an `.c`
+# path; the artifact is written to stdout. Capture that instead, and keep the
+# PTML markup (it carries source locations used by provenance checks).
 exec "$RUNTIME" run --platform linux/amd64 --rm \
-    -v "$PE_DIR:/work/in:ro" -v "$OUT_DIR:/work/out" \
+    -v "$PE_DIR:/work/in:ro" \
     "$IMAGE" revng quick artifact emit-c-as-single-file \
-    "/work/in/$PE_NAME" -o /work/out/decompiled.c
+    "/work/in/$PE_NAME" > "$OUT_DIR/decompiled.c"
