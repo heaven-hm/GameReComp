@@ -80,8 +80,11 @@ static void fault_report(int sig, siginfo_t *info, void *ctx) {
 #endif
         pc -= (uintptr_t)_dyld_get_image_vmaddr_slide(0);   /* link-time address, as nm prints it */
     }
-#elif defined(__linux__)
+#elif defined(__linux__) && defined(__x86_64__)
     if (ctx) pc = (uintptr_t)((ucontext_t *)ctx)->uc_mcontext.gregs[REG_RIP];
+#elif defined(__linux__) && defined(__aarch64__)
+    /* glibc aarch64 exposes PC directly, not the x86 gregs[] array. */
+    if (ctx) pc = (uintptr_t)((ucontext_t *)ctx)->uc_mcontext.pc;
 #endif
     int n;
     if (a >= base && a - base <= 0xFFFFFFFFu)

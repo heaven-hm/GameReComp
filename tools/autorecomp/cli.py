@@ -28,6 +28,36 @@ from tools.autorecomp.pipeline import (STAGES, STAGE_WEIGHTS,  # noqa: E402
 EXIT_VERIFIED = 0
 EXIT_STAGE_FAILED = 2
 EXIT_UNVERIFIED = 3
+
+
+def resolve_app_bundle_path(app: Path):
+    """Resolve a macOS .app bundle to its real Mach-O executable.
+
+    The GUI already does this; the CLI must agree so a bundle reached from
+    either surface gets the same named backend result.
+    """
+    macos = app / "Contents" / "MacOS"
+    if not macos.is_dir():
+        return None
+    plist = app / "Contents" / "Info.plist"
+    name = None
+    try:
+        text = plist.read_text(errors="replace")
+        marker = "<key>CFBundleExecutable</key>"
+        pos = text.find(marker)
+        if pos >= 0:
+            start = text.find("<string>", pos)
+            end = text.find("</string>", start)
+            if 0 <= start < end:
+                name = text[start + len("<string>"):end].strip()
+    except OSError:
+        pass
+    candidates = [macos / name] if name else []
+    candidates.extend(sorted(p for p in macos.iterdir() if p.is_file()))
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate.resolve()
+    return None
 EXIT_UNSUPPORTED = 4
 
 # Output mode -> the stages that produce that output. "source" stops after
@@ -107,6 +137,14 @@ def _pe_identity(pe_path):
     except OSError as exc:
         return None, f"cannot read the input: {exc}"
     if len(head) < 0x40 or head[:2] != b"MZ":
+        if head[:4] in (b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe",
+                        b"\xfe\xed\xfa\xcf", b"\xfe\xed\xfa\xce",
+                        b"\xca\xfe\xba\xbe", b"\xbf\xba\xfe\xca"):
+            return None, ("Mach-O detected — accepted as a source-level port input; "
+                          "PE32 lifting does not apply to macOS binaries")
+        if head[:4] == b"\x7fELF":
+            return None, ("ELF detected — accepted as a source-level port input; "
+                          "PE32 lifting does not apply to Linux binaries")
         return None, "not an MZ/PE executable"
     e_lfanew = int.from_bytes(head[0x3C:0x40], "little")
     if e_lfanew + 6 > len(head) or head[e_lfanew:e_lfanew + 4] != b"PE\x00\x00":
@@ -584,6 +622,10 @@ def main(argv=None):
         parser.error("the following arguments are required: pe_file")
 
     pe_path = Path(args.pe_file).expanduser()
+    if pe_path.is_dir() and pe_path.suffix.lower() == ".app":
+        resolved = resolve_app_bundle_path(pe_path)
+        if resolved is not None:
+            pe_path = resolved
     if not pe_path.is_file():
         print(f"error: input executable not found: {pe_path}", file=sys.stderr)
         if "..." in str(args.pe_file):

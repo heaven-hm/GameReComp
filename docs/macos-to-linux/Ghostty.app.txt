@@ -1,0 +1,4 @@
+warning: input/output OS and architecture were not fully specified; assuming input windows/x86 -> output linux/x86_64 (this host).
+         omitted: --input-arch (assuming auto, from the PE header)
+         pass --input-os, --input-arch, --target-os and --target-arch explicitly to declare them and silence this warning.
+error: cross-target build requested (linux/x86_64) on host (macos/arm64); the pipeline compiles with the host toolchain only -- run it on the target OS or omit --target-os/--target-arch
