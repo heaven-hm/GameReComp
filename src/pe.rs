@@ -328,6 +328,21 @@ pub fn resolve_target(target_os: &str, target_arch: &str) -> Result<(String, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pe32_plus_is_inspected_accepted_by_the_picker() {
+        let mut data = vec![0u8; 0x100];
+        data[..2].copy_from_slice(b"MZ");
+        data[0x3C..0x40].copy_from_slice(&0x80u32.to_le_bytes());
+        data[0x80..0x84].copy_from_slice(b"PE\0\0");
+        data[0x84..0x86].copy_from_slice(&0x8664u16.to_le_bytes());
+        data[0x98..0x9A].copy_from_slice(&0x20Bu16.to_le_bytes());
+        let info = inspect_pe_bytes(&data);
+        assert!(info.ok, "picker must inspect x64 inputs, not reject them: {}", info.error);
+        assert_eq!(info.magic, "PE32+");
+        assert_eq!(info.machine, "x86-64");
+        assert!(!info.pe32_x86, "only the backend reconstruction is PE32 i386");
+    }
     use std::path::PathBuf;
 
     #[test]
