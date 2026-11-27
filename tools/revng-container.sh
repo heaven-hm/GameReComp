@@ -22,6 +22,24 @@ if [ -z "$RUNTIME" ]; then
     fi
 fi
 IMAGE=${REVNG_IMAGE:-revng/revng:latest}
+
+# A stale DOCKER_HOST (for example a Docker Desktop socket whose daemon is not
+# running) used to make the GUI's Rev.ng button fail before the container was
+# ever started. Use the configured daemon if it responds; otherwise fall back
+# to a live Colima socket, which is the common macOS container runtime.
+if ! "$RUNTIME" info >/dev/null 2>&1; then
+    for sock in "$HOME/.colima/default/docker.sock" "$HOME/.colima/docker.sock"; do
+        if [ -S "$sock" ] && DOCKER_HOST="unix://$sock" "$RUNTIME" info >/dev/null 2>&1; then
+            export DOCKER_HOST="unix://$sock"
+            break
+        fi
+    done
+fi
+if ! "$RUNTIME" info >/dev/null 2>&1; then
+    echo "revng-container: no working container daemon (set DOCKER_HOST to a live docker.sock)" >&2
+    exit 4
+fi
+
 PE_DIR=$(cd -- "$(dirname -- "$PE")" >/dev/null 2>&1 && pwd)
 PE_NAME=$(basename -- "$PE")
 mkdir -p -- "$OUT"
