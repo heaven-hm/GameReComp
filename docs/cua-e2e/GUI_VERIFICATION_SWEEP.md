@@ -12,7 +12,7 @@ so run parity is honestly 0% / BLOCKED everywhere.
 | `winamp` | **100.0** | 0.0 (attach denied) | `allverify-winamp-100.png` |
 | `Project_IGI` | 0.0 (2 checks blocked, non-code-section VAs) | 0.0 (attach denied) | `allverify-projectigi-0.png` |
 | `IGI` | **75.0** (3 agree, 1 original-side fault) | 0.0 (attach denied) | `allverify-igi-75.png` |
-| `TmForever` | verifier running on the 88k-function project | — | `allverify-tm-ready.png` |
+| `TmForever` | 0.0 (2 checks blocked) | 0.0 (attach denied) | `allverify-tm-final.png` |
 | `ac_client` (AssaultCube) | pending rebuild (compile deadline raised) | — | sidebar `ac_client` in `allverify-home.png` |
 
 A blocked check is not a pass. The GUI shows the measured number and the exact reason
