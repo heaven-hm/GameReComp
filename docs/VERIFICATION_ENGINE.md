@@ -27,7 +27,9 @@ python3 -m tools.autorecomp.verify /path/to/project \
 ```
 
 `--address 0x...` can override function selection; `--all-functions` removes the cap.
-Same-input arguments after `--args` are used for both binaries. The GUI worker honours
+`--binary /path/to/rebuilt` selects the rebuilt executable explicitly, which is needed
+when several architecture-specific builds live in one project. Same-input arguments
+after `--args` are used for both binaries. The GUI worker honours
 `RECOMP_PYTHON` if the `.app` has a restricted PATH. Do not claim a game PASS from this
 command alone: a game verdict still needs frame/input evidence.
 
