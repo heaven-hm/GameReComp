@@ -14,6 +14,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -186,7 +187,8 @@ hook(null);
 ['kernel32.dll','user32.dll','advapi32.dll'].forEach(function (m) {
   if (Process.findModuleByName(m)) hook(m);
 });
-log({name:"start", argv:Process.argv.join(" ")});
+// Frida 17 does not expose Process.argv for spawned targets.
+log({name:"start", argv:(typeof Process.argv !== 'undefined' ? Process.argv.join(" ") : "")});
 '''
 
 
@@ -215,6 +217,8 @@ def frida_trace(argv, timeout, outdir, env_extra=None):
 
 def normalize(line):
     s = line.replace(str(Path.home()), '~')
+    # ASLR addresses are not stable output; compare event names and values.
+    s = re.sub(r'0x[0-9a-fA-F]{6,}', 'PTR', s)
     parts = s.split()
     return ' '.join(p.rsplit('/', 1)[-1] if '/' in p else p for p in parts)
 
@@ -238,20 +242,31 @@ def run_verification(pe, rebuilt, args, timeout, outdir):
           if x.startswith('RECOMP_EVT ')]
     re = [normalize(x) for x in rlog.read_text(errors='replace').splitlines()
           if x.startswith('RECOMP_EVT ')]
-    checked = max(len(oe), len(re))
-    passed = sum(1 for a, b in zip(oe, re) if a == b)
     logs = (olog.read_text(errors='replace') + '\n' + rlog.read_text(errors='replace'))
     attach_error = next((l for l in logs.splitlines() if 'Failed to attach' in l), '')
-    reason = '' if checked else (
-        f'Frida attach denied by the OS ({attach_error.strip()}); run parity is BLOCKED'
-        if attach_error else 'no comparable Frida events captured; run parity is BLOCKED')
+    if attach_error or not oe:
+        # Events from one side only are evidence of a broken oracle, not a
+        # divergence: the original process never produced a comparable stream.
+        reason = (f'Frida attach denied by the OS ({attach_error.strip()}); run parity is BLOCKED'
+                  if attach_error else
+                  'the original emitted no Frida events; run parity is BLOCKED')
+        return {
+            'engine': 'Frida', 'percent': 0.0, 'checked': 0, 'passed': 0,
+            'blocked': True, 'original_exit': ocode, 'rebuilt_exit': rcode,
+            'reason': reason,
+            'detail': f'0 comparable events; original exit {ocode}, rebuilt exit {rcode}',
+            'logs': [str(olog), str(rlog)], 'verified': False,
+        }
+    checked = max(len(oe), len(re))
+    passed = sum(1 for a, b in zip(oe, re) if a == b)
+    reason = '' if passed == checked else f'{checked - passed} normalized event(s) diverged'
     return {
         'engine': 'Frida', 'percent': round(100.0 * passed / checked, 1) if checked else 0.0,
-        'checked': checked, 'passed': passed, 'blocked': checked == 0,
+        'checked': checked, 'passed': passed, 'blocked': False,
         'original_exit': ocode, 'rebuilt_exit': rcode,
         'reason': reason,
         'detail': f'{passed}/{checked} normalized events agree; original exit {ocode}, rebuilt exit {rcode}',
-        'logs': [str(olog), str(rlog)], 'verified': bool(checked) and passed == checked,
+        'logs': [str(olog), str(rlog)], 'verified': checked > 0 and passed == checked,
     }
 
 
