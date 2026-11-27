@@ -6,9 +6,9 @@ Every game this product knows about, in one table: the locally supplied corpus t
 
 **Port details** are read from each project's own `reports/report.json`: functions recovered, generated C, the rebuilt binary, imports the runtime bound, and the low-level/high-level split. `LOW_LEVEL_FALLBACK` functions are register-transfer C, not reconstructed high-level source.
 
-Updated 2026-11-20T09:43:24Z by `python -m tools.gamesdb --matrix`.
+Updated 2026-11-27T14:53:47Z by `python -m tools.gamesdb --matrix`.
 
-**Running native macOS arm64 ports:** **93 / 120** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**93** with `0` unresolved imports).
+**Running native macOS arm64 ports:** **94 / 122** measured Windows PE32 applications & games compile and run natively on macOS `arm64` (**94** with `0` unresolved imports).
 
 ## This repository (measured)
 
@@ -52,6 +52,7 @@ Updated 2026-11-20T09:43:24Z by `python -m tools.gamesdb --matrix`.
 | Resource_Convertor (gconv.exe) | Windows | i386 (PE32) | 3441 fns recovered; 6 units / 38.7 MiB C; binary gconv 10392 KiB; 78 imports bound [macOS arm64 (native)]; low-level 3441/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | Snake (snake-windows-x86_64.exe) | Windows | x86-64 | inspect failed: PE32+ is not supported by the PE32 backend yet (machine x86-64); fail-closed instead of guessing | NOT RUN |
 | Snake | Windows | i386 (PE32) | 223 fns recovered; 2 units / 1.4 MiB C; binary snake 1309 KiB; 46 imports bound [macOS arm64 (native)]; low-level 223/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
+| TmForeverModLoader (TmForever.exe) | Windows | i386 (PE32) | 88039 fns recovered; 150 units / 934.0 MiB C; binary TmForever 338965 KiB [macOS arm64 (native)]; 257 imports bound, 159 unresolved; low-level 88039/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Torus Trooper (tt.exe) | Windows | i386 (PE32) | 4367 fns recovered; 7 units / 40.8 MiB C; binary tt 11644 KiB [macOS arm64 (native)]; 58 imports bound; low-level 4367/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented |
 | Tumiki Fighters (tf.exe) | Windows | i386 (PE32) | 3768 fns recovered; 7 units / 37.6 MiB C; binary tf 9987 KiB [macOS arm64 (native)]; 58 imports bound; low-level 3768/ high-level verified 0 | FAIL - rebuilt process cannot boot - rebuilt process aborted on an unhandled guest C++ exception (exit 3); guest SEH unwinding is not implemented |
 | Warning Forever (wf.exe) | Windows | i386 (PE32) | 2815 fns recovered; 6 units / 34.8 MiB C; binary wf 8540 KiB [macOS arm64 (native)]; 147 imports bound; low-level 2815/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
@@ -66,6 +67,7 @@ Updated 2026-11-20T09:43:24Z by `python -m tools.gamesdb --matrix`.
 | fifteensolver | Windows | i386 (PE32) | 411 fns recovered; 2 units / 3.8 MiB C; binary fifteensolver 1687 KiB; 58 imports bound [macOS arm64 (native)]; low-level 411/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |
 | filling | Windows | i386 (PE32) | 957 fns recovered; 3 units / 13.6 MiB C; binary filling 3873 KiB; 190 imports bound [macOS arm64 (native)]; low-level 957/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | fillingsolver | Windows | i386 (PE32) | 553 fns recovered; 2 units / 7.4 MiB C; binary fillingsolver 2129 KiB; 59 imports bound [macOS arm64 (native)]; low-level 553/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
+| fixtures (pe32-minimal.exe) | Windows | i386 (PE32) | 1 fns recovered; 2 units / 0.0 MiB C; binary pe32_minimal 839 KiB [macOS arm64 (native)]; 1 imports bound; low-level 1/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | flip | Windows | i386 (PE32) | 953 fns recovered; 3 units / 13.3 MiB C; binary flip 4083 KiB; 189 imports bound [macOS arm64 (native)]; low-level 953/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | flood | Windows | i386 (PE32) | 822 fns recovered; 3 units / 9.8 MiB C; binary flood 3464 KiB; 189 imports bound [macOS arm64 (native)]; low-level 822/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 0; no oracle supplied |
 | fuzzpuzz | Windows | i386 (PE32) | 11889 fns recovered; 50 units / 390.3 MiB C; binary fuzzpuzz 50130 KiB; 85 imports bound [macOS arm64 (native)]; low-level 11889/ high-level verified 0 | PARTIAL - launches, no scenario oracle - process launched and exited 1; no oracle supplied |

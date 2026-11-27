@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-20T09:43:24Z by `python -m tools.gamesdb`. Measured 120; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-27T14:53:47Z by `python -m tools.gamesdb`. Measured 122; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process launched and exited 0; no oracle supplied.
 
@@ -40,6 +40,7 @@ Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process 
 | fifteensolver | fifteensolver.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/fifteensolver/reports/report.html (host: Darwin arm64 (host build)) |
 | filling | filling.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/filling/reports/report.html (host: Darwin arm64 (host build)) |
 | fillingsolver | fillingsolver.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/fillingsolver/reports/report.html (host: Darwin arm64 (host build)) |
+| fixtures | pe32-minimal.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | /Users/haseeb-mir/GameReComp/projects/pe32_min_fixture/reports/report.html (host: Darwin arm64 (host build)) |
 | flip | flip.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/flip/reports/report.html (host: Darwin arm64 (host build)) |
 | flood | flood.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/flood/reports/report.html (host: Darwin arm64 (host build)) |
 | fuzzpuzz | fuzzpuzz.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/fuzzpuzz/reports/report.html (host: Darwin arm64 (host build)) |
@@ -116,6 +117,7 @@ Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process 
 | Hero Core | herocore gm5.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore_gm5/reports/report.html (host: Darwin arm64 (host build)) |
 | Hero Core | herocore gm7.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/herocore_gm7/reports/report.html (host: Darwin arm64 (host build)) |
 | IGI | IGI-Injector.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/IGI_Injector/reports/report.html (host: Darwin arm64 (host build)) |
+| TmForeverModLoader | TmForever.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | /Users/haseeb-mir/GameReComp/projects/TmForever/reports/report.html (host: Darwin arm64 (host build)) |
 | tetris | Tetris.exe | i386 (PE32) | Windows | 70 | launch-failed: rebuilt process boot-failed (exit 2) | projects/Tetris/reports/report.html (host: Darwin arm64 (host build)) |
 | NES_GameGenie | NES_GameGenieEncoder.exe | i386 (PE32) | Windows | 50 | not-run: verification did not run | projects/NES_GameGenieEncoder/reports/report.html |
 | Cannonball | cannonball.exe | x86-64 | Windows | 10 | not-run: verification did not run | projects/cannonball/reports/report.json (host: Darwin arm64) |
