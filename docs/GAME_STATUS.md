@@ -7,8 +7,8 @@ reported verification percentage. Missing oracle evidence is recorded as BLOCKED
 | Game | Input | macOS build | Linux build | Verification |
 | --- | --- | --- | --- | --- |
 | Project I.G.I. | `/Users/haseeb-mir/Downloads/IGI/IGI.EXE` (PE32 i386) | Yes — `projects/igi/build/IGI` renders level 5 and level 7 (`window level5`, `window level7`) | No — no Linux sysroot/daemon here | Source Unicorn sweep in `projects/igi/reports/verify.json`; Frida run parity **BLOCKED** (OS denies `task_for_pid`-style attach to any spawned process on this host). Not 100%. |
-| TrackMania Forever | `/Users/haseeb-mir/Downloads/TmForeverModLoader/TmForever.exe` (PE32 i386) | Pipeline running in background | Not attempted yet | No percentage recorded yet. |
-| AssaultCube | only `cube.exe` PE32+ x86-64 available | No — input rejected by the fail-closed PE32 i386 gate | No | **BLOCKED**: no 32-bit Windows cube.exe exists on this machine. `docs/assaultcube/cli-refusal.txt` has the named reason. |
+| TrackMania Forever | `/Users/haseeb-mir/Downloads/TmForeverModLoader/TmForever.exe` (PE32 i386, sha256 `5e287e79a07cccc9f58989120fda2668d5da1086321033f162492af7c2671672`) | Pipeline running in background | Not attempted yet | No percentage recorded yet. |
+| AssaultCube | official v1.3.0.2 Windows release, extracted `bin_win32/ac_client.exe` (PE32 i386, sha256 `5b588e6ff7710fa0170553506a50bfa14750ccb438a154e4ea0e0b1ba621cefb`) | Pipeline running in background | Not attempted yet | The pre-existing `cube.exe` was only PE32+ x86-64 and was correctly refused (`docs/assaultcube/cli-refusal.txt`); the genuine 32-bit client was downloaded from the official GitHub release and is now in the same pipeline. |
 | Other x86 oracle games (Tetris, igi2, solvers) | `/Users/haseeb-mir/Downloads/recomp-apps/recomp-oracle/*.exe` | Not yet processed | Not yet processed | General verifier is engine-agnostic; no per-game claim made. |
 
 ## What is still required before any 100% claim
