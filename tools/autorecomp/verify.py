@@ -179,11 +179,11 @@ function hook(module) {
   });
 }
 hook(null);
-if (Process.platform === 'windows') {
-  ['kernel32.dll','user32.dll','advapi32.dll'].forEach(function (m) {
-    if (Process.findModuleByName(m)) hook(m);
-  });
-}
+// Wine presents Windows DLLs to a Linux Frida host, so do not gate this on
+// Process.platform: hook them whenever they are loaded.
+['kernel32.dll','user32.dll','advapi32.dll'].forEach(function (m) {
+  if (Process.findModuleByName(m)) hook(m);
+});
 log({name:"start", argv:Process.argv.join(" ")});
 '''
 
