@@ -1293,6 +1293,46 @@ mod tests {
     }
 
     #[test]
+    fn loads_measured_verification_percentages_and_blocked_detail() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("gamerecomp-verify-model-{nanos}"));
+        fs::create_dir_all(dir.join("reports")).unwrap();
+        fs::write(
+            dir.join("reports/report.json"),
+            r#"{"score":50,"outcome":{"status":"partial"}}"#,
+        )
+        .unwrap();
+        fs::write(
+            dir.join("reports/verify.json"),
+            r#"{"source_percent":75.0,"run_percent":0.0,"verified":false,
+                "source":{"checked":4,"passed":3,"detail":"3/4 functions agree; 1 blocked",
+                          "addresses":[{"address":"0x00401000","verdict":"original-faulted","detail":"fetch unmapped"}]},
+                "run":{"checked":0,"passed":0,"reason":"Frida attach denied by the OS"}}"#,
+        )
+        .unwrap();
+        let m = ProjectModel::load(&dir).unwrap();
+        assert_eq!(m.source_percent, 75.0);
+        assert_eq!(m.run_percent, 0.0);
+        assert!(m
+            .verify_errors
+            .iter()
+            .any(|s| s.contains("3/4 functions agree")));
+        assert!(m
+            .verify_errors
+            .iter()
+            .any(|s| s.contains("Frida attach denied")));
+        assert!(m
+            .verify_errors
+            .iter()
+            .any(|s| s.contains("original-faulted")));
+        assert!(m.verify_summary.contains("not verified"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn discovery_skips_unmarked_children_but_keeps_registered_unbuilt_projects() {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
