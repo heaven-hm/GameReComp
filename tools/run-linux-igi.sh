@@ -12,18 +12,21 @@ IMAGE="${IGI_LINUX_IMAGE:-ubuntu:24.04}"
 
 mkdir -p "$SHOT_DIR"
 DOCKER_HOST="$SOCKET" docker run --rm \
+  -e LEVEL_ARGS="$LEVEL_ARGS" \
   -v "$PROJECT_DIR:/src" -v "$DATA_DIR:/data" -v "$SHOT_DIR:/shots" \
   "$IMAGE" bash -lc '
     set -e
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq
-    apt-get install -y -qq libsdl2-2.0-0 libsdl2-ttf-2.0-0 libavformat58 \
-      libavcodec58 libavutil56 libswresample3 xvfb >/tmp/apt.log 2>&1
+    apt-get install -y -qq libsdl2-2.0-0 libsdl2-ttf-2.0-0 libavformat60 \
+      libavcodec60 libavutil58 libswresample4 xvfb >/tmp/apt.log 2>&1
     # Generated .incbin paths are absolute and were recorded on a
     # case-insensitive macOS filesystem; mirror them inside the Linux container.
     mkdir -p /Users/haseeb-mir/GameReComp/projects
     ln -sfn /src /Users/haseeb-mir/GameReComp/projects/IGI
     cd /data
+    # LEVEL_ARGS is intentionally split into separate guest arguments so
+    # `window level5` reaches the guest as two argv entries, not one.
     xvfb-run -a env RECOMP_ASSETS_DIR=/data RECOMP_SCREENSHOT=/shots \
-      /src/build-linux/IGI '"$LEVEL_ARGS"'
+      /src/build-linux/IGI $LEVEL_ARGS
   '

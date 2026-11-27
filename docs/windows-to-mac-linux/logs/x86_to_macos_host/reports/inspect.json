@@ -1,0 +1,22 @@
+{
+  "path": "/Users/haseeb-mir/Documents/Code/GameReComp/tests/fixtures/pe32-minimal.exe",
+  "size": 1280,
+  "sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+  "md5": "118df5ea474a409cd912bbd63432cbd2",
+  "sha1": "ab303a4e3a269f06baea826dd8cf0b4c306846d7",
+  "machine": "i386",
+  "pe_type": "PE32",
+  "subsystem": "Windows GUI",
+  "image_base": "0x00400000",
+  "entry_point": "0x00401000",
+  "linker_version": "6.00",
+  "code_range": [
+    "0x00401000",
+    "0x00401200"
+  ],
+  "import_dlls": [
+    "KERNEL32.dll"
+  ],
+  "import_count": 1,
+  "iat_entries": 1
+}

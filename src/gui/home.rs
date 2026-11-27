@@ -737,7 +737,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                     "drop_any_path_input",
                     t,
                     &app.any_path_input,
-                    "Or paste any path: .exe, .app, ELF or folder",
+                    "Any path: .exe, .app, ELF or folder for batch",
                     app.focused_input == Some(FocusInput::AnyPathInput),
                     true,
                 )
@@ -756,6 +756,22 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                             );
                         } else {
                             this.pick_pe_path(path);
+                        }
+                        cx.notify();
+                    }),
+                ))
+                .child(style::ghost_btn("drop_batch_path_btn", t, "Batch folder").on_click(
+                    cx.listener(|this, _, _, cx| {
+                        let path = PathBuf::from(this.any_path_input.trim());
+                        if !path.is_dir() {
+                            this.push_toast(
+                                "Not a folder",
+                                "Batch mode needs a folder containing Windows .exe games/apps.",
+                                this.tokens().info,
+                                false,
+                            );
+                        } else {
+                            this.start_batch_worker(path, cx);
                         }
                         cx.notify();
                     }),

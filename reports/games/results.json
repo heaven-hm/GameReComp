@@ -2,6 +2,24 @@
   "schema": 1,
   "runs": [
     {
+      "relative_path": "Doukutsu.exe",
+      "game": ".revng-project",
+      "filename": "Doukutsu.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 70,
+      "verification": "not-run",
+      "status": "verification did not run",
+      "run_status": null,
+      "exit_code": null,
+      "host": "",
+      "input_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+      "evidence": "projects/cavestory-doukutsu/reports/report.html",
+      "project_dir": "projects/cavestory-doukutsu",
+      "port_details": "3317 fns recovered; 8 units / 51.0 MiB C; binary Doukutsu 10443 KiB; low-level 3310/ high-level verified 7",
+      "generated_at": "2026-11-27T21:02:14Z"
+    },
+    {
       "relative_path": "ac_client.exe",
       "game": "bin_win32",
       "filename": "ac_client.exe",
@@ -16,8 +34,8 @@
       "input_sha256": "5b588e6ff7710fa0170553506a50bfa14750ccb438a154e4ea0e0b1ba621cefb",
       "evidence": "/Users/haseeb-mir/GameReComp/projects/AssaultCube/reports/report.html",
       "project_dir": "/Users/haseeb-mir/GameReComp/projects/AssaultCube",
-      "port_details": "26673 fns recovered; 233 units / 1961.1 MiB C; low-level 26673/ high-level verified 0; compile failed: --reuse-build: /Users/haseeb-mir/GameReComp/projects/AssaultCube/build/ac_client is missing; run a b",
-      "generated_at": "2026-11-27T16:53:39Z"
+      "port_details": "26673 fns recovered; 233 units / 1961.1 MiB C; low-level 26673/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/GameReComp/projects/AssaultCube/logs/compile.log) [ 34%] Buildin",
+      "generated_at": "2026-11-27T20:00:56Z"
     },
     {
       "relative_path": "TmForever.exe",
@@ -234,24 +252,6 @@
       "project_dir": "projects/OrgView",
       "port_details": "603 fns recovered; 2 units / 5.6 MiB C; binary OrgView 2729 KiB [macOS arm64 (native)]; 122 imports bound; low-level 603/ high-level verified 0",
       "generated_at": "2026-11-19T16:18:16Z"
-    },
-    {
-      "relative_path": "Doukutsu.exe",
-      "game": "Cave Story",
-      "filename": "Doukutsu.exe",
-      "arch": "i386 (PE32)",
-      "os": "Windows",
-      "score": 93,
-      "verification": "partial",
-      "status": "process launched and stayed alive until the 10s timeout; no crash observed, no oracle",
-      "run_status": "timeout",
-      "exit_code": null,
-      "host": "Darwin arm64 (host build)",
-      "input_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
-      "evidence": "projects/Doukutsu/reports/report.html",
-      "project_dir": "projects/Doukutsu",
-      "port_details": "3317 fns recovered; 8 units / 51.0 MiB C; binary Doukutsu 10404 KiB [macOS arm64 (native)]; 143 imports bound; low-level 3310/ high-level verified 7",
-      "generated_at": "2026-11-19T16:18:05Z"
     },
     {
       "relative_path": "DoConfig.exe",

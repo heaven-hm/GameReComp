@@ -893,6 +893,11 @@ static void d3d_write_prim_caps(uint32_t p, int depth_bits) {
  * the common software rasterisers name themselves, and everything else is the
  * GPU that drew the window in the first place. */
 static int gl_rasterises_on_hardware(void) {
+    /* Headless Linux CI/Xvfb uses a software GL renderer. Forcing the HAL
+     * identity is an explicit testing override, not a claim about hardware;
+     * the rendered frames still come from the same OpenGL path. */
+    const char *force = getenv("RECOMP_FORCE_D3D_HAL");
+    if (force && *force && *force != '0') return 1;
     if (!load_gl()) return 0;
     const char *r = (const char *)p_getstring(GL_RENDERER);
     if (!r) return 0;

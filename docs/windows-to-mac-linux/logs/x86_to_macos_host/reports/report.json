@@ -1,0 +1,195 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-27T04:45:00Z",
+  "input": "/Users/haseeb-mir/Documents/Code/GameReComp/tests/fixtures/pe32-minimal.exe",
+  "project": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.02,
+      "status": "ok",
+      "message": "i386 PE32, 1 imports, entry 0x00401000",
+      "data": {
+        "path": "/Users/haseeb-mir/Documents/Code/GameReComp/tests/fixtures/pe32-minimal.exe",
+        "size": 1280,
+        "sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+        "md5": "118df5ea474a409cd912bbd63432cbd2",
+        "sha1": "ab303a4e3a269f06baea826dd8cf0b4c306846d7",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows GUI",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401000",
+        "linker_version": "6.00",
+        "code_range": [
+          "0x00401000",
+          "0x00401200"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll"
+        ],
+        "import_count": 1,
+        "iat_entries": 1
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 0.01,
+      "status": "ok",
+      "message": "1 functions, 4 instructions",
+      "data": {
+        "count": 1,
+        "instructions": 4
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.0,
+      "status": "ok",
+      "message": "2 source files, 1237 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 1237,
+        "lift_errors": 0,
+        "seconds": 0.0
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.04,
+      "status": "ok",
+      "message": "project at /Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host",
+      "data": {
+        "project": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host",
+        "name": "pe32_minimal",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 1,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3"
+          }
+        ],
+        "runtime_files": 44,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 4.49,
+      "status": "ok",
+      "message": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host/build/pe32_minimal (859360 bytes, 4.5s)",
+      "data": {
+        "binary": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host/build/pe32_minimal",
+        "sha256": "4a8122332060244de8fa154927ff9c871b5794aea5197e713c3dea615d0bdf45",
+        "seconds": 4.5,
+        "source_bytes": 1373259,
+        "build_timeout_seconds": 606.5482091903687,
+        "build_timeout_adaptive": true
+      }
+    },
+    {
+      "name": "run",
+      "seconds": 0.9,
+      "status": "ok",
+      "message": "exited, exit=0, 0.9s, 0 unresolved imports",
+      "data": {
+        "command": [
+          "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host/build/pe32_minimal"
+        ],
+        "cwd": "/Users/haseeb-mir/Documents/Code/GameReComp/tests/fixtures",
+        "headless": true,
+        "timeout_seconds": 12.0,
+        "timed_out": false,
+        "status": "exited",
+        "exit_code": 0,
+        "seconds": 0.9,
+        "booted": true,
+        "entry_point": "0x00401000",
+        "unresolved_import_count": 0,
+        "bound_imports": 1,
+        "unresolved_imports": [],
+        "import_trace_enabled": false,
+        "import_profile": [],
+        "import_calls_total": 0,
+        "log_stdout": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host/logs/run.stdout.log",
+        "log_stderr": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host/logs/run.stderr.log",
+        "stdout_tail": "",
+        "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x3000\n[pe] bound 1 imports, 0 unresolved\n[host] C:\\pe32-minimal.exe booted: entry 0x00401000, 0 unresolved imports\n[win32hle] ExitProcess(0) from guest 0x00401000",
+        "output_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x3000\n[pe] bound 1 imports, 0 unresolved\n[host] C:\\pe32-minimal.exe booted: entry 0x00401000, 0 unresolved imports\n[win32hle] ExitProcess(0) from guest 0x00401000"
+      }
+    },
+    {
+      "name": "verify",
+      "seconds": 0.0,
+      "status": "ok",
+      "message": "partial: process launched and exited 0; no oracle supplied",
+      "data": {
+        "status": "partial",
+        "reason": "process launched and exited 0; no oracle supplied"
+      }
+    }
+  ],
+  "outcome": {
+    "schema": 1,
+    "generated_at": "2026-11-27T04:45:00Z",
+    "status": "partial",
+    "reason": "process launched and exited 0; no oracle supplied",
+    "scope": "launch",
+    "game": "pe32-minimal.exe",
+    "executable_sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+    "target": {
+      "os": "darwin",
+      "arch": "arm64",
+      "label": "Darwin arm64 (host build)"
+    },
+    "checks": [],
+    "oracle_gaps": [
+      "no independent original-Windows oracle supplied",
+      "no frame, input or audio comparison",
+      "low-level register C is not high-level reconstructed source"
+    ],
+    "run": {
+      "command": [
+        "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host/build/pe32_minimal"
+      ],
+      "cwd": "/Users/haseeb-mir/Documents/Code/GameReComp/tests/fixtures",
+      "headless": true,
+      "timeout_seconds": 12.0,
+      "timed_out": false,
+      "status": "exited",
+      "exit_code": 0,
+      "seconds": 0.9,
+      "booted": true,
+      "entry_point": "0x00401000",
+      "unresolved_import_count": 0,
+      "bound_imports": 1,
+      "unresolved_imports": [],
+      "import_trace_enabled": false,
+      "import_profile": [],
+      "import_calls_total": 0,
+      "log_stdout": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host/logs/run.stdout.log",
+      "log_stderr": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/windows-to-mac-linux/logs/x86_to_macos_host/logs/run.stderr.log",
+      "stdout_tail": "",
+      "stderr_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x3000\n[pe] bound 1 imports, 0 unresolved\n[host] C:\\pe32-minimal.exe booted: entry 0x00401000, 0 unresolved imports\n[win32hle] ExitProcess(0) from guest 0x00401000",
+      "output_tail": "[pe] <embedded image> mapped at 0x00400000, span 0x3000\n[pe] bound 1 imports, 0 unresolved\n[host] C:\\pe32-minimal.exe booted: entry 0x00401000, 0 unresolved imports\n[win32hle] ExitProcess(0) from guest 0x00401000"
+    }
+  },
+  "score": 93,
+  "manifest": "manifest.json"
+}

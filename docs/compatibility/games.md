@@ -7,14 +7,17 @@ Host from this inventory run: Darwin/arm64. Other hosts are `HOST_NOT_TESTED`, n
 | Verification / run status | Rows |
 |---|---|
 | launch-failed / aborted | 4 |
-| launch-failed / boot-failed | 5 |
+| launch-failed / boot-failed | 6 |
 | launch-failed / crashed | 1 |
-| not-run / unknown | 17 |
+| not-run / unknown | 19 |
 | partial / exited | 86 |
-| partial / timeout | 8 |
+| partial / timeout | 7 |
 
 | Game | Input SHA-256 (12) | Verification | Host |
 |---|---|---|---|
+| .revng-project | `fa18379fe942` | not-run | HOST_NOT_TESTED |
+| bin_win32 | `5b588e6ff771` | not-run | HOST_NOT_TESTED |
+| TmForeverModLoader | `5e287e79a07c` | launch-failed | Darwin arm64 (host build) |
 | fixtures | `583759c15211` | partial | Darwin arm64 (host build) |
 | Downloads | `7346128fab42` | partial | Darwin arm64 (host build) |
 | Parsec47 | `41b2f77d2d7a` | launch-failed | Darwin arm64 (host build) |
@@ -26,9 +29,6 @@ Host from this inventory run: Darwin/arm64. Other hosts are `HOST_NOT_TESTED`, n
 | GeneRally | `ced9e54e6578` | partial | Darwin arm64 (host build) |
 | GeneRally | `868175b2cc24` | launch-failed | Darwin arm64 (host build) |
 | Cave Story | `07bbca123dcb` | launch-failed | Darwin arm64 (host build) |
-| Cave Story | `fa18379fe942` | partial | Darwin arm64 (host build) |
 | Cave Story | `03f3c73a3692` | partial | Darwin arm64 (host build) |
-| IGI | `dea34892d417` | partial | Darwin arm64 (host build) |
-| IGI | `81e6789212bf` | launch-failed | Darwin arm64 (host build) |
 
-Total rows: 121. A screenshot or process exit is not an independent original-game oracle; see `docs/VERIFICATION.md`.
+Total rows: 123. A screenshot or process exit is not an independent original-game oracle; see `docs/VERIFICATION.md`.

@@ -1,0 +1,275 @@
+{
+  "schema": 1,
+  "game": "pe32-minimal.exe",
+  "input_sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+  "source_digest_sha256": "feb3e66354c16b3b9b1ff7964598cd5c72108b30a9f2f3f61cc1d75037835f10",
+  "source_files": [
+    {
+      "path": "src/main.c",
+      "sha256": "087e82271e06a867f70a32267ea76c968d4b854055ace3d205910ab82e9e43b8",
+      "size": 1064
+    },
+    {
+      "path": "src/recomp/gen/recomp_0000.c",
+      "sha256": "af2b707c91bc9d9d4b7d1898f709f2b3f8d405e27765e609d966fdfb3747b9a7",
+      "size": 994
+    },
+    {
+      "path": "src/recomp/gen/recomp_dispatch.c",
+      "sha256": "3dc3a81a38670e94641d09afc3533c42b65960d50b28bc92b76e5adc86cbd2e6",
+      "size": 243
+    },
+    {
+      "path": "src/recomp/gen/recomp_funcs.h",
+      "sha256": "d8d1b647d41ba0c4924ea3ef0462a5911cc70f5a695468d27ef8b8bd1078ce44",
+      "size": 165
+    },
+    {
+      "path": "src/recomp/gen/recomp_image.S",
+      "sha256": "cbdcc7e81f032c80d2816d2fea0b494b717b0f7af943fc58cf9ff5d829d19d1f",
+      "size": 567
+    },
+    {
+      "path": "src/recomp/gen/recomp_image.bin",
+      "sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+      "size": 1280
+    },
+    {
+      "path": "src/recomp/gen/recomp_image.c",
+      "sha256": "b975b6a73b2f6d18de4485f42177d55a2a4fe10ebad8591516a9cae0fd2eeeb0",
+      "size": 301
+    },
+    {
+      "path": "src/recomp/gen/recomp_units.json",
+      "sha256": "c2ba0b283c2bb42299b0b8ca7125a3b6270d3d1beef5375fc42a79a4f20a5414",
+      "size": 257
+    },
+    {
+      "path": "src/runtime/recomp32/recomp_types.h",
+      "sha256": "99fef18ab3df781a5fdba856555fd41214497aba323125ff1a53ecdbd8e9c64d",
+      "size": 57578
+    },
+    {
+      "path": "src/runtime/win32hle/advapi32.c",
+      "sha256": "7e3389b776df2bbacde5152c1289a3fbc3db362ed51a12fc668bf0b006e984d1",
+      "size": 31871
+    },
+    {
+      "path": "src/runtime/win32hle/avifil32.c",
+      "sha256": "883612525653598b23b25c36fb2a7551dbd1cfdc924c15cfac3034445777cd80",
+      "size": 20047
+    },
+    {
+      "path": "src/runtime/win32hle/bink.c",
+      "sha256": "d8bc98b6ae40fc38cdb059e9ebac99bcb04d11b35e33d95f64eccee9e6a03929",
+      "size": 16065
+    },
+    {
+      "path": "src/runtime/win32hle/clock.c",
+      "sha256": "cc30256608f46922e9e0f1b75df0d0b8e4bce021922cdf221f5e0f230ba67ffd",
+      "size": 6533
+    },
+    {
+      "path": "src/runtime/win32hle/d3d7.c",
+      "sha256": "05eca21b0110f819f97b49547eb3e8450f95f54e4b93fa8e73e41ed99c351db4",
+      "size": 103863
+    },
+    {
+      "path": "src/runtime/win32hle/ddraw.c",
+      "sha256": "f325003e34e85b4018f3013c63fbbe20a3f38166ba546029f39c553f4831c8af",
+      "size": 49931
+    },
+    {
+      "path": "src/runtime/win32hle/dinput.c",
+      "sha256": "94e5be5bbf811ca20d212147513e5d521e7b560385b49a31b11e7c83c050545f",
+      "size": 26309
+    },
+    {
+      "path": "src/runtime/win32hle/dsound.c",
+      "sha256": "966d053bd49c54eb774075c6694e876039d0e480d375d3b5962d8b97eaa50610",
+      "size": 20808
+    },
+    {
+      "path": "src/runtime/win32hle/eh32.c",
+      "sha256": "d21fabe5c8bd8c776d75ebc0145cf2a7b120c1cf5f16eee132221cb4b2b17d00",
+      "size": 13114
+    },
+    {
+      "path": "src/runtime/win32hle/gdi32.c",
+      "sha256": "9035eaf5dd59a4c8045b337f7adbca15c48cad62a3af24733899116be4407ed4",
+      "size": 8582
+    },
+    {
+      "path": "src/runtime/win32hle/gdidc.c",
+      "sha256": "743f4a3d8e92289c40650717581a09501bf07f22d4d87cf75deb6b95b5d68456",
+      "size": 81261
+    },
+    {
+      "path": "src/runtime/win32hle/gl32.c",
+      "sha256": "5cdbcdba4ea5b175902415cf5e4b02d2e0e504078aea86b815111ac345fbb018",
+      "size": 15704
+    },
+    {
+      "path": "src/runtime/win32hle/guest_mem.c",
+      "sha256": "591afcd03cdd54768497e1de65c2c35d2e735824797d1c8b55a15a899a6016c5",
+      "size": 19047
+    },
+    {
+      "path": "src/runtime/win32hle/hle_path.c",
+      "sha256": "1ab1e3ee0b7f64a07b53c1d781767f43153d2ffe0f579a8219799e80814bb043",
+      "size": 8411
+    },
+    {
+      "path": "src/runtime/win32hle/host.c",
+      "sha256": "dae889635ce8491df6258fc64ae99a6318d8b83ec935362013787c4eeed50f72",
+      "size": 23851
+    },
+    {
+      "path": "src/runtime/win32hle/host.h",
+      "sha256": "73d99d5d66b6d06ba9ae39753f64d3a572bdec64c3229dbf917c0923e3165e33",
+      "size": 1596
+    },
+    {
+      "path": "src/runtime/win32hle/host_lite.c",
+      "sha256": "6a594e6b035539b02e60d709b9292fae384bf51570e619771a40600074d36477",
+      "size": 23954
+    },
+    {
+      "path": "src/runtime/win32hle/idm_extra.c",
+      "sha256": "fcf2afd8a5f2b6bd8ab7f4ad275836b81af1be8bf58c77d32d736a8b10b7953d",
+      "size": 9061
+    },
+    {
+      "path": "src/runtime/win32hle/input_rec.c",
+      "sha256": "9c4f66850f598e14d2eb274df9f538a94024928300ae28fcae36ad20292fc16a",
+      "size": 6898
+    },
+    {
+      "path": "src/runtime/win32hle/kernel32.c",
+      "sha256": "bfabb4b02211a0bcde8a5713ee718917c941be62139287e038aa205f49ca0d86",
+      "size": 46099
+    },
+    {
+      "path": "src/runtime/win32hle/kernel32_atom.c",
+      "sha256": "8e92b58f280c409c25a29ce03d03756696cfa26e47997f2f320bcba02ef9c3da",
+      "size": 6212
+    },
+    {
+      "path": "src/runtime/win32hle/kernel32_crt.c",
+      "sha256": "4bd6ad5536925969dc54046ceb9557f954d48965437e986a6ea54abeb2aa9eb8",
+      "size": 36373
+    },
+    {
+      "path": "src/runtime/win32hle/kernel32_ext.c",
+      "sha256": "196e7bdae38ddbf53e485c74b127524a37828bc942ca5bd18f1f0e4b0a07d8fb",
+      "size": 53856
+    },
+    {
+      "path": "src/runtime/win32hle/lz32.c",
+      "sha256": "f18852ff91c86a4bdca9290abef3f964ffa98df1be001636b77150b9b731e0ee",
+      "size": 4849
+    },
+    {
+      "path": "src/runtime/win32hle/module.c",
+      "sha256": "d8742baf1a602757f4bcad5919761407b5a4c0e3755ea83ad7b89d7bbe800e8a",
+      "size": 19166
+    },
+    {
+      "path": "src/runtime/win32hle/mss.c",
+      "sha256": "3bc4d3883c554631a2c4c9ba98f266f4f152ed4d48980bcabb0a0fa86186ee08",
+      "size": 13034
+    },
+    {
+      "path": "src/runtime/win32hle/msvcrt.c",
+      "sha256": "8a6eb97033c372a6815336fc2da5aebcce913c123dd4e898ac9717da4ffd663c",
+      "size": 124470
+    },
+    {
+      "path": "src/runtime/win32hle/ole32.c",
+      "sha256": "b10a1464c8e541b0b6c4420255b219a4bcef13e9d9edaa2d34b890409c342301",
+      "size": 23571
+    },
+    {
+      "path": "src/runtime/win32hle/pe_format.h",
+      "sha256": "490a339b8201bfbca5e65c94eb1b9a1a301fcedebed5ed6b5d663d20e5f4fa65",
+      "size": 3203
+    },
+    {
+      "path": "src/runtime/win32hle/pe_loader.c",
+      "sha256": "a55379549a5fd703e53449fb5ee8d9427f1daa2726dfa14447fb1921544e692c",
+      "size": 8569
+    },
+    {
+      "path": "src/runtime/win32hle/pe_loader.h",
+      "sha256": "676658d6f745918273fa353e741bb2f1cb3a203daa37098f466d7de8c3552d59",
+      "size": 2454
+    },
+    {
+      "path": "src/runtime/win32hle/present.c",
+      "sha256": "fcdb06ee2e072ac7a889ff1be55207e3b15644ad3a1620ec855d2822e60fc747",
+      "size": 4483
+    },
+    {
+      "path": "src/runtime/win32hle/screen.c",
+      "sha256": "28c28b69339c0aa35a41265183fc652f8508b1658a439efe8a82d395f32f448c",
+      "size": 48518
+    },
+    {
+      "path": "src/runtime/win32hle/screenshot.c",
+      "sha256": "a4557ff4834d07a9521450c519e639672a398676c726408c284fe3cabeaeef0c",
+      "size": 6143
+    },
+    {
+      "path": "src/runtime/win32hle/sdl12.c",
+      "sha256": "1ed51d3f64d9f16f9f54b25c840e8a48b2a78404d226c339731abf802dd002ed",
+      "size": 105227
+    },
+    {
+      "path": "src/runtime/win32hle/sdlmix.c",
+      "sha256": "8461112440e675288b5686b0f49684201f85a85e7c425c75a7e5d3a1d4b9cffa",
+      "size": 21482
+    },
+    {
+      "path": "src/runtime/win32hle/storage.c",
+      "sha256": "1f5ae20801e963bbc74a052d761f6579017329d8f0dcdf985841befa4c437da9",
+      "size": 29466
+    },
+    {
+      "path": "src/runtime/win32hle/user32.c",
+      "sha256": "fe0bb69563d3924dcaa4caee286305b779c7177e5d958412c78bdfea5eca434a",
+      "size": 176763
+    },
+    {
+      "path": "src/runtime/win32hle/win32hle.h",
+      "sha256": "b7f26dca72f6b671123acb7daba3ec9b1cd2e3444efc061ac7f3a291d7bf254d",
+      "size": 36010
+    },
+    {
+      "path": "src/runtime/win32hle/winamp_extra.c",
+      "sha256": "c25f1388524255fcb62007213751153f50ebf8e343fc38b6b302079c68f4e2ad",
+      "size": 4671
+    },
+    {
+      "path": "src/runtime/win32hle/wininet.c",
+      "sha256": "c3f85a41b0f9acc091732650c51ef275cbc12c3b5ed1f9866fdc5b4a4fe51158",
+      "size": 4108
+    },
+    {
+      "path": "src/runtime/win32hle/winmm.c",
+      "sha256": "d7d63f55dbbd13ee8673c776f691e00b862f5f40dcd2b02a763f075799dbab3d",
+      "size": 16152
+    },
+    {
+      "path": "src/runtime/win32hle/wsock32.c",
+      "sha256": "de6883462ee20d74f3743755ef256d5cef9ae11fa0ba762a3a02ca15a5c465cd",
+      "size": 28909
+    }
+  ],
+  "binary": {
+    "path": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/final-e2e/pipeline-fixture/build/pe32_minimal",
+    "sha256": "3edc723220571d3e166e4a83eb7b302344a98deb4e607b390c0e7600874bf773",
+    "size": 859360,
+    "built_from_source_digest": "feb3e66354c16b3b9b1ff7964598cd5c72108b30a9f2f3f61cc1d75037835f10",
+    "build_command": "cmake -S /Users/haseeb-mir/Documents/Code/GameReComp/docs/final-e2e/pipeline-fixture -B /Users/haseeb-mir/Documents/Code/GameReComp/docs/final-e2e/pipeline-fixture/build && cmake --build /Users/haseeb-mir/Documents/Code/GameReComp/docs/final-e2e/pipeline-fixture/build"
+  }
+}

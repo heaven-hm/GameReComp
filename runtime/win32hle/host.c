@@ -478,6 +478,8 @@ int recomp_host_main(int argc, char **argv) {
         permissive ? hle_resolve_import_or_stub : hle_resolve_import;   /* forward-declared below */
 
     recomp_host_init();
+    fprintf(stderr, "[host] embedded=%d image_size=%lu\n", have_embedded_image(),
+            (unsigned long)recomp_original_image_size);
 
     if (have_embedded_image()) {
         /* The original executable is embedded: it is not needed at run time.
