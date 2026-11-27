@@ -12,6 +12,20 @@ Updated 2026-11-25T23:30:00Z by `python -m tools.gamesdb --matrix`; IGI fresh-fr
 
 **Evidence-backed results:** **9 / 128** recorded rows point at a committed proof file; **9** of those carry a PASS/PARTIAL verdict (**1** explicitly report `0` unresolved imports). Other rows are NOT RUN / FAIL here even when a local build log exists outside version control.
 
+## Priority titles — games and apps (honest status)
+
+These are the titles named as priorities. Every status is fail-closed: no PASS
+without an independent original-Windows scenario oracle.
+
+| Title | Honest status | Full-frame proof |
+| --- | --- | --- |
+| IGI | PARTIAL — native render frames; no Windows oracle | `../proof/screenshots/igi-level5-fresh-0001.png` (splash, not gameplay) |
+| IDM | BLOCKED — rebuilt binary boots then aborts on a guest C++ exception; no port | `e2e-proof/idm-gui-pipeline.png` (tool capture, not gameplay) |
+| AssaultCube | PARTIAL — source-built native port renders; no Windows oracle | `../proof/screenshots/ac-native-macos-setup-frame.png` |
+| TrackMania ESWC / Forever | BLOCKED — no native binary and no committed frame | none — no real frame committed |
+| Ghostty | PARTIAL — process-level Windows/Linux runs; no GUI frame | none — no real frame committed |
+| Winamp | BLOCKED — rebuilt binary boot-fails with unresolved imports | `e2e-proof/winamp-gui-pipeline.png` (tool capture, not gameplay) |
+
 ## Installed on this machine (Highball bottle)
 
 All 361 installed Windows executables found under `~/Library/Application Support/Highball/bottles/Games/` are listed below. Counts: 5 BAD, 192 PE32 i386, 164 PE32+ x86-64. A listed app is an installed input, not a working port. `PE32+ x86-64` and invalid headers fail closed with a named reason. Screenshots are embedded at full frame size only where a real committed frame exists; every other row says so explicitly. No frame is fabricated, and no row is PASS without an independent Windows scenario oracle.
@@ -382,38 +396,41 @@ All 361 installed Windows executables found under `~/Library/Application Support
 
 ### Full-frame gallery (real committed frames only)
 
-![Fresh native IGI level one frame; render evidence only, no](proof/screenshots/igi-level1-fresh-0002.png)
+These are real committed byte-for-byte frames shown at full frame width. They
+are render/tool evidence, not an original-Windows oracle. IGI images are
+native splash/loading screens, not gameplay levels.
 
-*Fresh native IGI level one frame; render evidence only, no*
+![Native IGI splash frame; render evidence, not a Windows oracle.](../proof/screenshots/igi-level1-fresh-0002.png)
 
-![Fresh native IGI level five frame; render evidence only, no](proof/screenshots/igi-level5-fresh-0001.png)
+*Native IGI splash frame; render evidence, not a Windows oracle.*
 
-*Fresh native IGI level five frame; render evidence only, no*
+![Native IGI splash frame; render evidence, not a Windows oracle.](../proof/screenshots/igi-level5-fresh-0001.png)
 
-![Fresh native IGI level nine frame; render evidence only, no](proof/screenshots/igi-level9-fresh-0002.png)
+*Native IGI splash frame; render evidence, not a Windows oracle.*
 
-*Fresh native IGI level nine frame; render evidence only, no*
+![Native IGI splash frame; render evidence, not a Windows oracle.](../proof/screenshots/igi-level9-fresh-0002.png)
 
-![Native Cube render frame zero; render evidence only, no Windows](docs/screenshots/cube-native-frame-0000.png)
+*Native IGI splash frame; render evidence, not a Windows oracle.*
 
-*Native Cube render frame zero; render evidence only, no Windows*
+![Native Cube render frame zero; render evidence, not an oracle.](screenshots/cube-native-frame-0000.png)
 
-![Native Cube render frame one; render evidence only, no Windows](docs/screenshots/cube-native-frame-0001.png)
+*Native Cube render frame zero; render evidence, not an oracle.*
 
-*Native Cube render frame one; render evidence only, no Windows*
+![Native Cube render frame one; render evidence, not an oracle.](screenshots/cube-native-frame-0001.png)
 
-![Native Tetris OUCC render frame; render evidence only, no Windows](docs/screenshots/native/tetris-oucc-new-01.png)
+*Native Cube render frame one; render evidence, not an oracle.*
 
-*Native Tetris OUCC render frame; render evidence only, no Windows*
+![Native Tetris OUCC frame; render evidence, not an oracle.](screenshots/native/tetris-oucc-new-01.png)
 
-![Native Cave Story render frame; render evidence only, no Windows](docs/screenshots/native/cavestory-native-01.png)
+*Native Tetris OUCC frame; render evidence, not an oracle.*
 
-*Native Cave Story render frame; render evidence only, no Windows*
+![Native Cave Story frame; render evidence, not an oracle.](screenshots/native/cavestory-native-01.png)
 
-![Native AssaultCube setup frame; render evidence only, no Windows oracle.](proof/screenshots/ac-native-macos-setup-frame.png)
+*Native Cave Story frame; render evidence, not an oracle.*
 
-*Native AssaultCube setup frame; render evidence only, no Windows oracle.*
+![Native AssaultCube setup frame; render evidence, not an oracle.](../proof/screenshots/ac-native-macos-setup-frame.png)
 
+*Native AssaultCube setup frame; render evidence, not an oracle.*
 
 ## This repository (measured)
 
@@ -446,7 +463,7 @@ All 361 installed Windows executables found under `~/Library/Application Support
 | Hero Core (herocore gm5.exe) | Windows | i386 (PE32) | 17053 fns recovered; 19 units / 66.4 MiB C; binary herocore_gm5 24744 KiB [macOS arm64 (native)]; 495 imports bound, 18 unresolved; low-level 17053/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | Hero Core (herocore gm7.exe) | Windows | i386 (PE32) | 21674 fns recovered; 24 units / 87.0 MiB C; binary herocore_gm7 30408 KiB [macOS arm64 (native)]; 506 imports bound, 26 unresolved; low-level 21674/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
 | IGI (IGI-Injector.exe) | Windows | i386 (PE32) | 2687 fns recovered; 7 units / 41.9 MiB C; binary IGI_Injector 10759 KiB [macOS arm64 (native)]; 108 imports bound, 17 unresolved; low-level 2687/ high-level verified 0 | - | FAIL - rebuilt process cannot boot - rebuilt process boot-failed (exit 2) |
-| IGI | Windows | i386 (PE32) | 7325 fns recovered; 16 units / 114.9 MiB C; binary igi 38292 KiB [macOS arm64 (native)]; 128 imports bound; low-level 7325/ high-level verified 0 | fresh level 1/5/9 frames in `proof/screenshots/` | PARTIAL - fresh native frames and process proof in `proof/ports/igi-native-port.json`; no original-Windows oracle |
+| IGI | Windows | i386 (PE32) | 7325 fns recovered; 16 units / 114.9 MiB C; binary igi 38292 KiB [macOS arm64 (native)]; 128 imports bound; low-level 7325/ high-level verified 0 | fresh native splash/loading frames in `proof/screenshots/` | PARTIAL - fresh native frames and process proof in `proof/ports/igi-native-port.json`; no original-Windows oracle |
 | Ikachan (dxIka.exe) | Windows | i386 (PE32) | 545 fns recovered; 3 units / 9.8 MiB C; binary dxIka 2921 KiB [macOS arm64 (native)]; 97 imports bound; low-level 543/ high-level verified 2 | - | NOT RUN - measurement not committed (local build log only): process launched and exited 1; no oracle supplied |
 | NES_GameGenie (NES_GameGenieEncoder.exe) | Windows | i386 (PE32) | 84 fns recovered; 2 units / 0.3 MiB C; low-level 84/ high-level verified 0; compile failed: build failed (see /Users/haseeb-mir/Documents/Code/GameReComp/projects/NES_GameGenieEncoder/logs/com | - | NOT RUN - verification did not run |
 | Noiz2sa | Windows | i386 (PE32) | 6615 fns recovered; 14 units / 94.3 MiB C; binary noiz2sa 22293 KiB [macOS arm64 (native)]; 69 imports bound; low-level 6615/ high-level verified 0 | - | NOT RUN - measurement not committed (local build log only): process launched and stayed alive until the 10s timeout; no crash observed, no oracle |
