@@ -26,6 +26,7 @@ screenshots below are the driver's own captures.
 | Home **Open path** direct entry | PE32+ x86-64 `cube.exe` selected from an arbitrary path; GUI shows "PE32+ x86-64 accepted — backend result will be recorded" | `anypath-initial.png`, `anypath-x64-result.png` |
 | Home **Open path** with a macOS app bundle | `/System/Applications/Calculator.app` accepted as "Mach-O universal detected — source-level port route, no PE lifting" | `anypath-macos-app-result2.png` |
 | Home **Open path** with a Linux ELF | `/tmp/linux-ls` accepted as "ELF detected — source-level port route, no PE lifting" | `anypath-linux-elf-result2.png` |
+| Home option chips (Game/Desktop/Console, output OS/arch, Auto/WASM), verbose logs, screenshots, verify-standalone, Show all CLI parameters, Copy command, Choose project folder | Clicked and state visibly changed (e.g. Console App + windows/arm64 + expanded CLI panel) | `opt-*.png` |
 | Header **Launch** / **Create Issue** / **Open Output Folder** / **Dismiss** | Present and wired but not exercised in this pass to avoid spawning extra processes or external issue pages | — |
 
 Not clicked deliberately: destructive **Remove / Delete** and external-URL **Report a
