@@ -1818,8 +1818,9 @@ impl GameReCompApp {
         );
         cx.notify();
 
+        let python = std::env::var("RECOMP_PYTHON").unwrap_or_else(|_| "python3".to_string());
         thread::spawn(move || {
-            let mut cmd = Command::new("python3");
+            let mut cmd = Command::new(python);
             cmd.args(&args)
                 .current_dir(repo_root)
                 .stdout(Stdio::piped())
