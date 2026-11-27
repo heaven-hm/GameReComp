@@ -952,14 +952,14 @@ void hle_screen_mouse(int *x, int *y) {
 }
 void hle_screen_d3d7_active(int active) { g_d3d7_active = active != 0; }
 void hle_screen_gl_swap(void) {
-    if (g_win && g_glctx && pthread_equal(pthread_self(), g_video_thread)) {
+    if (g_win && g_glctx) {
         hle_screen_pump();
         SDL_GL_SwapWindow(g_win);
     }
 }
 
 void hle_screen_gl_viewport(int x, int y, int width, int height) {
-    if (!g_win || !g_glctx || !pthread_equal(pthread_self(), g_video_thread)) return;
+    if (!g_win || !g_glctx) return;
     int drawable_w = 0, drawable_h = 0;
     SDL_GL_GetDrawableSize(g_win, &drawable_w, &drawable_h);
     if (width < 0 || height < 0) return;
