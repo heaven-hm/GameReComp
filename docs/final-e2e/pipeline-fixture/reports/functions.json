@@ -1,0 +1,19 @@
+{
+  "count": 1,
+  "thunks": 0,
+  "instructions": 4,
+  "functions": [
+    {
+      "address": "0x00401000",
+      "name": "sub_00401000",
+      "size": 13,
+      "blocks": 1,
+      "instructions": 4,
+      "is_thunk": false,
+      "calls": 0,
+      "source_unit": "src/recomp/gen/recomp_0000.c",
+      "category": "LOW_LEVEL_FALLBACK"
+    }
+  ],
+  "lift_errors": 0
+}

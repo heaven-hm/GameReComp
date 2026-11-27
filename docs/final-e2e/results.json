@@ -1,0 +1,37 @@
+[
+  {
+    "input": "Windows x86 PE32",
+    "path": "/Users/haseeb-mir/Documents/Code/GameReComp/tests/fixtures/pe32-minimal.exe",
+    "exit": 0,
+    "result": "PE: PE32 i386 image base 0x400000 -- supported target",
+    "log": "docs/final-e2e/windows-x86-pe32.log"
+  },
+  {
+    "input": "Windows x64 PE32+",
+    "path": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/cross-os-proof/fixtures/pe32plus-minimal.exe",
+    "exit": 2,
+    "result": "PE: PE32+ x86-64 image base 0x40000000 -- NOT a supported target",
+    "log": "docs/final-e2e/windows-x64-pe32+.log"
+  },
+  {
+    "input": "macOS app arm64/x86_64",
+    "path": "/System/Applications/Notes.app",
+    "exit": 1,
+    "result": "PE: not usable: macOS Mach-O input: PE32 lifting does not apply; use the verified source-level port",
+    "log": "docs/final-e2e/macos-app-arm64-x86_64.log"
+  },
+  {
+    "input": "macOS app universal",
+    "path": "/System/Applications/Calculator.app",
+    "exit": 1,
+    "result": "PE: not usable: macOS Mach-O input: PE32 lifting does not apply; use the verified source-level port",
+    "log": "docs/final-e2e/macos-app-universal.log"
+  },
+  {
+    "input": "Linux ELF x86-64",
+    "path": "/Users/haseeb-mir/Documents/Code/GameReComp/docs/cua-e2e/linux-elf-amd64",
+    "exit": 1,
+    "result": "PE: not usable: Linux ELF input: PE32 lifting does not apply; use the verified source-level port",
+    "log": "docs/final-e2e/linux-elf-x86-64.log"
+  }
+]
