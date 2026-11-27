@@ -64,6 +64,14 @@ rev.ng is discovered through `REVNG_BIN`, then `PATH`, or through
 REVNG_DECOMPILE_CMD='revng decompile {pe} --output-dir {outdir}'
 ```
 
+On macOS the default is the bundled `tools/revng-container.sh`, which runs the
+upstream `revng/revng` image under an emulated linux/amd64 container and writes
+the real PTML artifact to `<outdir>/decompiled.c`. Older images accept `-o` but
+silently write no file, so the wrapper captures stdout instead; the PTML markup
+is retained for provenance. A stale `DOCKER_HOST` is replaced by a live Colima
+socket when one exists, so the GUI's **Rev.ng Source Pass** works without extra
+setup.
+
 The command runs with the output directory as its working directory, is
 bounded by the budget, and everything it writes is kept under
 `readability/revng/`. Candidate `*.c` files are recorded in
