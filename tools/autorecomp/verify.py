@@ -66,7 +66,9 @@ def source_verification(project, pe, addrs, cases):
         try:
             row = oracle(str(project), str(pe), [va], cases=cases,
                          progress=lambda *_: None)[0]
-        except Exception as exc:
+        except (Exception, SystemExit) as exc:
+            # difftest uses SystemExit for "original VA is not in a code section".
+            # That is a blocked check, not a reason to abandon the whole sweep.
             row = {'address': f'0x{va:08X}', 'verdict': 'engine-error', 'detail': str(exc)}
         rows.append(row)
     passed = sum(1 for r in rows if str(r.get('verdict', '')).startswith('agree'))
