@@ -11,6 +11,17 @@ reported verification percentage. Missing oracle evidence is recorded as BLOCKED
 | AssaultCube | official v1.3.0.2 Windows release, extracted `bin_win32/ac_client.exe` (PE32 i386, sha256 `5b588e6ff7710fa0170553506a50bfa14750ccb438a154e4ea0e0b1ba621cefb`) | Pipeline running in background | Not attempted yet | The pre-existing `cube.exe` was only PE32+ x86-64 and was correctly refused (`docs/assaultcube/cli-refusal.txt`); the genuine 32-bit client was downloaded from the official GitHub release and is now in the same pipeline. |
 | Other x86 oracle games (Tetris, igi2, solvers) | `/Users/haseeb-mir/Downloads/recomp-apps/recomp-oracle/*.exe` | Not yet processed | Not yet processed | General verifier is engine-agnostic; no per-game claim made. |
 
+## Rev.ng source pass
+
+The **Rev.ng Source Pass** path is tested end-to-end on the tested PE32 fixture:
+`projects/pe32_min_fixture/reports/readability.json` records
+`outcome: revng-candidates-recorded` and `readability/revng/decompiled.c` contains real
+PTML from the upstream container. Two blockers were fixed and verified: a stale
+`DOCKER_HOST` now falls back to a live Colima socket, and the current image's silent
+`-o` option is replaced by capturing stdout. On full IGI (1.4 MB PE) the emulated
+Rev.ng analysis is **OOM-killed (rc=137)** on this 8 GiB host; no integration into the
+dispatch ABI is claimed.
+
 ## What is still required before any 100% claim
 
 1. Same level / same scripted inputs into the original Windows executable and the
