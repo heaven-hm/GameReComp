@@ -19,6 +19,10 @@ screenshots below are the driver's own captures.
 | Dark toggle / Themes | Clicked, theme changed to Marked Dark and theme picker opened | `cua-side-dark-toggle.png`, `cua-side-themes.png`, `cua-run-options2.png` (dark) |
 | Header **Run Options…** | Opens launch-mode modal with extra arguments, remember toggle and Launch Game Now | `cua-run-options2.png` |
 | Header **Report** | Clicked, no GUI crash | `cua-report-button.png` |
+| All six tabs (Overview, Functions, Stages & Build, Agents, Frames, Settings) | Each rendered without crash; contact sheet shows all six states | `tabs-contact-sheet-verified.jpg`, `tab3-*.png` |
+| Function row → Inspector drawer | Opens `sub_00401000` with provenance, generated C, Source & Provenance / Notes & Hints, Copy C, Open file, Improve C Readability (AI), Star and prev/next controls | `feat-star-function.png` |
+| Inspector Notes & Hints / Copy C / Open file / Star / prev / next | All clicked, no crash | `insp-*.png` |
+| Functions filters (All, Verified, High-level, Lifted, Unresolved, Starred) and address sort | Clicked, no crash | `feat-*.png` |
 | Header **Launch** / **Create Issue** / **Open Output Folder** / **Dismiss** | Present and wired but not exercised in this pass to avoid spawning extra processes or external issue pages | — |
 
 Not clicked deliberately: destructive **Remove / Delete** and external-URL **Report a
