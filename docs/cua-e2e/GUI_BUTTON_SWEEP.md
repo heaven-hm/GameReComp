@@ -16,7 +16,10 @@ screenshots below are the driver's own captures.
 | Sidebar Compilers & tools | Route opens | `cua-side-compilers-tools.png` |
 | Sidebar Settings | Route opens | `cua-side-global-settings.png` |
 | Sidebar About | Route opens | `cua-side-about.png` |
-| Dark toggle / Themes | Clicked, screenshots captured | `cua-side-dark-toggle.png`, `cua-side-themes.png` |
+| Dark toggle / Themes | Clicked, theme changed to Marked Dark and theme picker opened | `cua-side-dark-toggle.png`, `cua-side-themes.png`, `cua-run-options2.png` (dark) |
+| Header **Run Options…** | Opens launch-mode modal with extra arguments, remember toggle and Launch Game Now | `cua-run-options2.png` |
+| Header **Report** | Clicked, no GUI crash | `cua-report-button.png` |
+| Header **Launch** / **Create Issue** / **Open Output Folder** / **Dismiss** | Present and wired but not exercised in this pass to avoid spawning extra processes or external issue pages | — |
 
 Not clicked deliberately: destructive **Remove / Delete** and external-URL **Report a
 problem**. The sweep proves the buttons are wired and that failure detail is visible;
