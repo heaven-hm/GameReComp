@@ -54,9 +54,14 @@ shows the measured value, not a desired one.
   `unable to access process with pid ... from the current user account`, and `sudo -n`
   requires a password. Therefore run parity is reported as **0% / BLOCKED**, not as a
   pass and not as a fabricated percentage.
-* The Unicorn side runs locally. For IGI the measured source parity of the sampled
-  functions was **75% (3/4 agree, 1 blocked)** in a prior run; the latest sampled run
-  is recorded in `projects/igi/reports/verify.json`.
+* The Unicorn side runs locally. The completed IGI sweep measured **75.0% source parity**:
+  `0x004A537A`, `0x004C1780` and `0x004D3710` agree-return; `0x0044D224` is blocked
+  because the ORIGINAL's own bytes fault on the synthetic entry state
+  (`UC_ERR_READ_UNMAPPED`), not because the generated C diverged. Raw rows:
+  `projects/igi/reports/verify.json`.
+* The macOS Frida run-parity attempt captured no events (exit 124 on both sides after
+  the attach failure); it is recorded as 0% / BLOCKED, not a pass. A second attempt
+  runs inside a Linux VM with Wine32 so the runtime oracle can attach.
 
 ## IGI runtime evidence (separate from the percentages)
 
