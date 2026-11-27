@@ -23,6 +23,7 @@ screenshots below are the driver's own captures.
 | Function row → Inspector drawer | Opens `sub_00401000` with provenance, generated C, Source & Provenance / Notes & Hints, Copy C, Open file, Improve C Readability (AI), Star and prev/next controls | `feat-star-function.png` |
 | Inspector Notes & Hints / Copy C / Open file / Star / prev / next | All clicked, no crash | `insp-*.png` |
 | Functions filters (All, Verified, High-level, Lifted, Unresolved, Starred) and address sort | Clicked, no crash | `feat-*.png` |
+| Home **Open path** direct entry | PE32+ x86-64 `cube.exe` selected from an arbitrary path; GUI shows "PE32+ x86-64 accepted — backend result will be recorded" | `anypath-initial.png`, `anypath-x64-result.png` |
 | Header **Launch** / **Create Issue** / **Open Output Folder** / **Dismiss** | Present and wired but not exercised in this pass to avoid spawning extra processes or external issue pages | — |
 
 Not clicked deliberately: destructive **Remove / Delete** and external-URL **Report a

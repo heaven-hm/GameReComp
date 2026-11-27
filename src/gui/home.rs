@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use gpui::{
     div, prelude::*, px, rgb, ClipboardItem, Context, Div, ExternalPaths, FontWeight, MouseButton,
     MouseDownEvent, Stateful, Styled,
@@ -722,6 +724,42 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                         }))
                         .child("+ Select multiple games…"),
                 ),
+        )
+        .child(
+            div()
+                .mt(px(8.0))
+                .w(px(320.0))
+                .max_w_full()
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(style::text_input_box(
+                    "drop_any_path_input",
+                    t,
+                    &app.any_path_input,
+                    "Or paste any path: .exe, .app, ELF or folder",
+                    app.focused_input == Some(FocusInput::AnyPathInput),
+                    true,
+                )
+                .on_click(cx.listener(|this, _, window, cx| {
+                    this.set_focus_input(Some(FocusInput::AnyPathInput), window, cx);
+                })))
+                .child(style::ghost_btn("drop_open_path_btn", t, "Open path").on_click(
+                    cx.listener(|this, _, _, cx| {
+                        let path = PathBuf::from(this.any_path_input.trim());
+                        if path.as_os_str().is_empty() {
+                            this.push_toast(
+                                "No path entered",
+                                "Paste a path to a Windows PE, macOS app, Linux ELF or folder.",
+                                this.tokens().info,
+                                false,
+                            );
+                        } else {
+                            this.pick_pe_path(path);
+                        }
+                        cx.notify();
+                    }),
+                )),
         )
         .child(
             div()

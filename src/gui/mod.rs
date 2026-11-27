@@ -117,6 +117,7 @@ impl WorkerKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FocusInput {
     SidebarFilter,
+    AnyPathInput,
     FnSearch,
     ProjectRename,
     OptPeFile,
@@ -408,6 +409,8 @@ pub struct GameReCompApp {
 
     // Home / Dropzone state
     pub drop_state: DropState,
+    /// Direct path entry: any Windows/macOS/Linux binary or folder, no filter.
+    pub any_path_input: String,
     pub picked_pe: PathBuf,
     pub picked_pe_info: PeInfo,
     pub picked_owned_checked: bool,
@@ -549,6 +552,7 @@ impl GameReCompApp {
             opts,
             show_advanced_opts: false,
             drop_state: DropState::Idle,
+            any_path_input: std::env::var("RECOMP_INITIAL_PATH").unwrap_or_default(),
             picked_pe: PathBuf::new(),
             picked_pe_info: PeInfo::default(),
             picked_owned_checked: false,
@@ -4213,6 +4217,7 @@ impl GameReCompApp {
     fn active_input_mut(&mut self) -> Option<&mut String> {
         match self.focused_input? {
             FocusInput::SidebarFilter => Some(&mut self.sidebar_filter),
+            FocusInput::AnyPathInput => Some(&mut self.any_path_input),
             FocusInput::FnSearch => Some(&mut self.fn_search),
             FocusInput::ProjectRename => Some(&mut self.rename_buf),
             FocusInput::OptPeFile => Some(&mut self.opts.pe_file),
