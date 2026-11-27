@@ -176,7 +176,7 @@ pub fn render_sidebar(
                     "new_menu_multi",
                     t,
                     "Select multiple games…",
-                    "decompile several .exe files at once",
+                    "Windows, macOS or Linux binaries — any architecture",
                 )
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.show_new_menu = false;
@@ -188,8 +188,8 @@ pub fn render_sidebar(
                 menu_item(
                     "new_menu_file",
                     t,
-                    "Open a game or app (.exe)",
-                    "32-bit Windows PE executable you own",
+                    "Open a game or app…",
+                    "Windows PE, macOS .app/Mach-O or Linux ELF — any architecture",
                 )
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.show_new_menu = false;

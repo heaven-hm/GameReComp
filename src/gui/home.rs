@@ -689,7 +689,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                 .font_family(t.ui_font)
                 .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.muted))
-                .child("32-bit Windows PE (.exe)  ·")
+                .child("Any executable or app bundle  ·")
                 .child(
                     div()
                         .id("drop_choose_file_link")

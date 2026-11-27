@@ -2652,7 +2652,7 @@ fn render_project_settings_tab(
                                     style::ghost_btn("proj_pe_browse", t, "Browse…").on_click(
                                         cx.listener(|this, _, window, cx| {
                                             this.pick_file_async(
-                                                "Choose a 32-bit Windows PE executable (.exe)",
+                                                "Choose any game or app (Windows PE, macOS .app/Mach-O, Linux ELF)",
                                                 window,
                                                 cx,
                                                 |this, f, _, _| {

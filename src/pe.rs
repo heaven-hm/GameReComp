@@ -271,7 +271,7 @@ pub fn resolve_input(
     }
     if !info.pe32_x86 {
         return Err(format!(
-            "unsupported input format: {} {} (only PE32 i386 is supported today)",
+            "input accepted, but reconstruction is PE32 i386 only: {} {} (64-bit guests are a different binary and are not reconstructed by this backend)",
             info.magic, info.machine
         ));
     }
