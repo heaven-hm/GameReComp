@@ -2,6 +2,24 @@
   "schema": 1,
   "runs": [
     {
+      "relative_path": "ac_client.exe",
+      "game": "bin_win32",
+      "filename": "ac_client.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 50,
+      "verification": "not-run",
+      "status": "verification did not run",
+      "run_status": null,
+      "exit_code": null,
+      "host": "",
+      "input_sha256": "5b588e6ff7710fa0170553506a50bfa14750ccb438a154e4ea0e0b1ba621cefb",
+      "evidence": "/Users/haseeb-mir/GameReComp/projects/AssaultCube/reports/report.html",
+      "project_dir": "/Users/haseeb-mir/GameReComp/projects/AssaultCube",
+      "port_details": "26673 fns recovered; 233 units / 1961.1 MiB C; low-level 26673/ high-level verified 0; compile failed: --reuse-build: /Users/haseeb-mir/GameReComp/projects/AssaultCube/build/ac_client is missing; run a b",
+      "generated_at": "2026-11-27T16:53:39Z"
+    },
+    {
       "relative_path": "TmForever.exe",
       "game": "TmForeverModLoader",
       "filename": "TmForever.exe",

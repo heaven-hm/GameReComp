@@ -386,6 +386,15 @@ fn render_project_header(
                 },
             )),
         );
+        let verify_dir = model.dir.clone();
+        actions = actions.child(
+            style::ghost_btn("hdr_verify_btn", t, "🧪 Verify").on_click(cx.listener(
+                move |this, _, _, cx| {
+                    this.start_verification_for_dir(verify_dir.clone(), cx);
+                    cx.notify();
+                },
+            )),
+        );
     }
 
     let proj_dir = model.dir.clone();
