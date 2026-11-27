@@ -20,7 +20,8 @@ def test_binary_discovery_from_manifest_uses_its_recorded_path(tmp_path):
     (tmp_path / "reports").mkdir()
     exe = tmp_path / "build" / "WhateverName"
     exe.parent.mkdir()
-    exe.write_bytes(b"\x7fELF")
+    magic = verify.host_binary_magic()
+    exe.write_bytes(magic[0] if magic else b"\x7fELF")
     exe.chmod(0o755)
     (tmp_path / "manifest.json").write_text(json.dumps({
         "binary": {"path": str(exe), "sha256": "abcd"}

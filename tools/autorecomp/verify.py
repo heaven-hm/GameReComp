@@ -84,8 +84,34 @@ def source_verification(project, pe, addrs, cases):
     }
 
 
+def host_binary_magic():
+    if sys.platform.startswith('linux'):
+        return (b'\x7fELF',)
+    if sys.platform == 'darwin':
+        # 32/64-bit Mach-O, little or big endian, and universal binaries.
+        return (b'\xcf\xfa\xed\xfe', b'\xce\xfa\xed\xfe', b'\xfe\xed\xfa\xcf',
+                b'\xfe\xed\xfa\xce', b'\xca\xfe\xba\xbe')
+    return ()
+
+
+def is_host_binary(path):
+    magic = host_binary_magic()
+    if not magic:
+        return True
+    try:
+        with open(path, 'rb') as f:
+            header = f.read(4)
+    except OSError:
+        return False
+    return header in magic
+
+
 def rebuilt_binary(project, report):
-    """Resolve the rebuilt binary without assuming a game name or directory case."""
+    """Resolve the rebuilt binary without assuming a game name or directory case.
+
+    Prefer a binary the current host can actually execute, so a macOS Mach-O in
+    `build/` cannot shadow the Linux ELF in `build-linux/` when verifying Linux.
+    """
     candidates = []
     raw = report.get('binary')
     if isinstance(raw, dict):
@@ -98,11 +124,16 @@ def rebuilt_binary(project, report):
         mb = mb.get('path')
     if mb:
         candidates.append(Path(mb))
-    for pat in ('build/*', 'build/*/*', '*'):
+    for pat in ('build*/*', 'build*/*/*', '*'):
         candidates.extend(Path(project).glob(pat))
+    seen = set()
     for c in candidates:
         try:
-            if c.is_file() and os.access(c, os.X_OK):
+            key = str(c.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
+            if c.is_file() and os.access(c, os.X_OK) and is_host_binary(c):
                 return c.resolve()
         except OSError:
             continue
