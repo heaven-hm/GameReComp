@@ -257,6 +257,7 @@ def main():
     ap = argparse.ArgumentParser(description='general Unicorn + Frida verification')
     ap.add_argument('project', help='autorecomp project dir')
     ap.add_argument('--pe', help='original PE32 i386 executable (default: report input)')
+    ap.add_argument('--binary', help='rebuilt executable override (default: discover from metadata)')
     ap.add_argument('--address', action='append', default=[])
     ap.add_argument('--max-functions', type=int, default=12)
     ap.add_argument('--all-functions', action='store_true')
@@ -272,7 +273,7 @@ def main():
         raise SystemExit(f'original PE not found: {pe}')
     addrs = function_addresses(project, a.address, a.max_functions, a.all_functions)
     src = source_verification(project, pe, addrs, a.cases)
-    rebuilt = rebuilt_binary(project, report)
+    rebuilt = Path(a.binary).resolve() if a.binary else rebuilt_binary(project, report)
     run = {'engine': 'Frida', 'blocked': True, 'percent': 0.0,
            'reason': 'rebuilt binary not found (manifest.json binary path or build/<name>)',
            'checked': 0, 'passed': 0, 'verified': False}
