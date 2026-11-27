@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include <signal.h>
 #include <unistd.h>
 #include <strings.h>
@@ -339,7 +340,8 @@ static int finish_boot(const char *log_name, const char *guest_name,
 }
 
 static int boot(const char *path, uint32_t (*resolve)(const char *)) {
-    char image[1024];
+    /* glibc's fortified realpath() requires a PATH_MAX-sized destination. */
+    char image[PATH_MAX];
     if (!realpath(path, image)) { fprintf(stderr, "[host] cannot find %s: %s\n", path, strerror(errno)); return -1; }
     enter_image_directory(image);
     if (recomp_pe_map(image, &g_img) != 0) return -1;
@@ -354,7 +356,7 @@ static int boot(const char *path, uint32_t (*resolve)(const char *)) {
  * the original exe did. Companions (a bundled DLL the game ships) are still
  * resolved relative to that directory -- they are the game's files. */
 static int boot_embedded(const char *assets_dir, uint32_t (*resolve)(const char *)) {
-    char dir[1024];
+    char dir[PATH_MAX];
     if (assets_dir && *assets_dir && realpath(assets_dir, dir)) {
         hle_set_drive('C', dir);
         if (chdir(dir) != 0)
