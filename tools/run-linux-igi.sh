@@ -19,6 +19,10 @@ DOCKER_HOST="$SOCKET" docker run --rm \
     apt-get update -qq
     apt-get install -y -qq libsdl2-2.0-0 libsdl2-ttf-2.0-0 libavformat58 \
       libavcodec58 libavutil56 libswresample3 xvfb >/tmp/apt.log 2>&1
+    # Generated .incbin paths are absolute and were recorded on a
+    # case-insensitive macOS filesystem; mirror them inside the Linux container.
+    mkdir -p /Users/haseeb-mir/GameReComp/projects
+    ln -sfn /src /Users/haseeb-mir/GameReComp/projects/IGI
     cd /data
     xvfb-run -a env RECOMP_ASSETS_DIR=/data RECOMP_SCREENSHOT=/shots \
       /src/build-linux/IGI '"$LEVEL_ARGS"'
