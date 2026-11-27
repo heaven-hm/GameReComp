@@ -40,10 +40,10 @@ separate percentages, with the reason under each. The **Verification detail** pa
 prints every blocked/diverged check and the last lines of the running job's log, so a
 failure to recompile or run is never reduced to a toast.
 
-Real GUI capture: `docs/verification-engine/gui-separate-percentages.jpg` (built from
-this source tree, IGI project open). Both percentages are shown at 0.0% because the
-Unicorn sweep had not finished and Frida attach is blocked on this host — the GUI
-shows the measured value, not a desired one.
+Real GUI captures: `docs/verification-engine/gui-separate-percentages.jpg` (before the
+sweep) and `docs/verification-engine/gui-igi-75-source.jpg` (after it). The latter shows
+**75.0%** source and **0.0%** run — the GUI displays the measured value, not a desired
+one.
 
 ## Honest status on this machine
 
