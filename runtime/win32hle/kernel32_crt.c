@@ -574,6 +574,59 @@ static void k_GetTempPathW(void) {
 }
 static void k_GetComputerNameA(void) { if (A32(1) && MEM32(A32(1)) > 5) { strcpy(ASTR(0), "HLEPC"); MEM32(A32(1)) = 5; RET(1, 2); } RET(0, 2); }
 
+/* shell32.SHGetFolderPathW(hwnd, csidl, token, flags, out-wbuf) -> HRESULT.
+ * Games use this for save-game/config directories. A stable synthetic path is
+ * enough to keep the guest running; the real folder choice is a documented gap. */
+/* Small, side-effect-free Win32 answers used by game startup probes. Each
+ * signature lists its exact stack argument count so RET keeps the guest stack
+ * balanced; a wrong count here corrupts the caller long before any screenshot. */
+static void k_GetPriorityClass(void) { RET(0x20u, 1); }          /* NORMAL_PRIORITY_CLASS */
+static void k_CancelIo(void) { RET(1, 1); }
+static void k_SetThreadAffinityMask(void) { RET(1, 2); }          /* previous mask */
+static void k_FreeSid(void) { RET(0, 1); }
+static void k_DeregisterEventSource(void) { RET(1, 1); }
+static void k_RegOpenKeyExW(void) {                               /* (key, sub, opt, access, out) */
+    uint32_t out = A32(4);
+    if (out) MEM32(out) = 0;
+    RET(2, 5);                                                    /* ERROR_FILE_NOT_FOUND */
+}
+static void k_GetAdaptersInfo(void) { RET(232, 2); }              /* ERROR_NO_DATA */
+static void k_SetEntriesInAclW(void) { RET(87, 3); }              /* ERROR_INVALID_PARAMETER */
+static void k_SetSecurityInfo(void) { RET(87, 6); }
+static void k_RegisterEventSourceA(void) { RET(0, 2); }
+static void k_ReportEventA(void) { RET(1, 9); }
+
+/* kernel32.GlobalMemoryStatusEx(LPMEMORYSTATUSEX): the guest reads the 64-byte
+ * struct before allocating its heaps. Report a plausible 8 GiB host. */
+static void k_GlobalMemoryStatusEx(void) {
+    uint32_t out = A32(0);
+    if (!out) { RET(0, 1); return; }
+    memset(APTR(0), 0, 64);
+    MEM32(out) = 64;
+    MEM32(out + 4) = 25;                       /* dwMemoryLoad */
+    {
+        const uint64_t vals[6] = {
+            8ull << 30, 6ull << 30, 8ull << 30, 6ull << 30, 4ull << 30, 3ull << 30
+        };
+        for (unsigned i = 0; i < 6; i++) {
+            MEM32(out + 8 + i * 8) = (uint32_t)vals[i];
+            MEM32(out + 12 + i * 8) = (uint32_t)(vals[i] >> 32);
+        }
+    }
+    RET(1, 1);
+}
+
+static void k_SHGetFolderPathW(void) {
+    static const uint16_t path[] = {
+        'C', ':', '\\', 'U', 's', 'e', 'r', 's', '\\', 'P', 'l', 'a', 'y', 'e', 'r', '\\',
+        'D', 'o', 'c', 'u', 'm', 'e', 'n', 't', 's', 0
+    };
+    uint32_t out = A32(4);
+    if (!out) { RET(0x80004005u, 5); return; }   /* E_FAIL */
+    memcpy(APTR(4), path, sizeof path);
+    RET(0, 5);                                   /* S_OK */
+}
+
 /* --- SEH / error hooks: the startup installs these --- */
 /* SetUnhandledExceptionFilter(filter): returns the PREVIOUS filter, or NULL if
  * there was none (MSDN).  The CRT installs one at startup and a game may chain
@@ -726,6 +779,19 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "GetSystemDirectoryA",          k_GetSystemDirectoryA },
     { "GetTempPathA",                 k_GetTempPathA },
     { "GetTempPathW",                 k_GetTempPathW },
+    { "SHGetFolderPathW",             k_SHGetFolderPathW },
+    { "GlobalMemoryStatusEx",         k_GlobalMemoryStatusEx },
+    { "GetPriorityClass",             k_GetPriorityClass },
+    { "CancelIo",                     k_CancelIo },
+    { "SetThreadAffinityMask",        k_SetThreadAffinityMask },
+    { "FreeSid",                      k_FreeSid },
+    { "DeregisterEventSource",        k_DeregisterEventSource },
+    { "RegOpenKeyExW",                k_RegOpenKeyExW },
+    { "GetAdaptersInfo",              k_GetAdaptersInfo },
+    { "SetEntriesInAclW",             k_SetEntriesInAclW },
+    { "SetSecurityInfo",              k_SetSecurityInfo },
+    { "RegisterEventSourceA",         k_RegisterEventSourceA },
+    { "ReportEventA",                 k_ReportEventA },
     { "GetComputerNameA",             k_GetComputerNameA },
     { "SetUnhandledExceptionFilter",  k_SetUnhandledExceptionFilter },
     { "UnhandledExceptionFilter",     k_UnhandledExceptionFilter },

@@ -35,6 +35,17 @@ if ! "$RUNTIME" info >/dev/null 2>&1; then
         fi
     done
 fi
+if ! "$RUNTIME" info >/dev/null 2>&1 && command -v colima >/dev/null 2>&1; then
+    # The VM can be stopped by a host restart; start it so the GUI pass still works.
+    colima stop >/dev/null 2>&1 || true
+    colima start --runtime docker >/dev/null 2>&1 || true
+    for sock in "$HOME/.colima/default/docker.sock" "$HOME/.colima/docker.sock"; do
+        if [ -S "$sock" ] && DOCKER_HOST="unix://$sock" "$RUNTIME" info >/dev/null 2>&1; then
+            export DOCKER_HOST="unix://$sock"
+            break
+        fi
+    done
+fi
 if ! "$RUNTIME" info >/dev/null 2>&1; then
     echo "revng-container: no working container daemon (set DOCKER_HOST to a live docker.sock)" >&2
     exit 4
