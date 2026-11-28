@@ -1,6 +1,0 @@
-{
-  "schema_version": 1,
-  "assets_root": ".",
-  "required_verifications": ["acceptance_100", "original_windows_gameplay_oracle"],
-  "issues": {}
-}
