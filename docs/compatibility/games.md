@@ -15,11 +15,11 @@ Host from this inventory run: Darwin/arm64. Other hosts are `HOST_NOT_TESTED`, n
 
 | Game | Input SHA-256 (12) | Verification | Host |
 |---|---|---|---|
+| fixtures | `583759c15211` | partial | Darwin arm64 (host build) |
 | IGI | `dea34892d417` | partial | Darwin arm64 (host build) |
 | .revng-project | `fa18379fe942` | not-run | HOST_NOT_TESTED |
 | bin_win32 | `5b588e6ff771` | not-run | HOST_NOT_TESTED |
 | TmForeverModLoader | `5e287e79a07c` | launch-failed | Darwin arm64 (host build) |
-| fixtures | `583759c15211` | partial | Darwin arm64 (host build) |
 | Downloads | `7346128fab42` | partial | Darwin arm64 (host build) |
 | Parsec47 | `41b2f77d2d7a` | launch-failed | Darwin arm64 (host build) |
 | Noiz2sa | `389af5a46ee8` | partial | Darwin arm64 (host build) |

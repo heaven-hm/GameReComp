@@ -2,6 +2,24 @@
   "schema": 1,
   "runs": [
     {
+      "relative_path": "pe32-minimal.exe",
+      "game": "fixtures",
+      "filename": "pe32-minimal.exe",
+      "arch": "i386 (PE32)",
+      "os": "Windows",
+      "score": 93,
+      "verification": "partial",
+      "status": "process launched and exited 0; no oracle supplied",
+      "run_status": "exited",
+      "exit_code": 0,
+      "host": "Darwin arm64 (host build)",
+      "input_sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
+      "evidence": "projects/pe32_min_fixture/reports/report.html",
+      "project_dir": "projects/pe32_min_fixture",
+      "port_details": "1 fns recovered; 2 units / 0.0 MiB C; binary pe32_minimal 839 KiB [macOS arm64 (native)]; 1 imports bound; low-level 1/ high-level verified 0",
+      "generated_at": "2026-11-28T01:45:27Z"
+    },
+    {
       "relative_path": "igi.exe",
       "game": "IGI",
       "filename": "igi.exe",
@@ -72,24 +90,6 @@
       "project_dir": "/Users/haseeb-mir/GameReComp/projects/TmForever",
       "port_details": "88039 fns recovered; 150 units / 934.0 MiB C; binary TmForever 338965 KiB [macOS arm64 (native)]; 257 imports bound, 159 unresolved; low-level 88039/ high-level verified 0",
       "generated_at": "2026-11-27T14:53:46Z"
-    },
-    {
-      "relative_path": "pe32-minimal.exe",
-      "game": "fixtures",
-      "filename": "pe32-minimal.exe",
-      "arch": "i386 (PE32)",
-      "os": "Windows",
-      "score": 93,
-      "verification": "partial",
-      "status": "process launched and exited 0; no oracle supplied",
-      "run_status": "exited",
-      "exit_code": 0,
-      "host": "Darwin arm64 (host build)",
-      "input_sha256": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
-      "evidence": "/Users/haseeb-mir/GameReComp/projects/pe32_min_fixture/reports/report.html",
-      "project_dir": "/Users/haseeb-mir/GameReComp/projects/pe32_min_fixture",
-      "port_details": "1 fns recovered; 2 units / 0.0 MiB C; binary pe32_minimal 839 KiB [macOS arm64 (native)]; 1 imports bound; low-level 1/ high-level verified 0",
-      "generated_at": "2026-11-27T12:13:52Z"
     },
     {
       "relative_path": "idman643build18.exe",
