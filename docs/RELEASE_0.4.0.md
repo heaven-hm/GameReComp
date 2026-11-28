@@ -36,7 +36,6 @@ Release date: 2026-11-28
 | Linux x86_64 | Yes | Yes | Source builds on a Linux/x86_64 host; not produced from macOS host here. |
 | Windows x86_64 | No | No | Windows target builds are explicitly unimplemented (exit 4). |
 | Windows x86 | No | No | Windows target builds are explicitly unimplemented (exit 4). |
-| WebAssembly `wasm32` | No | Yes | The only sanctioned cross-target from a host build. |
 
 ### Input formats
 
