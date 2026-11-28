@@ -33,3 +33,15 @@ screenshots below are the driver's own captures.
 Not clicked deliberately: destructive **Remove / Delete** and external-URL **Report a
 problem**. The sweep proves the buttons are wired and that failure detail is visible;
 it is not a claim that every game is verified.
+
+## Batch folder (verified after target-flag fix)
+
+The **Batch folder** button beside the direct path entry was clicked through CUA with the
+path set to `staging/windows-x86-batch` (16 staged PE32 i386 `.exe` links from the
+user-supplied inventory). The queue panel shows `Batch: windows-x86-batch`, `1 running`,
+`auto / auto`, and the active file advancing through the staged games
+(`04_LaunchIGI.exe` at 88%). Evidence: `batch-running-proof2.png`.
+
+Two real bugs were fixed first: `--target-os auto` was rejected by the Python CLI
+(`invalid choice: 'auto'`), and an empty GUI target could produce a dangling flag.
+Commit `9e9ff8b0`.
