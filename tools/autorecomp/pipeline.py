@@ -22,6 +22,8 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import __version__
+
 _TOOLS = Path(__file__).resolve().parents[1]
 _ROOT = _TOOLS.parent      # the repository root: highlevel/ lives beside tools/
 for _sub in ("pe", "disasm", "lift"):
@@ -1140,7 +1142,7 @@ class Pipeline:
         report = {
             "schema": 1,
             "tool": "GameReComp autorecomp",
-            "version": "0.0.1",
+            "version": __version__,
             "generated_at": _now(),
             "input": str(self.pe_path),
             "project": str(self.project_dir),
