@@ -79,7 +79,7 @@ export SMALL_GAMES_PATH=/path/to/your/games     # the small-games corpus
 export LARGE_GAMES_PATH=/path/to/your/large     # optional, larger titles
 ```
 
-A copy-paste starting point lives in [`config/corpus.env.example`](../config/corpus.env.example).
+A copy-paste starting point lives in .
 To refresh the inventory and the game database:
 
 ```sh
@@ -185,7 +185,7 @@ Rules the report follows:
   on every run.
 
 `report.html` is the same evidence rendered for people. The game database row for
-each run is in [`table.md`](../table.md).
+each run is in .
 
 ---
 
@@ -289,14 +289,14 @@ the evidence is comparable.
 
 | You want to know | Read |
 | --- | --- |
-| how the stages fit together | [`ARCHITECTURE.md`](ARCHITECTURE.md), [`PIPELINE.md`](PIPELINE.md) |
-| what the source labels mean and how provenance is tracked | [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md) |
-| how the readability pass and its gates work | [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md), section 8 above |
-| how verification decides pass/fail | [`VERIFICATION.md`](VERIFICATION.md) |
-| what upstream backend code is used and under which licence | [`BACKENDS.md`](BACKENDS.md), [`LICENSES.md`](LICENSES.md) |
-| measured benchmark data and methodology | [`BENCHMARKS.md`](BENCHMARKS.md), [`table.md`](../table.md) |
-| the planned desktop application | [`GUI.md`](GUI.md) |
-| runtime coverage and known Win32 gaps | [`RUNTIME_COMPAT.md`](RUNTIME_COMPAT.md) |
+| how the stages fit together | ,  |
+| what the source labels mean and how provenance is tracked |  |
+| how the readability pass and its gates work | , section 8 above |
+| how verification decides pass/fail |  |
+| what upstream backend code is used and under which licence | [](VERIFICATION.md),  |
+| measured benchmark data and methodology | ,  |
+| the planned desktop application |  |
+| runtime coverage and known Win32 gaps | [](VERIFICATION.md) |
 
 For the broader toolbox this product is built on, see the "Upstream pcrecomp
-toolbox" section of the [README](../README.md).
+toolbox" section of the .

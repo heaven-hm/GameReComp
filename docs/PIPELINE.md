@@ -156,7 +156,7 @@ time anyone ran it, it found the disassembler missing 7,331 functions.
 ### Typical Results
 
 A snapshot from three projects, to show the *shape* rather than to be current.
-Live counts are in the [README table](../README.md#the-projects-that-built-this).
+Live counts are in the .
 
 | Project | Total Functions | SDK/Library | Custom | Unknown |
 |---------|----------------|-------------|--------|---------|
@@ -470,7 +470,7 @@ The output is a standard native executable that runs on modern Windows (or Linux
 |------|------|-------|--------|
 | PE analysis | `pe/pe_analyze.py` | `.exe`/`.dll` | JSON metadata |
 | Import extraction | `pe/extract_imports.py` | `.exe`/`.dll`, or an install dir | Per-module imports + shared-API summary (PE32) |
-| PE32+ API-surface audit | `pe/audit_api_surface.py` | `.exe`/`.dll` (PE32 or PE32+) | Per-file audit, export → DLL database, missing-API ranking (adapted from arm64-recompiler; see [UPSTREAM_PROVENANCE_CONSOLIDATED.md](UPSTREAM_PROVENANCE_CONSOLIDATED.md)) |
+| PE32+ API-surface audit | `pe/audit_api_surface.py` | `.exe`/`.dll` (PE32 or PE32+) | Per-file audit, export → DLL database, missing-API ranking (adapted from arm64-recompiler; see [](SOURCE_PROVENANCE.md)) |
 | Delay imports | `pe/delay_imports.py` | `.exe`/`.dll` | Delay-load import list |
 | Section/DRM analysis | `pe/analyze_sections.py` | `.exe`/`.dll` | Entropy + protection report |
 | Binary catalog | `pe/catalog.py` | Install dir | Per-binary catalog, PE + NE/LE/MZ (text/JSON) |

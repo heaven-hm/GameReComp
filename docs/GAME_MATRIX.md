@@ -71,14 +71,14 @@ All 361 installed Windows executables found under `~/Library/Application Support
 | `Games/drive_c/Program Files (x86)/Windows Media Player/wmplayer.exe` | PE32 i386 | wmplayer.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
 | `Games/drive_c/Program Files (x86)/Windows NT/Accessories/wordpad.exe` | PE32 i386 | wordpad.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
 | `Games/drive_c/recomp-oracle/DoConfig.exe` | PE32 i386 | DoConfig.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
-| `Games/drive_c/recomp-oracle/Tetris.exe` | PE32+ x86-64 | Tetris.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | full-frame: `docs/screenshots/native/tetris-oucc-new-01.png` |
+| `Games/drive_c/recomp-oracle/Tetris.exe` | PE32+ x86-64 | Tetris.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | full-frame: no committed frame |
 | `Games/drive_c/recomp-oracle/TrackEditor.exe` | PE32 i386 | TrackEditor.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
 | `Games/drive_c/recomp-oracle/arith-calc.exe` | PE32 i386 | arith-calc.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
 | `Games/drive_c/recomp-oracle/base64.exe` | PE32 i386 | base64.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
 | `Games/drive_c/recomp-oracle/blackbox.exe` | PE32+ x86-64 | blackbox.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
 | `Games/drive_c/recomp-oracle/bridges.exe` | PE32+ x86-64 | bridges.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
 | `Games/drive_c/recomp-oracle/busybox.exe` | PE32 i386 | busybox.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
-| `Games/drive_c/recomp-oracle/cube.exe` | PE32+ x86-64 | cube.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | full-frame: `docs/screenshots/cube-native-frame-0000.png`, `docs/screenshots/cube-native-frame-0001.png` |
+| `Games/drive_c/recomp-oracle/cube.exe` | PE32+ x86-64 | cube.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | full-frame: no committed frame, no committed frame |
 | `Games/drive_c/recomp-oracle/fifteen.exe` | PE32+ x86-64 | fifteen.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
 | `Games/drive_c/recomp-oracle/fifteensolver.exe` | PE32 i386 | fifteensolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
 | `Games/drive_c/recomp-oracle/filling.exe` | PE32+ x86-64 | filling.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
@@ -94,8 +94,8 @@ All 361 installed Windows executables found under `~/Library/Application Support
 | `Games/drive_c/recomp-oracle/guess_game_x86.exe` | PE32 i386 | guess_game_x86.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
 | `Games/drive_c/recomp-oracle/hangman_x64.exe` | PE32+ x86-64 | hangman_x64.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
 | `Games/drive_c/recomp-oracle/hangman_x86.exe` | PE32 i386 | hangman_x86.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
-| `Games/drive_c/recomp-oracle/igi2-hm.exe` | PE32 i386 | igi2-hm.exe: PE32 i386; native frame committed; no Windows oracle claim | full-frame: `proof/screenshots/igi-level1-fresh-0002.png` |
-| `Games/drive_c/recomp-oracle/igi2.exe` | PE32 i386 | igi2.exe: PE32 i386; native frame committed; no Windows oracle claim | full-frame: `proof/screenshots/igi-level1-fresh-0002.png`, `proof/screenshots/igi-level5-fresh-0001.png`, `proof/screenshots/igi-level9-fresh-0002.png` |
+| `Games/drive_c/recomp-oracle/igi2-hm.exe` | PE32 i386 | igi2-hm.exe: PE32 i386; native frame committed; no Windows oracle claim | full-frame: no committed frame |
+| `Games/drive_c/recomp-oracle/igi2.exe` | PE32 i386 | igi2.exe: PE32 i386; native frame committed; no Windows oracle claim | full-frame: no committed frame, no committed frame, no committed frame |
 | `Games/drive_c/recomp-oracle/inertia.exe` | PE32+ x86-64 | inertia.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
 | `Games/drive_c/recomp-oracle/keen.exe` | PE32+ x86-64 | keen.exe: PE32+ x86-64 refused; fail-closed; no port or frame claimed | none - no committed frame |
 | `Games/drive_c/recomp-oracle/keensolver.exe` | PE32 i386 | keensolver.exe: PE32 i386 accepted; no frame; NOT RUN without oracle | none - no committed frame |
@@ -400,35 +400,35 @@ These are real committed byte-for-byte frames shown at full frame width. They
 are render/tool evidence, not an original-Windows oracle. IGI images are
 native splash/loading screens, not gameplay levels.
 
-![Native IGI splash frame; render evidence, not a Windows oracle.](../proof/screenshots/igi-level1-fresh-0002.png)
+
 
 *Native IGI splash frame; render evidence, not a Windows oracle.*
 
-![Native IGI splash frame; render evidence, not a Windows oracle.](../proof/screenshots/igi-level5-fresh-0001.png)
+
 
 *Native IGI splash frame; render evidence, not a Windows oracle.*
 
-![Native IGI splash frame; render evidence, not a Windows oracle.](../proof/screenshots/igi-level9-fresh-0002.png)
+
 
 *Native IGI splash frame; render evidence, not a Windows oracle.*
 
-![Native Cube render frame zero; render evidence, not an oracle.](screenshots/cube-native-frame-0000.png)
+
 
 *Native Cube render frame zero; render evidence, not an oracle.*
 
-![Native Cube render frame one; render evidence, not an oracle.](screenshots/cube-native-frame-0001.png)
+
 
 *Native Cube render frame one; render evidence, not an oracle.*
 
-![Native Tetris OUCC frame; render evidence, not an oracle.](screenshots/native/tetris-oucc-new-01.png)
+
 
 *Native Tetris OUCC frame; render evidence, not an oracle.*
 
-![Native Cave Story frame; render evidence, not an oracle.](screenshots/native/cavestory-native-01.png)
+
 
 *Native Cave Story frame; render evidence, not an oracle.*
 
-![Native AssaultCube setup frame; render evidence, not an oracle.](../proof/screenshots/ac-native-macos-setup-frame.png)
+
 
 *Native AssaultCube setup frame; render evidence, not an oracle.*
 
@@ -593,48 +593,48 @@ Status text is quoted from each project's own README; the architecture and OS co
 
 | Name | OS | Arch | Port details | Frame proof | Working status |
 | --- | --- | --- | --- | --- | --- |
-| [Star Wars: Force Commander](https://github.com/sp00nznet/forcecommander) | Windows | x86 (PE32) | 2000; upstream README claim | - | In game! briefing room renders in 3D - 39,038 functions, 10.7M lines† |
-| [C&C: Red Alert 2 + Yuri's Revenge](https://github.com/sp00nznet/redalert2-recomp) | Windows | x86 (PE32) | 2000; upstream README claim | - | Runs natively on Linux (win32hle), Bink movies, D3D11 presenter† |
-| [C&C: Tiberian Sun + Firestorm](https://github.com/sp00nznet/tiberiansun-recomp) | Windows | x86 (PE32) | 1999; upstream README claim | - | Runs natively on Linux (win32hle): movies, music, menus, skirmish† |
-| [Fury³](https://github.com/sp00nznet/fury3) | Windows | x86 (PE32) | 1995; upstream README claim | - | Playable! Flies the canyon - 1,945 functions, SDL2+imgui† |
-| [Dance eJay 1 + 2](https://github.com/sp00nznet/ejay) | Windows | x86 (Win16/32) | 1997; upstream README claim | - | Plays and draws! intro decode, 22,050 Hz audio, cursor animation† |
-| [Operation Neptune](https://github.com/sp00nznet/operationneptune) | Windows | x86 (PE32) | 1991/1998; upstream README claim | - | Plays! CRT -> WinMain -> opening -> in the submarine† |
-| [SimCity 2000 (CD / Win95)](https://github.com/sp00nznet/simcity2000) | Windows | x86 (PE32) | 1996; upstream README claim | - | Plays (Windows); win32hle bring-up runs MFC startup into main window† |
-| [SkiFree](https://github.com/sp00nznet/skifree) | Windows | x86 (Win16/Win32) | 1991; upstream README claim | - | Playable rebuild from decompiled C, cross-platform + extras† |
-| [Encarta 97 Encyclopedia](https://github.com/sp00nznet/encarta) | Windows | x86 (PE32) | 1996; upstream README claim | - | Runs! Whole app lifted (7,326 fns); hybrid MFC boundary† |
-| [Bolo Adventures III](https://github.com/sp00nznet/bolo) | DOS | x86-16 | 1993; upstream README claim | - | Boots & runs! 932 functions, 70K lines, EGA/DOS on SDL2† |
-| [Catz](https://github.com/sp00nznet/catz) | Windows 3.x/9x | x86-16 (NE) | 1996; upstream README claim | - | Runs! Win32 window, original frame loop, toys and saving work† |
-| [Civilization](https://github.com/sp00nznet/civ) | DOS | x86-16 | 1991; upstream README claim | - | Runs! 672 functions, interactive boot/menu, 164K lines† |
-| [World Empire](https://github.com/sp00nznet/worldempire) | Windows 3.x | x86-16 (VB p-code) | 1994; upstream README claim | - | Runs! 99/99 segments, 14,826 functions, 226K lines† |
-| [Fallout](https://github.com/sp00nznet/fallout1-re) | Windows | x86 (PE32) | 1997; upstream README claim | - | Fork - native + HTML5 web port, multiplayer† |
-| [Fallout 2](https://github.com/sp00nznet/fallout2-re) | Windows | x86 (PE32) | 1998; upstream README claim | - | Fork - decompilation ~complete (alexbatalov upstream)† |
-| [Soldier of Fortune](https://github.com/sp00nznet/sof) | Windows | x86 (PE32) | 2000; upstream README claim | - | Active - SDL2 port, 8 subsystems, full maps render† |
-| [X-Wing Alliance](https://github.com/sp00nznet/xwa) | Windows | x86 (PE32) | 1999; upstream README claim | - | Active - D3D11 port, concourse UI runs, 2,702 functions† |
-| [Black & White](https://github.com/sp00nznet/bw) | Windows | x86 (PE32) | 2001; upstream README claim | - | Active - all 569 types done, 10 Hz game loop runs† |
-| [DinoPark Tycoon](https://github.com/sp00nznet/dinopark) | DOS | x86-16 | 1993; upstream README claim | - | Boots! ~90K lines; renders .PIC screens + .ACT dinosaurs† |
-| [Grand Theft Auto](https://github.com/sp00nznet/gta) | DOS | x86 | 1997; upstream README claim | - | Builds & runs - 4,094 functions, 444K lines, runtime bringup† |
-| [Roller Coaster Construction Set](https://github.com/sp00nznet/coaster) | DOS | x86-16 | 1993; upstream README claim | - | Boots - 886 functions lifted, runs MSC startup into main()† |
-| [X-Wing vs TIE Fighter + Balance of Power](https://github.com/sp00nznet/xvt) | Windows | x86 (PE32) | 1997; upstream README claim | - | Boots to a window - 1,790 functions; DirectDraw next† |
-| [Nocturne](https://github.com/sp00nznet/nocturne) | Windows | x86 (PE32) | 1999; upstream README claim | - | Phase 7 - 6,027 functions, 0 errors; real window, 42 MB image mapped† |
-| [Crimson Skies](https://github.com/sp00nznet/crimsonskies) | Windows | x86 (PE32) | 2000; upstream README claim | - | Compiles & links - 6,232 functions, 826K lines† |
-| [El-Fish](https://github.com/sp00nznet/elfish) | Windows 3.x | x86-16 (NE) | 1993; upstream README claim | - | Lifted & links - 2,236 functions, 121 segments† |
-| [MechWarrior 3](https://github.com/sp00nznet/mechwarrior3-recomp) | Windows | x86 (PE32) | 1999; upstream README claim | - | Compiles - 2,805 functions, 0 lift errors, 158K lines† |
-| [POD Gold](https://github.com/sp00nznet/pod) | Windows | x86 (PE32) | 1997; upstream README claim | - | Compiles & links - 3,405 functions, 0 lift errors, 422K lines† |
-| [Recoil](https://github.com/sp00nznet/recoil-recomp) | Windows | x86 (PE32) | 1999; upstream README claim | - | Compiles - 3,490 functions, 0 lift errors, 321K lines† |
-| [Gunman Chronicles](https://github.com/sp00nznet/gunman) | Windows | x86 (PE32) | 2000; upstream README claim | - | Phase 2 - 3,990 functions, weapons/entities rebuilt† |
-| [Hellbender](https://github.com/sp00nznet/hellbender) | Windows | x86 (PE32) | 1996; upstream README claim | - | Bring-up - 5,262 functions, 0 errors, 507 import bridges† |
-| [Microsoft Bob](https://github.com/sp00nznet/bob) | Windows 95 | x86-16 (NE) | 1995; upstream README claim | - | Bring-up - modules lift link-clean, InitInstance runs† |
-| [Rise of Nations: Rise of Legends](https://github.com/sp00nznet/rol) | Windows | x86 (PE32) | 2006; upstream README claim | - | Phase 3 - 13.25 MB, 25,513 vtable-only functions, no RTTI† |
-| [Heavy Metal: FAKK2](https://github.com/sp00nznet/heavymetal) | Windows | x86 (PE32) | 2000; upstream README claim | - | Foundation - 57 source files, core systems scaffolded† |
-| [Jurassic Park: Trespasser](https://github.com/sp00nznet/trespasser) | Windows | x86 (PE32) | 1998; upstream README claim | - | P0 - reconnaissance; ships a linker map† |
-| [Missile Attack!](https://github.com/sp00nznet/missileattack) | Windows 3.x | x86-16 (NE) | 1992; upstream README claim | - | P0 fixture: 87 KB NE, one code segment, 21 KB of code† |
-| [Monster Truck Madness 1 + 2](https://github.com/sp00nznet/mtm) | Windows | x86 (PE32) | 1996/1998; upstream README claim | - | P0 - renderer split into named DLLs† |
-| [One Must Fall: Battlegrounds](https://github.com/sp00nznet/omfbg) | Windows | x86 (PE32 DLLs) | 2003; upstream README claim | - | P0 - 10,374 mangled C++ exports; SafeDisc covers 1%† |
-| [Terminal Velocity](https://github.com/sp00nznet/tv) | DOS | x86-32 (DOS/4GW LE) | 1995; upstream README claim | - | P0 - needs the LE/LX front end the toolbox lacks† |
-| [The Even More Incredible Machine](https://github.com/sp00nznet/tim) | Windows 3.x | x86-16 (NE) | 1993; upstream README claim | - | P0 - 27 code segments, imports only KERNEL/USER/GDI† |
-| [The Magic School Bus Explores the Human Body](https://github.com/sp00nznet/msbus) | Windows 3.x | x86-16 (NE) | 1994; upstream README claim | - | P0 - ~60 KB code driving 190 MB of content† |
-| [Black & White 2](https://github.com/sp00nznet/bw2) | Windows | x86 (PE32) | 2005; upstream README claim | - | P0 partial - white.exe (21.7 MB) not extracted† |
-| [The Electronic Whole Earth Catalog](https://github.com/sp00nznet/wholeearth) | Classic Mac OS | 68k | 1988; upstream README claim | - | Format project - no PC binary; classic-HFS lister + macrecomp† |
+|  | Windows | x86 (PE32) | 2000; upstream README claim | - | In game! briefing room renders in 3D - 39,038 functions, 10.7M lines† |
+|  | Windows | x86 (PE32) | 2000; upstream README claim | - | Runs natively on Linux (win32hle), Bink movies, D3D11 presenter† |
+|  | Windows | x86 (PE32) | 1999; upstream README claim | - | Runs natively on Linux (win32hle): movies, music, menus, skirmish† |
+|  | Windows | x86 (PE32) | 1995; upstream README claim | - | Playable! Flies the canyon - 1,945 functions, SDL2+imgui† |
+|  | Windows | x86 (Win16/32) | 1997; upstream README claim | - | Plays and draws! intro decode, 22,050 Hz audio, cursor animation† |
+|  | Windows | x86 (PE32) | 1991/1998; upstream README claim | - | Plays! CRT -> WinMain -> opening -> in the submarine† |
+|  | Windows | x86 (PE32) | 1996; upstream README claim | - | Plays (Windows); win32hle bring-up runs MFC startup into main window† |
+|  | Windows | x86 (Win16/Win32) | 1991; upstream README claim | - | Playable rebuild from decompiled C, cross-platform + extras† |
+|  | Windows | x86 (PE32) | 1996; upstream README claim | - | Runs! Whole app lifted (7,326 fns); hybrid MFC boundary† |
+|  | DOS | x86-16 | 1993; upstream README claim | - | Boots & runs! 932 functions, 70K lines, EGA/DOS on SDL2† |
+|  | Windows 3.x/9x | x86-16 (NE) | 1996; upstream README claim | - | Runs! Win32 window, original frame loop, toys and saving work† |
+|  | DOS | x86-16 | 1991; upstream README claim | - | Runs! 672 functions, interactive boot/menu, 164K lines† |
+|  | Windows 3.x | x86-16 (VB p-code) | 1994; upstream README claim | - | Runs! 99/99 segments, 14,826 functions, 226K lines† |
+|  | Windows | x86 (PE32) | 1997; upstream README claim | - | Fork - native + HTML5 web port, multiplayer† |
+|  | Windows | x86 (PE32) | 1998; upstream README claim | - | Fork - decompilation ~complete (alexbatalov upstream)† |
+|  | Windows | x86 (PE32) | 2000; upstream README claim | - | Active - SDL2 port, 8 subsystems, full maps render† |
+|  | Windows | x86 (PE32) | 1999; upstream README claim | - | Active - D3D11 port, concourse UI runs, 2,702 functions† |
+|  | Windows | x86 (PE32) | 2001; upstream README claim | - | Active - all 569 types done, 10 Hz game loop runs† |
+|  | DOS | x86-16 | 1993; upstream README claim | - | Boots! ~90K lines; renders .PIC screens + .ACT dinosaurs† |
+|  | DOS | x86 | 1997; upstream README claim | - | Builds & runs - 4,094 functions, 444K lines, runtime bringup† |
+|  | DOS | x86-16 | 1993; upstream README claim | - | Boots - 886 functions lifted, runs MSC startup into main()† |
+|  | Windows | x86 (PE32) | 1997; upstream README claim | - | Boots to a window - 1,790 functions; DirectDraw next† |
+|  | Windows | x86 (PE32) | 1999; upstream README claim | - | Phase 7 - 6,027 functions, 0 errors; real window, 42 MB image mapped† |
+|  | Windows | x86 (PE32) | 2000; upstream README claim | - | Compiles & links - 6,232 functions, 826K lines† |
+|  | Windows 3.x | x86-16 (NE) | 1993; upstream README claim | - | Lifted & links - 2,236 functions, 121 segments† |
+|  | Windows | x86 (PE32) | 1999; upstream README claim | - | Compiles - 2,805 functions, 0 lift errors, 158K lines† |
+|  | Windows | x86 (PE32) | 1997; upstream README claim | - | Compiles & links - 3,405 functions, 0 lift errors, 422K lines† |
+|  | Windows | x86 (PE32) | 1999; upstream README claim | - | Compiles - 3,490 functions, 0 lift errors, 321K lines† |
+|  | Windows | x86 (PE32) | 2000; upstream README claim | - | Phase 2 - 3,990 functions, weapons/entities rebuilt† |
+|  | Windows | x86 (PE32) | 1996; upstream README claim | - | Bring-up - 5,262 functions, 0 errors, 507 import bridges† |
+|  | Windows 95 | x86-16 (NE) | 1995; upstream README claim | - | Bring-up - modules lift link-clean, InitInstance runs† |
+|  | Windows | x86 (PE32) | 2006; upstream README claim | - | Phase 3 - 13.25 MB, 25,513 vtable-only functions, no RTTI† |
+|  | Windows | x86 (PE32) | 2000; upstream README claim | - | Foundation - 57 source files, core systems scaffolded† |
+|  | Windows | x86 (PE32) | 1998; upstream README claim | - | P0 - reconnaissance; ships a linker map† |
+|  | Windows 3.x | x86-16 (NE) | 1992; upstream README claim | - | P0 fixture: 87 KB NE, one code segment, 21 KB of code† |
+|  | Windows | x86 (PE32) | 1996/1998; upstream README claim | - | P0 - renderer split into named DLLs† |
+|  | Windows | x86 (PE32 DLLs) | 2003; upstream README claim | - | P0 - 10,374 mangled C++ exports; SafeDisc covers 1%† |
+|  | DOS | x86-32 (DOS/4GW LE) | 1995; upstream README claim | - | P0 - needs the LE/LX front end the toolbox lacks† |
+|  | Windows 3.x | x86-16 (NE) | 1993; upstream README claim | - | P0 - 27 code segments, imports only KERNEL/USER/GDI† |
+|  | Windows 3.x | x86-16 (NE) | 1994; upstream README claim | - | P0 - ~60 KB code driving 190 MB of content† |
+|  | Windows | x86 (PE32) | 2005; upstream README claim | - | P0 partial - white.exe (21.7 MB) not extracted† |
+|  | Classic Mac OS | 68k | 1988; upstream README claim | - | Format project - no PC binary; classic-HFS lister + macrecomp† |
 
 ---
 
@@ -648,63 +648,63 @@ Status text is quoted from each project's own README; the architecture and OS co
 <tr><td align="center"><img src="../proof/screenshots/ac-native-macos-setup-frame.png" alt="ac-native-macos-setup-frame.png" width="100%"><br><sub>ac-native-macos-setup-frame.png</sub></td><td>1024×768<br>2,758 colours</td></tr>
 <tr><td align="center"><img src="../proof/screenshots/igi-level1-fresh-0002.png" alt="igi-level1-fresh-0002.png" width="100%"><br><sub>igi-level1-fresh-0002.png</sub></td><td>640×480<br>6,814 colours</td></tr>
 <tr><td align="center"><img src="../proof/screenshots/igi-level5-fresh-0001.png" alt="igi-level5-fresh-0001.png" width="100%"><br><sub>igi-level5-fresh-0001.png</sub></td><td>640×480<br>6,814 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-01-intro.png" alt="cavestory-doukutsu-01-intro.png" width="100%"><br><sub>cavestory-doukutsu-01-intro.png</sub></td><td>640×480<br>47 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-02-intro.png" alt="cavestory-doukutsu-02-intro.png" width="100%"><br><sub>cavestory-doukutsu-02-intro.png</sub></td><td>640×480<br>46 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cavestory-doukutsu-03-screen.png" alt="cavestory-doukutsu-03-screen.png" width="100%"><br><sub>cavestory-doukutsu-03-screen.png</sub></td><td>640×480<br>16 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cube-native-frame-0000.png" alt="cube-native-frame-0000.png" width="100%"><br><sub>cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/cube-native-frame-0001.png" alt="cube-native-frame-0001.png" width="100%"><br><sub>cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0000-blank.png" alt="doukutsu-sweep-frame-0000-blank.png" width="100%"><br><sub>doukutsu-sweep-frame-0000-blank.png</sub></td><td>640×480<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/doukutsu-sweep-frame-0001.png" alt="doukutsu-sweep-frame-0001.png" width="100%"><br><sub>doukutsu-sweep-frame-0001.png</sub></td><td>640×480<br>5 colours</td></tr>
-<tr><td align="center"><img src="screenshots/frame-0000-frame-0000.bmp" alt="frame-0000-frame-0000.bmp" width="100%"><br><sub>frame-0000-frame-0000.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>cavestory-doukutsu-01-intro.png</sub></td><td>640×480<br>47 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>cavestory-doukutsu-02-intro.png</sub></td><td>640×480<br>46 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>cavestory-doukutsu-03-screen.png</sub></td><td>640×480<br>16 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>doukutsu-sweep-frame-0000-blank.png</sub></td><td>640×480<br>1 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>doukutsu-sweep-frame-0001.png</sub></td><td>640×480<br>5 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>frame-0000-frame-0000.bmp</sub></td><td>240×263<br>4 colours</td></tr>
 <tr><td align="center"><img src="screenshots/game-recomp-cli-help.png" alt="game-recomp-cli-help.png" width="100%"><br><sub>game-recomp-cli-help.png</sub></td><td>1945×1880<br>5546 colours</td></tr>
 <tr><td align="center"><img src="screenshots/game-recomp-gui-dark.png" alt="game-recomp-gui-dark.png" width="100%"><br><sub>game-recomp-gui-dark.png</sub></td><td>2760×1816<br>5368 colours</td></tr>
-<tr><td align="center"><img src="screenshots/game-recomp-gui-light.png" alt="game-recomp-gui-light.png" width="100%"><br><sub>game-recomp-gui-light.png</sub></td><td>2760×1816<br>6396 colours</td></tr>
-<tr><td align="center"><img src="screenshots/game-recomp-gui-nord-frost.png" alt="game-recomp-gui-nord-frost.png" width="100%"><br><sub>game-recomp-gui-nord-frost.png</sub></td><td>2760×1816<br>6175 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>game-recomp-gui-light.png</sub></td><td>2760×1816<br>6396 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>game-recomp-gui-nord-frost.png</sub></td><td>2760×1816<br>6175 colours</td></tr>
 <tr><td align="center"><img src="screenshots/igi-window-level5-splash.png" alt="igi-window-level5-splash.png" width="100%"><br><sub>igi-window-level5-splash.png</sub></td><td>640×480<br>6814 colours</td></tr>
-<tr><td align="center"><img src="screenshots/ikachan-blank-frame.png" alt="ikachan-blank-frame.png" width="100%"><br><sub>ikachan-blank-frame.png</sub></td><td>351×238<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/macos-ikachan-blank.bmp" alt="macos-ikachan-blank.bmp" width="100%"><br><sub>macos-ikachan-blank.bmp</sub></td><td>351×238<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0000.bmp" alt="screenshots-000-Doukutsu-frame-0000.bmp" width="100%"><br><sub>screenshots-000-Doukutsu-frame-0000.bmp</sub></td><td>640×480<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-000-Doukutsu-frame-0001.bmp" alt="screenshots-000-Doukutsu-frame-0001.bmp" width="100%"><br><sub>screenshots-000-Doukutsu-frame-0001.bmp</sub></td><td>640×480<br>5 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0000.png" alt="screenshots-cube-native-frame-0000.png" width="100%"><br><sub>screenshots-cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.bmp" alt="screenshots-cube-native-frame-0001.bmp" width="100%"><br><sub>screenshots-cube-native-frame-0001.bmp</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-cube-native-frame-0001.png" alt="screenshots-cube-native-frame-0001.png" width="100%"><br><sub>screenshots-cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-frame-0000.bmp" alt="screenshots-frame-0000.bmp" width="100%"><br><sub>screenshots-frame-0000.bmp</sub></td><td>580×456<br>1 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-frame-0001.bmp" alt="screenshots-frame-0001.bmp" width="100%"><br><sub>screenshots-frame-0001.bmp</sub></td><td>580×456<br>2 colours</td></tr>
-<tr><td align="center"><img src="screenshots/screenshots-ikachan-native-frame-0000.png" alt="screenshots-ikachan-native-frame-0000.png" width="100%"><br><sub>screenshots-ikachan-native-frame-0000.png</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>ikachan-blank-frame.png</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>macos-ikachan-blank.bmp</sub></td><td>351×238<br>1 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>screenshots-000-Doukutsu-frame-0000.bmp</sub></td><td>640×480<br>1 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>screenshots-000-Doukutsu-frame-0001.bmp</sub></td><td>640×480<br>5 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>screenshots-cube-native-frame-0000.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>screenshots-cube-native-frame-0001.bmp</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>screenshots-cube-native-frame-0001.png</sub></td><td>240×263<br>4 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>screenshots-frame-0000.bmp</sub></td><td>580×456<br>1 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>screenshots-frame-0001.bmp</sub></td><td>580×456<br>2 colours</td></tr>
+<tr><td align="center">no committed frame<br><sub>screenshots-ikachan-native-frame-0000.png</sub></td><td>351×238<br>1 colours</td></tr>
 </table>
 
 ## Frame inventory
 
 | File | Size | Distinct RGB colours | SHA-256 of committed file | Verdict |
 |---|---|---|---|---|
-| `igi-level1-fresh-0002.png` | 640×480 | 6,814 | `b88f6d616981ffe6541e021a1b94f8590e6fd32adc6b0606912c1c52e4c21cf4` | PARTIAL — real non-blank native render |
-| `igi-level5-fresh-0001.png` | 640×480 | 6,814 | `602b806620f0bf8f23a0b01fd1d7f3d6440fd026dee106edc1ca95ba6b9b5d1a` | PARTIAL — real non-blank native render |
-| `igi-level9-fresh-0002.png` | 640×480 | 6,814 | `b88f6d616981ffe6541e021a1b94f8590e6fd32adc6b0606912c1c52e4c21cf4` | PARTIAL — byte-identical to level 1; real render |
-| `ac-setup-cua.png` | 1024×768 | 17,689 | `6b341ca298e969ffecb7a97b33ec4b295ab8e7f3a11eba34be4491b1926e2f03` | PARTIAL — real CUA-captured gameplay frame |
-| `ac-native-macos-setup-frame.png` | 1024×768 | 2,758 | `67b64561fcdc4fc97953399ddf494996a1511cbfc7c3464060535b6fd4fcc6cd` | PARTIAL — real native render |
-| `cavestory-doukutsu-01-intro.png` | 640×480 | 47 | `2bb1b42e7cd652851b5fd909eee365fb4a6d0c2db39c5e4d9f60c5e66f277204` | PARTIAL — real non-blank native render |
-| `cavestory-doukutsu-02-intro.png` | 640×480 | 46 | `503559ab2e1b95963dacbe03b6533012e3ed852a18a339925a058ccfb1d59ba0` | PARTIAL — real non-blank native render |
-| `cavestory-doukutsu-03-screen.png` | 640×480 | 16 | `8c9a36bf692ba0cd4fc20fc7802b2c4eeccb9464625d82dce01e236cc48d86d0` | PARTIAL — real non-blank native render |
-| `cube-native-frame-0000.png` | 240×263 | 4 | `4612755ca7d157200990c452459471be497591c51f56938ef54885f4db0963fa` | PARTIAL — real non-blank native render |
-| `cube-native-frame-0001.png` | 240×263 | 4 | `90b3fa0e8fa4159a38a5f251d9ca6e9a3c619cd61a322d0e8beb3e9335e245ef` | PARTIAL — real non-blank native render |
-| `doukutsu-sweep-frame-0000-blank.png` | 640×480 | 1 | `9347fe86f6b448518e30d671057b4ece3e7f2cf3906488168f63736a4c990bc0` | FAIL — blank, never counted as evidence |
-| `doukutsu-sweep-frame-0001.png` | 640×480 | 5 | `c921689ead26aa8966b9a88cc5fce73e7946bb3d73efa74bc40b764c5cd951cc` | PARTIAL — real non-blank native render |
-| `frame-0000-frame-0000.bmp` | 240×263 | 4 | `178b877da9efb47443124586f83ab98ddd1b24cf6948c9d1bd290584822bcee8` | PARTIAL — real non-blank native render |
-| `game-recomp-cli-help.png` | 1945×1880 | 5546 | `e168a7cf9b58448504b60e154732817551e4e5769557e07d66371e2f04b12cc1` | PARTIAL — real non-blank native render |
-| `game-recomp-gui-dark.png` | 2760×1816 | 5368 | `f205594aceb27a84608e6e68ca5bb2578bd54cab4faa245b5e833708f07dfd12` | PARTIAL — real non-blank native render |
-| `game-recomp-gui-light.png` | 2760×1816 | 6396 | `dc30097e919b03d52fcca57923380134d5ed6aa89aff6afd5f8a9abcd138478a` | PARTIAL — real non-blank native render |
-| `game-recomp-gui-nord-frost.png` | 2760×1816 | 6175 | `5a6f160d9c587fd3a8bb16e2544fb6c8e46acc14b44059afb588b83519f55e72` | PARTIAL — real non-blank native render |
-| `igi-window-level5-splash.png` | 640×480 | 6814 | `02500b672883205a89c27388c8505cfb6efb6cd5824eccf5e5da3bcac04fde01` | PARTIAL — real non-blank native render |
-| `ikachan-blank-frame.png` | 351×238 | 1 | `bbe32c0f170a633dda300f55f1c914041c6b1fcb0a58b9725eeab734ca582f39` | FAIL — blank, never counted as evidence |
-| `macos-ikachan-blank.bmp` | 351×238 | 1 | `49cf95b7411cb08e3026a9dcc05fcfa5d8988f7da4cdfba73fff9cfd45ab757c` | FAIL — blank, never counted as evidence |
-| `screenshots-000-Doukutsu-frame-0000.bmp` | 640×480 | 1 | `756292a16d18a3f5cf9e98b00422f3024b5ecde7b19f3388db4f365ac641a6b6` | FAIL — blank, never counted as evidence |
-| `screenshots-000-Doukutsu-frame-0001.bmp` | 640×480 | 5 | `2da261e8053037a722dfffea2f726ddc712a974bdce909de63fc4daff2bf7c3b` | PARTIAL — real non-blank native render |
-| `screenshots-cube-native-frame-0000.png` | 240×263 | 4 | `9d9354563483299a037f5d2b05d0f27e4f7b08c6b54c2c2abda6c88ba9b574d6` | PARTIAL — real non-blank native render |
-| `screenshots-cube-native-frame-0001.bmp` | 240×263 | 4 | `3d1d1f381c350b77b24eb743047e833d1fda9197bcdf56f9e5a3081b36b5e968` | PARTIAL — real non-blank native render |
-| `screenshots-cube-native-frame-0001.png` | 240×263 | 4 | `6ee0fb77087fee263d49efae690a2b26eb0e69af5201e91462640fc10457c8e5` | PARTIAL — real non-blank native render |
-| `screenshots-frame-0000.bmp` | 580×456 | 1 | `1b2cab9f8c1d1ac541bc03551fa1f0aed380c440566c32bc579f0b65c38b3d28` | FAIL — blank, never counted as evidence |
-| `screenshots-frame-0001.bmp` | 580×456 | 2 | `11116c2709934dac8a2ae03b758922e1c46c840012fffda777c26e6ef17c8843` | PARTIAL — real non-blank native render |
-| `screenshots-ikachan-native-frame-0000.png` | 351×238 | 1 | `967db05021e1d219c3ad2e5ff91deab9e3a5499983820115f856a224b8392581` | FAIL — blank, never counted as evidence |
+| no committed frame | 640×480 | 6,814 | `b88f6d616981ffe6541e021a1b94f8590e6fd32adc6b0606912c1c52e4c21cf4` | PARTIAL — real non-blank native render |
+| no committed frame | 640×480 | 6,814 | `602b806620f0bf8f23a0b01fd1d7f3d6440fd026dee106edc1ca95ba6b9b5d1a` | PARTIAL — real non-blank native render |
+| no committed frame | 640×480 | 6,814 | `b88f6d616981ffe6541e021a1b94f8590e6fd32adc6b0606912c1c52e4c21cf4` | PARTIAL — byte-identical to level 1; real render |
+| no committed frame | 1024×768 | 17,689 | `6b341ca298e969ffecb7a97b33ec4b295ab8e7f3a11eba34be4491b1926e2f03` | PARTIAL — real CUA-captured gameplay frame |
+| no committed frame | 1024×768 | 2,758 | `67b64561fcdc4fc97953399ddf494996a1511cbfc7c3464060535b6fd4fcc6cd` | PARTIAL — real native render |
+| no committed frame | 640×480 | 47 | `2bb1b42e7cd652851b5fd909eee365fb4a6d0c2db39c5e4d9f60c5e66f277204` | PARTIAL — real non-blank native render |
+| no committed frame | 640×480 | 46 | `503559ab2e1b95963dacbe03b6533012e3ed852a18a339925a058ccfb1d59ba0` | PARTIAL — real non-blank native render |
+| no committed frame | 640×480 | 16 | `8c9a36bf692ba0cd4fc20fc7802b2c4eeccb9464625d82dce01e236cc48d86d0` | PARTIAL — real non-blank native render |
+| no committed frame | 240×263 | 4 | `4612755ca7d157200990c452459471be497591c51f56938ef54885f4db0963fa` | PARTIAL — real non-blank native render |
+| no committed frame | 240×263 | 4 | `90b3fa0e8fa4159a38a5f251d9ca6e9a3c619cd61a322d0e8beb3e9335e245ef` | PARTIAL — real non-blank native render |
+| no committed frame | 640×480 | 1 | `9347fe86f6b448518e30d671057b4ece3e7f2cf3906488168f63736a4c990bc0` | FAIL — blank, never counted as evidence |
+| no committed frame | 640×480 | 5 | `c921689ead26aa8966b9a88cc5fce73e7946bb3d73efa74bc40b764c5cd951cc` | PARTIAL — real non-blank native render |
+| no committed frame | 240×263 | 4 | `178b877da9efb47443124586f83ab98ddd1b24cf6948c9d1bd290584822bcee8` | PARTIAL — real non-blank native render |
+| no committed frame | 1945×1880 | 5546 | `e168a7cf9b58448504b60e154732817551e4e5769557e07d66371e2f04b12cc1` | PARTIAL — real non-blank native render |
+| no committed frame | 2760×1816 | 5368 | `f205594aceb27a84608e6e68ca5bb2578bd54cab4faa245b5e833708f07dfd12` | PARTIAL — real non-blank native render |
+| no committed frame | 2760×1816 | 6396 | `dc30097e919b03d52fcca57923380134d5ed6aa89aff6afd5f8a9abcd138478a` | PARTIAL — real non-blank native render |
+| no committed frame | 2760×1816 | 6175 | `5a6f160d9c587fd3a8bb16e2544fb6c8e46acc14b44059afb588b83519f55e72` | PARTIAL — real non-blank native render |
+| no committed frame | 640×480 | 6814 | `02500b672883205a89c27388c8505cfb6efb6cd5824eccf5e5da3bcac04fde01` | PARTIAL — real non-blank native render |
+| no committed frame | 351×238 | 1 | `bbe32c0f170a633dda300f55f1c914041c6b1fcb0a58b9725eeab734ca582f39` | FAIL — blank, never counted as evidence |
+| no committed frame | 351×238 | 1 | `49cf95b7411cb08e3026a9dcc05fcfa5d8988f7da4cdfba73fff9cfd45ab757c` | FAIL — blank, never counted as evidence |
+| no committed frame | 640×480 | 1 | `756292a16d18a3f5cf9e98b00422f3024b5ecde7b19f3388db4f365ac641a6b6` | FAIL — blank, never counted as evidence |
+| no committed frame | 640×480 | 5 | `2da261e8053037a722dfffea2f726ddc712a974bdce909de63fc4daff2bf7c3b` | PARTIAL — real non-blank native render |
+| no committed frame | 240×263 | 4 | `9d9354563483299a037f5d2b05d0f27e4f7b08c6b54c2c2abda6c88ba9b574d6` | PARTIAL — real non-blank native render |
+| no committed frame | 240×263 | 4 | `3d1d1f381c350b77b24eb743047e833d1fda9197bcdf56f9e5a3081b36b5e968` | PARTIAL — real non-blank native render |
+| no committed frame | 240×263 | 4 | `6ee0fb77087fee263d49efae690a2b26eb0e69af5201e91462640fc10457c8e5` | PARTIAL — real non-blank native render |
+| no committed frame | 580×456 | 1 | `1b2cab9f8c1d1ac541bc03551fa1f0aed380c440566c32bc579f0b65c38b3d28` | FAIL — blank, never counted as evidence |
+| no committed frame | 580×456 | 2 | `11116c2709934dac8a2ae03b758922e1c46c840012fffda777c26e6ef17c8843` | PARTIAL — real non-blank native render |
+| no committed frame | 351×238 | 1 | `967db05021e1d219c3ad2e5ff91deab9e3a5499983820115f856a224b8392581` | FAIL — blank, never counted as evidence |
 
 ## Tested games without captured frames
 
@@ -718,4 +718,4 @@ failure, no native binary, or no build); no screenshot can be shown for them.
 - **TrackMania ESWC / Forever**: no native binary and no committed frame. The desktop capture with no game window was removed as invalid evidence; engine controls BLOCKED. IGI has native frames in `proof/screenshots/`.
 - **New downloads** (Chocolate Strife, Crispy Strife, VCMI): controls BLOCKED.
 
-See [verification methodology](VERIFICATION.md). No original-Windows frame oracle exists here (#145/#171); captures are native-only and labelled PARTIAL or FAIL.
+See . No original-Windows frame oracle exists here (#145/#171); captures are native-only and labelled PARTIAL or FAIL.

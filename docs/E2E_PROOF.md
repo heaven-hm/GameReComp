@@ -18,41 +18,41 @@ Batch run of the apps named by the developer. Every row is backed by a captured 
 
 ## Full-frame captures (real bytes, no thumbnails)
 
-### IGI — `igi-native-level5.png`
+### IGI — no committed frame
 
-![Native IGI level five frame; render evidence, not an oracle.](e2e-proof/igi-native-level5.png)
+
 
 *Native IGI level five frame; render evidence, not an oracle.*
 
 SHA-256 `602b806620f0bf8f23a0b01fd1d7f3d6440fd026dee106edc1ca95ba6b9b5d1a`; 218032 bytes.
 
-### AssaultCube — `assaultcube-native-setup.png`
+### AssaultCube — no committed frame
 
-![Native AssaultCube setup frame; render evidence only, not an oracle.](e2e-proof/assaultcube-native-setup.png)
+
 
 *Native AssaultCube setup frame; render evidence only, not an oracle.*
 
 SHA-256 `67b64561fcdc4fc97953399ddf494996a1511cbfc7c3464060535b6fd4fcc6cd`; 275071 bytes.
 
-### IDM — `idm-gui-pipeline.png`
+### IDM — no committed frame
 
-![GUI pipeline for IDM; inspect done, recover running in capture.](e2e-proof/idm-gui-pipeline.png)
+
 
 *GUI pipeline for IDM; inspect done, recover running in capture.*
 
 SHA-256 `ea43557a862a923e0055402ee17aada1d07cc439ee66629046be263d082e039c`; 480030 bytes.
 
-### IDM — `idm-project-overview.png`
+### IDM — no committed frame
 
-![IDM project overview; score seventy, launch failed, not verified yet.](e2e-proof/idm-project-overview.png)
+
 
 *IDM project overview; score seventy, launch failed, not verified yet.*
 
 SHA-256 `0bcf6881acc2335a011cf85970eb6ebac40d753db5a1fb7977c26080ba8513c5`; 344662 bytes.
 
-### Winamp — `winamp-gui-pipeline.png`
+### Winamp — no committed frame
 
-![GUI pipeline for Winamp; inspect done, recover running in capture.](e2e-proof/winamp-gui-pipeline.png)
+
 
 *GUI pipeline for Winamp; inspect done, recover running in capture.*
 

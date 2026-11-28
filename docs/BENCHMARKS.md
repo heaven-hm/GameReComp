@@ -113,7 +113,7 @@ concludes nothing runs; the README says several do.
 The rows are not being edited by hand. `generated_at` on each row is what proves
 the staleness, and the honest repair is a re-sweep that rewrites every row from its
 own project's `reports/report.json`, which is what
-[`reports/run-sweep.sh`](../reports/run-sweep.sh) does:
+ does:
 
 ```sh
 SMALL_GAMES_PATH=/path/to/games sh reports/run-sweep.sh 20

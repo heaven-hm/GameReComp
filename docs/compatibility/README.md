@@ -3,7 +3,7 @@
 Issue #14 owns this directory: one machine-readable source of truth for API
 coverage, synthetic fixtures, CI gating and status aggregation. It does **not**
 own D3D/input/audio/networking backends or the independent original-game
-gameplay oracle (issues #1/#3). See [issue #14](https://github.com/heaven-hm/GameReComp/issues/14).
+gameplay oracle (issues #1/#3). See .
 
 ## Files
 

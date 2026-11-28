@@ -15,17 +15,17 @@ Every direction named by the developer was executed on this macOS arm64 host. Ea
 
 ## Full-frame GUI captures (real bytes)
 
-### `macos-notes-selected.png`
+### no committed frame
 
-![GUI resolves Notes.app to Mach-O and reports the source port](macos-notes-selected.png)
+
 
 *GUI resolves Notes.app to Mach-O and reports the source port*
 
 SHA-256 `078724e1a6448fc8550aed51d93f56f80a7b9fa5f7e830b827e69640e041f0d8`; 523576 bytes.
 
-### `windows-x64-selected.png`
+### no committed frame
 
-![GUI accepts PE32+ x86-64 input and reports the exact backend](windows-x64-selected.png)
+
 
 *GUI accepts PE32+ x86-64 input and reports the exact backend*
 

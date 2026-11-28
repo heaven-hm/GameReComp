@@ -4,7 +4,7 @@
 
 This is a provenance ledger, not a status board. Statuses and function counts
 move every week and rot in a document; they live in the
-[README table](../README.md#the-projects-that-built-this) and nowhere else.
+ and nowhere else.
 What does not rot is *why* a tool works the way it does, and that is what is
 written down here.
 
@@ -61,7 +61,7 @@ repo is a scar from one specific binary, and the entry below names it.
 
 ## Sid Meier's Civilization (1991)
 
-**Repo**: [sp00nznet/civ](https://github.com/sp00nznet/civ) ·
+**Repo**:  ·
 **Original**: `CIV.EXE` (305 KB, 16-bit MZ) + 23 overlay modules, Microsoft C 5.x
 
 The oldest binary in the collection, and the reason the entire 16-bit half of
@@ -78,7 +78,7 @@ why the 16-bit path is a parallel pipeline rather than a special case of the
 
 ## Operation Neptune (1991, Win32 re-release 1998)
 
-**Repo**: [sp00nznet/operationneptune](https://github.com/sp00nznet/operationneptune) ·
+**Repo**:  ·
 **Original**: `ONWIN32.EXE`, Borland-compiled PE32, unpacked
 
 **Contributed**: `assets/extract_wise.py`.
@@ -94,7 +94,7 @@ starts up nothing like MSVC's.
 
 ## DinoPark Tycoon (1993)
 
-**Repo**: [sp00nznet/dinopark](https://github.com/sp00nznet/dinopark) ·
+**Repo**:  ·
 **Original**: 16-bit DOS, Borland large model
 
 **Contributed**: `disasm/largemodel16.py`.
@@ -109,7 +109,7 @@ than from scratch.
 
 ## El-Fish (1993)
 
-**Repo**: [sp00nznet/elfish](https://github.com/sp00nznet/elfish) ·
+**Repo**:  ·
 **Original**: 16-bit NE + TSXLIB DOS extender
 
 **Contributed**: the first version of the `ne/` front end, `disasm/fpu_decode.py`.
@@ -123,8 +123,8 @@ segmented NE image.
 
 ## Fury³ (1995) and Hellbender (1996)
 
-**Repos**: [sp00nznet/fury3](https://github.com/sp00nznet/fury3),
-[sp00nznet/hellbender](https://github.com/sp00nznet/hellbender) ·
+**Repos**: ,
+ ·
 **Engine**: Terminal Reality voxel engine, Win32/MSVC
 
 **Contributed**: `pe/stdcall_argc.py`, `runtime/recomp32/image_loader.c`, the
@@ -141,7 +141,7 @@ argument.
 
 ## Catz (1996)
 
-**Repo**: [sp00nznet/catz-recomp](https://github.com/sp00nznet/catz-recomp) ·
+**Repo**:  ·
 **Original**: 16-bit NE engine DLL (PF Magic)
 
 **Notable**: Lifting a *DLL* rather than an EXE, in NE format, where the host
@@ -153,7 +153,7 @@ the previous project's.
 
 ## Microsoft Encarta 97 Encyclopedia (1996)
 
-**Repo**: [sp00nznet/encarta](https://github.com/sp00nznet/encarta) ·
+**Repo**:  ·
 **Original**: `ENC97.EXE` + 5 DLLs + 6 legacy 16-bit components + 14 `.M20` files, MFC 4.0 / MSVC 4.x
 
 **Contributed**: all of `formats/`, `runtime/hybrid/`,
@@ -171,7 +171,7 @@ and byte-exact with no DLL present.
 
 ## Grand Theft Auto (1997)
 
-**Repo**: [sp00nznet/gta](https://github.com/sp00nznet/gta) ·
+**Repo**:  ·
 **Engine**: DMA "Race'n'Chase"
 
 **Notable**: The handler table starts at `0x4B4AD1` -- an *odd* address, inside
@@ -184,7 +184,7 @@ in it surface at runtime as unresolved indirect calls.
 
 ## POD Gold (1997)
 
-**Repo**: [sp00nznet/pod-recomp](https://github.com/sp00nznet/pod-recomp) ·
+**Repo**:  ·
 **Engine**: Ubi Soft MMX software rasteriser
 
 **Contributed**: the MMX instruction coverage in `lift32.py`, the MMX register
@@ -200,7 +200,7 @@ POD never interleaves them, which is the only reason the simple model holds.
 
 ## X-Wing Alliance (1999)
 
-**Repo**: [sp00nznet/xwa](https://github.com/sp00nznet/xwa) ·
+**Repo**:  ·
 **Original**: `xwingalliance.exe`, MSVC, SafeDisc v1, fixed base `0x00400000`
 
 **Contributed**: `disasm/disasm32.py`, `lift/lift32.py`, `lift/translator.py`,
@@ -215,8 +215,8 @@ dumper because static unwrapping was not viable.
 
 ## Zipper GOS: Recoil (1999), MechWarrior 3 (1999), Crimson Skies (2000)
 
-**Repos**: [sp00nznet/crimsonskies](https://github.com/sp00nznet/crimsonskies),
-[sp00nznet/mechwarrior3-recomp](https://github.com/sp00nznet/mechwarrior3-recomp);
+**Repos**: ,
+;
 `recoil-recomp` private ·
 **Engine**: Zipper Interactive GOS, three generations
 
@@ -233,7 +233,7 @@ hand-rolling the same crash reporter, so it moved into `runtime/`.
 
 ## Soldier of Fortune (2000)
 
-**Repo**: [sp00nznet/sof](https://github.com/sp00nznet/sof) ·
+**Repo**:  ·
 **Engine**: Quake II (heavily modified) + GHOUL ·
 **Original**: `SoF.exe` + `gamex86.dll` + `ref_gl.dll` + `player.dll` + 3 sound DLLs, MSVC 6.0
 
@@ -250,7 +250,7 @@ file.
 
 ## Gunman Chronicles (2000)
 
-**Repo**: [sp00nznet/gunman](https://github.com/sp00nznet/gunman) ·
+**Repo**:  ·
 **Engine**: GoldSrc
 
 **Contributed**: all of `classify/`, `ghidra/DecompileAll.java`,
@@ -266,7 +266,7 @@ adjacent).
 
 ## Heavy Metal: FAKK2 (2000)
 
-**Repo**: [sp00nznet/heavymetal](https://github.com/sp00nznet/heavymetal) ·
+**Repo**:  ·
 **Engine**: id Tech 3 + Ritual UberTools
 
 **Contributed**: `pe/pe_analyze.py` (merged), `assets/pk3_inspect.py`.
@@ -279,7 +279,7 @@ before anything links.
 
 ## Black & White (2001)
 
-**Repo**: [sp00nznet/bw](https://github.com/sp00nznet/bw) ·
+**Repo**:  ·
 **Engine**: Lionhead custom, MSVC 6.0, SafeDisc
 
 **Contributed**: all of `cpp/`, `ghidra/GhidraStats.java`,
@@ -295,11 +295,11 @@ toolchain in both directions and across two compilers.
 
 ## Jurassic Park: Trespasser (1998)
 
-**Repo**: [sp00nznet/trespasser](https://github.com/sp00nznet/trespasser) ·
+**Repo**:  ·
 **Original**: `setup\tpassp6.exe`, the Pentium Pro/II build. Plain MSVC 6.0 PE32, no DRM.
 
 **Contributed**: `disasm/score_recovery.py`, the E9 tail-call seeding in
-`disasm32.find_branch_targets`, and [CONSOLIDATION.md](CONSOLIDATION.md).
+`disasm32.find_branch_targets`, and [](SOURCE_PROVENANCE.md).
 
 **Notable**: This project's only contribution so far is *measurement*, and it
 has been worth more than most features. Scoring `disasm32.py` against a linker
@@ -313,7 +313,7 @@ before, so nobody knew.
 
 ## Nocturne (1999)
 
-**Repo**: [sp00nznet/nocturne](https://github.com/sp00nznet/nocturne) ·
+**Repo**:  ·
 **Engine**: Terminal Reality, Watcom C/C++32
 
 **Contributed**: the `VirtualSize == 0` tolerance in `pe/pe_analyze.py`, and
@@ -329,7 +329,7 @@ anything large enough to notice.
 
 ## Rise of Legends (2006)
 
-**Repo**: [sp00nznet/rol](https://github.com/sp00nznet/rol) ·
+**Repo**:  ·
 **Engine**: Big Huge Games rts2, MSVC 7.1
 
 **Notable**: The stress test. 13.25 MB, 19.2 million instructions, **25,513
@@ -342,7 +342,7 @@ function recovery pass that cannot follow a vtable misses most of this binary.
 
 ## One Must Fall: Battlegrounds (2003)
 
-**Repo**: [sp00nznet/omfbg](https://github.com/sp00nznet/omfbg) (private) *
+**Repo**:  (private) *
 **Engine**: Diversions Entertainment, modular -- `OMFBG.exe` + 9 `.ModuleDLL`
 
 **Contributed**: the v6+ file-descriptor layout in `assets/isextract.py`, the
@@ -369,7 +369,7 @@ strength of `AddD` matches that were all inside
 
 ## Monster Truck Madness 1 & 2 (1996, 1998)
 
-**Repo**: [sp00nznet/mtm](https://github.com/sp00nznet/mtm) (private) *
+**Repo**:  (private) *
 **Engine**: Terminal Reality, third generation
 
 **Notable**: the Fury3/Hellbender pair is the collection's cheapest regression
@@ -383,7 +383,7 @@ Nocturne (1999) that makes four Terminal Reality generations: 1995, 1996, 1998,
 
 ## Star Wars: Force Commander (2000)
 
-**Repo**: [sp00nznet/forcecommander](https://github.com/sp00nznet/forcecommander) (private) *
+**Repo**:  (private) *
 **Original**: `Focom.exe`, MSVC 6.0 + MSVCP60, no DRM
 
 **Notable**: the clean version of the X-Wing Alliance problem. Same publisher,
@@ -396,7 +396,7 @@ first week.
 
 ## Terminal Velocity (1995)
 
-**Repo**: [sp00nznet/tv](https://github.com/sp00nznet/tv) (private) *
+**Repo**:  (private) *
 **Original**: `GAME.EXE`, Watcom C/C++, DOS/4GW
 
 **Notable**: the argument for an **LE/LX front end**. `catalog.py` names LE/LX
@@ -411,7 +411,7 @@ test of whether the lifter is compiler-independent.
 
 ## Black & White 2 (2005)
 
-**Repo**: [sp00nznet/bw2](https://github.com/sp00nznet/bw2) (private) *
+**Repo**:  (private) *
 **Engine**: Lionhead, four years on from `bw`
 
 **Notable**: `white.exe` is **21,739,061 bytes** -- larger than Rise of Legends
@@ -428,7 +428,7 @@ that fixed an InstallShield 7 disc reads an InstallShield 9 one unchanged.
 
 ## The Magic School Bus Explores the Human Body (1994)
 
-**Repo**: [sp00nznet/msbus](https://github.com/sp00nznet/msbus) (private) *
+**Repo**:  (private) *
 **Original**: Win16 NE, Microsoft "band" engine
 
 **Notable**: roughly **60 KB of machine code driving 190 MB of content** --
@@ -441,7 +441,7 @@ project is `.MSF`, `.PAG` and `.PFL`.
 
 ## The Even More Incredible Machine (1993)
 
-**Repo**: [sp00nznet/tim](https://github.com/sp00nznet/tim) (private) *
+**Repo**:  (private) *
 **Original**: `TEMIM.EXE`, Borland C++, NE, 27 code segments
 
 **Notable**: imports KERNEL, USER and GDI and **nothing else** -- the entire
@@ -454,7 +454,7 @@ Third Borland project after Operation Neptune and Gizmos & Gadgets.
 
 ## Missile Attack! (1992)
 
-**Repo**: [sp00nznet/missileattack](https://github.com/sp00nznet/missileattack) ·
+**Repo**:  ·
 **Original**: `MISSILE.EXE`, 87 KB NE shareware, **one code segment**
 
 **Notable**: the fixture for the 16-bit pipeline. 21 KB in a single segment, so
@@ -468,7 +468,7 @@ El-Fish problem at 1/100th the size.
 
 ## The Electronic Whole Earth Catalog (1988)
 
-**Repo**: [sp00nznet/wholeearth](https://github.com/sp00nznet/wholeearth)
+**Repo**: 
 
 **Notable**: not a PC title at all. The disc has an Apple Partition Map and an
 HFS volume and no ISO 9660 descriptor -- Macintosh, Broderbund, the same shelf as
@@ -480,7 +480,7 @@ to `macrecomp`.
 
 ## Blake Stone: Aliens of Gold (1993) and Planet Strike (1994)
 
-**Repo**: [sp00nznet/blakestone](https://github.com/sp00nznet/blakestone) ·
+**Repo**:  ·
 **Original**: `BS_AOG.EXE` / `BS_FIRE.EXE`, LZEXE 0.91, Borland C++ 3.x medium
 model, 386 code in 16-bit segments (the Wolfenstein 3D engine, extended by JAM)
 
@@ -500,7 +500,7 @@ is a tool bug.
 
 ## World Empire (1994)
 
-**Repo**: [sp00nznet/worldempire](https://github.com/sp00nznet/worldempire) ·
+**Repo**:  ·
 
 **Notable**: the first target where the x86 lives in a different file than the
 game. `EMPIRE.EXE` imports `VBRUN300.DLL` and nothing else and carries 14
@@ -651,8 +651,8 @@ programs, not one target. Kept as a prospecting corpus: OS/2 16-bit is NE, which
 
 ## The Fallout forks (1997, 1998)
 
-**Repos**: [fallout1-re](https://github.com/sp00nznet/fallout1-re),
-[fallout2-re](https://github.com/sp00nznet/fallout2-re) ·
+**Repos**: ,
+ ·
 **Upstream**: alexbatalov's reverse-engineered source
 
 Not recompilations -- forks of completed RE work, kept here because they answer

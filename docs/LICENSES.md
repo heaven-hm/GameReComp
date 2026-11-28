@@ -14,7 +14,7 @@ DirectMusic COM façade from igi-recomp, and the PE API-surface audit ported
 from arm64-recompiler (`LICENSES/arm64-recompiler-MIT.txt`). New vendored
 code must be added there, not only here. Exact upstream commit pins and reuse
 decisions are consolidated in
-[`UPSTREAM_PROVENANCE_CONSOLIDATED.md`](UPSTREAM_PROVENANCE_CONSOLIDATED.md).
+[](SOURCE_PROVENANCE.md).
 
 ## Runtime dependencies of generated projects
 
