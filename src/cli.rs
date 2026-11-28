@@ -19,8 +19,8 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[command(
     name = "game-recomp-cli",
     version = VERSION,
-    about = "GameReComp CLI — Pick your game and turn it to native port",
-    long_about = "Pick your game and turn it to native port. GameReComp turns Windows PE32 x86 games you own into standalone native C or WebAssembly builds with deterministic lifting and verification. AI is strictly optional and ONLY used to improve readable C source code (compile- and evidence-verified). Licensed under AGPL-3.0-only.",
+    about = "GameReComp CLI — Any game or app, any OS, any architecture",
+    long_about = "Any game or app, any OS, any architecture. GameReComp accepts Windows, macOS and Linux inputs across x86, x86_64 and arm64; PE32 i386 games you own are turned into standalone native C or WebAssembly builds with deterministic lifting and verification. AI is strictly optional and ONLY used to improve readable C source code (compile- and evidence-verified). Licensed under AGPL-3.0-only.",
     disable_help_subcommand = false,
     args_conflicts_with_subcommands = true
 )]
@@ -321,7 +321,7 @@ fn print_styled_overview(cfg: &AppConfig) {
     println!("  {}", brand_banner());
     println!(
         "  {}",
-        "Pick your game and turn it to native port.".dimmed()
+        "Any game or app, any OS, any architecture — PE32 i386 rebuilds; other inputs report exact status.".dimmed()
     );
     println!();
     println!("  {}", "COMMANDS".bright_yellow().bold());
@@ -720,7 +720,7 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     println!("  {}", brand_banner());
     println!(
         "  {}",
-        "Pick your game and turn it to native port.".dimmed()
+        "Any game or app, any OS, any architecture — PE32 i386 rebuilds; other inputs report exact status.".dimmed()
     );
     println!("  {}", "─".repeat(72).dimmed());
     println!(

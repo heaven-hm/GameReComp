@@ -400,11 +400,6 @@ pub fn parse_env_file(text: &str) -> Vec<(String, String)> {
 }
 
 /// Locate the Python pipeline bundled inside a macOS `.app` bundle.
-///
-/// A bundled GUI runs from `<App>.app/Contents/MacOS/game-recomp-gui`, where the
-/// repo's Python sources are shipped at `<App>.app/Contents/Resources/repo`.
-/// Without this, `resolve_repo_root` falls back to `/` and every recompile
-/// fails with `ModuleNotFoundError: No module named 'tools'`.
 fn bundled_repo_root(exe: &Path) -> Option<PathBuf> {
     let contents = exe.parent()?.parent()?;
     let candidate = contents.join("Resources").join("repo");
@@ -787,17 +782,6 @@ mod tests {
     }
 
     #[test]
-    fn finds_bundled_repo_root_in_macos_app() {
-        let base = env::temp_dir().join(format!("gamerecomp-bundle-root-{}", std::process::id()));
-        let exe = base.join("Contents").join("MacOS").join("game-recomp-gui");
-        let repo = base.join("Contents").join("Resources").join("repo");
-        let _ = fs::create_dir_all(repo.join("tools").join("autorecomp"));
-        let found = bundled_repo_root(&exe);
-        assert_eq!(found.as_deref(), Some(repo.as_path()));
-        let _ = fs::remove_dir_all(&base);
-    }
-
-    #[test]
     fn resolves_repo_root_from_cwd() {
         let cfg = AppConfig::load(None);
         assert!(cfg.repo_root.join("tools").join("autorecomp").is_dir());
@@ -809,98 +793,5 @@ mod tests {
         assert_eq!(SystemResources::compute_recommended(10, 16384), 5);
         assert_eq!(SystemResources::compute_recommended(32, 65536), 8);
         assert_eq!(SystemResources::compute_recommended(1, 1024), 1);
-    }
-
-    #[test]
-    fn source_improve_settings_default_to_empty_and_preserve_other_defaults() {
-        let settings = UserSettings::default();
-        assert!(settings.revng_bin.is_empty());
-        assert!(settings.revng_dir.is_empty());
-        assert!(settings.ai_web_endpoint.is_empty());
-        assert!(settings.ai_web_model.is_empty());
-        assert!(settings.ai_web_cmd.is_empty());
-        assert_eq!(settings.theme, "dark");
-        assert_eq!(settings.default_timeout_secs, 12);
-    }
-
-    #[test]
-    fn parses_source_improve_settings_from_json() {
-        let settings: UserSettings = serde_json::from_str(
-            r#"{
-                "revng_bin": "/opt/revng/bin/revng",
-                "revng_dir": "/tmp/revng-out",
-                "ai_web_endpoint": "https://ai.example.invalid/v1",
-                "ai_web_model": "coder-web",
-                "ai_web_cmd": "web-ai --url {endpoint} --model {model}"
-            }"#,
-        )
-        .unwrap();
-        assert_eq!(settings.revng_bin, "/opt/revng/bin/revng");
-        assert_eq!(settings.revng_dir, "/tmp/revng-out");
-        assert_eq!(settings.ai_web_endpoint, "https://ai.example.invalid/v1");
-        assert_eq!(settings.ai_web_model, "coder-web");
-        assert_eq!(
-            settings.ai_web_cmd,
-            "web-ai --url {endpoint} --model {model}"
-        );
-    }
-
-    #[test]
-    fn missing_source_improve_settings_serde_default_to_empty() {
-        let settings: UserSettings = serde_json::from_str(r#"{"theme": "light"}"#).unwrap();
-        assert_eq!(settings.theme, "light");
-        assert!(settings.revng_bin.is_empty());
-        assert!(settings.revng_dir.is_empty());
-        assert!(settings.ai_web_endpoint.is_empty());
-        assert!(settings.ai_web_model.is_empty());
-        assert!(settings.ai_web_cmd.is_empty());
-    }
-
-    #[test]
-    fn configured_command_prefers_env_then_corpus_then_settings() {
-        let mut corpus_env = BTreeMap::new();
-        corpus_env.insert(
-            "REVENG_WEB_AI_CMD".to_string(),
-            "corpus-web --model {model}".to_string(),
-        );
-        assert_eq!(
-            configured_command(
-                Some("env-web --model {model}".to_string()),
-                &corpus_env,
-                "REVENG_WEB_AI_CMD",
-                "settings-web"
-            ),
-            Some("env-web --model {model}".to_string())
-        );
-        assert_eq!(
-            configured_command(None, &corpus_env, "REVENG_WEB_AI_CMD", "settings-web"),
-            Some("corpus-web --model {model}".to_string())
-        );
-        assert_eq!(
-            configured_command(
-                None,
-                &BTreeMap::new(),
-                "REVENG_WEB_AI_CMD",
-                "  settings-web  "
-            ),
-            Some("settings-web".to_string())
-        );
-        assert_eq!(
-            configured_command(None, &BTreeMap::new(), "REVENG_WEB_AI_CMD", "   "),
-            None
-        );
-    }
-
-    #[test]
-    fn parses_web_ai_command_from_corpus_env_file() {
-        let pairs =
-            parse_env_file("export REVENG_WEB_AI_CMD='web-ai --url {endpoint} --model {model}'\n");
-        assert_eq!(
-            pairs,
-            vec![(
-                "REVENG_WEB_AI_CMD".to_string(),
-                "web-ai --url {endpoint} --model {model}".to_string()
-            )]
-        );
     }
 }

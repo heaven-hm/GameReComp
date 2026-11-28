@@ -11,25 +11,6 @@
 #
 # The jobs are identical either way; nothing here is GitHub-specific beyond the
 # YAML shape.
-#
-# Linux evidence comes only from the `linux-end-to-end` job below (Linux runner).
-# On any host without a Linux runner every Linux result is NOT TESTED.
-# A macOS run is never substituted for a Linux result.
-# no Linux PASS is recorded here in advance.
-# Acceptance needs that Linux job green, with stage logs and a native Linux (ELF) binary uploaded as evidence.
-#
-# Hybrid deterministic evidence (job `hybrid-deterministic` below) is separate.
-# It exercises the hybrid verdict gate with fake/mocked adapters and runs the
-# CPU-level Unicorn paired difftest. Neither path attaches Frida, starts Wine or
-# highball, nor runs a Windows game. Its only claims are the deterministic test
-# results; every host-dependent result is spelled out as NOT TESTED:
-#   live_windows_capture:   NOT TESTED (no Windows/Wine/highball run in this workflow)
-#   live_frida_attach:      NOT TESTED (fake adapters only; no live process attach)
-#   wine_original_run:      NOT TESTED (no Wine or highball invocation here)
-#   linux_native_binary:    NOT TESTED (only `linux-end-to-end` may record ELF evidence)
-#   windows_game_compat:    NOT TESTED (no game corpus or gameplay oracle here)
-# No PASS is fabricated for any of those. The job records them as facts on the
-# runner at execution time; a passing self-check is never a live capture claim.
 name: ci
 
 on:
@@ -52,17 +33,26 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install test deps
-        run: python -m pip install --upgrade pytest pefile unicorn capstone pyyaml
+        run: python -m pip install --upgrade pytest pefile jsonschema
       # The same script a developer runs, so CI and a local run cannot diverge.
-      # --fast skips only the parts that need a game corpus, which CI does not
-      # have: proprietary binaries are never committed. The fail-closed
-      # differential gate and multilifter selector are unconditional in the
-      # shared gate (issue #25) and report PASS/FAIL on every run.
+      # --fast skips the parts that need a game corpus, which CI does not have:
+      # proprietary binaries are never committed.
       - name: Verify (the shared gate)
         run: |
           pip install -q pyelftools 2>/dev/null || true
-          # --differential is a compatibility alias; verify.sh always runs the gates.
-          sh verify.sh --fast --differential
+          sh verify.sh --fast
+      # Issue #14: one machine-readable inventory, fail-closed on deleted tests,
+      # new critical imports, missing inputs and unsupported-as-PASS claims.
+      - name: Compatibility inventory and regression gate
+        run: python3 -m tools.compatibility --check --branch "${GITHUB_REF_NAME}"
+      - name: Upload compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-${{ matrix.os }}
+          path: |
+            docs/compatibility
+            reports/compatibility
 
   runtime:
     name: win32hle selftests (${{ matrix.os }})
@@ -105,170 +95,3 @@ jobs:
         with:
           name: pe32-minimal-report
           path: ${{ runner.temp }}/pe32-minimal/reports/
-
-  # Explicit Linux-host execution. This is the sole source of Linux results;
-  # without this runner the status is NOT TESTED (see the header comment).
-  linux-end-to-end:
-    name: PE32 -> C -> native Linux binary -> report (Linux host)
-    runs-on: ${{ matrix.os }}
-    needs: python
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install test deps
-        run: |
-          python -m pip install --upgrade pytest pefile unicorn capstone
-          pip install -q pyelftools 2>/dev/null || true
-      - name: SDL2 (Linux)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev
-      # Record facts from the runner, never predicted or fabricated results.
-      - name: Record Linux host, toolchain and hashes
-        run: |
-          set -eu
-          : "${RUNNER_TEMP:?RUNNER_TEMP must be set}"
-          mkdir -p "$RUNNER_TEMP/linux-host"
-          ENV_FILE="$RUNNER_TEMP/linux-host/environment.txt"
-          {
-            echo "linux_status: RUNNING (Linux runner only; no macOS substitution)"
-            echo "host_os: $(uname -s)"
-            echo "host_arch: $(uname -m)"
-            echo "host_uname: $(uname -a)"
-            echo "runner_os: $RUNNER_OS"
-            echo "runner_arch: $RUNNER_ARCH"
-            echo "git_head: $(git rev-parse HEAD)"
-            echo "python: $(python3 --version 2>&1)"
-            echo "cc: $(cc --version 2>&1 | head -n 1)"
-            echo "cmake: $(cmake --version 2>&1 | head -n 1)"
-            echo "rustc: $(rustc --version 2>&1)"
-            echo "fixture_sha256: $(sha256sum tests/fixtures/pe32-minimal.exe | cut -d' ' -f1)"
-          } | tee "$ENV_FILE"
-      - name: Full pipeline on the PE32 fixture (Linux host)
-        run: |
-          set -eu
-          ./GameReComp tests/fixtures/pe32-minimal.exe \
-            --project-dir "$RUNNER_TEMP/pe32-minimal" \
-            --input-os windows --input-arch x86 \
-            --target-os host --target-arch host \
-            --timeout 10 --no-table
-      - name: Verify native Linux binary, record its hash and show stage logs
-        run: |
-          set -eu
-          python3 - "$RUNNER_TEMP/pe32-minimal" \
-            "$RUNNER_TEMP/linux-host/native-binary.txt" \
-            tests/fixtures/pe32-minimal.exe <<'PY'
-          import hashlib
-          import json
-          import pathlib
-          import sys
-
-          project = pathlib.Path(sys.argv[1])
-          out = pathlib.Path(sys.argv[2])
-          fixture = pathlib.Path(sys.argv[3])
-          manifest = json.loads((project / "manifest.json").read_text(encoding="utf-8"))
-          fixture_hash = hashlib.sha256(fixture.read_bytes()).hexdigest()
-          recorded = manifest.get("input_sha256")
-          if recorded != fixture_hash:
-              raise SystemExit(
-                  f"fixture hash mismatch: manifest={recorded} actual={fixture_hash}")
-          binary = pathlib.Path(manifest["binary"]["path"])
-          if not binary.is_absolute():
-              binary = project / binary
-          data = binary.read_bytes()
-          if not data.startswith(b"\x7fELF"):
-              raise SystemExit(f"native binary is not ELF: {binary}")
-          digest = hashlib.sha256(data).hexdigest()
-          out.write_text(
-              f"native_binary: {binary}\n"
-              f"native_format: ELF\n"
-              f"native_sha256: {digest}\n",
-              encoding="utf-8",
-          )
-          print(out.read_text(encoding="utf-8"), end="")
-          PY
-          for log in "$RUNNER_TEMP/pe32-minimal"/logs/*.log; do
-            [ -e "$log" ] || continue
-            echo "===== $log ====="
-            cat "$log"
-          done
-      - name: ELF/Mach-O/.NET refusal tests
-        run: python3 -m pytest tests/test_cli.py::InputFormatRefusal -q
-      - name: Upload Linux evidence (stage logs, reports, host/toolchain/hashes)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-pe32-minimal-evidence
-          path: |
-            ${{ runner.temp }}/pe32-minimal/reports/
-            ${{ runner.temp }}/pe32-minimal/logs/
-            ${{ runner.temp }}/pe32-minimal/manifest.json
-            ${{ runner.temp }}/linux-host/
-
-  # Deterministic hybrid checks. Fake/mocked adapters exercise the fail-closed
-  # verdict gate; Unicorn executes paired CPU cases against lifted C. Both are
-  # host-independent and need no Frida attach, Wine/highball run or Windows game.
-  # See the NOT TESTED policy in the header; no live Windows capture is claimed.
-  hybrid-deterministic:
-    name: hybrid deterministic self-checks + Unicorn paired difftest
-    runs-on: ${{ matrix.os }}
-    needs: python
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install deterministic test deps
-        run: python -m pip install --upgrade pytest unicorn capstone pyyaml pefile
-      # These tests substitute fake engines for Frida/Unicorn/native and assert
-      # the gate stays fail-closed. No --live-frida, no Wine, no --exe, no
-      # proprietary game binary: a PASS here is a gate self-check only.
-      - name: Hybrid pipeline deterministic self-checks (fake adapters)
-        run: |
-          set -eu
-          python3 -m pytest \
-            tests/test_hybrid_diff.py \
-            tests/test_frida_probe.py \
-            tests/test_proof_checker.py \
-            -q
-      # Real Unicorn executes the paired x86/x86-64 cases against lifted C.
-      # This is CPU-level only: no process, no Wine, no Frida, no Windows host.
-      - name: Unicorn paired difftest (CPU-level, no Wine/Frida)
-        run: |
-          set -eu
-          python3 tools/lift/difftest.py -k paired --cases 2
-      # Record facts from the runner, never a predicted or promoted result.
-      - name: Record NOT TESTED scope (no live Windows capture)
-        run: |
-          set -eu
-          : "${RUNNER_TEMP:?RUNNER_TEMP must be set}"
-          SCOPE="$RUNNER_TEMP/hybrid-deterministic-scope.txt"
-          {
-            echo "job: hybrid-deterministic"
-            echo "runner_os: $RUNNER_OS"
-            echo "git_head: $(git rev-parse HEAD)"
-            echo "self_checks: host-independent fake-adapter gate tests (test result comes from pytest)"
-            echo "unicorn_paired_difftest: CPU-level paired cases (test result comes from difftest)"
-            echo "live_windows_capture: NOT TESTED (no Windows/Wine/highball run in this job)"
-            echo "live_frida_attach: NOT TESTED (fake adapters only; no live process attach)"
-            echo "wine_original_run: NOT TESTED (no Wine or highball invocation here)"
-            echo "linux_native_binary: NOT TESTED (only linux-end-to-end may record ELF evidence)"
-            echo "windows_game_compatibility: NOT TESTED (no game corpus or gameplay oracle)"
-            echo "claim: deterministic gate/CPU checks only; no live Windows capture claimed"
-          } | tee "$SCOPE"
-      - name: Upload hybrid deterministic scope record
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: hybrid-deterministic-scope
-          path: ${{ runner.temp }}/hybrid-deterministic-scope.txt

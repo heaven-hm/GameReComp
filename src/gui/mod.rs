@@ -113,7 +113,7 @@ impl SourceImproveMethod {
 
     pub fn short_label(self) -> &'static str {
         match self {
-            Self::Revng => "rev.ng",
+            Self::Revng => "revng",
             Self::AiLocal => "AI (local)",
             Self::AiWeb => "AI (web)",
         }
@@ -180,6 +180,7 @@ pub enum FocusInput {
     IssueTitle,
     IssueNotes,
     RunGameDataDir,
+    RunGameArguments,
     QuickRenameProject,
 }
 
@@ -212,6 +213,7 @@ pub struct RunGameModal {
     pub has_wasm: bool,
     pub use_data_dir: bool,
     pub data_dir: String,
+    pub arguments: String,
     pub suggested_pe_dir: String,
     pub save_as_default: bool,
 }
@@ -456,6 +458,10 @@ pub struct GameReCompApp {
 
     // Multi-game parallel decompilation & queue state
     pub jobs: Vec<ActiveJob>,
+    /// Standalone launches kept alive (and reaped) after the GUI reports them.
+    pub launched_children: Vec<Child>,
+    /// stdout/stderr lines from a live guest, consumed by the UI timer.
+    pub launch_log: Arc<Mutex<Vec<String>>>,
     pub queued_pipelines: Vec<QueuedJob>,
     pub queued_batches: Vec<QueuedBatch>,
     pub selected_job_id: Option<u64>,
@@ -521,31 +527,6 @@ pub struct GameReCompApp {
     pub wasm_server_open_lock: Arc<Mutex<()>>,
     pub wasm_server_ready: Arc<AtomicBool>,
     pub wasm_server_startup_error: Arc<Mutex<Option<(u64, String, Option<PathBuf>)>>>,
-}
-
-/// Prepare the shared pipeline options for a real (non-dry-run) "Run pipeline"
-/// start from the project workspace.
-///
-/// The Home screen reuses `App::opts` for both "Start recompiling" and
-/// "Dry-run plan". A dry-run used to leave `dry_run = true` behind, so a later
-/// "Run pipeline" on an opened project silently printed a plan and produced no
-/// binary, logs or launchable build. Clearing it here makes every real start
-/// explicit and keeps the backend command free of `--dry-run`.
-///
-/// Returns `false` when no original PE is configured, in which case the caller
-/// should show the "Missing executable" guidance instead of starting a job.
-pub fn prepare_active_project_options(
-    opts: &mut PipelineOptions,
-    project_dir: Option<&Path>,
-) -> bool {
-    if opts.pe_file.trim().is_empty() {
-        return false;
-    }
-    opts.dry_run = false;
-    if let Some(dir) = project_dir {
-        opts.project_dir = dir.display().to_string();
-    }
-    true
 }
 
 impl GameReCompApp {
@@ -620,6 +601,8 @@ impl GameReCompApp {
             picked_pe_info: PeInfo::default(),
             picked_owned_checked: false,
             jobs: Vec::new(),
+            launched_children: Vec::new(),
+            launch_log: Arc::new(Mutex::new(Vec::new())),
             queued_pipelines: Vec::new(),
             queued_batches: Vec::new(),
             selected_job_id: None,
@@ -850,24 +833,16 @@ impl GameReCompApp {
     pub fn browse_for_multiple_pes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let rx = cx.prompt_for_paths(PathPromptOptions {
             files: true,
-            directories: false,
+            directories: true,
             multiple: true,
-            prompt: Some("Select game/app executables (.exe, Mach-O, ELF) - unsupported formats are refused with a clear reason".into()),
+            prompt: Some("Select games or apps: Windows .exe, macOS .app, Linux ELF, or project folders".into()),
         });
         let weak = cx.entity().downgrade();
         window
             .spawn(cx, async move |cx| {
                 if let Ok(Ok(Some(files))) = rx.await {
                     let selected_count = files.len();
-                    let exes: Vec<PathBuf> = files
-                        .into_iter()
-                        .filter(|p| {
-                            p.is_file()
-                                && p.is_file().then(|| inspect_pe(p)).is_some_and(|info| {
-                                    info.ok && info.pe32_x86
-                                })
-                        })
-                        .collect();
+                    let exes: Vec<PathBuf> = files;
                     let accepted_count = exes.len();
                     let rejected_count = selected_count.saturating_sub(accepted_count);
                     if !exes.is_empty() {
@@ -882,8 +857,8 @@ impl GameReCompApp {
                     } else if rejected_count > 0 {
                         let _ = weak.update(cx, |this, cx| {
                             this.push_toast(
-                                "No executable selected",
-                                &format!("Skipped {rejected_count} item(s); unsupported formats are refused by the backend with a named reason."),
+                                "No Windows executables selected",
+                                &format!("Skipped {rejected_count} item(s); select valid PE32 x86 executables."),
                                 this.tokens().not_c,
                                 true,
                             );
@@ -894,7 +869,7 @@ impl GameReCompApp {
                         let _ = weak.update(cx, |this, cx| {
                             this.push_toast(
                                 "Some files skipped",
-                                &format!("Skipped {rejected_count} invalid or unsupported executable(s)."),
+                                &format!("{rejected_count} file(s) could not be read."),
                                 this.tokens().info,
                                 false,
                             );
@@ -916,19 +891,12 @@ impl GameReCompApp {
 
     pub fn enqueue_multiple_pes(&mut self, paths: Vec<PathBuf>) {
         let mut added = 0usize;
-        let mut skipped: Vec<String> = Vec::new();
+        let skipped: Vec<String> = Vec::new();
         for path in paths {
-            if !path.is_file() {
-                continue;
-            }
-            let name = path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("file")
-                .to_string();
-            let info = inspect_pe(&path);
-            if !info.ok || !info.pe32_x86 {
-                skipped.push(name);
+            let is_app = path.extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| e.eq_ignore_ascii_case("app"));
+            if !path.is_file() && !is_app {
                 continue;
             }
             let mut opts = self.opts.clone();
@@ -952,8 +920,8 @@ impl GameReCompApp {
         if !skipped.is_empty() {
             let err_col = self.tokens().miss;
             self.push_toast(
-                "Skipped unsupported files",
-                &format!("Not PE32 i386: {}", skipped.join(", ")),
+                "Files not queued",
+                &format!("Not readable: {}", skipped.join(", ")),
                 err_col,
                 true,
             );
@@ -1183,11 +1151,6 @@ impl GameReCompApp {
         self.picked_owned_checked = false;
         self.opts.pe_file.clear();
         self.opts.project_dir.clear();
-        // A "Dry-run plan" must not leak into the next real recompile. Every
-        // real start path clears this explicitly, but clearing it here too
-        // keeps the shared options object from carrying plan-only state
-        // across a pick -> open project -> Run pipeline flow.
-        self.opts.dry_run = false;
     }
 
     pub fn pick_pe_path(&mut self, path: PathBuf) {
@@ -1206,9 +1169,9 @@ impl GameReCompApp {
     pub fn browse_for_pe(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let rx = cx.prompt_for_paths(PathPromptOptions {
             files: true,
-            directories: false,
+            directories: true,
             multiple: false,
-            prompt: Some("Choose a game/app executable (.exe, Mach-O, ELF) - unsupported formats are refused with a clear reason".into()),
+            prompt: Some("Choose a Windows .exe, macOS .app bundle, Linux ELF executable, or project folder".into()),
         });
         let weak = cx.entity().downgrade();
         window
@@ -1216,6 +1179,9 @@ impl GameReCompApp {
                 if let Ok(Ok(Some(mut files))) = rx.await {
                     if let Some(file) = files.pop() {
                         let _ = weak.update(cx, |this, cx| {
+                            // Let inspect_pe explain the format: .app bundles resolve
+                            // to their Mach-O executable, and Mach-O/ELF inputs get a
+                            // named reason instead of a blanket extension rejection.
                             this.pick_pe_path(file);
                             cx.notify();
                         });
@@ -1438,15 +1404,6 @@ impl GameReCompApp {
         self.focused_input = None;
     }
 
-    pub fn effective_ai_cmd(&self) -> Option<String> {
-        let trimmed = self.agent_cmd_buf.trim();
-        if !trimmed.is_empty() {
-            Some(trimmed.to_string())
-        } else {
-            self.cfg.reveng_ai_cmd.clone()
-        }
-    }
-
     /// Command used for the explicit "AI (web)" route. The saved template may
     /// contain `{endpoint}` / `{model}` placeholders; `{input}` / `{output}`
     /// are left untouched for `readability.py` to fill in.
@@ -1503,6 +1460,15 @@ impl GameReCompApp {
         );
     }
 
+    pub fn effective_ai_cmd(&self) -> Option<String> {
+        let trimmed = self.agent_cmd_buf.trim();
+        if !trimmed.is_empty() {
+            Some(trimmed.to_string())
+        } else {
+            self.cfg.reveng_ai_cmd.clone()
+        }
+    }
+
     pub fn save_agent_cmd(&mut self) {
         self.settings.reveng_ai_cmd = self.agent_cmd_buf.trim().to_string();
         self.cfg.reveng_ai_cmd = if self.settings.reveng_ai_cmd.is_empty() {
@@ -1538,8 +1504,7 @@ impl GameReCompApp {
     }
 
     pub fn start_active_project_pipeline(&mut self, cx: &mut Context<Self>) {
-        let mut opts = self.opts.clone();
-        if !prepare_active_project_options(&mut opts, self.active_project_dir.as_deref()) {
+        if self.opts.pe_file.trim().is_empty() {
             self.push_toast(
                 "Missing executable",
                 "Set the Original PE executable path in Settings first.",
@@ -1548,6 +1513,10 @@ impl GameReCompApp {
             );
             cx.notify();
             return;
+        }
+        let mut opts = self.opts.clone();
+        if let Some(ref dir) = self.active_project_dir {
+            opts.project_dir = dir.display().to_string();
         }
         self.enqueue_or_start_pipeline(opts, cx);
     }
@@ -1827,7 +1796,7 @@ impl GameReCompApp {
                     0 => "Completed cleanly (verified pass)".to_string(),
                     3 => "Recompiled and ran (unverified / partial)".to_string(),
                     2 => "A pipeline stage failed — inspect log for details".to_string(),
-                    4 => "Unsupported input or target configuration".to_string(),
+                    4 => "Input or target cannot be rebuilt on this host — see log".to_string(),
                     _ => format!("Exited with status {code}"),
                 }
             };
@@ -1867,6 +1836,27 @@ impl GameReCompApp {
         target_fn: Option<String>,
         cx: &mut Context<Self>,
     ) {
+        self.start_readability_agent_for_dir_with(dir, target_fn, method.providers_arg(), Some(method), cx);
+    }
+
+    /// Run the readability harness with a named provider set: "ai", "revng",
+    /// or "all". Rev.ng needs no AI command and is available through the
+    /// bundled container wrapper on macOS.
+    ///
+    /// `method` is optional for legacy call sites that still pass only a
+    /// provider string; when absent the method is inferred from `providers`.
+    pub fn start_readability_agent_for_dir_with(
+        &mut self,
+        dir: PathBuf,
+        target_fn: Option<String>,
+        providers: &str,
+        method: Option<SourceImproveMethod>,
+        cx: &mut Context<Self>,
+    ) {
+        let method = method.unwrap_or_else(|| match providers {
+            "revng" => SourceImproveMethod::Revng,
+            _ => SourceImproveMethod::AiLocal,
+        });
         let dir_key = normalized_path(&dir);
         if self.deleting_projects.contains(&dir_key)
             || self
@@ -1883,6 +1873,7 @@ impl GameReCompApp {
             cx.notify();
             return;
         }
+        let providers = providers.to_string();
         let revng_bin = self.settings.revng_bin.trim().to_string();
         let revng_dir = self.settings.revng_dir.trim().to_string();
         let (ai_cmd, web_cmd): (Option<String>, Option<String>) = match method {
@@ -1964,35 +1955,41 @@ impl GameReCompApp {
             "tools.autorecomp.readability".to_string(),
             dir.display().to_string(),
             "--providers".to_string(),
-            method.providers_arg().to_string(),
+            providers.clone(),
         ];
         if let Some(ref f) = target_fn {
             args.push("--function".to_string());
             args.push(f.clone());
         }
 
+        let stage = if providers == "revng" {
+            "Rev.ng source pass".to_string()
+        } else {
+            match target_fn {
+                Some(ref f) => format!("C readability ({f})"),
+                None => "C source readability".to_string(),
+            }
+        };
+        // The PR-side provider string remains authoritative for the harness
+        // arguments; the method controls configuration, labeling and logging.
         let method_label = method.short_label();
-        let stage = match target_fn {
-            Some(ref f) => format!("C readability [{method_label}] ({f})"),
-            None => format!("C source readability [{method_label}]"),
+        let command_prefix = match method {
+            SourceImproveMethod::Revng => format!("# source improve: {method_label}"),
+            SourceImproveMethod::AiLocal => format!(
+                "# source improve: {method_label}\n$ REVENG_AI_CMD=\"{}\"",
+                ai_cmd.clone().unwrap_or_default()
+            ),
+            SourceImproveMethod::AiWeb => format!(
+                "# source improve: {method_label}\n$ REVENG_WEB_AI_CMD=\"{}\"\n$ REVENG_AI_CMD=\"{}\"",
+                web_cmd.clone().unwrap_or_default(),
+                web_cmd.clone().unwrap_or_default()
+            ),
         };
         let proj_name = dir
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("project")
             .to_string();
-        let command_prefix = match method {
-            SourceImproveMethod::Revng => format!("# source improve: {method_label}"),
-            SourceImproveMethod::AiLocal => {
-                format!(
-                    "# source improve: {method_label}\n$ REVENG_AI_CMD=\"{}\"",
-                    ai_cmd.clone().unwrap_or_default()
-                )
-            }
-            SourceImproveMethod::AiWeb => {
-                format!("# source improve: {method_label}\n$ REVENG_WEB_AI_CMD=\"{}\"\n$ REVENG_AI_CMD=\"{}\"", web_cmd.clone().unwrap_or_default(), web_cmd.clone().unwrap_or_default())
-            }
-        };
 
         let (tx, rx) = mpsc::channel();
         let cancel_requested = Arc::new(AtomicBool::new(false));
@@ -2012,15 +2009,17 @@ impl GameReCompApp {
             auto_ai_readability: false,
             is_dry_run: false,
             status: JobStatus::Running,
-            stage,
+            stage: stage.clone(),
             started: Instant::now(),
             paused_at: None,
             paused_total: Duration::ZERO,
             finished_secs: None,
             current_file: String::new(),
-            current_task_detail: format!(
-                "{method_label} pass — improving readable C source code (compile- & evidence-gated)"
-            ),
+            current_task_detail: if providers == "revng" {
+                "Rev.ng pass — decompiling the original PE into typed C candidates".to_string()
+            } else {
+                format!("{method_label} pass — improving readable C source code (compile- & evidence-gated)")
+            },
             compile_pct: None,
             processed_files: Vec::new(),
             live_stages: fresh_live_stages(),
@@ -2033,7 +2032,7 @@ impl GameReCompApp {
         self.selected_job_id = Some(id);
         self.push_feed(
             "agent",
-            &format!("started {method_label} readability pass on {proj_name}"),
+            &format!("started {stage} on {proj_name}"),
             false,
         );
         cx.notify();
@@ -2041,10 +2040,7 @@ impl GameReCompApp {
         thread::spawn(move || {
             let mut cmd = Command::new(crate::config::python_interpreter(&repo_root));
             cmd.current_dir(&repo_root)
-                .env("PYTHONPATH", &repo_root)
-                .args(&args)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped());
+                .env("PYTHONPATH", &repo_root);
             // The readability harness reads REVENG_AI_CMD for every AI route;
             // the web route just supplies its own user-configured command.
             if let Some(cmd_text) = ai_cmd {
@@ -2062,6 +2058,9 @@ impl GameReCompApp {
                     cmd.env("REVNG_DIR", &revng_dir);
                 }
             }
+            cmd.args(&args)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
             let code = run_streaming_child_inner(
                 cmd,
                 child_for_thread,
@@ -2495,69 +2494,68 @@ impl GameReCompApp {
         }
     }
 
-    /// Resolve the game-data root for a native launch when the user has not
-    /// picked one explicitly.
-    ///
-    /// The Python `run` stage starts the rebuilt binary with `cwd` set to
-    /// `--assets-dir` (or the original PE's parent by default), and the runtime
-    /// reads the same root from `RECOMP_ASSETS_DIR` or a single directory
-    /// argument. Without one, `boot_embedded(NULL, ...)` leaves the guest
-    /// unable to find its own data files, so a launch from `project/build/`
-    /// looks like a failed native build even though the binary is fine.
-    /// Prefer an explicitly configured assets dir, then the PE paths the GUI
-    /// already knows about (picked file, active job, loaded project).
-    pub fn native_launch_assets_root<'a>(
-        configured_assets_dir: &str,
-        pe_paths: impl IntoIterator<Item = &'a Path>,
-    ) -> Option<PathBuf> {
-        let configured = Path::new(configured_assets_dir.trim());
-        if !configured.as_os_str().is_empty() && configured.is_dir() {
-            return Some(normalized_path(configured));
-        }
-        for pe in pe_paths {
-            let Some(parent) = pe.parent() else {
-                continue;
-            };
-            if parent.as_os_str().is_empty() {
+    /// Split a user-supplied launch-argument string into argv entries.
+    /// Supports single/double quotes and backslash escapes.
+    pub fn split_launch_args(input: &str) -> Vec<String> {
+        let mut out = Vec::new();
+        let mut current = String::new();
+        let mut quote: Option<char> = None;
+        let mut escape = false;
+        let mut started = false;
+        for ch in input.chars() {
+            if escape {
+                current.push(ch);
+                escape = false;
+                started = true;
                 continue;
             }
-            let root = normalized_path(parent);
-            if root.is_dir() {
-                return Some(root);
+            if ch == '\\' && quote != Some('\'') {
+                escape = true;
+                started = true;
+                continue;
+            }
+            if let Some(q) = quote {
+                if ch == q {
+                    quote = None;
+                } else {
+                    current.push(ch);
+                }
+                started = true;
+                continue;
+            }
+            if ch == '\'' || ch == '"' {
+                quote = Some(ch);
+                started = true;
+            } else if ch.is_whitespace() {
+                if started {
+                    out.push(std::mem::take(&mut current));
+                    started = false;
+                }
+            } else {
+                current.push(ch);
+                started = true;
             }
         }
-        None
+        if started {
+            out.push(current);
+        }
+        out
     }
 
     pub fn launch_rebuilt_binary(&mut self, bin: &Path) {
-        let project_dir = bin.parent().and_then(Path::parent);
-        let project_pe = project_dir.and_then(read_project_pe_path);
-        let job_pe = project_dir.and_then(|dir| {
-            self.jobs
-                .iter()
-                .rev()
-                .find(|job| job.project_dir.as_deref() == Some(dir))
-                .map(|job| Path::new(job.pe_path.as_str()))
-        });
-        let mut pe_paths: Vec<&Path> = Vec::new();
-        // The binary's own project is the most reliable hint; a stale picked
-        // file or an unrelated active job must not win over it.
-        if let Some(pe) = project_pe.as_deref() {
-            pe_paths.push(Path::new(pe));
-        }
-        if let Some(pe) = job_pe {
-            pe_paths.push(pe);
-        }
-        if let Some(pe) = self.active_project.as_ref() {
-            pe_paths.push(Path::new(pe.pe_path.trim()));
-        }
-        pe_paths.push(self.picked_pe.as_path());
-        pe_paths.push(Path::new(self.opts.pe_file.trim()));
-        let assets_root = Self::native_launch_assets_root(&self.opts.assets_dir, pe_paths);
-        self.launch_rebuilt_binary_with_data(bin, assets_root.as_deref());
+        self.launch_rebuilt_binary_with_data(bin, None);
     }
 
     pub fn launch_rebuilt_binary_with_data(&mut self, bin: &Path, data_dir: Option<&Path>) {
+        self.launch_rebuilt_binary_with_args(bin, data_dir, "");
+    }
+
+    pub fn launch_rebuilt_binary_with_args(
+        &mut self,
+        bin: &Path,
+        data_dir: Option<&Path>,
+        extra_args: &str,
+    ) {
         if !bin.is_file() {
             self.push_toast(
                 "Missing executable",
@@ -2586,9 +2584,84 @@ impl GameReCompApp {
         } else if let Some(parent) = bin.parent() {
             cmd.current_dir(parent);
         }
+        for arg in Self::split_launch_args(extra_args) {
+            cmd.arg(arg);
+        }
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
         match cmd.spawn() {
-            Ok(_) => {
-                if let Some(dir) = data_dir {
+            Ok(mut child) => {
+                // A rebuilt guest can map its PE and exit before any window
+                // appears. Wait briefly, then show the real stdout/stderr so a
+                // CLI tool's usage or error is not hidden behind a generic toast.
+                let mut early_exit = None;
+                for _ in 0..12 {
+                    match child.try_wait() {
+                        Ok(Some(status)) => {
+                            early_exit = Some(status.code().unwrap_or(-1));
+                            break;
+                        }
+                        Ok(None) => thread::sleep(Duration::from_millis(100)),
+                        Err(_) => break,
+                    }
+                }
+                if let Some(code) = early_exit {
+                    let output = child.wait_with_output().ok();
+                    let mut text = String::new();
+                    if let Some(out) = output {
+                        text.push_str(&String::from_utf8_lossy(&out.stdout));
+                        text.push_str(&String::from_utf8_lossy(&out.stderr));
+                    }
+                    let text = text.trim();
+                    let detail = if text.is_empty() {
+                        format!("{} exited with status {}; no window was shown.", bin.display(), code)
+                    } else {
+                        format!("{} exited with status {}:\n{}", bin.display(), code, text)
+                    };
+                    self.push_toast(
+                        if code == 0 {
+                            "Rebuilt app finished"
+                        } else {
+                            "Rebuilt binary exited immediately"
+                        },
+                        &detail,
+                        if code == 0 {
+                            self.tokens().match_fill
+                        } else {
+                            self.tokens().not_c
+                        },
+                        code != 0,
+                    );
+                } else {
+                    let stdout = child.stdout.take();
+                    let stderr = child.stderr.take();
+                    let log = Arc::clone(&self.launch_log);
+                    thread::spawn(move || {
+                        for line in BufReader::new(stdout.expect("piped stdout")).lines() {
+                            match line {
+                                Ok(text) => {
+                                    if let Ok(mut buf) = log.lock() {
+                                        buf.push(text);
+                                    }
+                                }
+                                Err(_) => break,
+                            }
+                        }
+                        for line in BufReader::new(stderr.expect("piped stderr")).lines() {
+                            match line {
+                                Ok(text) => {
+                                    if let Ok(mut buf) = log.lock() {
+                                        buf.push(text);
+                                    }
+                                }
+                                Err(_) => break,
+                            }
+                        }
+                    });
+                    self.launched_children.push(child);
+                }
+                if early_exit.is_some() {
+                    // Toast already emitted above.
+                } else if let Some(dir) = data_dir {
                     self.push_toast(
                         "Launched with game data",
                         &format!("{} (data: {})", bin.display(), dir.display()),
@@ -2624,12 +2697,9 @@ impl GameReCompApp {
                 && !meta.game_data_dir.trim().is_empty()
             {
                 let data_path = normalized_path(Path::new(meta.game_data_dir.trim()));
-                self.launch_rebuilt_binary_with_data(&b, Some(&data_path));
+                self.launch_rebuilt_binary_with_args(&b, Some(&data_path), &meta.launch_arguments);
             } else {
-                // No explicit data folder: infer the original PE's directory
-                // instead of starting the guest in project/build/, where it
-                // cannot find its own data files.
-                self.launch_rebuilt_binary(&b);
+                self.launch_rebuilt_binary_with_args(&b, None, &meta.launch_arguments);
             }
         } else if has_wasm {
             self.launch_or_open_wasm(dir);
@@ -2660,8 +2730,12 @@ impl GameReCompApp {
             .unwrap_or_default();
         let data_dir = if !meta.game_data_dir.trim().is_empty() {
             meta.game_data_dir.clone()
-        } else {
+        } else if !suggested_pe_dir.is_empty() {
             suggested_pe_dir.clone()
+        } else if dir.is_dir() {
+            normalized_path(&dir).display().to_string()
+        } else {
+            String::new()
         };
         let use_data_dir = (binary_path.is_some() || !has_wasm)
             && (preselect_data_dir || meta.launch_with_data_dir);
@@ -2673,6 +2747,7 @@ impl GameReCompApp {
             has_wasm,
             use_data_dir,
             data_dir,
+            arguments: meta.launch_arguments.clone(),
             suggested_pe_dir,
             save_as_default: true,
         });
@@ -2687,31 +2762,51 @@ impl GameReCompApp {
             return;
         };
         let trimmed_data = modal.data_dir.trim().to_string();
+        // Prefer an explicitly chosen folder, then the original executable's
+        // folder, then the project folder. A missing folder must not block a
+        // rebuild that can run from its generated standalone binary.
+        let fallback_data_dir = [&modal.suggested_pe_dir]
+            .into_iter()
+            .map(|s| PathBuf::from(s.trim()))
+            .find(|p| p.is_dir())
+            .or_else(|| Some(modal.project_dir.clone()).filter(|p| p.is_dir()));
         let resolved_data = if trimmed_data.is_empty() {
             if modal.use_data_dir && launch_now {
-                self.push_toast(
-                    "Select a valid game folder",
-                    "Choose an existing game data/assets directory before launching.",
-                    self.tokens().not_c,
-                    true,
-                );
-                cx.notify();
-                return;
+                match fallback_data_dir {
+                    Some(dir) => Some(normalized_path(&dir)),
+                    None => {
+                        self.push_toast(
+                            "Select a valid game folder",
+                            "Choose an existing game data/assets directory before launching.",
+                            self.tokens().not_c,
+                            true,
+                        );
+                        cx.notify();
+                        return;
+                    }
+                }
+            } else {
+                None
             }
-            None
         } else {
             let candidate = normalized_path(Path::new(&trimmed_data));
             if modal.use_data_dir && launch_now && !candidate.is_dir() {
-                self.push_toast(
-                    "Select a valid game folder",
-                    "Choose an existing game data/assets directory before launching.",
-                    self.tokens().not_c,
-                    true,
-                );
-                cx.notify();
-                return;
+                match fallback_data_dir {
+                    Some(dir) => Some(normalized_path(&dir)),
+                    None => {
+                        self.push_toast(
+                            "Select a valid game folder",
+                            "Choose an existing game data/assets directory before launching.",
+                            self.tokens().not_c,
+                            true,
+                        );
+                        cx.notify();
+                        return;
+                    }
+                }
+            } else {
+                Some(candidate)
             }
-            Some(candidate)
         };
         if modal.use_data_dir && modal.has_wasm && modal.binary_path.is_none() {
             self.push_toast(
@@ -2732,6 +2827,7 @@ impl GameReCompApp {
             if modal.binary_path.is_some() || !modal.has_wasm {
                 meta.launch_with_data_dir = modal.use_data_dir;
             }
+            meta.launch_arguments = modal.arguments.clone();
             if let Err(error) = save_ui_meta_at(&modal.project_dir, &meta) {
                 self.push_toast(
                     "Could not save launch options",
@@ -2752,6 +2848,7 @@ impl GameReCompApp {
                     if modal.binary_path.is_some() || !modal.has_wasm {
                         proj.ui_meta.launch_with_data_dir = modal.use_data_dir;
                     }
+                    proj.ui_meta.launch_arguments = modal.arguments.clone();
                 }
             }
             if !launch_now {
@@ -2773,7 +2870,11 @@ impl GameReCompApp {
         if launch_now {
             if modal.use_data_dir {
                 if let Some(ref bin) = modal.binary_path {
-                    self.launch_rebuilt_binary_with_data(bin, resolved_data.as_deref());
+                    self.launch_rebuilt_binary_with_args(
+                        bin,
+                        resolved_data.as_deref(),
+                        &modal.arguments,
+                    );
                 } else if modal.has_wasm {
                     self.launch_or_open_wasm(&modal.project_dir);
                 } else {
@@ -2785,7 +2886,7 @@ impl GameReCompApp {
                     );
                 }
             } else if let Some(ref bin) = modal.binary_path {
-                self.launch_rebuilt_binary_with_data(bin, None);
+                self.launch_rebuilt_binary_with_args(bin, None, &modal.arguments);
             } else if modal.has_wasm {
                 self.launch_or_open_wasm(&modal.project_dir);
             } else {
@@ -2798,7 +2899,10 @@ impl GameReCompApp {
             }
         }
         self.run_game_modal = None;
-        if self.focused_input == Some(FocusInput::RunGameDataDir) {
+        if matches!(
+            self.focused_input,
+            Some(FocusInput::RunGameDataDir | FocusInput::RunGameArguments)
+        ) {
             self.focused_input = None;
         }
         cx.notify();
@@ -2806,7 +2910,10 @@ impl GameReCompApp {
 
     pub fn close_run_game_modal(&mut self, cx: &mut Context<Self>) {
         self.run_game_modal = None;
-        if self.focused_input == Some(FocusInput::RunGameDataDir) {
+        if matches!(
+            self.focused_input,
+            Some(FocusInput::RunGameDataDir | FocusInput::RunGameArguments)
+        ) {
             self.focused_input = None;
         }
         cx.notify();
@@ -3455,7 +3562,7 @@ impl GameReCompApp {
         };
         self.issue_draft = IssueDraft {
             game_name: game_name.clone(),
-            title: format!("[Support Request] {game_name}: unsupported PE / preflight failure"),
+            title: format!("[Support Request] {game_name}: preflight failure"),
             pe_summary,
             target_summary: self.opts.resolved_target_summary(),
             failed_stage: "inspect".to_string(),
@@ -3763,6 +3870,31 @@ impl GameReCompApp {
             );
             changed = true;
         }
+        let new_lines: Vec<String> = self.launch_log.lock()
+            .map(|mut buf| buf.drain(..).collect())
+            .unwrap_or_default();
+        for line in new_lines {
+            let error = line.contains("FATAL") || line.contains("error") || line.contains("abort");
+            self.push_feed("game", &line, !error);
+            if error {
+                self.push_toast("Rebuilt game error", &line, self.tokens().not_c, true);
+            }
+            changed = true;
+        }
+        let mut still_running = Vec::new();
+        for mut child in std::mem::take(&mut self.launched_children) {
+            match child.try_wait() {
+                Ok(None) => still_running.push(child),
+                Ok(Some(status)) => {
+                    let line = format!("[game] process exited with status {}", status.code().unwrap_or(-1));
+                    self.push_feed("game", &line, status.success());
+                    changed = true;
+                }
+                Err(_) => {}
+            }
+        }
+        self.launched_children = still_running;
+
         let running = self.has_running_jobs();
         if running {
             self.anim_frame = self.anim_frame.wrapping_add(1);
@@ -3793,6 +3925,7 @@ impl GameReCompApp {
         }
 
         let mut feed_events: Vec<(String, String, bool)> = Vec::new();
+        let mut error_toasts: Vec<(String, String)> = Vec::new();
         let mut finished_events: Vec<FinishedEvent> = Vec::new();
 
         for job in &mut self.jobs {
@@ -3846,6 +3979,13 @@ impl GameReCompApp {
                             job.compile_pct = Some(1.0);
                         }
                         job.current_task_detail = format!("{st}: {status} ({secs:.1}s) {detail}");
+                        if status == "failed" {
+                            job.failure_summary = format!("{st} failed: {detail}");
+                            error_toasts.push((
+                                "Recompilation stage failed".to_string(),
+                                format!("{st}: {detail}"),
+                            ));
+                        }
                         feed_events.push((
                             format!("{} · {st}", job.name),
                             format!("{status} ({secs:.1}s) {detail}"),
@@ -3909,7 +4049,33 @@ impl GameReCompApp {
                         job.has_wasm = has_wasm;
                         let ok = code == 0 || code == 3;
                         if !ok {
-                            job.failure_summary = summary.clone();
+                            let error_lines: Vec<String> = job
+                                .live_logs
+                                .iter()
+                                .rev()
+                                .filter(|l| {
+                                    let t = l.trim();
+                                    t.contains("error")
+                                        || t.contains("Error")
+                                        || t.contains("failed")
+                                        || t.contains("FATAL")
+                                        || t.contains("Traceback")
+                                        || t.starts_with("File ")
+                                        || t.contains("Exception")
+                                })
+                                .take(14)
+                                .cloned()
+                                .collect::<Vec<String>>();
+                            let mut error_lines = error_lines;
+                            error_lines.reverse();
+                            job.failure_summary = if error_lines.is_empty() {
+                                summary.clone()
+                            } else {
+                                format!("{}\n{}", summary, error_lines.join("\n"))
+                            };
+                            job.current_task_detail = job.failure_summary.clone();
+                            let short: String = job.failure_summary.chars().take(500).collect();
+                            error_toasts.push(("Recompilation failed".to_string(), short));
                         }
                         let stopped = job.cancel_requested.load(Ordering::SeqCst);
                         if stopped {
@@ -3955,6 +4121,11 @@ impl GameReCompApp {
                     }
                 }
             }
+        }
+
+        for (title, detail) in error_toasts {
+            let col = self.tokens().not_c;
+            self.push_toast(&title, &detail, col, true);
         }
 
         for (actor, msg, is_ok) in feed_events {
@@ -4116,6 +4287,7 @@ impl GameReCompApp {
             FocusInput::IssueTitle => Some(&mut self.issue_draft.title),
             FocusInput::IssueNotes => Some(&mut self.issue_draft.user_notes),
             FocusInput::RunGameDataDir => self.run_game_modal.as_mut().map(|m| &mut m.data_dir),
+            FocusInput::RunGameArguments => self.run_game_modal.as_mut().map(|m| &mut m.arguments),
             FocusInput::QuickRenameProject => self.rename_modal.as_mut().map(|m| &mut m.name_buf),
         }
     }
@@ -4694,7 +4866,7 @@ fn file_identity(path: &Path) -> io::Result<FileIdentity> {
     #[cfg(unix)]
     let (volume, file) = {
         use std::os::unix::fs::MetadataExt;
-        (metadata.dev(), u128::from(metadata.ino()))
+        (metadata.dev(), metadata.ino() as u128)
     };
     #[cfg(windows)]
     let (volume, file) = {
@@ -4730,6 +4902,7 @@ fn remove_project_path(path: &Path, expected: FileIdentity) -> io::Result<()> {
     }
 }
 
+#[allow(dead_code)]
 fn has_exe_extension(path: &Path) -> bool {
     path.extension()
         .and_then(|extension| extension.to_str())
@@ -5062,20 +5235,14 @@ pub fn launch_gui(cfg: AppConfig, open_dir: Option<&Path>) -> i32 {
             gpui::init(cx);
             style::register_fonts(cx);
             let bounds = Bounds::centered(None, size(px(1380.0), px(880.0)), cx);
-            let app_icon = Arc::new(
-                image::load_from_memory(include_bytes!("../../assets/gamerecomp-app-icon-128.png"))
-                    .expect("embedded GameRecomp app icon")
-                    .to_rgba8(),
-            );
             let options = WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 window_min_size: Some(size(px(860.0), px(580.0))),
                 titlebar: Some(TitlebarOptions {
-                    title: Some("GameReComp — Pick your game and turn it to native port".into()),
+                    title: Some("GameReComp — Any game or app, any OS, any architecture".into()),
                     appears_transparent: false,
                     ..Default::default()
                 }),
-                icon: Some(app_icon),
                 ..Default::default()
             };
             cx.on_window_closed(|cx, _id| {
@@ -5104,49 +5271,6 @@ pub fn launch_gui(cfg: AppConfig, open_dir: Option<&Path>) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn native_launch_assets_root_prefers_configured_dir_then_pe_parent() {
-        let unique = format!(
-            "gr-launch-assets-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos()
-        );
-        let root = std::env::temp_dir().join(unique);
-        let game_data = root.join("game data");
-        let pe_dir = root.join("original");
-        fs::create_dir_all(&game_data).unwrap();
-        fs::create_dir_all(&pe_dir).unwrap();
-        let pe = pe_dir.join("game.exe");
-        fs::write(&pe, b"not a real PE").unwrap();
-
-        // No configured dir: the original PE's parent is the assets root.
-        assert_eq!(
-            GameReCompApp::native_launch_assets_root("", [pe.as_path()]),
-            Some(fs::canonicalize(&pe_dir).unwrap())
-        );
-        // An explicitly configured assets dir wins over the PE parent.
-        assert_eq!(
-            GameReCompApp::native_launch_assets_root(game_data.to_str().unwrap(), [pe.as_path()]),
-            Some(fs::canonicalize(&game_data).unwrap())
-        );
-        // Stale paths are skipped instead of producing an invalid launch cwd.
-        assert_eq!(
-            GameReCompApp::native_launch_assets_root(
-                root.join("missing").to_str().unwrap(),
-                [Path::new("/definitely/not/a/game.exe"), pe.as_path()]
-            ),
-            Some(fs::canonicalize(&pe_dir).unwrap())
-        );
-        assert_eq!(
-            GameReCompApp::native_launch_assets_root("", [Path::new("game.exe")]),
-            None
-        );
-        fs::remove_dir_all(&root).ok();
-    }
 
     #[test]
     fn executable_picker_filter_is_case_insensitive() {
@@ -5218,5 +5342,22 @@ mod tests {
             }
         }
         assert_eq!(percent_encode_query("Hi [1]!"), "Hi%20%5B1%5D%21");
+    }
+
+    #[test]
+    fn launch_arguments_split_quotes_and_escapes() {
+        assert!(GameReCompApp::split_launch_args("").is_empty());
+        assert_eq!(
+            GameReCompApp::split_launch_args("-g 3x3:6a1a_7a8d"),
+            vec!["-g", "3x3:6a1a_7a8d"]
+        );
+        assert_eq!(
+            GameReCompApp::split_launch_args("--name \"Two Words\" 'other arg'"),
+            vec!["--name", "Two Words", "other arg"]
+        );
+        assert_eq!(
+            GameReCompApp::split_launch_args("a\\ b c"),
+            vec!["a b", "c"]
+        );
     }
 }

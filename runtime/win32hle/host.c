@@ -187,6 +187,8 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_msvcrt);
     win32hle_register(win32hle_kernel32_atom);
     win32hle_register(win32hle_dinput);
+    win32hle_register(win32hle_winamp_extra);
+    win32hle_register(win32hle_idm_extra);
     win32hle_register(win32hle_bink);
     win32hle_register(win32hle_mss);
     win32hle_register(win32hle_wininet);
@@ -621,7 +623,9 @@ int recomp_host_main(int argc, char **argv) {
                 (!recomp_original_name[0] || !strcasecmp(path_basename(argv[1]), recomp_original_name))) {
                 if (!assets) assets = parent_dir(argv[1], dirbuf, sizeof dirbuf);
                 first = 2;
-            } else if (argc == 2 && is_directory(argv[1])) {
+            } else if (is_directory(argv[1]) && (assets || argc == 2)) {
+                /* A GUI-launched assets directory is a leading positional
+                 * argument even when extra guest arguments follow it. */
                 if (!assets) assets = argv[1];
                 first = 2;
             }

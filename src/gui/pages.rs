@@ -993,7 +993,7 @@ pub fn render_about_page(
         viewport_w,
         "ABOUT",
         "GameReComp",
-        "Pick your game and turn it to native port — static PE32 x86 recompilation to native executables and WebAssembly, built in Rust with GPUI Kit.",
+        "Any game or app, any OS, any architecture — accepts Windows, macOS and Linux inputs across x86, x86_64 and arm64; PE32 i386 reconstruction is fail-closed to the host.",
     )
     .child(
         div()
@@ -1143,7 +1143,7 @@ fn render_typography_settings(
                 .font_weight(FontWeight::BOLD)
                 .text_size(px(t.ui_px(15.0)))
                 .text_color(rgb(t.ink))
-                .child("Live Preview · Pick your game and turn it to native port."),
+                .child("Live Preview · Any game or app, any OS, any architecture — PE32 i386 rebuilds; other inputs report exact status."),
         )
         .child(
             div()
@@ -1913,6 +1913,40 @@ pub fn render_run_game_modal(
                                         ),
                                     )
                                 }),
+                        )
+                    })
+                    .when(modal.binary_path.is_some() || !modal.has_wasm, |el| {
+                        el.child(
+                            div()
+                                .flex()
+                                .flex_col()
+                                .gap(px(6.0))
+                                .child(style::eyebrow(t, "EXTRA COMMAND-LINE ARGUMENTS"))
+                                .child(
+                                    style::text_input_box(
+                                        "run_modal_args_input",
+                                        t,
+                                        &modal.arguments,
+                                        "e.g. -g 3x3:6a1a... (CLI tools)",
+                                        app.focused_input
+                                            == Some(FocusInput::RunGameArguments),
+                                        true,
+                                    )
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.set_focus_input(
+                                            Some(FocusInput::RunGameArguments),
+                                            window,
+                                            cx,
+                                        );
+                                    })),
+                                )
+                                .child(
+                                    div()
+                                        .font_family(t.ui_font)
+                                        .text_size(px(t.ui_px(11.0)))
+                                        .text_color(rgb(t.muted))
+                                        .child("Quotes and backslash escapes are supported. Saved with this project's launch options."),
+                                ),
                         )
                     })
                     .child(

@@ -1,0 +1,2 @@
+
+error: unsupported input architecture: x86_64 (this pipeline reconstructs PE32 x86 guests; a 64-bit build of the same game, if one exists, would be a different binary to reconstruct -- 64-bit guest support is planned, not implemented)

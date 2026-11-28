@@ -1,0 +1,26 @@
+==> inspect
+    ok         0.3s  inspect: i386 PE32, 679 imports, entry 0x004BB7D9
+==> recover
+    ok        97.7s  recover: 7665 functions, 732436 instructions
+==> translate
+    ok         9.5s  translate: 12 source files, 76317479 bytes, 0 lift errors
+==> project
+    ok         0.0s  project: project at /Users/haseeb-mir/GameReComp/projects/winamp
+==> compile
+    ok       158.6s  compile: /Users/haseeb-mir/GameReComp/projects/winamp/build/winamp (28959976 bytes, 158.4s)
+==> run
+    ok         1.7s  run: boot-failed, exit=2, 1.7s, 235 unresolved imports
+==> verify
+    ok         0.0s  verify: launch-failed: rebuilt process boot-failed (exit 2)
+==> report
+    ok         0.1s  report: reports in /Users/haseeb-mir/GameReComp/projects/winamp/reports
+
+project:      /Users/haseeb-mir/GameReComp/projects/winamp
+input:        windows/x86 (winamp.exe)
+output:       macos/arm64 native
+source code:  /Users/haseeb-mir/GameReComp/projects/winamp/src/recomp/gen
+binary:       /Users/haseeb-mir/GameReComp/projects/winamp/build/winamp
+stages:       inspect(ok), recover(ok), translate(ok), project(ok), compile(ok), run(ok), verify(ok), report(ok)
+score:        70/100
+verification: launch-failed
+report:       /Users/haseeb-mir/GameReComp/projects/winamp/reports/report.html

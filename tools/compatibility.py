@@ -185,7 +185,6 @@ def scan_dispatch(repo):
 
 def _fixture_specs(baseline):
     """Map fixture ids to deterministic builder inputs from the baseline."""
-    by_id = {f["family_id"]: f for f in baseline["families"]}
     specs = {
         "fx-existing-pe32-minimal": {
             "kind": "fixture-pe32", "dll": "KERNEL32.dll", "func": "ExitProcess",
@@ -321,7 +320,6 @@ def observe_families(baseline, inputs, scan, head):
         method_labels = spec["guest_interface"]["method_slots"]
         has_methods = all(label in scan["methods"] for label in method_labels)
         reg_ok = reg is None or reg in scan["registered"]
-        sources_ok = not missing_sources
 
         if unsupported:
             new_capability = bool(reg and reg in scan["registered"])

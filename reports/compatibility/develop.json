@@ -38,7 +38,7 @@
     "winsock-2-directplay": "UNSUPPORTED",
     "xinput-raw-input": "UNSUPPORTED"
   },
-  "head_at_generation": "f32b4168f8c4485f183177d1ac63a959d1a201ad",
+  "head_at_generation": "b7ca839147dde88c9f2a333ea1aa556aa74d9915",
   "host_arch": "arm64",
   "host_os": "Darwin",
   "input_sha256_by_path": {
@@ -63,7 +63,7 @@
     "runtime/win32hle/gdi32.c": "9035eaf5dd59a4c8045b337f7adbca15c48cad62a3af24733899116be4407ed4",
     "runtime/win32hle/gdidc.c": "743f4a3d8e92289c40650717581a09501bf07f22d4d87cf75deb6b95b5d68456",
     "runtime/win32hle/gl32.c": "5cdbcdba4ea5b175902415cf5e4b02d2e0e504078aea86b815111ac345fbb018",
-    "runtime/win32hle/host.c": "e8d2d77e7b5b25d58c5a18629c48318d98d88c3ed30e6b9ce64dd42cd9165e1a",
+    "runtime/win32hle/host.c": "dae889635ce8491df6258fc64ae99a6318d8b83ec935362013787c4eeed50f72",
     "runtime/win32hle/kernel32.c": "bfabb4b02211a0bcde8a5713ee718917c941be62139287e038aa205f49ca0d86",
     "runtime/win32hle/module.c": "d8742baf1a602757f4bcad5919761407b5a4c0e3755ea83ad7b89d7bbe800e8a",
     "runtime/win32hle/mss.c": "3bc4d3883c554631a2c4c9ba98f266f4f152ed4d48980bcabb0a0fa86186ee08",
@@ -104,7 +104,7 @@
     "tests/fixtures/__missing__/no-such-input.exe": "595ce66a95cda2f4d5cf0fee7f19b8213b950658ed03efd9f4981414fba8c999",
     "tests/fixtures/pe32-minimal.exe": "583759c15211f04bd7fd69d96b140ed8a7b1ed8306c5c54fd09163cd6693cfe3",
     "tools/autorecomp/diagnose.py": "b0a9721fb145c3e3466cd29fd3c7ffbadbac3e70cc43724512acc7a49e3b7d83",
-    "tools/compatibility.py": "44acce1ab6efef72db00806ce15c46c1034cdfbad0d5094e3dbccac411a58400",
+    "tools/compatibility.py": "9492dac59736e4b5e4b279a59c05a816546239eb12da5818a95e5957fb43721a",
     "tools/corpus/inventory.py": "f1f69c853ec98ab3556f30161788f1c5e31a2b09705e1f4c397b66800d7101d7",
     "tools/gamesdb.py": "c43151025eac92b67696353ba9b4922984c24330682188fc61ef9169510b500c"
   },

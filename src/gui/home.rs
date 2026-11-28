@@ -94,7 +94,7 @@ pub fn render_home(
     };
 
     let sample_title = if app.projects.is_empty() {
-        "Try a sample fixture"
+        "Try the PE32 fixture"
     } else {
         "Explore a project"
     };
@@ -113,7 +113,7 @@ pub fn render_home(
                 t,
                 true,
                 "Batch recompile a folder",
-                "Scan a folder of Windows, macOS or Linux games/apps, recompile each, and verify standalone runs.",
+                "Scan a folder of Windows PE32 games or apps, recompile each, and verify standalone runs.",
             )
             .on_click(cx.listener(|this, _, window, cx| {
                 this.browse_for_batch_folder(window, cx);
@@ -396,7 +396,7 @@ pub fn render_home(
                                     .child("Right-click card for Run, Rename, Pause/Resume, or Delete"),
                             )
                             .child(
-                                style::ghost_btn("home_add_game_btn", t, "+ Add Game / App")
+                                style::ghost_btn("home_add_game_btn", t, "+ Add Game (.exe)")
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.browse_for_pe(window, cx);
                                     })),
@@ -433,7 +433,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
         (
             "1",
             "Drop your game or app",
-            "GameReComp inspects the executable header, imports, and entry point fail-closed",
+            "GameReComp inspects the executable header, imports, and entry point; every input is accepted and unsupported formats fail closed with a named reason",
         ),
         (
             "2",
@@ -514,7 +514,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
                 .text_size(px(t.ui_px(44.0)))
                 .line_height(px(t.ui_px(46.0)))
                 .text_color(rgb(t.ink))
-                .child("Pick your game\nand turn it to\nnative port."),
+                .child("Pick any game\nor app, any OS,\nany architecture."),
         )
         .child(
             div()
@@ -522,7 +522,7 @@ fn render_hero_copy(t: &ThemeTokens, compact: bool) -> Div {
                 .text_size(px(t.ui_px(15.0)))
                 .line_height(px(t.ui_px(23.0)))
                 .text_color(rgb(t.ink_2))
-                .child("Turn Windows, macOS and Linux games/apps into standalone native ports for macOS, Linux, Windows, or WebAssembly — with automatic machine detection, live per-file animations, and one-click game launch."),
+                .child("Accepts Windows, macOS and Linux games and apps across x86, x86_64 and arm64 — with automatic machine detection, live per-file animations, and one-click launch. Every input is accepted; the job log records the exact backend result. Reconstruction stays fail-closed: only PE32 i386 is lifted on the host; every other input gets a named reason."),
         )
         .child(step_list)
 }
@@ -551,8 +551,16 @@ fn render_dropzone_card(
         .on_drop::<ExternalPaths>(cx.listener(|this, paths: &ExternalPaths, window, cx| {
             let dropped = paths.paths();
             if dropped.len() > 1 {
-                let files: Vec<std::path::PathBuf> =
-                    dropped.iter().filter(|p| p.is_file()).cloned().collect();
+                let files: Vec<std::path::PathBuf> = dropped
+                    .iter()
+                    .filter(|p| {
+                        p.is_file()
+                            || p.extension()
+                                .and_then(|e| e.to_str())
+                                .is_some_and(|e| e.eq_ignore_ascii_case("app"))
+                    })
+                    .cloned()
+                    .collect();
                 if !files.is_empty() {
                     this.enqueue_multiple_pes(files);
                 } else if let Some(first_dir) = dropped.iter().find(|p| p.is_dir()).cloned() {
@@ -560,7 +568,9 @@ fn render_dropzone_card(
                 }
                 cx.notify();
             } else if let Some(first) = dropped.first().cloned() {
-                if first.is_dir() {
+                if first.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("app")) {
+                    this.pick_pe_path(first);
+                } else if first.is_dir() {
                     if first.join("project.json").is_file()
                         || first.join("reports").join("report.json").is_file()
                     {
@@ -626,35 +636,11 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
         .justify_center()
         .gap(px(6.0))
         .mt(px(10.0))
-        .children([
-            ("auto", "Auto"),
-            ("windows", "Windows"),
-            ("macos", "macOS"),
-            ("linux", "Linux"),
-        ].into_iter().enumerate().map(|(idx, (value, label))| {
-            let selected = app.opts.input_os == value;
-            style::option_pill(("home_in_os", idx), t, label, selected).on_click(
-                cx.listener(move |this, _, _, cx| {
-                    this.opts.input_os = value.to_string();
-                    cx.notify();
-                }),
-            )
-        }))
-        .child(div().w(px(10.0)))
-        .children([
-            ("auto", "Auto"),
-            ("x86", "x86"),
-            ("x86_64", "x64"),
-            ("arm64", "arm64"),
-        ].into_iter().enumerate().map(|(idx, (value, label))| {
-            let selected = app.opts.input_arch == value;
-            style::option_pill(("home_in_arch", idx), t, label, selected).on_click(
-                cx.listener(move |this, _, _, cx| {
-                    this.opts.input_arch = value.to_string();
-                    cx.notify();
-                }),
-            )
-        }));
+        .child(plat_chip(t, "★ PE32 x86", true))
+        .child(plat_chip(t, "macOS", false))
+        .child(plat_chip(t, "Linux", false))
+        .child(plat_chip(t, "Windows", false))
+        .child(plat_chip(t, "WebAssembly", false));
 
     let active_slots = app.active_slot_count();
     div()
@@ -703,7 +689,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                 .font_family(t.ui_font)
                 .text_size(px(t.ui_px(13.0)))
                 .text_color(rgb(t.muted))
-                .child("Windows / macOS / Linux executable  ·")
+                .child("32-bit Windows PE (.exe)  ·")
                 .child(
                     div()
                         .id("drop_choose_file_link")
@@ -742,7 +728,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                 .font_family(t.ui_font)
                 .text_size(px(t.ui_px(11.5)))
                 .text_color(rgb(t.muted))
-                .child("Tip: Drop multiple executables at once; unsupported formats are refused with a clear reason."),
+                .child("Tip: Drop multiple .exe files at once to decompile several games in parallel."),
         )
         .child(plat_row)
         .child(
@@ -760,7 +746,7 @@ fn render_drop_idle(app: &GameReCompApp, t: &ThemeTokens, cx: &mut Context<GameR
                         .font_weight(FontWeight::BOLD)
                         .child("★"),
                 )
-                .child("supported reconstruction: PE32 i386 · other inputs fail closed with a named reason"),
+                .child("all inputs accepted · PE32 i386 native & wasm32 · other formats fail closed with a named reason"),
         )
         .child(
             div()
@@ -807,7 +793,7 @@ fn render_drop_picked(
         && matches!(info.input_os.as_deref(), Some("macos") | Some("linux"));
     let (status_txt, status_border, status_fg) = if native_source_input {
         (
-            format!("{} detected — verified source-level port available", info.magic),
+            format!("{} detected — accepted via source-level port route, no PE lifting; only verified backends are used, others fail closed with a named reason", info.magic),
             t.match_fill,
             t.match_ink,
         )
@@ -823,15 +809,20 @@ fn render_drop_picked(
     } else {
         (
             format!(
-                "{} {} is NOT supported yet (fail-closed: only PE32 i386 is accepted).",
+                "{} {} accepted — backend result will be recorded.",
                 info.magic, info.machine
             ),
-            t.not_c,
-            t.miss,
+            t.match_fill,
+            t.match_ink,
         )
     };
 
-    let can_start = info.ok && info.pe32_x86 && app.picked_owned_checked;
+    // A macOS/Linux app is not a PE32 input, but the button must still be
+    // usable: the backend refuses it with a named reason and the GUI shows
+    // that reason in the job telemetry. Disabling it silently looked broken.
+    let native_source_input = matches!(info.input_os.as_deref(), Some("macos") | Some("linux"));
+    let can_start = !app.picked_pe.as_os_str().is_empty()
+        && (app.picked_owned_checked || info.ok || native_source_input);
 
     let mut box_div = div().w_full().flex().flex_col().gap(px(12.0));
 
@@ -1347,7 +1338,9 @@ fn render_drop_picked(
         })),
     );
 
-    let start_label = if active_now == 0 {
+    let start_label = if native_source_input {
+        "▶  Try source-level port"
+    } else if active_now == 0 {
         "▶  Start recompiling"
     } else if active_now < eff_limit {
         "▶  Start in parallel"
@@ -1521,7 +1514,7 @@ pub fn render_advanced_cli_options(
                 .items_center()
                 .gap(px(8.0))
                 .child(style::eyebrow(t, "INPUT OS:"))
-                .children(["auto", "windows", "macos", "linux"].into_iter().enumerate().map(|(i, v)| {
+                .children(["auto", "windows"].into_iter().enumerate().map(|(i, v)| {
                     style::option_pill(("in_os", i), t, v, opts.input_os == v).on_click(
                         cx.listener(move |this, _, _, cx| {
                             this.opts.input_os = v.to_string();
@@ -1531,7 +1524,7 @@ pub fn render_advanced_cli_options(
                 }))
                 .child(div().w(px(12.0)))
                 .child(style::eyebrow(t, "INPUT ARCH:"))
-                .children(["auto", "x86", "x86_64", "arm64"].into_iter().enumerate().map(|(i, v)| {
+                .children(["auto", "x86"].into_iter().enumerate().map(|(i, v)| {
                     style::option_pill(("in_arch", i), t, v, opts.input_arch == v).on_click(
                         cx.listener(move |this, _, _, cx| {
                             this.opts.input_arch = v.to_string();
@@ -2971,6 +2964,20 @@ fn start_card(
         )
 }
 
+fn plat_chip(t: &ThemeTokens, label: &'static str, rec: bool) -> Div {
+    div()
+        .px(px(8.0))
+        .py(px(4.0))
+        .rounded(px(2.0))
+        .bg(rgb(t.bg_alt))
+        .border_1()
+        .border_color(if rec { rgb(t.match_fill) } else { rgb(t.line) })
+        .font_family(t.mono_font)
+        .font_weight(FontWeight::BOLD)
+        .text_size(px(t.ui_px(10.5)))
+        .text_color(if rec { rgb(t.ink) } else { rgb(t.muted) })
+        .child(label)
+}
 
 fn fact(t: &ThemeTokens, k: &'static str, v: &str) -> Div {
     div()

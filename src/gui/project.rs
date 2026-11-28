@@ -577,6 +577,10 @@ fn render_overview_tab(
         );
     } else if app.last_finished_project.as_deref() == Some(model.dir.as_path()) {
         let files_count = proj_job.map(|j| j.processed_files.len()).unwrap_or(0);
+        let launch_ready = !matches!(
+            model.verification.as_str(),
+            "launch-failed" | "boot-failed" | "not-run" | "unbuilt" | "failed"
+        );
         // Post-decompile ready-to-play action banner!
         let bin_opt = model.built_binary_path();
         let has_wasm = model.has_wasm_build;
@@ -584,6 +588,7 @@ fn render_overview_tab(
         let proj_dir_data = model.dir.clone();
         let proj_title_data = model.display_title().to_string();
         let proj_dir_ai = model.dir.clone();
+        let proj_dir_revng = model.dir.clone();
         let proj_dir_open = model.dir.clone();
         let mut actions = div().flex().flex_wrap().items_center().gap(px(8.0));
         if let Some(bin) = bin_opt {
@@ -642,6 +647,14 @@ fn render_overview_tab(
                 })),
             )
             .child(
+                style::ghost_btn("post_revng_btn", t, "🔬 Rev.ng Source Pass")
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.start_readability_agent_for_dir_with(
+                            proj_dir_revng.clone(), None, "revng", Some(SourceImproveMethod::Revng), cx,
+                        );
+                    })),
+            )
+            .child(
                 style::ghost_btn("post_open_dir_btn", t, "Open Output Folder").on_click(
                     cx.listener(move |_, _, _, _| {
                         let _ = open::that(&proj_dir_open);
@@ -680,14 +693,22 @@ fn render_overview_tab(
                                 .flex()
                                 .items_center()
                                 .gap(px(8.0))
-                                .child(style::status_badge("✓ READY TO PLAY", t.match_fill, t.bg))
+                                .child(if launch_ready {
+                                    style::status_badge("✓ READY TO PLAY", t.match_fill, t.bg)
+                                } else {
+                                    style::status_badge("LAUNCH FAILED", t.not_c, t.miss_bg)
+                                })
                                 .child(
                                     div()
                                         .font_family(t.ui_font)
                                         .font_weight(FontWeight::EXTRA_BOLD)
                                         .text_size(px(t.ui_px(15.5)))
                                         .text_color(rgb(t.match_ink))
-                                        .child("Decompilation & build finished!"),
+                                        .child(if launch_ready {
+                                            "Decompilation & build finished!"
+                                        } else {
+                                            "Build finished, but the rebuilt process did not boot."
+                                        }),
                                 ),
                         )
                         .child(
@@ -696,9 +717,14 @@ fn render_overview_tab(
                                 .text_size(px(t.ui_px(12.5)))
                                 .text_color(rgb(t.ink_2))
                                 .child(format!(
-                                    "{} file(s) processed · score {}/100 · click Launch to run your rebuilt game.",
+                                    "{} file(s) processed · score {}/100 · {}",
                                     files_count,
-                                    model.score
+                                    model.score,
+                                    if launch_ready {
+                                        "click Launch to run your rebuilt game."
+                                    } else {
+                                        "Launch is diagnostic only: the run stage reports why the guest exited."
+                                    }
                                 )),
                         ),
                 )
@@ -2029,6 +2055,7 @@ fn render_agents_tab(
     cx: &mut Context<GameReCompApp>,
 ) -> Div {
     let ai_cmd = app.effective_ai_cmd();
+    let revng_dir = model.dir.clone();
     let agent_job = app.jobs.iter().rev().find(|j| {
         j.is_running()
             && j.kind == WorkerKind::Readability
@@ -2083,17 +2110,30 @@ fn render_agents_tab(
                         }),
                 )
                 .child(if agent_running {
-                    style::danger_btn("ag_stop_btn", t, "■ Stop").on_click(cx.listener(
-                        move |this, _, _, cx| {
-                            this.stop_job(agent_job_id);
-                            cx.notify();
-                        },
-                    ))
+                    div().child(
+                        style::danger_btn("ag_stop_btn", t, "■ Stop").on_click(cx.listener(
+                            move |this, _, _, cx| {
+                                this.stop_job(agent_job_id);
+                                cx.notify();
+                            },
+                        )),
+                    )
                 } else {
-                    style::primary_btn("ag_start_btn", t, "✨ Improve C Readability (AI)", true)
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.start_readability_agent(cx);
-                        }))
+                    div().flex().flex_wrap().items_center().gap(px(8.0))
+                        .child(
+                            style::primary_btn("ag_start_btn", t, "✨ Improve C Readability (AI)", true)
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.start_readability_agent(cx);
+                                })),
+                        )
+                        .child(
+                            style::ghost_btn("ag_revng_btn", t, "🔬 Rev.ng Source Pass")
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.start_readability_agent_for_dir_with(
+                                        revng_dir.clone(), None, "revng", Some(SourceImproveMethod::Revng), cx,
+                                    );
+                                })),
+                        )
                 }),
         )
         .child(

@@ -307,9 +307,25 @@ def detect_revng():
                 "command": template, "source": "REVNG_DECOMPILE_CMD"}
     exe = os.environ.get("REVNG_BIN") or shutil.which("revng")
     if not exe:
+        # macOS/Windows have no native rev.ng: the upstream Linux/amd64
+        # container is the supported route. The wrapper is shipped with the
+        # repo so the GUI can run the pass without extra environment setup.
+        wrapper = (Path(__file__).resolve().parents[2] / "tools" /
+                   "revng-container.sh")
+        runtime = os.environ.get("REVNG_DOCKER")
+        if not runtime:
+            runtime = "docker" if shutil.which("docker") else (
+                "podman" if shutil.which("podman") else None)
+        if wrapper.is_file() and runtime:
+            return {"name": "revng", "available": True,
+                    "kind": "command-template", "command":
+                    f"{wrapper} {{pe}} {{outdir}}",
+                    "source": f"container:{runtime}",
+                    "image": os.environ.get("REVNG_IMAGE", "revng/revng:latest")}
         return {"name": "revng", "available": False, "kind": "binary",
                 "reason": "revng not found: install rev.ng, set REVNG_BIN, "
-                          "or provide REVNG_DECOMPILE_CMD"}
+                          "provide REVNG_DECOMPILE_CMD, or install Docker/Podman "
+                          "to run the revng/revng container"}
     version = None
     try:
         proc = subprocess.run([exe, "--version"], capture_output=True, text=True,
@@ -466,6 +482,8 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
         pe = self._pe_override
         if pe is None and len(command) > 1 and command[1]:
             pe = Path(command[1])
+        if pe is None and isinstance(report, dict) and report.get("input"):
+            pe = Path(report["input"])
         pe_s = str(pe) if pe else None
         if pe_s and not Path(pe_s).is_file():
             raise ReadabilityError(f"original executable not found: {pe_s}")
@@ -556,17 +574,21 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
 
         if provider["kind"] == "command-template":
             try:
+                parts = shlex.split(provider["command"])
+                if not any("{pe}" in a or "{outdir}" in a for a in parts):
+                    parts = [*parts, str(pe)]
                 cmd = [part.format(pe=pe, outdir=str(out_dir))
-                       for part in shlex.split(provider["command"])]
-            except (ValueError, KeyError) as exc:
+                       for part in parts]
+            except (ValueError, KeyError, IndexError) as exc:
                 self.revng_status = "failed"
                 self._stage("revng", "failed",
                             f"bad REVNG_DECOMPILE_CMD template: {exc}",
                             seconds=round(time.time() - t0, 2))
                 return False
         else:
-            cmd = [provider["command"], "decompile", pe,
-                   "--output-dir", str(out_dir)]
+            cmd = [provider["command"], "quick", "artifact",
+                   "emit-c-as-single-file", pe, "-o",
+                   str(out_dir / "decompiled.c")]
 
         timeout = self.deadline.clamp(self.provider_timeout * 2, floor=10)
         with open(log_path, "w") as log:
