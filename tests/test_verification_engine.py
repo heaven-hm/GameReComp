@@ -1,14 +1,11 @@
-"""Tests for the general Unicorn + Frida verification engine.
+"""Tests for the same-input runtime verification engine.
 
-These check the parts that must work for ANY project: binary discovery without
-game-specific names, address discovery from the recovered function inventory,
-and honest handling of a blocked run oracle.
+Reconstruction is done once by the pipeline; this engine only runs the two
+built binaries with identical inputs and compares their observable output.
 """
 import json
 import sys
 from pathlib import Path
-
-import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
@@ -36,62 +33,65 @@ def test_binary_discovery_does_not_accept_a_directory(tmp_path):
     assert verify.rebuilt_binary(tmp_path, {}) is None
 
 
-def test_addresses_come_from_function_inventory_not_hardcoded(tmp_path):
+def test_source_parity_is_read_not_recomputed(tmp_path):
     (tmp_path / "reports").mkdir()
-    (tmp_path / "reports" / "functions.json").write_text(json.dumps({
-        "functions": [
-            {"address": "0x00402000", "name": "f_small", "calls": 1,
-             "instructions": 5, "is_thunk": False},
-            {"address": "0x00403000", "name": "f_big", "calls": 20,
-             "instructions": 500, "is_thunk": False},
-            {"address": "0x00404000", "name": "thunk", "calls": 0,
-             "instructions": 2, "is_thunk": True},
-        ]
-    }))
-    addrs = verify.function_addresses(tmp_path, [], 1)
-    assert addrs == [0x00402000]
+    (tmp_path / "reports" / "verify.json").write_text(json.dumps({"source_percent": 75.0}))
+    src = verify.recorded_source_verification(tmp_path)
+    assert src["percent"] == 75.0
+    assert "no re-lifting" in src["engine"]
 
 
-def test_explicit_addresses_are_honoured(tmp_path):
-    assert verify.function_addresses(tmp_path, ["0x1234", "0x5678"], 1) == [0x1234]
+def test_source_parity_missing_is_blocked(tmp_path):
+    src = verify.recorded_source_verification(tmp_path)
+    assert src["blocked"] is True
+    assert src["percent"] == 0.0
 
 
-def test_normalization_hides_user_paths_but_keeps_event_names():
-    line = f"RECOMP_EVT {{'name': 'open', 'a0': '{Path.home()}/Downloads/IGI/IGI.EXE'}}"
+def test_normalization_hides_user_paths_and_aslr_pointers():
+    line = f"orig {Path.home()}/Downloads/IGI/IGI.EXE 0x104bc9120"
     out = verify.normalize(line)
-    assert "RECOMP_EVT" in out and "'name': 'open'" in out
     assert str(Path.home()) not in out
+    assert "PTR" in out
 
 
-def test_normalization_hides_aslr_pointers():
-    line = 'RECOMP_EVT {"name":"open","a0":"0x104bc9120"}'
-    out = verify.normalize(line)
-    assert "PTR" in out and "0x104bc9120" not in out
-
-
-def test_attach_failure_is_blocked_not_a_divergence(tmp_path, monkeypatch):
+def test_runtime_parity_compares_both_outputs(tmp_path, monkeypatch):
     pe = tmp_path / "original.exe"
     rebuilt = tmp_path / "rebuilt"
     pe.write_bytes(b"MZ")
     rebuilt.write_bytes(b"\x7fELF")
-    monkeypatch.setattr(verify.shutil, "which", lambda _: "/usr/bin/wine")
-    monkeypatch.setattr(verify, "windows_runner", lambda: "/usr/bin/wine")
+    monkeypatch.setattr(verify, "windows_runner", lambda: ["/usr/bin/wine"])
     monkeypatch.setattr(verify, "wine_prefix", lambda: None)
 
-    def fake_trace(argv, timeout, outdir, env_extra=None):
+    def fake_capture(argv, timeout, outdir, env_extra=None):
         outdir.mkdir(parents=True, exist_ok=True)
-        if "original" in str(outdir):
-            log = outdir / "run.log"
-            log.write_text("Failed to attach: unable to access process with pid 1\n")
-            other = log
-        else:
-            log = outdir / "run.log"
-            log.write_text('RECOMP_EVT {"name":"open","a0":"PTR"}\n')
-            other = log
-        return log, 1
+        (outdir / "run.log").write_text("ok")
+        if argv[0] == "/usr/bin/wine":
+            return 0, "boot ok\n", ""
+        return 0, "boot ok\n", ""
 
-    monkeypatch.setattr(verify, "frida_trace", fake_trace)
-    result = verify.run_verification(pe, rebuilt, [], 5, tmp_path / "frida")
-    assert result["blocked"] is True
-    assert result["checked"] == 0
-    assert "attach denied" in result["reason"]
+    monkeypatch.setattr(verify, "run_process_capture", fake_capture)
+    result = verify.runtime_verification(pe, rebuilt, [], 5, tmp_path / "runtime")
+    assert result["blocked"] is False
+    assert result["verified"] is True
+    assert result["percent"] == 100.0
+    assert result["checked"] == 3  # exit code + stdout + stderr
+
+
+def test_runtime_parity_detects_divergence(tmp_path, monkeypatch):
+    pe = tmp_path / "original.exe"
+    rebuilt = tmp_path / "rebuilt"
+    pe.write_bytes(b"MZ")
+    rebuilt.write_bytes(b"\x7fELF")
+    monkeypatch.setattr(verify, "windows_runner", lambda: ["/usr/bin/wine"])
+    monkeypatch.setattr(verify, "wine_prefix", lambda: None)
+
+    def fake_capture(argv, timeout, outdir, env_extra=None):
+        outdir.mkdir(parents=True, exist_ok=True)
+        if argv[0] == "/usr/bin/wine":
+            return 0, "original\n", ""
+        return 1, "rebuilt\n", ""
+
+    monkeypatch.setattr(verify, "run_process_capture", fake_capture)
+    result = verify.runtime_verification(pe, rebuilt, [], 5, tmp_path / "runtime")
+    assert result["verified"] is False
+    assert "stdout" in result["reason"] and "exit_code" in result["reason"]

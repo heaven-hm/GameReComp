@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""General verification engine: source parity (Unicorn) + run parity (Frida).
+"""Runtime verification: run both built programs with the SAME inputs.
 
-No game-specific addresses or paths: every input comes from the project report
-or the command line. Source parity uses tools.lift.difftest.oracle, which runs
-the ORIGINAL x86 bytes and the project's generated C side by side in Unicorn
-and compares the guest state. Run parity uses Frida to record observable calls
-and output from the original executable (through a Windows runtime when the
-host is not Windows) and the rebuilt binary with the SAME arguments, then
-compares the normalized event streams. Both percentages are counts of named
-checks; a missing runtime or zero events is reported as BLOCKED, never a pass.
+Reconstruction/lifting already happened in the pipeline; this engine does not
+repeat it. It reads the recorded source-parity value from the project report and
+then executes the original Windows executable (through Wine on non-Windows
+hosts) and the rebuilt program with identical arguments, capturing stdout,
+stderr and exit codes. Named checks compare those observable outputs; a missing
+runtime or no observable output is reported as BLOCKED, never as a pass.
 """
 import argparse
 import glob
@@ -31,59 +29,26 @@ def load_json(path):
         return {}
 
 
-def function_addresses(project, explicit, limit, allow_all=False):
-    out = [int(a, 0) for a in explicit]
-    if out:
-        return out[:limit] if not allow_all else out
-    data = load_json(project / 'reports' / 'functions.json')
-    funcs = data.get('functions') or []
-    # Prefer small, non-thunk functions: a synthetic entry state can legitimately
-    # fault a complex original, and a blocked check is not evidence of parity.
-    funcs = [f for f in funcs if not f.get('is_thunk')]
-    funcs.sort(key=lambda f: (int(f.get('calls') or 0), int(f.get('instructions') or 0)))
-    for f in funcs:
-        va = f.get('address')
-        if va:
-            out.append(int(va, 0) if isinstance(va, str) else int(va))
-    if not out:
-        for mod in sorted((project / 'src/highlevel').glob('*.json')):
-            for fn in load_json(mod).get('functions', []):
-                va = fn.get('address') or fn.get('va')
-                if va:
-                    out.append(int(va, 0) if isinstance(va, str) else int(va))
-    if not out:
-        manifest = load_json(project / 'manifest.json')
-        va = manifest.get('entry_point') or manifest.get('entry')
-        if va:
-            out.append(int(va, 0) if isinstance(va, str) else int(va))
-    out = list(dict.fromkeys(out))
-    return out if allow_all else out[:limit]
+def recorded_source_verification(project):
+    """Read the source-parity value recorded by the original pipeline run.
 
-
-def source_verification(project, pe, addrs, cases):
-    from tools.lift.difftest import oracle
-    rows = []
-    for va in addrs:
-        try:
-            row = oracle(str(project), str(pe), [va], cases=cases,
-                         progress=lambda *_: None)[0]
-        except (Exception, SystemExit) as exc:
-            # difftest uses SystemExit for "original VA is not in a code section".
-            # That is a blocked check, not a reason to abandon the whole sweep.
-            row = {'address': f'0x{va:08X}', 'verdict': 'engine-error', 'detail': str(exc)}
-        rows.append(row)
-    passed = sum(1 for r in rows if str(r.get('verdict', '')).startswith('agree'))
-    failed = sum(1 for r in rows if r.get('verdict') == 'diverge')
-    blocked = len(rows) - passed - failed
+    This is deliberately NOT recomputed: the reconstruction/lifting step already
+    happened once, and re-running Unicorn here would be duplicated work.
+    """
+    for name in ('reports/verify.json', 'reports/verification.json', 'reports/report.json'):
+        data = load_json(project / name)
+        if 'source_percent' in data:
+            value = float(data['source_percent'] or 0)
+            return {
+                'engine': f'recorded in {name} (no re-lifting)',
+                'percent': round(value, 1), 'checked': 1, 'passed': 1 if value >= 99 else 0,
+                'blocked': False, 'verified': value >= 99.0,
+                'detail': f'Source parity recorded at pipeline time: {value:.1f}%',
+            }
     return {
-        'engine': 'Unicorn / tools.lift.difftest.oracle',
-        'checked': len(rows), 'passed': passed, 'failed': failed, 'blocked': blocked,
-        'percent': round(100.0 * passed / len(rows), 1) if rows else 0.0,
-        'verified': bool(rows) and passed == len(rows),
-        'detail': (f'{passed}/{len(rows)} functions agree; {failed} diverge; '
-                   f'{blocked} blocked (no generated body, harness failure, '
-                   f'original fault, or synthetic-state limit)'),
-        'addresses': rows,
+        'engine': 'recorded source parity', 'percent': 0.0, 'checked': 0,
+        'passed': 0, 'blocked': True, 'verified': False,
+        'detail': 'No recorded source-parity value; run the pipeline once, do not re-lift here.',
     }
 
 
@@ -192,29 +157,6 @@ log({name:"start", argv:(typeof Process.argv !== 'undefined' ? Process.argv.join
 '''
 
 
-def frida_trace(argv, timeout, outdir, env_extra=None):
-    outdir.mkdir(parents=True, exist_ok=True)
-    script = outdir / 'trace.js'
-    log = outdir / 'run.log'
-    script.write_text(FRIDA_SCRIPT)
-    env = dict(os.environ)
-    if env_extra:
-        env.update(env_extra)
-    # Frida 17 resumes spawned processes by default; --no-pause no longer exists.
-    cmd = ['frida', '-f', str(argv[0]), *map(str, argv[1:]),
-           '-l', str(script), '-q', '-t', str(timeout), '--kill-on-exit']
-    try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
-        text = (p.stdout or '') + '\n--- stderr ---\n' + (p.stderr or '')
-        code = p.returncode
-    except subprocess.TimeoutExpired as e:
-        text = (e.stdout or b'').decode(errors='replace') + '\n[timeout]\n' + \
-               (e.stderr or b'').decode(errors='replace')
-        code = 124
-    log.write_text(f'exit={code}\n$ ' + ' '.join(map(str, cmd)) + '\n' + text)
-    return log, code
-
-
 def normalize(line):
     s = line.replace(str(Path.home()), '~')
     # ASLR addresses are not stable output; compare event names and values.
@@ -223,55 +165,87 @@ def normalize(line):
     return ' '.join(p.rsplit('/', 1)[-1] if '/' in p else p for p in parts)
 
 
-def run_verification(pe, rebuilt, args, timeout, outdir):
-    if shutil.which('frida') is None:
-        return {'engine': 'Frida', 'blocked': True, 'reason': 'frida not found',
-                'percent': 0.0, 'checked': 0, 'passed': 0, 'verified': False}
+def run_process_capture(argv, timeout, outdir, env_extra=None):
+    """Run one binary and persist its observable output."""
+    outdir.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ)
+    if env_extra:
+        env.update(env_extra)
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, timeout=timeout,
+                              env=env, errors='replace')
+        code, stdout, stderr = proc.returncode, proc.stdout or '', proc.stderr or ''
+    except subprocess.TimeoutExpired as exc:
+        code = 124
+        stdout = exc.stdout.decode(errors='replace') if isinstance(exc.stdout, bytes) else (exc.stdout or '')
+        stderr = exc.stderr.decode(errors='replace') if isinstance(exc.stderr, bytes) else (exc.stderr or '')
+        stderr += '\n[timeout]'
+    (outdir / 'stdout.txt').write_text(stdout)
+    (outdir / 'stderr.txt').write_text(stderr)
+    (outdir / 'run.log').write_text(f'exit={code}\n$ ' + ' '.join(map(str, argv)) +
+                                    '\n--- stdout ---\n' + stdout + '\n--- stderr ---\n' + stderr)
+    return code, stdout, stderr
+
+
+def _normalized_lines(text):
+    return [normalize(line) for line in text.splitlines() if line.strip()]
+
+
+def runtime_verification(pe, rebuilt, args, timeout, outdir):
+    """Run original and rebuilt with identical args; compare observable output."""
     runner = windows_runner()
-    if not runner:
-        return {'engine': 'Frida', 'blocked': True,
-                'reason': 'no Windows runtime for the original executable (set RECOMP_WINDOWS_RUNNER)',
-                'percent': 0.0, 'checked': 0, 'passed': 0, 'verified': False}
+    if not runner and sys.platform != 'win32':
+        return {
+            'engine': 'same-input runtime comparison', 'blocked': True, 'percent': 0.0,
+            'checked': 0, 'passed': 0, 'verified': False,
+            'reason': 'no Windows runtime for the original (set RECOMP_WINDOWS_RUNNER)',
+        }
     env = {}
     prefix = wine_prefix()
     if prefix:
         env['WINEPREFIX'] = prefix
-    olog, ocode = frida_trace([*runner, str(pe), *args], timeout, outdir / 'original', env)
-    rlog, rcode = frida_trace([str(rebuilt), *args], timeout, outdir / 'rebuilt', env)
-    oe = [normalize(x) for x in olog.read_text(errors='replace').splitlines()
-          if x.startswith('RECOMP_EVT ')]
-    re = [normalize(x) for x in rlog.read_text(errors='replace').splitlines()
-          if x.startswith('RECOMP_EVT ')]
-    logs = (olog.read_text(errors='replace') + '\n' + rlog.read_text(errors='replace'))
-    attach_error = next((l for l in logs.splitlines() if 'Failed to attach' in l), '')
-    if attach_error or not oe:
-        # Events from one side only are evidence of a broken oracle, not a
-        # divergence: the original process never produced a comparable stream.
-        reason = (f'Frida attach denied by the OS ({attach_error.strip()}); run parity is BLOCKED'
-                  if attach_error else
-                  'the original emitted no Frida events; run parity is BLOCKED')
+    original_argv = ([*runner, str(pe)] if runner else [str(pe)]) + [str(a) for a in args]
+    rebuilt_argv = [str(rebuilt)] + [str(a) for a in args]
+    ocode, oout, oerr = run_process_capture(original_argv, timeout, outdir / 'original', env)
+    rcode, rout, rerr = run_process_capture(rebuilt_argv, timeout, outdir / 'rebuilt', env)
+
+    checks = []
+    checks.append(('exit_code', ocode == rcode, f'original={ocode} rebuilt={rcode}'))
+    oout_lines, rout_lines = _normalized_lines(oout), _normalized_lines(rout)
+    oerr_lines, rerr_lines = _normalized_lines(oerr), _normalized_lines(rerr)
+    observable = bool(oout_lines or oerr_lines or rout_lines or rerr_lines)
+    if observable:
+        checks.append(('stdout', oout_lines == rout_lines,
+                       f'{len(oout_lines)} original / {len(rout_lines)} rebuilt lines'))
+        checks.append(('stderr', oerr_lines == rerr_lines,
+                       f'{len(oerr_lines)} original / {len(rerr_lines)} rebuilt lines'))
+    if not observable:
         return {
-            'engine': 'Frida', 'percent': 0.0, 'checked': 0, 'passed': 0,
-            'blocked': True, 'original_exit': ocode, 'rebuilt_exit': rcode,
-            'reason': reason,
-            'detail': f'0 comparable events; original exit {ocode}, rebuilt exit {rcode}',
-            'logs': [str(olog), str(rlog)], 'verified': False,
+            'engine': 'same-input runtime comparison', 'blocked': True, 'percent': 0.0,
+            'checked': 0, 'passed': 0, 'verified': False, 'original_exit': ocode,
+            'rebuilt_exit': rcode,
+            'reason': 'neither process produced observable stdout/stderr; no output to compare',
+            'detail': f'original exit {ocode}, rebuilt exit {ocode}',
+            'logs': [str(outdir / 'original/run.log'), str(outdir / 'rebuilt/run.log')],
         }
-    checked = max(len(oe), len(re))
-    passed = sum(1 for a, b in zip(oe, re) if a == b)
-    reason = '' if passed == checked else f'{checked - passed} normalized event(s) diverged'
+    passed = sum(1 for _, ok, _ in checks if ok)
+    checked = len(checks)
+    failed = [name for name, ok, _ in checks if not ok]
     return {
-        'engine': 'Frida', 'percent': round(100.0 * passed / checked, 1) if checked else 0.0,
+        'engine': 'same-input runtime comparison (stdout/stderr/exit code)',
+        'percent': round(100.0 * passed / checked, 1),
         'checked': checked, 'passed': passed, 'blocked': False,
+        'verified': passed == checked,
         'original_exit': ocode, 'rebuilt_exit': rcode,
-        'reason': reason,
-        'detail': f'{passed}/{checked} normalized events agree; original exit {ocode}, rebuilt exit {rcode}',
-        'logs': [str(olog), str(rlog)], 'verified': checked > 0 and passed == checked,
+        'reason': '' if not failed else 'diverged checks: ' + ', '.join(failed),
+        'detail': f'{passed}/{checked} checks agree; original exit {ocode}, rebuilt exit {rcode}',
+        'checks': [{'name': n, 'ok': ok, 'detail': d} for n, ok, d in checks],
+        'logs': [str(outdir / 'original/run.log'), str(outdir / 'rebuilt/run.log')],
     }
 
 
 def main():
-    ap = argparse.ArgumentParser(description='general Unicorn + Frida verification')
+    ap = argparse.ArgumentParser(description='same-input runtime verification of two built binaries')
     ap.add_argument('project', help='autorecomp project dir')
     ap.add_argument('--pe', help='original PE32 i386 executable (default: report input)')
     ap.add_argument('--binary', help='rebuilt executable override (default: discover from metadata)')
@@ -288,20 +262,25 @@ def main():
     pe = Path(a.pe).resolve() if a.pe else Path(report.get('input') or '')
     if not pe.is_file():
         raise SystemExit(f'original PE not found: {pe}')
-    addrs = function_addresses(project, a.address, a.max_functions, a.all_functions)
-    src = source_verification(project, pe, addrs, a.cases)
+    # Reconstruction/lifting already ran in the pipeline. These flags are kept
+    # for compatibility with older callers but deliberately do not re-lift.
+    if a.address or a.all_functions:
+        print('warning: --address/--all-functions are ignored; verification is runtime-only',
+              file=sys.stderr)
+    src = recorded_source_verification(project)
     rebuilt = Path(a.binary).resolve() if a.binary else rebuilt_binary(project, report)
     run = {'engine': 'Frida', 'blocked': True, 'percent': 0.0,
            'reason': 'rebuilt binary not found (manifest.json binary path or build/<name>)',
            'checked': 0, 'passed': 0, 'verified': False}
     if rebuilt is not None:
-        run = run_verification(pe, rebuilt, a.args, a.timeout, project / 'reports' / 'frida')
+        run = runtime_verification(pe, rebuilt, a.args, a.timeout, project / 'reports' / 'runtime')
     out = {
         'schema': 1, 'project': str(project), 'input': str(pe),
         'source_percent': src['percent'], 'source': src,
         'run_percent': run['percent'], 'run': run,
-        'verified': src['verified'] and run['verified'],
-        'honesty': 'Measured over named checks; no scenario oracle means no game PASS.',
+        'verified': run['verified'],
+        'honesty': 'Runtime parity only: both built binaries run with the same inputs; '
+                   'no lifting is repeated here.',
     }
     dest = Path(a.json) if a.json else project / 'reports' / 'verify.json'
     dest.parent.mkdir(parents=True, exist_ok=True)

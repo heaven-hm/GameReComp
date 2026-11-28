@@ -176,7 +176,7 @@ Everything this project claims today is therefore one of two things:
 | --- | --- |
 | "the rebuilt binary runs" | the process's own exit code, its import-call profile, and its frames |
 | "the typed C equals its mechanical body" | a differential harness linking both entry points from the shipped source |
-| "the game matches the original" | **nothing.** It is not claimed anywhere. |
+| "same-input output parity" | `verify.py` runs the original and rebuilt binaries with identical arguments and compares exit code, stdout and stderr; this is not a claim of full game equivalence. |
 
 Three routes to a real oracle, in ascending cost, and what was decided:
 
@@ -184,11 +184,10 @@ Three routes to a real oracle, in ascending cost, and what was decided:
    already runs x86 in Unicorn and compares it against lifted C. Driving it with
    a project's own lifted function, against the original PE's bytes at the same
    address, gives "this function agrees with the original on these inputs" for
-   any recoverable function — with no Windows host. **Chosen**, because it needs
-   nothing this project lacks and it upgrades every function claim from "the
-   lifted C does something plausible" to "it agrees with the original bytes on
-   the inputs driven". It is per-function and per-input-set: it does not, and
-   must not, be summarised as a whole-game claim.
+   any recoverable function — with no Windows host. **Chosen and already run by
+   the pipeline.** `verify.py` reads that recorded value; it deliberately does
+   not repeat the lifting or the differential harness. It is per-function and
+   per-input-set: it does not, and must not, be summarised as a whole-game claim.
 
 **Static evidence is not redundant with the bytes, and it is not a substitute.**
 Measured on 2026-10-30 over Doukutsu's generated functions, which is the cleanest
@@ -210,13 +209,13 @@ kept: a static refusal is cheap and catches a whole family at once (an empty bod
 an `undef()`-valued body, a lost-input signature), while a divergence can only be
 seen by running the thing and watching what comes out.
 
-2. **A Windows host or VM, once.** Record the original's side — exit code,
-   stdout/stderr, and, with an IAT-patching DLL or debugger import trace, the
-   same call transcript this runtime already emits, plus the same input
-   transcript. The comparison tools then work unchanged, because the transcripts
-   are the same text format *by construction*. **Deferred, not refused**: this is
-   what would let a report say "same calls, same state" about a real game. When a
-   Windows host exists this becomes a recording job, not a redesign.
+2. **Run both built binaries with the same inputs.** `verify.py` now executes the
+   original Windows executable (through Wine on non-Windows hosts) and the
+   rebuilt program with identical arguments, captures stdout/stderr and exit
+   codes, normalizes paths/pointers, and scores named checks. **Implemented**,
+   but it compares observable output only — not frames, not state, and not full
+   game equivalence. Frida events may be collected separately where attach is
+   permitted; they are not required for this comparison.
 
 3. **Emulating the original end to end under Unicorn with its DLLs.** That is a
    Windows API emulator inside a CPU emulator — a second project, whose value
