@@ -369,15 +369,21 @@ fn run_single_batch_item(
         "auto".to_string(),
         "--input-arch".to_string(),
         "auto".to_string(),
-        "--target-os".to_string(),
-        opts.target_os.clone(),
-        "--target-arch".to_string(),
-        opts.target_arch.clone(),
         "--timeout".to_string(),
         opts.timeout.clone(),
         "--no-progress".to_string(),
         "--no-table".to_string(),
     ];
+    // The Python backend accepts host/linux/macos/windows/... but not "auto";
+    // omit the flags entirely when the GUI left the target at its default.
+    if opts.target_os != "auto" && !opts.target_os.is_empty() {
+        run_args.push("--target-os".to_string());
+        run_args.push(opts.target_os.clone());
+    }
+    if opts.target_arch != "auto" && !opts.target_arch.is_empty() {
+        run_args.push("--target-arch".to_string());
+        run_args.push(opts.target_arch.clone());
+    }
     if opts.clean_objects {
         run_args.push("--clean-objects".to_string());
     }

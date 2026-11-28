@@ -2141,11 +2141,11 @@ impl GameReCompApp {
             parallel.to_string(),
             "--verify-standalone".to_string(),
         ];
-        if target_os != "auto" && target_os != "host" {
+        if !target_os.is_empty() && target_os != "auto" && target_os != "host" {
             batch_args.push("--target-os".to_string());
             batch_args.push(target_os.clone());
         }
-        if target_arch != "auto" && target_arch != "host" {
+        if !target_arch.is_empty() && target_arch != "auto" && target_arch != "host" {
             batch_args.push("--target-arch".to_string());
             batch_args.push(target_arch.clone());
         }
