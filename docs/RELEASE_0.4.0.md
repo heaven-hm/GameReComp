@@ -30,12 +30,24 @@ Release date: 2026-11-28
 
 | Target / arch | GUI | CLI | Status |
 | --- | --- | --- | --- |
-| macOS arm64 | Yes | Yes | Host build and smoke-tested. |
+| macOS arm64 | Yes | Yes | Release artifacts built and smoke-tested on this host. |
 | macOS x86_64 | No | No | Cross-compilation from this host is not supported. |
-| Linux aarch64 | Yes | Yes | Source builds in a Linux/aarch64 container; host toolchain required. |
+| Linux aarch64 | No (blocked here) | Yes | CLI artifact built; GUI needs a Linux host with GUI sysroot libs. |
 | Linux x86_64 | Yes | Yes | Source builds on a Linux/x86_64 host; not produced from macOS host here. |
-| Windows x86_64 | No | No | Windows target builds are explicitly unimplemented (exit 4). |
-| Windows x86 | No | No | Windows target builds are explicitly unimplemented (exit 4). |
+| Windows x86_64 (GNU) | No | Yes | CLI artifact built via mingw-w64; GUI needs Windows SDK fxc.exe. |
+| Windows x86 (GNU) | No | No | CLI cross-link failed: missing 32-bit native unwind symbols. |
+
+## Release assets (v0.4.0)
+
+| Asset | Contents |
+| --- | --- |
+| `GameReComp-cli-v0.4.0-macos-arm64.tar.gz` | macOS arm64 CLI |
+| `GameReComp-gui-v0.4.0-macos-arm64.tar.gz` | macOS arm64 GUI |
+| `GameReComp-cli-v0.4.0-linux-arm64.tar.gz` | Linux aarch64 CLI |
+| `GameReComp-cli-v0.4.0-windows-x86_64.zip` | Windows x86_64 GNU CLI |
+| `GameReComp-v0.4.0-SHA256SUMS.txt` | SHA-256 checksums for all assets |
+
+No Windows GUI, Linux GUI, or WASM binary is shipped in this release.
 
 ### Input formats
 
