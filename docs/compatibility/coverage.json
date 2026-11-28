@@ -5,7 +5,7 @@
       "api_family": "Win32 kernel32",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_kernel32 found",
           "result": "NOT_RUN"
@@ -53,7 +53,7 @@
       "owner_issue": 1,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/kernel32.c",
           "runtime/win32hle/module.c"
@@ -68,7 +68,7 @@
       "api_family": "USER32 / GDI32",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_user32 found",
           "result": "NOT_RUN"
@@ -126,7 +126,7 @@
       "owner_issue": 2,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/user32.c",
           "runtime/win32hle/gdi32.c",
@@ -142,7 +142,7 @@
       "api_family": "DirectDraw",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_ddraw found",
           "result": "NOT_RUN"
@@ -191,7 +191,7 @@
       "owner_issue": 6,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/ddraw.c"
         ],
@@ -205,7 +205,7 @@
       "api_family": "Direct3D",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -257,7 +257,7 @@
       "owner_issue": 2,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/d3d7.c",
           "runtime/win32hle/ddraw.c"
@@ -272,7 +272,7 @@
       "api_family": "Direct3D",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -307,7 +307,7 @@
       "owner_issue": 6,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -319,7 +319,7 @@
       "api_family": "Direct3D",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -354,7 +354,7 @@
       "owner_issue": 3,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -366,7 +366,7 @@
       "api_family": "Direct3D",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -401,7 +401,7 @@
       "owner_issue": 5,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -413,7 +413,7 @@
       "api_family": "Direct3D / DXGI",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -448,7 +448,7 @@
       "owner_issue": 7,
       "pe_format": "PE32+",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -460,7 +460,7 @@
       "api_family": "Glide",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -495,7 +495,7 @@
       "owner_issue": 6,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -507,7 +507,7 @@
       "api_family": "DirectInput",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_dinput found",
           "result": "NOT_RUN"
@@ -555,7 +555,7 @@
       "owner_issue": 2,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/dinput.c"
         ],
@@ -569,7 +569,7 @@
       "api_family": "DirectInput",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -604,7 +604,7 @@
       "owner_issue": 5,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -616,7 +616,7 @@
       "api_family": "XInput / Raw Input",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -651,7 +651,7 @@
       "owner_issue": 11,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -663,7 +663,7 @@
       "api_family": "DirectSound",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_dsound found",
           "result": "NOT_RUN"
@@ -710,7 +710,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/dsound.c"
         ],
@@ -724,7 +724,7 @@
       "api_family": "DirectMusic",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_ole32 found",
           "result": "NOT_RUN"
@@ -776,7 +776,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/ole32.c",
           "runtime/win32hle/sdlmix.c"
@@ -791,7 +791,7 @@
       "api_family": "WinMM",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_winmm found",
           "result": "NOT_RUN"
@@ -836,7 +836,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/winmm.c"
         ],
@@ -850,7 +850,7 @@
       "api_family": "DirectShow / Video for Windows",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_avifil32 found",
           "result": "NOT_RUN"
@@ -894,7 +894,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/avifil32.c"
         ],
@@ -908,7 +908,7 @@
       "api_family": "Bink / Miles",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_bink found",
           "result": "NOT_RUN"
@@ -958,7 +958,7 @@
       "owner_issue": 10,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/bink.c",
           "runtime/win32hle/mss.c"
@@ -973,7 +973,7 @@
       "api_family": "Winsock",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_wsock32 found",
           "result": "NOT_RUN"
@@ -1018,7 +1018,7 @@
       "owner_issue": 12,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/wsock32.c"
         ],
@@ -1032,7 +1032,7 @@
       "api_family": "Winsock 2 / DirectPlay / IPX",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -1068,7 +1068,7 @@
       "owner_issue": 12,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -1080,7 +1080,7 @@
       "api_family": "Win16 / NE",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -1130,7 +1130,7 @@
       "owner_issue": 8,
       "pe_format": "NE",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win16/host/win16_impl.c",
           "runtime/win16/host/win32_backend.c"
@@ -1145,7 +1145,7 @@
       "api_family": "PE32 loader / SEH / C++ EH / multi-DLL",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_module found",
           "result": "NOT_RUN"
@@ -1201,7 +1201,7 @@
       "owner_issue": 9,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/pe_loader.c",
           "runtime/win32hle/eh32.c",
@@ -1217,7 +1217,7 @@
       "api_family": "PE32+ Win64",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -1252,7 +1252,7 @@
       "owner_issue": 13,
       "pe_format": "PE32+",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -1264,7 +1264,7 @@
       "api_family": "OpenGL / GLU",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_gl32 found",
           "result": "NOT_RUN"
@@ -1308,7 +1308,7 @@
       "owner_issue": 2,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/gl32.c"
         ],
@@ -1322,7 +1322,7 @@
       "api_family": "MSVCRT",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_msvcrt found",
           "result": "NOT_RUN"
@@ -1367,7 +1367,7 @@
       "owner_issue": 9,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/msvcrt.c"
         ],
@@ -1381,7 +1381,7 @@
       "api_family": "MSVCP140 / VCRUNTIME140",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol None found",
           "result": "NOT_RUN"
@@ -1416,7 +1416,7 @@
       "owner_issue": 9,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [],
         "registered_in": null,
         "registration_symbol": null
@@ -1428,7 +1428,7 @@
       "api_family": "WININET",
       "evidence": [
         {
-          "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
+          "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
           "kind": "registry",
           "note": "registration symbol win32hle_wininet found",
           "result": "NOT_RUN"
@@ -1470,7 +1470,7 @@
       "owner_issue": 12,
       "pe_format": "PE32",
       "source_provenance": {
-        "commit": "ff3338054ebcce1205b815c126807ef0234f09b4",
+        "commit": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
         "files": [
           "runtime/win32hle/wininet.c"
         ],
@@ -1496,18 +1496,6 @@
   },
   "generator": "python3 -m tools.compatibility",
   "inputs": {
-    "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009": {
-      "bytes_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
-      "detail": "shim registration source (static audit)",
-      "expected_result": "NOT_RUN",
-      "fixture_id": null,
-      "input_sha256": "053c5492c45717fc88c30f7f0557d42f78cdd9b85d41c3cefdd3ac7772a43009",
-      "kind": "registry",
-      "observed_result": "NOT_RUN",
-      "path": "runtime/win32hle/host.c",
-      "present": true,
-      "status": "ok"
-    },
     "0581d6ba7eaaf3e88147579fe7386fb2d565c19c0915488d002a3f48abaa17dc": {
       "bytes_sha256": "0581d6ba7eaaf3e88147579fe7386fb2d565c19c0915488d002a3f48abaa17dc",
       "detail": "existing evidence report (read-only)",
@@ -1565,6 +1553,18 @@
       "kind": "source",
       "observed_result": "NOT_RUN",
       "path": "runtime/native32/eh32.c",
+      "present": true,
+      "status": "ok"
+    },
+    "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b": {
+      "bytes_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
+      "detail": "shim registration source (static audit)",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "3815db9fab4fd0f190a3b54a4b4892f967006b13d99454c68d32455b18cac20b",
+      "kind": "registry",
+      "observed_result": "NOT_RUN",
+      "path": "runtime/win32hle/host.c",
       "present": true,
       "status": "ok"
     },
@@ -1700,17 +1700,17 @@
       "present": true,
       "status": "ok"
     },
-    "615494cb5d19ddc3944afdf36b169c671192adabbb848ad9ca20d4112b5c165e": {
-      "bytes_sha256": "615494cb5d19ddc3944afdf36b169c671192adabbb848ad9ca20d4112b5c165e",
+    "5d667d5d5d8ba8167dea46e61d8ef46358c95b9c63b9a93f886b92ed168c0fcb": {
+      "bytes_sha256": null,
       "detail": "existing tool/report integration point",
       "expected_result": "NOT_RUN",
       "fixture_id": null,
-      "input_sha256": "615494cb5d19ddc3944afdf36b169c671192adabbb848ad9ca20d4112b5c165e",
+      "input_sha256": "5d667d5d5d8ba8167dea46e61d8ef46358c95b9c63b9a93f886b92ed168c0fcb",
       "kind": "integration",
       "observed_result": "NOT_RUN",
       "path": "docs/RUNTIME_COMPAT.md",
-      "present": true,
-      "status": "ok"
+      "present": false,
+      "status": "MISSING_INPUT"
     },
     "61efac09f4f36a4e8f0091d0477cbb99388c4a9c12cfcdc230a6dbd4b841f0eb": {
       "bytes_sha256": "61efac09f4f36a4e8f0091d0477cbb99388c4a9c12cfcdc230a6dbd4b841f0eb",
@@ -1868,6 +1868,18 @@
       "present": true,
       "status": "ok"
     },
+    "8d28c04ad4dabcca62cbcc17c38af5b9b3dacc7e52c094381a74302b715febbf": {
+      "bytes_sha256": "8d28c04ad4dabcca62cbcc17c38af5b9b3dacc7e52c094381a74302b715febbf",
+      "detail": "existing evidence report (read-only)",
+      "expected_result": "PASS",
+      "fixture_id": null,
+      "input_sha256": "8d28c04ad4dabcca62cbcc17c38af5b9b3dacc7e52c094381a74302b715febbf",
+      "kind": "report",
+      "observed_result": "PASS",
+      "path": "reports/games/results.json",
+      "present": true,
+      "status": "ok"
+    },
     "8d96c192eeb4c299dc07c90efce026ab12529c44bd3249705f1f39644ac36cbe": {
       "bytes_sha256": "8d96c192eeb4c299dc07c90efce026ab12529c44bd3249705f1f39644ac36cbe",
       "detail": "tests/fixtures/make_compat_fixture.py:fx-win32-user32-gdi USER32.dll!MessageBoxA",
@@ -1949,18 +1961,6 @@
       "kind": "fixture-pe32",
       "observed_result": "PARTIAL",
       "path": "synthetic:fx-wininet",
-      "present": true,
-      "status": "ok"
-    },
-    "9f669eeb8b59c254db277ccc62d7a9bf1e3bc01fd8c9d019c0c069dd6943ce8a": {
-      "bytes_sha256": "9f669eeb8b59c254db277ccc62d7a9bf1e3bc01fd8c9d019c0c069dd6943ce8a",
-      "detail": "existing evidence report (read-only)",
-      "expected_result": "PASS",
-      "fixture_id": null,
-      "input_sha256": "9f669eeb8b59c254db277ccc62d7a9bf1e3bc01fd8c9d019c0c069dd6943ce8a",
-      "kind": "report",
-      "observed_result": "PASS",
-      "path": "reports/games/results.json",
       "present": true,
       "status": "ok"
     },
@@ -2084,18 +2084,6 @@
       "present": true,
       "status": "ok"
     },
-    "cc8d62c99ee6ab8cdfdd4673149426d2eccf3020109dd79775542f321dca90b5": {
-      "bytes_sha256": "cc8d62c99ee6ab8cdfdd4673149426d2eccf3020109dd79775542f321dca90b5",
-      "detail": "existing tool/report integration point",
-      "expected_result": "NOT_RUN",
-      "fixture_id": null,
-      "input_sha256": "cc8d62c99ee6ab8cdfdd4673149426d2eccf3020109dd79775542f321dca90b5",
-      "kind": "integration",
-      "observed_result": "NOT_RUN",
-      "path": "docs/GAME_MATRIX.md",
-      "present": true,
-      "status": "ok"
-    },
     "cf98b1f2b5102ec48405de8c1176462fa4c74099d56e8e56735c96f6143fd003": {
       "bytes_sha256": "cf98b1f2b5102ec48405de8c1176462fa4c74099d56e8e56735c96f6143fd003",
       "detail": "tests/fixtures/make_compat_fixture.py:fx-msvcrt MSVCRT.dll!_initterm",
@@ -2177,6 +2165,18 @@
       "kind": "fixture-pe32",
       "observed_result": "UNSUPPORTED",
       "path": "synthetic:fx-msvcp140-vcruntime140",
+      "present": true,
+      "status": "ok"
+    },
+    "dfddd38f5160b2f09f1cc24ae4fb5980c579868ea68677a423cdb897779df5e6": {
+      "bytes_sha256": "dfddd38f5160b2f09f1cc24ae4fb5980c579868ea68677a423cdb897779df5e6",
+      "detail": "existing tool/report integration point",
+      "expected_result": "NOT_RUN",
+      "fixture_id": null,
+      "input_sha256": "dfddd38f5160b2f09f1cc24ae4fb5980c579868ea68677a423cdb897779df5e6",
+      "kind": "integration",
+      "observed_result": "NOT_RUN",
+      "path": "docs/GAME_MATRIX.md",
       "present": true,
       "status": "ok"
     },
@@ -2281,7 +2281,7 @@
   "summary": {
     "families": 26,
     "inputs": 65,
-    "missing_inputs": 1,
+    "missing_inputs": 2,
     "not_run": 30,
     "partial": 15,
     "pass": 1,
@@ -2289,7 +2289,7 @@
   },
   "target": {
     "branch": "develop",
-    "head_at_generation": "ff3338054ebcce1205b815c126807ef0234f09b4",
+    "head_at_generation": "5b7935ec62d6c0705a85964bb0b14c0025bac7f9",
     "host_arch": "arm64",
     "host_os": "Darwin",
     "pe_formats": [

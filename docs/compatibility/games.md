@@ -15,6 +15,7 @@ Host from this inventory run: Darwin/arm64. Other hosts are `HOST_NOT_TESTED`, n
 
 | Game | Input SHA-256 (12) | Verification | Host |
 |---|---|---|---|
+| IGI | `dea34892d417` | partial | Darwin arm64 (host build) |
 | .revng-project | `fa18379fe942` | not-run | HOST_NOT_TESTED |
 | bin_win32 | `5b588e6ff771` | not-run | HOST_NOT_TESTED |
 | TmForeverModLoader | `5e287e79a07c` | launch-failed | Darwin arm64 (host build) |
@@ -29,6 +30,5 @@ Host from this inventory run: Darwin/arm64. Other hosts are `HOST_NOT_TESTED`, n
 | GeneRally | `ced9e54e6578` | partial | Darwin arm64 (host build) |
 | GeneRally | `868175b2cc24` | launch-failed | Darwin arm64 (host build) |
 | Cave Story | `07bbca123dcb` | launch-failed | Darwin arm64 (host build) |
-| Cave Story | `03f3c73a3692` | partial | Darwin arm64 (host build) |
 
 Total rows: 123. A screenshot or process exit is not an independent original-game oracle; see `docs/VERIFICATION.md`.
