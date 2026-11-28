@@ -13,6 +13,7 @@ IMAGE="${IGI_LINUX_IMAGE:-ubuntu:24.04}"
 mkdir -p "$SHOT_DIR"
 DOCKER_HOST="$SOCKET" docker run --rm \
   -e LEVEL_ARGS="$LEVEL_ARGS" \
+  -e RECOMP_FORCE_D3D_HAL="${RECOMP_FORCE_D3D_HAL:-0}" \
   -v "$PROJECT_DIR:/src" -v "$DATA_DIR:/data" -v "$SHOT_DIR:/shots" \
   "$IMAGE" bash -lc '
     set -e

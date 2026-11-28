@@ -172,7 +172,15 @@ __attribute__((weak)) const unsigned long recomp_original_image_size = 0;
 __attribute__((weak)) const char recomp_original_name[1] = { 0 };
 __attribute__((weak)) const int recomp_has_embedded_image = 0;
 
-static int have_embedded_image(void) { return recomp_has_embedded_image; }
+/* GCC -O3 folds a weak `const` read inside this translation unit to the weak
+ * default (0), ignoring the strong generated definition in recomp_image.c.
+ * A volatile load forces the linked value to be read at run time. */
+static int have_embedded_image(void) {
+    return *(volatile const int *)&recomp_has_embedded_image;
+}
+static unsigned long embedded_image_size(void) {
+    return *(volatile const unsigned long *)&recomp_original_image_size;
+}
 
 /* ---- bundled DLLs -------------------------------------------------------
  *
@@ -367,7 +375,7 @@ static int boot_embedded(const char *assets_dir, uint32_t (*resolve)(const char 
          * C:, as enter_image_directory does for the file-based boot. */
         hle_set_drive('C', dir);
     }
-    size_t n = (size_t)recomp_original_image_size;
+    size_t n = (size_t)embedded_image_size();
     if (recomp_pe_map_mem(recomp_original_image, n, &g_img) != 0) return -1;
     char guest[512];
     const char *name = recomp_original_name[0] ? recomp_original_name : "game.exe";
@@ -479,7 +487,7 @@ int recomp_host_main(int argc, char **argv) {
 
     recomp_host_init();
     fprintf(stderr, "[host] embedded=%d image_size=%lu\n", have_embedded_image(),
-            (unsigned long)recomp_original_image_size);
+            embedded_image_size());
 
     if (have_embedded_image()) {
         /* The original executable is embedded: it is not needed at run time.

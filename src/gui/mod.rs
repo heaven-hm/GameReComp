@@ -2129,6 +2129,28 @@ impl GameReCompApp {
         let id = self.alloc_job_id();
         let exe = self.cli_binary_path();
         let parallel = self.effective_max_concurrent_jobs().max(1);
+        // Carry the target selected in the single-game configurator into batch
+        // jobs so a Linux host can batch to Linux and other hosts get the exact
+        // cross-target refusal instead of silently running as auto.
+        let target_os = self.opts.target_os.clone();
+        let target_arch = self.opts.target_arch.clone();
+        let mut batch_args: Vec<String> = vec![
+            "batch".to_string(),
+            folder.display().to_string(),
+            "--parallel".to_string(),
+            parallel.to_string(),
+            "--verify-standalone".to_string(),
+        ];
+        if target_os != "auto" && target_os != "host" {
+            batch_args.push("--target-os".to_string());
+            batch_args.push(target_os.clone());
+        }
+        if target_arch != "auto" && target_arch != "host" {
+            batch_args.push("--target-arch".to_string());
+            batch_args.push(target_arch.clone());
+        }
+        let target_label = format!("{} / {}", target_os, target_arch);
+        let preview = format!("game-recomp-cli {}", batch_args.join(" "));
         let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
         let child_for_thread = Arc::clone(&child_slot);
         let cancel_requested = Arc::new(AtomicBool::new(false));
@@ -2148,7 +2170,7 @@ impl GameReCompApp {
             name: format!("Batch: {folder_name}"),
             pe_path: folder.display().to_string(),
             pe_summary: String::new(),
-            target_label: format!("{parallel} workers"),
+            target_label: target_label.clone(),
             project_dir: None,
             built_binary: None,
             has_wasm: false,
@@ -2167,10 +2189,7 @@ impl GameReCompApp {
             compile_pct: None,
             processed_files: Vec::new(),
             live_stages: fresh_live_stages(),
-            live_logs: vec![format!(
-                "$ game-recomp-cli batch {} --parallel {parallel} --verify-standalone",
-                folder.display()
-            )],
+            live_logs: vec![format!("$ {preview}")],
             child: child_slot,
             cancel_requested,
             pgid: pgid_slot,
@@ -2187,15 +2206,7 @@ impl GameReCompApp {
 
         thread::spawn(move || {
             let mut cmd = Command::new(exe);
-            cmd.args([
-                "batch",
-                &folder.display().to_string(),
-                "--parallel",
-                &parallel.to_string(),
-                "--verify-standalone",
-            ])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+            cmd.args(&batch_args).stdout(Stdio::piped()).stderr(Stdio::piped());
             let code = run_streaming_child_inner(
                 cmd,
                 child_for_thread,

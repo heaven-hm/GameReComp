@@ -230,6 +230,8 @@ struct BatchArgs {
     skip_existing: bool,
     limit: Option<usize>,
     offset: usize,
+    target_os: String,
+    target_arch: String,
 }
 
 fn parse_batch_args(args: &[String]) -> Result<BatchArgs, String> {
@@ -242,6 +244,8 @@ fn parse_batch_args(args: &[String]) -> Result<BatchArgs, String> {
         skip_existing: false,
         limit: None,
         offset: 0,
+        target_os: "auto".to_string(),
+        target_arch: "auto".to_string(),
     };
 
     let mut i = 0;
@@ -289,6 +293,22 @@ fn parse_batch_args(args: &[String]) -> Result<BatchArgs, String> {
                     i += 2;
                 } else {
                     return Err("error: --offset requires an integer".to_string());
+                }
+            }
+            "--target-os" => {
+                if let Some(v) = args.get(i + 1) {
+                    parsed.target_os = v.clone();
+                    i += 2;
+                } else {
+                    return Err("error: --target-os requires a value".to_string());
+                }
+            }
+            "--target-arch" => {
+                if let Some(v) = args.get(i + 1) {
+                    parsed.target_arch = v.clone();
+                    i += 2;
+                } else {
+                    return Err("error: --target-arch requires a value".to_string());
                 }
             }
             other => {
@@ -350,9 +370,9 @@ fn run_single_batch_item(
         "--input-arch".to_string(),
         "auto".to_string(),
         "--target-os".to_string(),
-        "auto".to_string(),
+        opts.target_os.clone(),
         "--target-arch".to_string(),
-        "auto".to_string(),
+        opts.target_arch.clone(),
         "--timeout".to_string(),
         opts.timeout.clone(),
         "--no-progress".to_string(),
@@ -963,5 +983,20 @@ mod tests {
             .map(String::from)
             .collect();
         assert_eq!(parse_batch_args(&zero_clamped).unwrap().parallel, 1);
+
+        let targeted: Vec<String> = vec![
+            "/tmp/games",
+            "--target-os",
+            "linux",
+            "--target-arch",
+            "arm64",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let parsed = parse_batch_args(&targeted).unwrap();
+        assert_eq!(parsed.target_os, "linux");
+        assert_eq!(parsed.target_arch, "arm64");
+        assert_eq!(parsed.inputs, vec!["/tmp/games".to_string()]);
     }
 }
