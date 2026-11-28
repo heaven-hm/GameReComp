@@ -157,7 +157,7 @@ the previous project's.
 **Original**: `ENC97.EXE` + 5 DLLs + 6 legacy 16-bit components + 14 `.M20` files, MFC 4.0 / MSVC 4.x
 
 **Contributed**: all of `formats/`, `runtime/hybrid/`,
-`runtime/recomp32_cpu/`, `lift/lift32_cpu.py`, and `docs/HYBRID.md`.
+`runtime/recomp32_cpu/`, and `lift/lift32_cpu.py`.
 
 **Notable**: Not a game, which is the point -- the approach works on any kind
 of application. It is also the project that forced the **real -> lifted**

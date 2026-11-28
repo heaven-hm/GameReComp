@@ -6,7 +6,7 @@ Every game this project knows about: locally supplied corpus, the legacy engine 
 
 `†` marks a score derived from the upstream project's own README status; it was not measured by this repository and is not a verification claim. Legacy-engine outcomes are context only.
 
-Updated 2026-11-27T21:02:14Z by `python -m tools.gamesdb`. Measured 123; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
+Updated 2026-11-28T00:48:32Z by `python -m tools.gamesdb`. Measured 123; local corpus 15 PE32 + 4 PE32+ executable(s), 12 non-PE data file(s); upstream projects 42.
 
 Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process launched and exited 0; no oracle supplied.
 
@@ -18,7 +18,7 @@ Best measured result: **BusyBox** (busybox-w32.exe) at 93/100, partial: process 
 | Cave Story | DoConfig.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/DoConfig/reports/report.html (host: Darwin arm64 (host build)) |
 | Downloads | idman643build18.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/idman643build18/reports/report.html (host: Darwin arm64 (host build)) |
 | GeneRally | TrackEditor.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/TrackEditor/reports/report.html (host: Darwin arm64 (host build)) |
-| IGI | igi.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/igi/reports/report.html (host: Darwin arm64 (host build)) |
+| IGI | igi.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/IGI_17c11606/reports/report.html (host: Darwin arm64 (host build)) |
 | Ikachan | dxIka.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 1; no oracle supplied | projects/dxIka/reports/report.html (host: Darwin arm64 (host build)) |
 | Noiz2sa | noiz2sa.exe | i386 (PE32) | Windows | 93 | partial: process launched and stayed alive until the 10s timeout; no crash observed, no oracle | projects/noiz2sa/reports/report.html (host: Darwin arm64 (host build)) |
 | PSFTP | psftp-w32.exe | i386 (PE32) | Windows | 93 | partial: process launched and exited 0; no oracle supplied | projects/psftp_w32/reports/report.html (host: Darwin arm64 (host build)) |

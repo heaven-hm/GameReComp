@@ -1,2 +1,0 @@
-
-error: cross-target build requested (windows/arm64) on host (macos/arm64); the pipeline compiles with the host toolchain only -- run it on the target OS or omit --target-os/--target-arch

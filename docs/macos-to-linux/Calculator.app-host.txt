@@ -1,7 +1,0 @@
-warning: input/output OS and architecture were not fully specified; assuming input windows/x86 -> output macos/arm64 (this host).
-         omitted: --input-os (assuming auto, from the PE header)
-         omitted: --input-arch (assuming auto, from the PE header)
-         omitted: --target-os (assuming host)
-         omitted: --target-arch (assuming host)
-         pass --input-os, --input-arch, --target-os and --target-arch explicitly to declare them and silence this warning.
-error: Mach-O detected — accepted as a source-level port input; PE32 lifting does not apply to macOS binaries

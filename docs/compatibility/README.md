@@ -61,9 +61,8 @@ has no bytes and must always report `MISSING_INPUT`/`NOT_RUN`.
 
 ## Corrected documentation claim
 
-The 2026-10-30 audit claimed `docs/RUNTIME_COMPAT.md` said DirectInput was
-unimplemented. Re-audited on `develop`: `runtime/win32hle/host.c` registers
-`win32hle_dinput`, `runtime/win32hle/dinput.c` installs the COM vtables, and
-`docs/RUNTIME_COMPAT.md` already describes keyboard/mouse as implemented with
-named gaps. The inventory records DirectInput 3/5/7 as `declared`/`PARTIAL`
-with those limitations; it does not repeat the false "absent" claim.
+A 2026-10-30 audit claimed DirectInput was unimplemented. Re-audited on
+`develop`: `runtime/win32hle/host.c` registers `win32hle_dinput` and
+`runtime/win32hle/dinput.c` installs the COM vtables. This inventory records
+DirectInput 3/5/7 as `declared`/`PARTIAL` with named limitations; it does not
+repeat the false "absent" claim.

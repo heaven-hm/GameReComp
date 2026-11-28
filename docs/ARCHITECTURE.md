@@ -224,4 +224,4 @@ deterministic apart from timestamps and absolute paths.
 - macOS hosts on releases older than the Homebrew freetype bottle's build
   target must rebuild freetype from source, or every binary that links
   SDL2_ttf aborts in dyld. This is an environment issue, not a runtime bug; see
-  `docs/RUNTIME_COMPAT.md`.
+  `docs/VERIFICATION.md` for the current gates.
