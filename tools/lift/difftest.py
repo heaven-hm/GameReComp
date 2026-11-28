@@ -444,6 +444,36 @@ CASES = [
     Case('sub.paired.setl', bytes.fromhex('29c80f9cc3'),         # sub eax,ecx; setl bl
          {'eax': 1, 'ecx': 2, 'ebx': 0}),
 
+    # --- OF after a subtraction: CMP_O/CMP_NO used to be constants 0/1 -------
+    #
+    # recomp_eflags() always derived OF correctly, so the flag-comparison cases
+    # above could not see this. The STATIC pairing path emitted the CMP_O macro
+    # for cmp/sub/dec, and that macro was a placeholder: `cmp; jo` and
+    # `sub; setno` always took the no-overflow arm. Checked allocation and
+    # saturating-clamp code reads exactly this flag, and the failure is a
+    # plausible-looking length rather than a crash. setcc puts the answer in a
+    # register the harness compares directly, not just through the flags word.
+    Case('cmp.paired.seto-overflow', bytes.fromhex('39c80f90c3'), # cmp eax,ecx; seto bl
+         {'eax': 0x80000000, 'ecx': 1, 'ebx': 0}),   # INT_MIN - 1 wraps positive
+    Case('cmp.paired.seto-no-overflow', bytes.fromhex('39c80f90c3'),
+         {'eax': 1, 'ecx': 2, 'ebx': 0}),
+    Case('cmp.paired.setno-overflow', bytes.fromhex('39c80f91c3'),  # cmp eax,ecx; setno bl
+         {'eax': 0x80000000, 'ecx': 1, 'ebx': 0}),
+    Case('cmp.paired.setno-no-overflow', bytes.fromhex('39c80f91c3'),
+         {'eax': 1, 'ecx': 2, 'ebx': 0}),
+    Case('sub.paired.seto', bytes.fromhex('29c80f90c3'),        # sub eax,ecx; seto bl
+         {'eax': 0x80000000, 'ecx': 1, 'ebx': 0}),
+    Case('dec.paired.seto', bytes.fromhex('480f90c3'),          # dec eax; seto bl
+         {'eax': 0x80000000, 'ebx': 0}),
+    # Narrow compares are left-aligned in the tuple; their OF is bit 31 too.
+    Case('cmp8.paired.seto', bytes.fromhex('38d80f90c3'),       # cmp al,bl; seto bl
+         {'eax': 0x80, 'ebx': 0x00000001}),
+    Case('cmp16.paired.seto', bytes.fromhex('6639c80f90c3'),    # cmp ax,cx; seto bl
+         {'eax': 0x8000, 'ecx': 1, 'ebx': 0}),
+    # Logic clears OF: the subtraction's overflow must not leak in here.
+    Case('test.paired.seto', bytes.fromhex('85c80f90c3'),       # test eax,ecx; seto bl
+         {'eax': 0x80000000, 'ecx': 1, 'ebx': 0}),
+
     # --- and so must the instructions whose whole job IS the carry ---
     #
     # Borland's strcpy and strcat are one routine entered at two addresses, clc
@@ -689,6 +719,13 @@ CASES = [
          mem={SCRATCH: (5).to_bytes(4, 'little')}),
     Case('lock.cmpxchg.differ', bytes.fromhex('f00fb10e'), regs={'eax': 4, 'ecx': 9},
          mem={SCRATCH: (5).to_bytes(4, 'little')}),
+    # lock cmpxchg8b [esi]: edx:eax == [esi] -> [esi] = ecx:ebx; else edx:eax = [esi]
+    Case('lock.cmpxchg8b.equal', bytes.fromhex('f00fc70e'),
+         regs={'eax': 5, 'edx': 7, 'ebx': 0x11, 'ecx': 0x22},
+         mem={SCRATCH: (5 | 7 << 32).to_bytes(8, 'little')}),
+    Case('lock.cmpxchg8b.differ', bytes.fromhex('f00fc70e'),
+         regs={'eax': 5, 'edx': 8, 'ebx': 0x11, 'ecx': 0x22},
+         mem={SCRATCH: (5 | 7 << 32).to_bytes(8, 'little')}),
 ]
 
 # Every x87 register form, i = 1 and 2, from a stack of three distinct values
@@ -796,6 +833,28 @@ def _sse_forms():
             out.append(Case('x87.%s.%s' % (name, tag),
                             bytes.fromhex('d906' 'd94604' + op + 'dd1f' + ('' if pops else 'dd5f08')),
                             mem={SCRATCH: struct.pack('<ff', *data) + bytes(24)}))
+    # sqrt: the x86 indefinite QNaN is NEGATIVE and a NaN keeps its sign and
+    # payload. C's sqrt(f) does neither, so the general ps/sd data above only
+    # caught a single byte. These pin all four forms at both widths, with a
+    # negative, a signalling NaN, a quiet NaN and a negative zero in play.
+    f32_neg = struct.pack('<8f', 1.0, 4.0, 9.0, 16.0,
+                                -2.25, 4.0, 9.0, 16.0)       # xmm1 lane 0 < 0
+    f32_nan = struct.pack('<8I', 0x3F800000, 0x40000000, 0, 0,
+                                0x7F800001, 0xFFC00007, 0, 0)  # sNaN+, qNaN-
+    f32_zero = struct.pack('<8I', 0, 0, 0, 0, 0x80000000, 0, 0, 0)
+    f64_neg = struct.pack('<4d', 1.5, 2.5, -4.0, -9.0)      # xmm1 lanes < 0
+    f64_nan = struct.pack('<4Q', 0x3FF0000000000000, 0,
+                                0x7FF0000000000001, 0xFFF8000000000001)
+    for name, op, data in (('sqrtss.neg', 'f30f51c1', f32_neg),
+                           ('sqrtss.snan', 'f30f51c1', f32_nan),
+                           ('sqrtss.negzero', 'f30f51c1', f32_zero),
+                           ('sqrtps.neg', '0f51c1', f32_neg),
+                           ('sqrtps.nan', '0f51c1', f32_nan),
+                           ('sqrtsd.neg', 'f20f51c1', f64_neg),
+                           ('sqrtpd.neg', '660f51c1', f64_neg),
+                           ('sqrtpd.nan', '660f51c1', f64_nan)):
+        out.append(Case('sse.%s' % name, load + bytes.fromhex(op) + store,
+                        regs={'eax': 0xFFFFFF85}, mem={SCRATCH: data + extra}))
     # bsf/bsr: the index, and ZF with the destination left alone for 0
     for name, op in (('bsf', '0fbcc1'), ('bsr', '0fbdc1')):
         for v in (0x00F0, 0x80000001, 0):

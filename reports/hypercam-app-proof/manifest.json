@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "case": "hypercam7-real-app-recomp-proof",
+  "verdict": "BLOCKED",
+  "pass": false,
+  "reason": "autorecomp stalled in recover stage; no generated CMake project, no native binary, no frames",
+  "input": {
+    "source_path": "/Users/haseeb-mir/Library/Application Support/Highball/bottles/Games/drive_c/Program Files (x86)/HyperCam 7/SMM_HyperCam.exe",
+    "staged_path": "/Users/haseeb-mir/hypercam-app-proof/stage/SMM_HyperCam.exe",
+    "sha256": "068293946e12a6aa030a6e7bee212b0800ea914ad8b0354bac576da724059154",
+    "size_bytes": 16833368,
+    "pe_type": "i386 PE32 Windows GUI",
+    "entry_point": "0x011EC929",
+    "import_count": 50,
+    "is_installer_stub": false,
+    "stub_assessment_basis": "static only: 16MB C++ GUI binary, HyperCam RTTI/dialog strings, in-app SMM_* DLL imports"
+  },
+  "generation": {
+    "command": "python3 -m tools.autorecomp <staged-exe> --project-dir /Users/haseeb-mir/hypercam-app-proof/hypercam-app-src --assets-dir /Users/haseeb-mir/hypercam-app-proof/stage --out-mode source --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --no-table",
+    "launches": 1,
+    "pid": 62404,
+    "child_pid": 62468,
+    "started": "2026-11-26T01:02:20+05:30",
+    "status_at_report": "still running in recover after 38 minutes",
+    "stage_reached": "recover",
+    "stage_completed": ["inspect"],
+    "cpu_time": "4m33s",
+    "process_state": "U (uninterruptible wait)",
+    "physical_footprint_bytes": 5368709120,
+    "generated_project": false,
+    "cmake_lists_present": false,
+    "generated_source_units": 0
+  },
+  "build": {
+    "attempted": false,
+    "reason": "no generated CMake project",
+    "flags_requested": "-O0 -g0 -j4",
+    "native_binary": null,
+    "binary_sha256": null
+  },
+  "run": {
+    "attempted": false,
+    "reason": "no native binary",
+    "timeout_seconds": null,
+    "recomp_screenshot_env": null,
+    "frames": 0,
+    "frame_sha256": [],
+    "colour_stats": null
+  },
+  "cua": {
+    "daemon_started": true,
+    "session": "hypercam-app-proof-3",
+    "capture_scope": "desktop",
+    "start_session_ok": true,
+    "get_desktop_state_ok": true,
+    "screenshot_png_sha256": "315afdad5e069b8f0a09b7ea1d228ae0ac4f34f3290cb1e3513a7401f10ae3b3",
+    "screenshot_png_bytes": 448625,
+    "screenshot_committed": false,
+    "screenshot_omission_reason": "image contains unrelated desktop/session content",
+    "hypercam_window_present": false
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "tool": "tests/diff/differential_gate.py",
+  "what_it_proves": "the per-function oracle's flag and named-memory comparisons are non-vacuous on real machine code, and a broken body is not promoted",
+  "what_it_does_not_prove": "anything about other entry states, the C compile/link path, other functions, or the game as a whole",
+  "fixture": {
+    "entry": "0x00401000",
+    "code": "a10041400005feffffffa304414000c3",
+    "named": [
+      "0x00404100",
+      "0x00404104"
+    ],
+    "cases": 8,
+    "pe_sha256": "d7871ee496e48a3bf79c4cb8f6cac71ca8e84d6f02e2b320c94b3b868de6633f"
+  },
+  "checks": [
+    {
+      "name": "named-memory-from-original-bytes",
+      "ok": true,
+      "detail": "named=['0x00404100', '0x00404104']"
+    },
+    {
+      "name": "reference-flags-nonvacuous",
+      "ok": true,
+      "detail": "CF=[0, 1]; PF=[0, 1]; AF=[0, 1]; ZF=[0, 1]; SF=[0, 1]"
+    },
+    {
+      "name": "flag-break-hidden-when-flags-excluded",
+      "ok": true,
+      "detail": "verdict=agree, fields=[]"
+    },
+    {
+      "name": "flag-break-detected-when-flags-compared",
+      "ok": true,
+      "detail": "verdict=diverge, fields=['ZF']"
+    },
+    {
+      "name": "memory-break-detected-at-named-address",
+      "ok": true,
+      "detail": "verdict=diverge, fields=['[00404104]']"
+    },
+    {
+      "name": "clean-body-agrees",
+      "ok": true,
+      "detail": "verdict=agree, fields=[]"
+    },
+    {
+      "name": "multilifter-promotes-only-clean-body",
+      "ok": true,
+      "detail": "{\"clean_body\": \"PROMOTE\", \"flag_bug\": \"FAILED\", \"memory_bug\": \"FAILED\"}"
+    }
+  ],
+  "decisions": {
+    "clean_body": "PROMOTE",
+    "flag_bug": "FAILED",
+    "memory_bug": "FAILED"
+  },
+  "ok": true
+}

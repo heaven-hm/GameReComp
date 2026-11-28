@@ -1,0 +1,55 @@
+{
+  "game": "windows__x64__games__game2048.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__game2048.exe/game2048",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/game2048.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+  "arch": "PE32+ x64",
+  "match_reason": "path partial match",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__game2048.exe",
+  "native": {
+    "game": "windows__x64__games__game2048.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__game2048.exe/game2048",
+    "binary_sha256": "074d8c2f5ca8a07214b0592f43dacfa6c2e9a35e86256191e6e2497f81e2de19",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__game2048.exe/game2048"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__game2048.exe/screenshots"
+    },
+    "exit_code": 2,
+    "stdout_tail": "usage: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__game2048.exe/game2048 <pe32plus.exe>\n",
+    "seconds": 0.0,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__game2048.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "windows__x64__games__game2048.exe exit=      2 frames=0 0.0s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 2,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__game2048.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run game2048.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+    "exit": 0,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__game2048.exe/highball.log",
+    "bytes": 1016,
+    "seconds": 15.1,
+    "tail": "\n=== 2048 (Score: 0) ===\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |      |      |      |\n-----------------------------\n|      |      |    2 |      |\n-----------------------------\n|    2 |      |      |      |\n-----------------------------\nControls: W (Up), A (Left), S (Down), D (Right), Q (Quit)\nLaunching game2048.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=0 after 11s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T074058Z-Games-game2048.exe.log\n\nmsync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n002c:err:wineboot:process_run_key Error running cmd L\"C:\\\\windows\\\\system32\\\\winemenubuilder.exe -a -r\" (126).\n0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L\"C:\\\\windows\\\\system32\\\\drivers\\\\idmwfp.sys\") not found\n0074:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\IDMWFP\": c0000142\n"
+  }
+}

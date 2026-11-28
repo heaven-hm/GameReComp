@@ -1,0 +1,19 @@
+
+[36m[1m========================================
+        C BASE64 ENCODER / DECODER      
+========================================[0m
+1. Base64 Encode String
+2. Base64 Decode String
+3. Exit
+Choose (1-3): Enter text to encode: 
+[32mEncoded Result:[0m
+aGVsbG8gd29ybGQA
+
+1. Base64 Encode String
+2. Base64 Decode String
+3. Exit
+Choose (1-3): 
+Goodbye!
+
+Launching base64.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...
+exit=0 after 4s — log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261125T060433Z-Games-base64.exe.log

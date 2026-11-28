@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "tool": "blaze",
+  "version": "0.20261105.4",
+  "install": "curl -fsSL https://ix.dev/blaze | sh -s -- --version 0.20261105.4",
+  "toolchain": "nightly-2026-10-27 (Blaze-owned, separate from rustup)",
+  "rule": "Rust project builds use blaze check/run/test, not cargo or rustc",
+  "command": "blaze check (GameReComp workspace)",
+  "result": "STALLED after ~20 min in objc2_app_kit macro expansion (LOOP_STALLED); no compile errors reported before stall",
+  "note": "Blaze was used exclusively for the Rust build attempt. Prior cargo config [profile.dev.package.\"*\"] debug=\"line-tables-only\" remains in ~/.cargo/config.toml for any CI fallback, but no cargo/rustc was invoked for this build.",
+  "verdict": "BLOCKED - toolchain stall on large GPUI dependency graph; no compile verdict claimed"
+}

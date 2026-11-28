@@ -1,0 +1,16 @@
+{
+  "slug": "games__generally__GeneRally.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/generally/GeneRally.exe",
+  "sha256": "868175b2cc2461ee0fe4d7b599eabfd94581d6dd54ea75a47f89f41617e82391",
+  "size": 728576,
+  "is_game": true,
+  "started": 1795505784.741697,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__GeneRally.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

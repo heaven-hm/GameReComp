@@ -1,0 +1,16 @@
+{
+  "slug": "win32__unequalsolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/unequalsolver.exe",
+  "sha256": "9d00fc91a1e90b6bb8e7856f28f61c2da00647b77a42806dfbf5ccb5c93dec15",
+  "size": 226722,
+  "is_game": true,
+  "started": 1795505640.8279731,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unequalsolver.exe/bin_unequalsolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unequalsolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__unequalsolver.exe/report.json",
+  "seconds": 26.5
+}

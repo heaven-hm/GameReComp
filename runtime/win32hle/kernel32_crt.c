@@ -35,7 +35,7 @@ void hle_fls_thread_exit(void);
 /* A thread's handle object: how many ResumeThreads it still waits for
  * (CREATE_SUSPENDED), and once it has ended, its exit code, so a wait on the
  * handle returns. Never freed: CloseHandle can come while it still runs. */
-struct thread_arg { uint32_t start, param, tid; volatile int suspend, done, kill; uint32_t code; };
+struct thread_arg { uint32_t start, param, tid; volatile int suspend, done, kill; uint32_t code; int priority; };
 static __thread struct thread_arg *t_self;
 static void *thread_trampoline(void *p) {
     struct thread_arg *a = (struct thread_arg *)p;
@@ -104,6 +104,28 @@ static void k_TerminateThread(void) {
 static void k_ExitThread(void) {
     hle_thread_exit_self(A32(0));
 }
+
+/* FreeLibraryAndExitThread(hModule, dwExitCode): decrement the module's load
+ * count through the same FreeLibrary shim every other guest caller uses, then
+ * end *this guest thread* exactly as ExitThread does. It never returns and it
+ * never calls hle_exit - that would take down the host process (and every other
+ * guest thread) for what is only a thread's exit.
+ *
+ * Counters are observable to kernel32_misc_selftest.c: a DLL whose code is not
+ * lifted leaves no other trace of its unload, and this call cannot report one
+ * through its own dead thread. */
+volatile uint32_t hle_free_lib_exit_calls;
+volatile uint32_t hle_free_lib_exit_frees;
+static void k_FreeLibraryAndExitThread(void) { /* (hModule, dwExitCode) */
+    uint32_t hmod = A32(0), code = A32(1);
+    hle_free_lib_exit_calls++;
+    uint32_t free_va = hle_resolve("FreeLibrary");
+    if (free_va) {
+        (void)hle_call_guest(free_va, 1, &hmod);  /* nested: restores this shim's registers */
+        hle_free_lib_exit_frees++;
+    }
+    hle_thread_exit_self(code);              /* does not return */
+}
 static void k_GetExitCodeThread(void) {        /* (h, &code) */
     struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
     if (A32(1)) MEM32(A32(1)) = a && a->done ? a->code : 259u;   /* STILL_ACTIVE */
@@ -129,8 +151,22 @@ int hle_thread_done(uint32_t h) {
     struct thread_arg *a = (struct thread_arg *)hle_handle_obj(h, HLE_H_THREAD);
     return a && a->done;
 }
-static void k_SetThreadPriority(void) { RET(1, 2); }
-static void k_GetThreadPriority(void) { RET(0, 1); }
+/* Win32 guest threads are cooperatively serialised under the machine lock, so
+ * a host scheduling priority cannot express Windows priority semantics.  The
+ * requested priority is stored on the thread object and read back verbatim;
+ * an invalid handle or out-of-range value fails like the Windows API. */
+static void k_SetThreadPriority(void) {
+    struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
+    int p = (int)(int32_t)A32(1);
+    if (!a || p < -7 || p > 9) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2); }
+    a->priority = p;
+    RET(1, 2);
+}
+static void k_GetThreadPriority(void) {
+    struct thread_arg *a = (struct thread_arg *)hle_handle_obj(A32(0), HLE_H_THREAD);
+    if (!a) { hle_set_last_error(6 /* ERROR_INVALID_HANDLE */); RET(0x80000000u, 1); }
+    RET((uint32_t)(int32_t)a->priority, 1);
+}
 static void k_GetCurrentThread(void)  { RET(0xFFFFFFFEu, 0); }
 
 /* --- standard handles --- */
@@ -589,11 +625,190 @@ static void k_SetUnhandledExceptionFilter(void) {
 }
 static void k_UnhandledExceptionFilter(void)    { RET(0, 1); }  /* EXCEPTION_CONTINUE_SEARCH */
 static void k_RtlUnwind(void)      { RETV(4); }                 /* no guest SEH unwinding yet */
+
+/* --- RtlCaptureContext / RtlLookupFunctionEntry / RtlVirtualUnwind ---
+ * These three are listed as missing in docs/WIN32_API_COVERAGE.md.  They are
+ * implemented here against the *guest* register file and guest addresses only;
+ * nothing in this layer depends on the host's registers or stack.
+ *
+ * The x86 CONTEXT of winnt.h is 0x2CC bytes.  CONTEXT_FULL (0x10007) requests
+ * CONTROL|INTEGER|SEGMENTS, so the debug registers, the x87 FLOATING_SAVE_AREA
+ * and the 512-byte ExtendedRegisters area are not part of the captured state:
+ * they are cleared rather than filled with invented values.  The caller must
+ * supply a valid 0x2CC-byte guest buffer, exactly as on Windows (where a bad
+ * pointer faults instead of being checked). */
+#define CTX_SIZE             0x2CCu
+#define CTX_CONTEXTFLAGS     0x000u
+#define CTX_SegGs            0x08Cu
+#define CTX_SegFs            0x090u
+#define CTX_SegEs            0x094u
+#define CTX_SegDs            0x098u
+#define CTX_Edi              0x09Cu
+#define CTX_Esi              0x0A0u
+#define CTX_Ebx              0x0A4u
+#define CTX_Edx              0x0A8u
+#define CTX_Ecx              0x0ACu
+#define CTX_Eax              0x0B0u
+#define CTX_Ebp              0x0B4u
+#define CTX_Eip              0x0B8u
+#define CTX_SegCs            0x0BCu
+#define CTX_EFlags           0x0C0u
+#define CTX_Esp              0x0C4u
+#define CTX_SegSs            0x0C8u
+#define CTX_FULL             0x10007u                  /* CONTROL|INTEGER|SEGMENTS */
+
+/* RtlCaptureContext(ContextRecord): snapshot the current guest register file
+ * into a guest CONTEXT.  Eip is the return address the caller pushed for this
+ * call (what Windows records as the resume address after the call); Esp is the
+ * caller's stack pointer just past that word.  The shim ABI has no callee
+ * arity, so - as in the x86 record - only the return address is accounted for.
+ * EFlags is left zero: the runtime keeps a lazy flag decomposition, not the
+ * EFLAGS word, and presenting the former as the latter would be fiction. */
+static void k_RtlCaptureContext(void) {                 /* (LPCONTEXT) */
+    uint32_t ctx = A32(0);
+    if (!ctx) { hle_set_last_error(ERROR_INVALID_PARAMETER); RETV(1); }
+    memset(hle_ptr(ctx), 0, CTX_SIZE);
+    MEM32(ctx + CTX_CONTEXTFLAGS) = CTX_FULL;
+    MEM32(ctx + CTX_SegGs) = g_seg_gs;
+    MEM32(ctx + CTX_SegFs) = g_seg_fs;
+    MEM32(ctx + CTX_SegEs) = g_seg_es;
+    MEM32(ctx + CTX_SegDs) = g_seg_ds;
+    MEM32(ctx + CTX_Edi) = g_edi;
+    MEM32(ctx + CTX_Esi) = g_esi;
+    MEM32(ctx + CTX_Ebx) = g_ebx;
+    MEM32(ctx + CTX_Edx) = g_edx;
+    MEM32(ctx + CTX_Ecx) = g_ecx;
+    MEM32(ctx + CTX_Eax) = g_eax;
+    MEM32(ctx + CTX_Ebp) = g_ebp;
+    MEM32(ctx + CTX_Eip) = MEM32(g_esp);                /* guest return address */
+    MEM32(ctx + CTX_EFlags) = 0;
+    MEM32(ctx + CTX_Esp) = g_esp + 4u;
+    MEM32(ctx + CTX_SegCs) = g_seg_cs;
+    MEM32(ctx + CTX_SegSs) = g_seg_ss;
+    RETV(1);
+}
+
+/* RtlLookupFunctionEntry(ControlPc, &ImageBase, HistoryTable): the x86 stack
+ * unwinds through FS:[0] registration records, not the .pdata RUNTIME_FUNCTION
+ * table x64 uses.  There is no RUNTIME_FUNCTION for a 32-bit guest PC to
+ * find, so the honest answer is NULL rather than a fabricated entry.  The one
+ * thing that can still be answered truthfully is the image base: for a PC in
+ * a module the loader knows, report that module's base (as the x64 call does).
+ * ERROR_CALL_NOT_IMPLEMENTED makes the missing table mechanism visible; a bare
+ * NULL would be indistinguishable from a well-formed lookup that found nothing. */
+static void k_RtlLookupFunctionEntry(void) {            /* (pc, &imageBase, history) */
+    uint32_t pc = A32(0), out = A32(1);
+    uint32_t base = 0, size = 0;
+    if (out) MEM32(out) = pc && hle_module_region(pc, &base, &size) ? base : 0;
+    hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+    RET(0, 3);                                          /* PRUNTIME_FUNCTION = NULL */
+}
+
+/* RtlVirtualUnwind(HandlerType, ImageBase, ControlPc, FunctionEntry,
+ * ContextRecord, &HandlerData, &EstablisherFrame, ContextPointers): a virtual
+ * unwind is defined by the RUNTIME_FUNCTION's unwind info, which no x86 guest
+ * image here supplies.  With no verifiable unwind data, perform NO unwind:
+ * return NULL, leave the CONTEXT and all out parameters untouched, and report
+ * the call unimplemented.  Inventing an establisher frame or handler address
+ * would only send guest unwind code into a function that does not exist. */
+static void k_RtlVirtualUnwind(void) {
+    hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+    RET(0, 8);                                          /* no handler, nothing unwound */
+}
+
+/* --- interlocked S-lists, RtlPcToFileHeader, RtlUnwindEx ---
+ * These four are listed as missing in docs/WIN32_API_COVERAGE.md.  Every
+ * pointer here is a guest address.  The x86 SLIST_ENTRY is a single Next
+ * pointer (4 bytes), and the x86 SLIST_HEADER is an 8-byte, 8-byte-aligned
+ * union: word 0 is the first entry's Next pointer (SLIST_HEADER.Next.Next),
+ * word 1 packs a 16-bit Depth in its low half and a 16-bit Sequence in its
+ * high half (SLIST_HEADER.Depth / .Sequence).  This is Windows' 32-bit
+ * template, not the 16-byte amd64 one. */
+#define SLIST_NEXT_OFF   0u                 /* first entry's Next pointer */
+#define SLIST_COUNT_OFF  4u                 /* Depth:16, Sequence:16 */
+
+/* The machine lock is this layer's single serialising lock: a guest thread
+ * holds it for a whole lifted call, and a shim runs nested inside that claim.
+ * Taking it explicitly around the read-modify-write makes these the atomic
+ * S-list primitives the guest thinks it is calling (its own LOCK CMPXCHG8B
+ * buys the same exclusive access on real x86). */
+static void k_InterlockedPushEntrySList(void) {          /* (head, entry) */
+    uint32_t head = A32(0), entry = A32(1);
+    if (!head || !entry) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 2); }
+    mach_enter();
+    uint32_t old = MEM32(head + SLIST_NEXT_OFF);
+    uint32_t packed = MEM32(head + SLIST_COUNT_OFF);
+    uint32_t depth = (packed & 0xFFFFu) + 1u;            /* 16-bit wrap */
+    uint32_t seq = (packed >> 16) + 1u;                  /* 16-bit wrap */
+    MEM32(entry) = old;                                  /* entry->Next = old head */
+    MEM32(head + SLIST_NEXT_OFF) = entry;
+    MEM32(head + SLIST_COUNT_OFF) = ((seq & 0xFFFFu) << 16) | (depth & 0xFFFFu);
+    mach_leave();
+    RET(old, 2);                                         /* previous first entry */
+}
+
+/* InterlockedFlushSList(head): unlink the whole list in one step and return
+ * its old first entry.  An empty list returns NULL and leaves the header
+ * untouched; otherwise Depth is cleared and Sequence is preserved, as in
+ * Windows' flush. */
+static void k_InterlockedFlushSList(void) {              /* (head) */
+    uint32_t head = A32(0);
+    if (!head) { hle_set_last_error(ERROR_INVALID_PARAMETER); RET(0, 1); }
+    mach_enter();
+    uint32_t old = MEM32(head + SLIST_NEXT_OFF);
+    if (old) {
+        uint32_t packed = MEM32(head + SLIST_COUNT_OFF);
+        MEM32(head + SLIST_NEXT_OFF) = 0;
+        MEM32(head + SLIST_COUNT_OFF) = packed & 0xFFFF0000u; /* depth 0, sequence kept */
+    }
+    mach_leave();
+    RET(old, 1);
+}
+
+/* RtlPcToFileHeader(pc, &base): the base of the guest module that maps pc, or
+ * NULL for an unmapped pc.  Nothing is inferred from the address itself: the
+ * answer comes from the loader's own module table (hle_module_region), the
+ * same source RtlLookupFunctionEntry uses for its honest image base. */
+static void k_RtlPcToFileHeader(void) {                  /* (pc, &base) */
+    uint32_t pc = A32(0), out = A32(1);
+    uint32_t base = 0, size = 0;
+    int found = pc && hle_module_region(pc, &base, &size);
+    if (out) MEM32(out) = found ? base : 0;
+    RET(found ? base : 0, 2);
+}
+
+/* RtlUnwindEx(TargetFrame, TargetIp, ExceptionRecord, ReturnValue,
+ *             ContextRecord, HistoryTable): on Windows this never returns to
+ * its caller -- it transfers control to a target frame's handler or raises a
+ * second-chance exception.  This layer has no guest SEH unwind tables (see
+ * RtlVirtualUnwind above), so it cannot unwind truthfully.  Moving the guest's
+ * registers or stack and returning as if it had would be a fake unwind; instead
+ * report the call as unsupported and return void.  A caller must not treat the
+ * return as a completed unwind: no frame has been unwound. */
+static void k_RtlUnwindEx(void) {
+    (void)A32(0); (void)A32(1); (void)A32(2);
+    (void)A32(3); (void)A32(4); (void)A32(5);
+    hle_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
+    RETV(6);
+}
+
 static void k_RaiseException(void) {
-    if (A32(0) == 0xE0440001u)
-        hle_eh_d_throw(A32(0), A32(2), A32(3));
-    fprintf(stderr, "[win32hle] RaiseException(0x%08X) from guest 0x%08X: guest exceptions are not handled\n",
-            A32(0), g_cur_func);
+    uint32_t code = A32(0);
+    if (code == 0xE0440001u) {
+        const char *reason = "no diagnostic";
+        int dispatched = hle_eh_d_throw(code, A32(2), A32(3), &reason);
+        /* A caught throw never returns here: hle_eh_d_throw longjmps into the
+         * guest catch.  Every path that does return is a refusal, and must
+         * say why instead of hiding behind the generic "not handled" line. */
+        fprintf(stderr, "[win32hle] DMD throw dispatch=%d reason=%s from guest 0x%08X\n",
+                dispatched, reason, g_cur_func);
+        fprintf(stderr, "[win32hle] DMD throw NOT dispatched: %s "
+                        "(guest 0x%08X); no guest catch was resumed\n",
+                reason, g_cur_func);
+    } else {
+        fprintf(stderr, "[win32hle] RaiseException(0x%08X) from guest 0x%08X: guest exceptions are not handled\n",
+                code, g_cur_func);
+    }
     hle_exit(3);
 }
 static void k_LoadModule(void)    { RET(2u, 2); }               /* file not found */
@@ -730,6 +945,13 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "SetUnhandledExceptionFilter",  k_SetUnhandledExceptionFilter },
     { "UnhandledExceptionFilter",     k_UnhandledExceptionFilter },
     { "RtlUnwind",                    k_RtlUnwind },
+    { "RtlCaptureContext",            k_RtlCaptureContext },
+    { "RtlLookupFunctionEntry",       k_RtlLookupFunctionEntry },
+    { "RtlVirtualUnwind",             k_RtlVirtualUnwind },
+    { "InterlockedPushEntrySList",    k_InterlockedPushEntrySList },
+    { "InterlockedFlushSList",        k_InterlockedFlushSList },
+    { "RtlPcToFileHeader",            k_RtlPcToFileHeader },
+    { "RtlUnwindEx",                  k_RtlUnwindEx },
     { "RaiseException",               k_RaiseException },
     { "LoadModule",                   k_LoadModule },
     { "CreateThread",                 k_CreateThread },
@@ -738,6 +960,7 @@ const win32hle_shim win32hle_kernel32_crt[] = {
     { "TerminateThread",              k_TerminateThread },
     { "GetThreadContext",             k_GetThreadContext },
     { "ExitThread",                   k_ExitThread },
+    { "FreeLibraryAndExitThread",     k_FreeLibraryAndExitThread },
     { "GetExitCodeThread",            k_GetExitCodeThread },
     { "SetThreadPriority",            k_SetThreadPriority },
     { "GetThreadPriority",            k_GetThreadPriority },

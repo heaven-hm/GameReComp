@@ -1,0 +1,16 @@
+{
+  "slug": "games__generally__TrackEditor.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/generally/TrackEditor.exe",
+  "sha256": "ced9e54e6578a0e10fae997dcf23889cba323c9df926bafe1a455aa014876410",
+  "size": 114176,
+  "is_game": true,
+  "started": 1795505070.7115479,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/bin_TrackEditor",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__generally__TrackEditor.exe/report.json",
+  "seconds": 20.3
+}

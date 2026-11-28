@@ -1,0 +1,225 @@
+{
+  "scope": "original arith-calc.exe vs native rebuild; cross-built PE under Highball Wine compared byte-for-byte in the Wine test",
+  "cross_build": {
+    "32": {
+      "status": "OK",
+      "binary": "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/evidence-32.exe",
+      "bytes": 681896,
+      "pe": "PE32",
+      "bits": 32,
+      "sources": [
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/main.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_0000.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_dispatch.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_image.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/guest_mem.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/hle_path.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/host.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/host_lite.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/kernel32.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/module.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/pe_loader.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/win32_port.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_image.S"
+      ],
+      "commands": [
+        [
+          "/opt/homebrew/bin/i686-w64-mingw32-gcc",
+          "-c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_image.S",
+          "-o",
+          "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/evidence-32-objs/recomp_image.o"
+        ],
+        [
+          "/opt/homebrew/bin/i686-w64-mingw32-gcc",
+          "-std=gnu11",
+          "-O2",
+          "-w",
+          "-DRECOMP_CONSOLE_ONLY",
+          "-D_WIN32_WINNT=0x0601",
+          "-DWIN32_LEAN_AND_MEAN=1",
+          "-DRECOMP_BASED_MEMORY=1",
+          "-DRECOMP_GUEST_SPAN=0x40000000ull",
+          "-I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/win32_compat",
+          "-I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle",
+          "-I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/recomp32",
+          "-I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen",
+          "-include",
+          "win32_port.h",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/main.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_0000.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_dispatch.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_image.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/guest_mem.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/hle_path.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/host.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/host_lite.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/kernel32.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/module.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/pe_loader.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/win32_port.c",
+          "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/evidence-32-objs/recomp_image.o",
+          "-o",
+          "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/evidence-32.exe",
+          "-static",
+          "-Wl,--image-base=0x60000000",
+          "-lws2_32",
+          "-luser32",
+          "-lgdi32",
+          "-ladvapi32",
+          "-lshell32",
+          "-lole32"
+        ]
+      ],
+      "note": "console subset only; GUI/SDL shims are empty. PE32 uses based guest memory (RECOMP_BASED_MEMORY, 1 GB span) because Highball Wine occupies low host VAs."
+    },
+    "64": {
+      "status": "OK",
+      "binary": "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/evidence-64.exe",
+      "bytes": 673205,
+      "pe": "PE32+",
+      "bits": 64,
+      "sources": [
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/main.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_0000.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_dispatch.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_image.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/guest_mem.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/hle_path.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/host.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/host_lite.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/kernel32.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/module.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/pe_loader.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/win32_port.c",
+        "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_image.S"
+      ],
+      "commands": [
+        [
+          "/opt/homebrew/bin/x86_64-w64-mingw32-gcc",
+          "-c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_image.S",
+          "-o",
+          "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/evidence-64-objs/recomp_image.o"
+        ],
+        [
+          "/opt/homebrew/bin/x86_64-w64-mingw32-gcc",
+          "-std=gnu11",
+          "-O2",
+          "-w",
+          "-DRECOMP_CONSOLE_ONLY",
+          "-D_WIN32_WINNT=0x0601",
+          "-DWIN32_LEAN_AND_MEAN=1",
+          "-I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/win32_compat",
+          "-I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle",
+          "-I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/recomp32",
+          "-I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen",
+          "-include",
+          "win32_port.h",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/main.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_0000.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_dispatch.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/recomp/gen/recomp_image.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/guest_mem.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/hle_path.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/host.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/host_lite.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/kernel32.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/module.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/pe_loader.c",
+          "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/arith-calc/src/runtime/win32hle/win32_port.c",
+          "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/evidence-64-objs/recomp_image.o",
+          "-o",
+          "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/p4-win32-console-xez0uit0/evidence-64.exe",
+          "-static",
+          "-Wl,--image-base=0x140000000",
+          "-lws2_32",
+          "-luser32",
+          "-lgdi32",
+          "-ladvapi32",
+          "-lshell32",
+          "-lole32"
+        ]
+      ],
+      "note": "console subset only; GUI/SDL shims are empty. PE32 uses based guest memory (RECOMP_BASED_MEMORY, 1 GB span) because Highball Wine occupies low host VAs."
+    }
+  },
+  "engine_probes": {
+    "difftest.py": {
+      "entry": "hybrid_diff.unicorn_signal -> difftest.run_unicorn_function",
+      "record": {
+        "status": "BLOCKED",
+        "reason": "OracleFault: the ORIGINAL's bytes at 0x00401B00 faulted on case 0: Invalid memory fetch (UC_ERR_FETCH_UNMAPPED)"
+      }
+    },
+    "frida_probe.py": {
+      "script_sha256": "cdf5acba4396d196",
+      "hooks": [
+        "ExitProcess",
+        "WriteFile"
+      ],
+      "dry_run": "tools/frida_probe.py --dry-run prints this script",
+      "live_record": {
+        "status": "BLOCKED",
+        "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+        "script_sha256": "cdf5acba4396d196"
+      }
+    }
+  },
+  "hybrid": {
+    "exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/apps/arith-calc.exe",
+    "status": "BLOCKED",
+    "reason": "unicorn: OracleFault: the ORIGINAL's bytes at 0x00401B00 faulted on case 0: Invalid memory fetch (UC_ERR_FETCH_UNMAPPED); frida: NotSupportedError: unexpected error while probing dyld of target process",
+    "unicorn": {
+      "status": "BLOCKED",
+      "reason": "OracleFault: the ORIGINAL's bytes at 0x00401B00 faulted on case 0: Invalid memory fetch (UC_ERR_FETCH_UNMAPPED)"
+    },
+    "frida": {
+      "status": "BLOCKED",
+      "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+      "script_sha256": "cdf5acba4396d196"
+    },
+    "native": {
+      "original": {
+        "exit_code": 0,
+        "sha256": "9b59ee613acc7b5a1512f8a5fcc5f65317f0fa79452d01728e1715b63f23d7a6",
+        "stdout_hash": "dc10bfee0bdb528994ae67cf9f5a8580f36447daf28b4744556ca178733fb38b"
+      },
+      "native": {
+        "exit_code": 0,
+        "stdout_hash": "dc10bfee0bdb528994ae67cf9f5a8580f36447daf28b4744556ca178733fb38b"
+      },
+      "stdin_bytes": 0,
+      "args": [],
+      "original_lines": [
+        "arith:start",
+        "primes<200=46",
+        "fib(20)=6765",
+        "gcd(1071,462)=21",
+        "popcount(0xF0F0F0F0)=16",
+        "rotl(0x12345678,8)=878082066",
+        "poly=12512",
+        "mul=-8369910",
+        "div=-18",
+        "mod=-141",
+        "arith:done"
+      ],
+      "native_lines": [
+        "arith:start",
+        "primes<200=46",
+        "fib(20)=6765",
+        "gcd(1071,462)=21",
+        "popcount(0xF0F0F0F0)=16",
+        "rotl(0x12345678,8)=878082066",
+        "poly=12512",
+        "mul=-8369910",
+        "div=-18",
+        "mod=-141",
+        "arith:done"
+      ],
+      "status": "MATCH"
+    },
+    "note": "CPU/process-level evidence only; not gameplay or frame equivalence"
+  },
+  "note": "CPU/process-level evidence only, not gameplay or frame equivalence. BLOCKED engines are recorded verbatim; no fabricated 100%."
+}

@@ -1,7 +1,7 @@
 use gpui::{div, prelude::*, px, rgb, Context, Div, FontWeight, MouseButton, Stateful, Styled};
 
 use super::style;
-use super::{FocusInput, GameReCompApp, JobStatus, ProjectTab};
+use super::{FocusInput, GameReCompApp, JobStatus, ProjectTab, SourceImproveMethod};
 use crate::theme_tokens::{
     MonoFont, ThemeMode, ThemeTokens, UiFont, CODE_FONT_SCALE_PRESETS, UI_FONT_SCALE_PRESETS,
 };
@@ -599,6 +599,70 @@ pub fn render_settings_page(
                                     ),
                                 ),
                         ),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.0))
+                        .child(style::eyebrow(t, "SOURCE IMPROVEMENT (rev.ng / AI)"))
+                        .child(
+                            div()
+                                .font_family(t.ui_font)
+                                .text_size(px(t.ui_px(11.5)))
+                                .text_color(rgb(t.muted))
+                                .child("Every method is compile- and re-run-gated; unproven edits are reverted and never reported as PASS. Web AI is explicit opt-in."),
+                        )
+                        .child(source_setting_input(
+                            "set_revng_bin",
+                            t,
+                            "rev.ng binary (REVNG_BIN)",
+                            &app.settings.revng_bin,
+                            "/opt/revng/bin/revng",
+                            app.focused_input == Some(FocusInput::SettingsRevngBin),
+                            FocusInput::SettingsRevngBin,
+                            cx,
+                        ))
+                        .child(source_setting_input(
+                            "set_revng_dir",
+                            t,
+                            "rev.ng output directory (REVNG_DIR)",
+                            &app.settings.revng_dir,
+                            "/path/to/revng-output",
+                            app.focused_input == Some(FocusInput::SettingsRevngDir),
+                            FocusInput::SettingsRevngDir,
+                            cx,
+                        ))
+                        .child(source_setting_input(
+                            "set_ai_web_endpoint",
+                            t,
+                            "Web AI endpoint ({endpoint})",
+                            &app.settings.ai_web_endpoint,
+                            "https://api.example.invalid/v1",
+                            app.focused_input == Some(FocusInput::SettingsAiWebEndpoint),
+                            FocusInput::SettingsAiWebEndpoint,
+                            cx,
+                        ))
+                        .child(source_setting_input(
+                            "set_ai_web_model",
+                            t,
+                            "Web AI model ({model})",
+                            &app.settings.ai_web_model,
+                            "coder-model",
+                            app.focused_input == Some(FocusInput::SettingsAiWebModel),
+                            FocusInput::SettingsAiWebModel,
+                            cx,
+                        ))
+                        .child(source_setting_input(
+                            "set_ai_web_cmd",
+                            t,
+                            "Web AI command (REVENG_WEB_AI_CMD)",
+                            &app.settings.ai_web_cmd,
+                            "web-ai --url {endpoint} --model {model}",
+                            app.focused_input == Some(FocusInput::SettingsAiWebCmd),
+                            FocusInput::SettingsAiWebCmd,
+                            cx,
+                        )),
                 )
                 .child(
                     div()
@@ -1209,6 +1273,36 @@ fn page_shell(
         )
 }
 
+fn source_setting_input(
+    id: &'static str,
+    t: &ThemeTokens,
+    label: &'static str,
+    value: &str,
+    placeholder: &'static str,
+    focused: bool,
+    field: FocusInput,
+    cx: &mut Context<GameReCompApp>,
+) -> Div {
+    div()
+        .flex()
+        .flex_col()
+        .gap(px(4.0))
+        .child(
+            div()
+                .font_family(t.ui_font)
+                .text_size(px(t.ui_px(11.5)))
+                .text_color(rgb(t.muted))
+                .child(label),
+        )
+        .child(
+            style::text_input_box(id, t, value, placeholder, focused, true).on_click(cx.listener(
+                move |this, _, window, cx| {
+                    this.set_focus_input(Some(field), window, cx);
+                },
+            )),
+        )
+}
+
 fn info_kv(t: &ThemeTokens, k: &'static str, v: &str) -> Div {
     div()
         .flex()
@@ -1447,7 +1541,12 @@ pub fn render_project_context_menu(
                 )
                 .on_click(cx.listener(move |this, _, _, cx| {
                     this.context_menu = None;
-                    this.start_readability_agent_for_dir(dir_ai.clone(), None, cx);
+                    this.start_readability_agent_for_dir(
+                        SourceImproveMethod::AiLocal,
+                        dir_ai.clone(),
+                        None,
+                        cx,
+                    );
                 })),
             );
     }

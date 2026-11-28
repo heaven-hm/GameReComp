@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "what_it_proves": "captured native frames have real pixel content (distinct colours + hashes); not a Windows oracle",
+  "frames": [
+    {
+      "width": 580,
+      "height": 456,
+      "bpp": 24,
+      "sha256": "21576d0738639c104726ec2bae957f08fa08238b78297a618327e894fbefce8b",
+      "distinct_colors": 1,
+      "blank": true,
+      "bytes": 793494,
+      "game": "games__cavestory__DoConfig.exe",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0000.bmp"
+    },
+    {
+      "width": 580,
+      "height": 456,
+      "bpp": 24,
+      "sha256": "d9721780e216364aace0fcf69123d243c4c41d98d4dacc2882409d09737a40a4",
+      "distinct_colors": 2,
+      "blank": false,
+      "bytes": 793494,
+      "game": "games__cavestory__DoConfig.exe",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0001.bmp"
+    },
+    {
+      "width": 580,
+      "height": 456,
+      "bpp": 24,
+      "sha256": "d9721780e216364aace0fcf69123d243c4c41d98d4dacc2882409d09737a40a4",
+      "distinct_colors": 2,
+      "blank": false,
+      "bytes": 793494,
+      "game": "games__cavestory__DoConfig.exe",
+      "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0002.bmp"
+    }
+  ]
+}

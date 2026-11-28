@@ -1,0 +1,42 @@
+{
+  "status": "BLOCKED",
+  "reason": "unicorn: SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/games/snake/snake-windows-x86_64.exe: not PE32 (magic 0x20B); frida: NotSupportedError: unexpected error while probing dyld of target process; native: one side timed out",
+  "unicorn": {
+    "status": "BLOCKED",
+    "reason": "SystemExit: /Users/haseeb-mir/Downloads/recomp-apps/games/snake/snake-windows-x86_64.exe: not PE32 (magic 0x20B)"
+  },
+  "frida": {
+    "status": "BLOCKED",
+    "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+    "script_sha256": "e95a6e07c56ce886"
+  },
+  "native": {
+    "original": {
+      "exit_code": "TIMEOUT",
+      "sha256": "207d311be674c17be31131df095534003e0120b1a00a6569b697e00ae0c2d373",
+      "stdout_hash": "dc159a4d8aa07cd76157eb749d037374ad5f227bf68ec63cd6dfd733a276638c"
+    },
+    "native": {
+      "exit_code": 2,
+      "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdin_bytes": 0,
+    "args": [],
+    "original_lines": [
+      "######################",
+      "#                    #",
+      "#                    #",
+      "#                    #",
+      "#                    #",
+      "#                    #",
+      "#                    #",
+      "#                    #",
+      "#                    #",
+      "#                    #"
+    ],
+    "native_lines": [],
+    "status": "BLOCKED",
+    "reason": "one side timed out"
+  },
+  "note": "CPU/process-level evidence only; BLOCKED is never MATCH"
+}

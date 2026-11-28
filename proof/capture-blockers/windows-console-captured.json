@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "capability": "windows-endpoint",
+  "capture_id": "arith-calc-highball-console",
+  "source": "tools.highball_oracle_capture (real Highball/Wine run)",
+  "measured": {
+    "status": "CAPTURED",
+    "verification": "CAPTURED",
+    "exit_code": 0,
+    "timed_out": false,
+    "scope": "console-only",
+    "gui_frame_evidence": false,
+    "oracle": "highball-wine-console",
+    "original_exe_sha256": "bb67ed0c581a1a00cfce9fd324c4003a970d4869829bb472e5f91b4ee476be3c",
+    "normalized_stdout_sha256": "b6674fd6da06bc9dd36a49a5697efdeb8af7bd354f00b9c6d77359533b572d8f",
+    "native_sha256": null,
+    "evidence_doc": "docs/WINDOWS_ORACLE_ENDPOINT.md"
+  },
+  "endpoint": {
+    "kind": "highball-wine",
+    "label": "highball-wine-console",
+    "verified": true,
+    "scope": "console-only",
+    "guest_output_sha256": "b6674fd6da06bc9dd36a49a5697efdeb8af7bd354f00b9c6d77359533b572d8f",
+    "native_sha256": null
+  },
+  "note": "Real process-level Highball/Wine console capture for arith-calc.exe. Wine emulation is not the retail Windows host; scope is console-only and no rebuilt native hash is available. This record must never be promoted to a GUI/frame, audio or retail-Windows oracle claim."
+}

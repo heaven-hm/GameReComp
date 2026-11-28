@@ -1,0 +1,208 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "b1_status": "BUILD-ONLY",
+  "b2_native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/bin_DoConfig",
+    "sha256": "ecd62f9a1c54c1330858a4d58bec7a9dd57d18398946d0cbbb83ddc19f02fc43",
+    "valid": true
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "PARTIAL",
+  "copied": [
+    "evidence/corpus/games__cavestory__DoConfig.exe/status.json",
+    "evidence/corpus/games__cavestory__DoConfig.exe/report.json",
+    "evidence/corpus/games__cavestory__DoConfig.exe/build.log",
+    "evidence/corpus/games__cavestory__DoConfig.exe/frame-proof.json",
+    "evidence/corpus/games__cavestory__DoConfig.exe/summary.json",
+    "evidence/corpus/games__cavestory__DoConfig.exe/run.log",
+    "evidence/corpus/games__cavestory__DoConfig.exe/highball.log",
+    "evidence/corpus/games__cavestory__DoConfig.exe/native-frames.html"
+  ],
+  "cross_os_paths": {
+    "linux_to_windows_shared": {
+      "citation": "PR #176: evidence/corpus/_cross_os/PR176_LINUX_TO_WINDOWS_SOURCE_BUILD.md",
+      "status": "SHARED PROOF (PR #176)"
+    },
+    "windows_to_linux": {
+      "citation": "PR #175: evidence/corpus/_cross_os/PR175_LINUX_RUNNER_EVIDENCE.md (real ELF build+run of a generated project on a Linux host)",
+      "status": "NOT TESTED per target"
+    },
+    "x64_to_macos": {
+      "citation": "PR #174: evidence/corpus/_cross_os/PR174_X64_CORPUS_EVIDENCE.md",
+      "status": "N/A (x86 target)"
+    }
+  },
+  "engines": {
+    "frida": {
+      "reason": "NotSupportedError: unexpected error while probing dyld of target process",
+      "script_sha256": "e95a6e07c56ce886",
+      "status": "BLOCKED"
+    },
+    "native": {
+      "args": [],
+      "native": {
+        "exit_code": "TIMEOUT",
+        "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_lines": [],
+      "original": {
+        "exit_code": 1,
+        "sha256": "03f3c73a36920e8148a7d683f2f9ef0e5d6a14f32ab6ec59446919228012324f",
+        "stdout_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "original_lines": [],
+      "reason": "one side timed out",
+      "status": "BLOCKED",
+      "stdin_bytes": 0
+    },
+    "note": "CPU/process-level evidence only; BLOCKED is never MATCH",
+    "reason": "unicorn: OracleFault: the ORIGINAL's bytes at 0x004032C1 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED); frida: NotSupportedError: unexpected error while probing dyld of target process; native: one side timed out",
+    "status": "BLOCKED",
+    "unicorn": {
+      "reason": "OracleFault: the ORIGINAL's bytes at 0x004032C1 faulted on case 0: Invalid memory read (UC_ERR_READ_UNMAPPED)",
+      "status": "BLOCKED"
+    }
+  },
+  "exit": "TIMEOUT",
+  "frame_proof_ok": true,
+  "frames": [
+    {
+      "actual_blank": true,
+      "actual_distinct_colours": 1,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0000.png",
+      "actual_sha256": "556cab06ca5fc0afb8c16f80bcb4b224f58fcf6cd949ea19c6364f77ca41e9e4",
+      "blank_match": true,
+      "claimed_blank": true,
+      "claimed_distinct_colours": 1,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0000.bmp",
+      "claimed_sha256": "21576d0738639c104726ec2bae957f08fa08238b78297a618327e894fbefce8b",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    },
+    {
+      "actual_blank": false,
+      "actual_distinct_colours": 10,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0001.png",
+      "actual_sha256": "1f44593da0c649dfe73af671902493c7ab9ecb9a4a5d623faa7d57d624d5c52f",
+      "blank_match": true,
+      "claimed_blank": false,
+      "claimed_distinct_colours": 2,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0001.bmp",
+      "claimed_sha256": "d9721780e216364aace0fcf69123d243c4c41d98d4dacc2882409d09737a40a4",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    },
+    {
+      "actual_blank": false,
+      "actual_distinct_colours": 10,
+      "actual_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0002.png",
+      "actual_sha256": "1f44593da0c649dfe73af671902493c7ab9ecb9a4a5d623faa7d57d624d5c52f",
+      "blank_match": true,
+      "claimed_blank": false,
+      "claimed_distinct_colours": 2,
+      "claimed_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/games__cavestory__DoConfig.exe/screenshots/frame-0002.bmp",
+      "claimed_sha256": "d9721780e216364aace0fcf69123d243c4c41d98d4dacc2882409d09737a40a4",
+      "exists": true,
+      "hash_match": true,
+      "png_fallback": true
+    }
+  ],
+  "frames_claimed": 3,
+  "frames_verified": 3,
+  "linux_to_windows": {
+    "code": "NO_REAL_SOURCE",
+    "reason": "no real C source found; refusing to synthesise a source (source-level cross-build only, no ELF/Mach-O binary conversion)",
+    "roots": [
+      "/Users/haseeb-mir/Downloads/Other/gitHub_C/FloatMemory.c",
+      "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory"
+    ],
+    "status": "BLOCKED"
+  },
+  "macos_to_windows": {
+    "command": [
+      "/opt/homebrew/bin/i686-w64-mingw32-gcc",
+      "-O2",
+      "-o",
+      "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/tmp9j7qsp99/DoConfig.exe",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/main.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/recomp/gen/recomp_0000.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/recomp/gen/recomp_dispatch.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/recomp/gen/recomp_image.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/advapi32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/avifil32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/bink.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/clock.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/d3d7.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/ddraw.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/dinput.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/dsound.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/eh32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/gdi32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/gdidc.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/gl32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/guest_mem.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/hle_path.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/host.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/host_lite.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/input_rec.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/kernel32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/kernel32_atom.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/kernel32_crt.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/kernel32_ext.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/lz32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/module.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/mss.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/msvcrt.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/ole32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/pe_loader.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/present.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/screen.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/screenshot.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/sdl12.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/sdlmix.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/storage.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/user32.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/wininet.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/winmm.c",
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/wsock32.c"
+    ],
+    "compiler_output": ".\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/sdl12.c:15:10: fatal error: SDL2/SDL.h: No such file or directory\n   15 | #include <SDL2/SDL.h>\n      |          ^~~~~~~~~~~~\ncompilation terminated.\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/sdlmix.c:34:10: fatal error: SDL2/SDL.h: No such file or directory\n   34 | #include <SDL2/SDL.h>\n      |          ^~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/storage.c:17:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/user32.c:31:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/wininet.c:26:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\nIn file included from /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/winmm.c:17:\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/win32hle.h:32:10: fatal error: recomp_types.h: No such file or directory\n   32 | #include \"recomp_types.h\"   /* g_eax, g_esp, MEM*, recomp_func_t, the dispatch contract */\n      |          ^~~~~~~~~~~~~~~~\ncompilation terminated.\n/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/project/src/runtime/win32hle/wsock32.c:26:10: fatal error: poll.h: No such file or directory\n   26 | #include <poll.h>\n      |          ^~~~~~~~\ncompilation terminated.\n",
+    "reason": "cross-compilation failed",
+    "status": "FAIL"
+  },
+  "native": {
+    "exists": true,
+    "magic": "cffaedfe",
+    "path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__cavestory__DoConfig.exe/bin_DoConfig",
+    "sha256": "ecd62f9a1c54c1330858a4d58bec7a9dd57d18398946d0cbbb83ddc19f02fc43",
+    "valid": true
+  },
+  "nonblank_verified": 2,
+  "rationale": "2 independently verified non-blank frame(s); launch exit=TIMEOUT, no Windows oracle",
+  "rejects": [],
+  "report_ok": true,
+  "run_log_ok": true,
+  "screenshots": [
+    "evidence/corpus/games__cavestory__DoConfig.exe/frame-0000.png",
+    "evidence/corpus/games__cavestory__DoConfig.exe/frame-0001.png",
+    "evidence/corpus/games__cavestory__DoConfig.exe/frame-0002.png"
+  ],
+  "slug": "games__cavestory__DoConfig.exe",
+  "snapshot": "2026-11-24T13:39:05",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "03f3c73a36920e8148a7d683f2f9ef0e5d6a14f32ab6ec59446919228012324f",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/games/cavestory/DoConfig.exe",
+  "source_rejected": false
+}

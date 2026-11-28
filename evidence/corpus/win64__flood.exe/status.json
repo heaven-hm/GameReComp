@@ -1,0 +1,16 @@
+{
+  "slug": "win64__flood.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/flood.exe",
+  "sha256": "f36da8c35b48d3f156bb1cfca08480e5d45fb17411e140443d50e9b32bc5283f",
+  "size": 158792,
+  "is_game": true,
+  "started": 1795505812.678785,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x1400143c8, delta 0, imports 191\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/bin_flood",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__flood.exe/report.json",
+  "seconds": 17.2
+}

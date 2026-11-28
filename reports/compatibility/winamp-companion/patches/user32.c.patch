@@ -1,0 +1,16 @@
+--- /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/winamp-evidence/runtime/win32hle/user32.c	2026-11-26 02:23:44
++++ /Users/haseeb-mir/winamp-companion-proof/winamp-companion-src/src/runtime/win32hle/user32.c	2026-11-26 02:19:43
+@@ -3769,7 +3769,12 @@
+     { "SetWindowTextA", u_SetWindowTextA }, { "GetWindowTextA", u_GetWindowTextA },
+     { "GetWindowTextLengthA", u_GetWindowTextLengthA },
+     { "PostMessageA", u_PostMessageA }, { "PostMessageW", u_PostMessageW }, { "PostQuitMessage", u_PostQuitMessage },
+-    { "PostThreadMessageA", u_PostThreadMessageA }, { "MsgWaitForMultipleObjects", u_MsgWaitForMultipleObjects },
++    { "PostThreadMessageA", u_PostThreadMessageA }, { "PostThreadMessageW", u_PostThreadMessageA },
++    { "MsgWaitForMultipleObjects", u_MsgWaitForMultipleObjects },
++    /* Winamp's Ex spelling has the same five stack slots from the guest's
++     * point of view here (n=0 in its wait loop); reuse the real message wait
++     * so the UI thread gets machine time instead of a busy-return stub. */
++    { "MsgWaitForMultipleObjectsEx", u_MsgWaitForMultipleObjects },
+     { "GetMessageA", u_GetMessageA }, { "GetMessageW", u_GetMessageW },
+     { "PeekMessageA", u_PeekMessageA }, { "WaitMessage", u_WaitMessage },
+     { "TranslateMessage", u_TranslateMessage }, { "DispatchMessageA", u_DispatchMessageA },

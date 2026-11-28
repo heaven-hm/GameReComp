@@ -17,10 +17,16 @@
  */
 
 #include "recomp/dos_compat.h"
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 /* Global DOS state - accessible from interrupt handlers */
 static DosState *g_dos = NULL;
@@ -33,23 +39,152 @@ DosState *get_dos_state(CPU *cpu)
 
 /* ─── File path translation ─── */
 
-static void dos_path_to_native(const CPU *cpu, uint16_t seg, uint16_t off,
-                                char *out, int out_size)
+/* DOS path translation results. Zero means the guest path is safe; every
+ * negative value is an explicit rejection. The INT 21h handlers deliberately
+ * map all rejections to a single generic DOS error (03h, "path not found") so
+ * a guest cannot probe the host file system through the error code. */
+enum {
+    DOS_PATH_OK           =   0,
+    DOS_PATH_ERR_EMPTY    =  -1,  /* empty path */
+    DOS_PATH_ERR_NUL      =  -2,  /* path not NUL-terminated within DOS limit */
+    DOS_PATH_ERR_DRIVE    =  -3,  /* drive-letter prefix, e.g. "C:" */
+    DOS_PATH_ERR_ABSOLUTE =  -4,  /* leading '/' or '\\' */
+    DOS_PATH_ERR_DOTDOT   =  -5,  /* any ".." component */
+    DOS_PATH_ERR_TOOLONG  =  -6,  /* too long for the DOS or host buffer */
+    DOS_PATH_ERR_RESOLVE  =  -7,  /* realpath() failed (e.g. broken symlink) */
+    DOS_PATH_ERR_ESCAPE   =  -8   /* canonical path is outside game_dir */
+};
+
+/* Canonicalize a backslash-normalized guest path under g_dos->game_dir.
+ *
+ * Fail closed: a path is only ever returned when its canonical, symlink-
+ * resolved form is game_dir itself or a descendant of it. Lexical checks run
+ * before any filesystem access, so traversal, drive prefixes and absolute
+ * paths are rejected without touching the host at all. */
+static int dos_path_canonicalize(const char *dos_path, char *out, size_t out_size)
 {
-    /* Read DOS path string from memory */
+    char root[PATH_MAX];
+    char candidate[PATH_MAX];
+    char resolved[PATH_MAX];
+    size_t root_len, len, i;
+    const char *p;
+    int written;
+
+    if (out == NULL || out_size == 0) return DOS_PATH_ERR_TOOLONG;
+    out[0] = 0;
+    if (dos_path == NULL) return DOS_PATH_ERR_EMPTY;
+
+    len = strlen(dos_path);
+    if (len == 0) return DOS_PATH_ERR_EMPTY;
+    if (len >= 260) return DOS_PATH_ERR_TOOLONG;
+    /* A C string cannot hold an embedded NUL; keep the explicit check so any
+     * future caller passing a counted buffer fails closed instead. */
+    for (i = 0; i < len; ++i)
+        if (dos_path[i] == '\0') return DOS_PATH_ERR_NUL;
+
+    /* Reject drive prefixes ("C:FOO", "z:\\etc") outright rather than trying
+     * to guess a host mapping for them. */
+    if (((dos_path[0] | 0x20) >= 'a' && (dos_path[0] | 0x20) <= 'z') &&
+        dos_path[1] == ':')
+        return DOS_PATH_ERR_DRIVE;
+    /* '\\' has already become '/', so a leading slash is an absolute (or UNC)
+     * path and must never be appended to the game directory. */
+    if (dos_path[0] == '/') return DOS_PATH_ERR_ABSOLUTE;
+
+    /* Reject *every* '..' component, including ones that would stay inside
+     * the root: the guest has no legitimate need to walk upwards here. */
+    p = dos_path;
+    while (*p) {
+        const char *component = p;
+        while (*p && *p != '/') ++p;
+        if ((size_t)(p - component) == 2 &&
+            component[0] == '.' && component[1] == '.')
+            return DOS_PATH_ERR_DOTDOT;
+        while (*p == '/') ++p;
+    }
+
+    /* Canonicalize the root once; the guest directory must itself exist. */
+    if (realpath(g_dos->game_dir, root) == NULL) return DOS_PATH_ERR_RESOLVE;
+    root_len = strlen(root);
+    if (root_len + 1 + len + 1 > sizeof candidate) return DOS_PATH_ERR_TOOLONG;
+    snprintf(candidate, sizeof candidate, "%s/%s", root, dos_path);
+
+    /* Resolve symlinks. realpath() requires the leaf to exist; a DOS create
+     * names a file that does not exist yet, so fall back to canonicalizing
+     * the deepest existing parent and appending the final component. */
+    if (realpath(candidate, resolved) == NULL) {
+        char parent[PATH_MAX];
+        const char *leaf;
+        char *slash;
+        struct stat st;
+
+        snprintf(parent, sizeof parent, "%s", candidate);
+        slash = strrchr(parent, '/');
+        if (slash == NULL || slash == parent) return DOS_PATH_ERR_RESOLVE;
+        leaf = slash + 1;
+        *slash = 0;
+        if (realpath(parent, resolved) == NULL) return DOS_PATH_ERR_RESOLVE;
+        if (strlen(resolved) + 1 + strlen(leaf) + 1 > sizeof resolved)
+            return DOS_PATH_ERR_TOOLONG;
+        snprintf(resolved + strlen(resolved), sizeof resolved - strlen(resolved),
+                 "/%s", leaf);
+#if defined(__unix__) || defined(__APPLE__)
+        /* A symlink leaf (including a dangling one) must not redirect a
+         * create/write outside the game directory either. */
+        if (lstat(resolved, &st) == 0 && S_ISLNK(st.st_mode)) {
+            char leaf_real[PATH_MAX];
+            if (realpath(resolved, leaf_real) == NULL) return DOS_PATH_ERR_RESOLVE;
+            snprintf(resolved, sizeof resolved, "%s", leaf_real);
+        }
+#else
+        (void)st;
+#endif
+    }
+
+    /* Prefix check on the canonical result: "/root-evil" must not pass as a
+     * child of "/root". */
+    {
+        size_t resolved_len = strlen(resolved);
+        if (resolved_len < root_len || strncmp(resolved, root, root_len) != 0)
+            return DOS_PATH_ERR_ESCAPE;
+        if (resolved_len > root_len && resolved[root_len] != '/')
+            return DOS_PATH_ERR_ESCAPE;
+    }
+
+    written = snprintf(out, out_size, "%s", resolved);
+    if (written < 0 || (size_t)written >= out_size) return DOS_PATH_ERR_TOOLONG;
+    return DOS_PATH_OK;
+}
+
+/* Read an ASCIIZ path from guest memory, normalize separators and confine the
+ * result to game_dir. Returns DOS_PATH_OK or a negative DOS_PATH_ERR_* code. */
+static int dos_path_to_native(const CPU *cpu, uint16_t seg, uint16_t off,
+                              char *out, size_t out_size)
+{
     char dos_path[260];
-    int i = 0;
-    while (i < 259) {
+    size_t i = 0;
+    int terminated = 0;
+
+    if (out == NULL || out_size == 0) return DOS_PATH_ERR_TOOLONG;
+    out[0] = 0;
+    while (i < sizeof dos_path - 1) {
         uint8_t c = cpu->mem[seg_off(seg, (uint16_t)(off + i))];
-        if (c == 0) break;
-        /* Convert backslash to forward slash */
+        if (c == 0) { terminated = 1; break; }
         dos_path[i] = (c == '\\') ? '/' : (char)c;
-        i++;
+        ++i;
     }
     dos_path[i] = 0;
+    /* No terminator inside the DOS 260-byte limit: refuse instead of silently
+     * truncating into a different (possibly safe-looking) path. */
+    if (!terminated) return DOS_PATH_ERR_NUL;
+    return dos_path_canonicalize(dos_path, out, out_size);
+}
 
-    /* Prepend game directory */
-    snprintf(out, out_size, "%s/%s", g_dos->game_dir, dos_path);
+/* A rejected path becomes one generic DOS "path not found" failure. */
+static void dos_path_fail(CPU *cpu)
+{
+    cpu->ax = 3;
+    cpu->flags |= FLAG_CF;
 }
 
 /* ─── DOS File Handle Management ─── */
@@ -252,7 +387,10 @@ void dos_int21(CPU *cpu)
 
     case 0x3C: { /* Create file */
         char path[512];
-        dos_path_to_native(cpu, cpu->ds, cpu->dx, path, sizeof(path));
+        if (dos_path_to_native(cpu, cpu->ds, cpu->dx, path, sizeof(path)) != DOS_PATH_OK) {
+            dos_path_fail(cpu);
+            break;
+        }
         FILE *f = fopen(path, "wb");
         if (f) {
             int handle = dos_alloc_handle(f);
@@ -273,7 +411,10 @@ void dos_int21(CPU *cpu)
 
     case 0x3D: { /* Open file */
         char path[512];
-        dos_path_to_native(cpu, cpu->ds, cpu->dx, path, sizeof(path));
+        if (dos_path_to_native(cpu, cpu->ds, cpu->dx, path, sizeof(path)) != DOS_PATH_OK) {
+            dos_path_fail(cpu);
+            break;
+        }
         const char *mode;
         switch (cpu->al & 3) {
             case 0: mode = "rb"; break;     /* Read only */
@@ -341,7 +482,10 @@ void dos_int21(CPU *cpu)
 
     case 0x41: { /* Delete file */
         char path[512];
-        dos_path_to_native(cpu, cpu->ds, cpu->dx, path, sizeof(path));
+        if (dos_path_to_native(cpu, cpu->ds, cpu->dx, path, sizeof(path)) != DOS_PATH_OK) {
+            dos_path_fail(cpu);
+            break;
+        }
         if (remove(path) == 0) {
             cpu->flags &= ~FLAG_CF;
         } else {

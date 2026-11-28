@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:33:21Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiessolver.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.17,
+      "status": "ok",
+      "message": "i386 PE32, 60 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiessolver.exe",
+        "size": 219764,
+        "sha256": "830447211f443524c0ac228c3550631a36b2becf4def1a74c7f4c7d1b830faea",
+        "md5": "11cc43ad6422c29a5f976ebbc8905c53",
+        "sha1": "10305c9ebe93ac8f995fdc493d7377a3fd76ce65",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x00410200"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-convert-l1-1-0.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll"
+        ],
+        "import_count": 60,
+        "iat_entries": 60
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 4.11,
+      "status": "ok",
+      "message": "726 functions, 105101 instructions",
+      "data": {
+        "count": 726,
+        "instructions": 105101
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.39,
+      "status": "ok",
+      "message": "3 source files, 11494761 bytes, 0 lift errors",
+      "data": {
+        "source_units": 3,
+        "source_bytes": 11494761,
+        "lift_errors": 0,
+        "seconds": 0.4
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.18,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/project",
+        "name": "galaxiessolver",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 726,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "830447211f443524c0ac228c3550631a36b2becf4def1a74c7f4c7d1b830faea"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "830447211f443524c0ac228c3550631a36b2becf4def1a74c7f4c7d1b830faea"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 11.08,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/project/build/galaxiessolver (2753344 bytes, 11.1s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiessolver.exe/project/build/galaxiessolver",
+        "sha256": "8f68350d349d9191cd1283969f3a4e9833214ff956ca2336b5546d9020f2f680",
+        "seconds": 11.1,
+        "source_bytes": 13102535,
+        "build_timeout_seconds": 662.4777555465698,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}

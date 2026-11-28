@@ -1,0 +1,16 @@
+[screenshot] writing up to 3 frame(s) to /Users/haseeb-mir/winamp-companion-proof/frames, at most one every 500 ms
+[pe] <embedded image> mapped at 0x00400000, span 0x28F000
+[pe] static TLS: template 0x004DBD98..0x004DBDBC (+0 zero), index 0
+[pe] <embedded image> mapped at 0x10000000, span 0x6A000
+[pe] <embedded image> mapped at 0x7EFD0000, span 0x2B000
+[pe] unresolved import VCRUNTIME140.dll!__std_type_info_destroy_list
+[pe] unresolved import api-ms-win-crt-heap-l1-1-0.dll!_aligned_malloc
+[pe] unresolved import api-ms-win-crt-math-l1-1-0.dll!exp
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_execute_onexit_table
+[pe] unresolved import api-ms-win-crt-runtime-l1-1-0.dll!_seh_filter_dll
+[pe] unresolved import KERNEL32.dll!DisableThreadLibraryCalls
+[pe] bound 26 imports (0 delay), 6 unresolved
+[pe] companion nsutil.dll: 6 unresolved imports
+ICALL: null target from 0x10063DCC (NULL vtable/interface pointer; no dispatch possible)
+
+[win32hle] fatal signal 10 at 0x700fffffe4 (guest VA 0x0FFFFFE4) in lifted function 0x10063BDB, esp 0x1056FF68, pc 0x101be8f78

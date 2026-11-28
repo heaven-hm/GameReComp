@@ -73,6 +73,146 @@ def _extract_c_from_llm_output(raw_text):
     return text + "\n"
 
 
+# A readability edit may rename locals and add comments, but the names below
+# are part of the link contract. recomp_dispatch.c, recomp_funcs.h and sibling
+# recomp_*.c units bind them by name, and an address-named lift function carries
+# the guest VA in its name. Renaming one used to cost a whole build attempt:
+# the candidate was written to disk, compiled, and only the linker reported the
+# undefined symbol. The pre-build guard rejects that candidate up front.
+_ADDR_SYMBOL_RE = re.compile(r"\b(sub_[0-9A-Fa-f]{4,16})\b")
+_DISPATCH_ENTRY_RE = re.compile(
+    r"\{\s*0x[0-9A-Fa-f]{4,16}u\s*,\s*([A-Za-z_]\w*)\s*\}")
+_CALL_REF_RE = re.compile(
+    r"\b(?:RECOMP_CALL|RECOMP_DISPATCH)\s*\(\s*([A-Za-z_]\w*)\s*\)")
+_EXPORT_DECL_RE = re.compile(
+    r"\b(?:__declspec\s*\(\s*dllexport\s*\)|EXPORT|RECOMP_EXPORT|"
+    r"GAME_RECOMP_EXPORT)\b")
+_FUNC_DEF_RE = re.compile(
+    r"(?m)^(?![\t ])"
+    r"(?:(?:extern|__declspec\s*\([^)]*\)|EXPORT|RECOMP_EXPORT|"
+    r"GAME_RECOMP_EXPORT)\s+)*"
+    r"(?:[A-Za-z_]\w*\s+)*"
+    r"([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{")
+_CONTROL_KW = {"if", "for", "while", "switch", "do", "else", "return", "sizeof"}
+_TYPE_KW = {"void", "int", "char", "short", "long", "float", "double",
+            "unsigned", "signed", "const", "volatile", "static", "extern",
+            "inline", "struct", "union", "enum", "typedef", "__stdcall",
+            "__cdecl", "__fastcall"}
+
+
+def _strip_c_noise(text):
+    """Blank C comments and string literals, keeping line structure.
+
+    Neither can be a symbol another translation unit binds to; leaving them in
+    would make a changed comment/string look like a removed or added export.
+    """
+    text = re.sub(r"/\*.*?\*/",
+                  lambda m: "\n" * m.group(0).count("\n"),
+                  text or "", flags=re.DOTALL)
+    text = re.sub(r"//[^\n]*", "", text)
+    return re.sub(r'"(?:\\.|[^"\\])*"', '""', text)
+
+
+def _top_level_function_names(text):
+    """Names of non-static C function definitions that start at column 0."""
+    names = set()
+    for line in _strip_c_noise(text).splitlines():
+        if not line or line[0].isspace():
+            continue  # an indented line is a statement, not a top-level def
+        match = _FUNC_DEF_RE.match(line)
+        if not match:
+            continue
+        name = match.group(1)
+        if name in _CONTROL_KW or re.search(r"\bstatic\b", line):
+            continue
+        names.add(name)
+    return names
+
+
+def extract_exported_symbols(text):
+    """Return ``{symbol_name: why_other_code_depends_on_it}`` for a C unit.
+
+    Only names another translation unit can bind to are included: address-named
+    lift entry points, top-level non-static function definitions, dispatch-table
+    and ``RECOMP_CALL`` targets, and explicitly exported symbols. Local
+    variables and file-static helpers are deliberately excluded -- renaming
+    those is the whole point of the readability pass.
+    """
+    code = _strip_c_noise(text)
+    found = {}
+
+    for match in _ADDR_SYMBOL_RE.finditer(code):
+        found.setdefault(match.group(1),
+                         "address-named dispatched function (sub_XXXXXXXX)")
+
+    for name in _top_level_function_names(text):
+        found.setdefault(name, "externally visible function definition")
+
+    for regex, why in ((_DISPATCH_ENTRY_RE, "recomp_dispatch_table entry"),
+                       (_CALL_REF_RE, "RECOMP_CALL/RECOMP_DISPATCH target")):
+        for match in regex.finditer(code):
+            found.setdefault(match.group(1), why)
+
+    for match in _EXPORT_DECL_RE.finditer(code):
+        tail = code[match.end():match.end() + 200]
+        ident = next((m.group(1) for m in re.finditer(r"\b([A-Za-z_]\w*)\b", tail)
+                      if m.group(1) not in _TYPE_KW), None)
+        if ident:
+            found.setdefault(ident, "explicitly exported symbol")
+    return found
+
+
+def find_symbol_name_changes(original_text, candidate_text):
+    """List exported/dispatched names the candidate lost (renamed or removed).
+
+    Each entry is ``{symbol, why}`` plus ``suspected_rename`` when the candidate
+    introduced exactly one new exported name, which makes the rejection precise
+    enough for the provider to fix it in a single retry.
+    """
+    before = extract_exported_symbols(original_text)
+    after = extract_exported_symbols(candidate_text)
+    before_defs = _top_level_function_names(original_text)
+    after_defs = _top_level_function_names(candidate_text)
+
+    # A definition may disappear even when the old name still appears as a
+    # call reference in the candidate -- that is exactly the link failure this
+    # guard exists to prevent, so compare definitions separately too.
+    lost = sorted((set(before) - set(after)) | (before_defs - after_defs))
+    added = sorted(((set(after) - set(before)) | (after_defs - before_defs))
+                   - set(lost))
+    changes = []
+    for name in lost:
+        info = {"symbol": name,
+                "why": before.get(name, "externally visible function definition")}
+        if len(added) == 1:
+            info["suspected_rename"] = added[0]
+        changes.append(info)
+    return changes
+
+
+def format_symbol_guard_feedback(rel, changes):
+    """Turn guard findings into the feedback shown to the provider and report."""
+    lines = [
+        f"pre-build symbol guard rejected {rel}: exported/dispatched symbol "
+        "name(s) changed",
+        "src/recomp/gen/recomp_dispatch.c and sibling units bind these names "
+        "at link time, "
+        "so renaming them fails the build. Keep every name below byte-for-byte "
+        "identical:",
+    ]
+    for change in changes:
+        detail = f"  - {change['symbol']}"
+        if change.get("suspected_rename"):
+            detail += f" -> {change['suspected_rename']}"
+        detail += f" ({change['why']}) is missing from the candidate"
+        lines.append(detail)
+    lines.append(
+        "Restore the original names -- including sub_XXXXXXXX address symbols "
+        "-- and change only local variable names, comments, and control-flow shape."
+    )
+    return "\n".join(lines)
+
+
 def _build_readability_prompt(rel, original_text, feedback="", target_function=None):
     """Build a strict prompt scoping AI strictly to C source readability."""
     focus = (
@@ -373,6 +513,27 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             "pe": pe_s,
         }
 
+    def _revert_and_rebuild(self, unit, backup) -> None:
+        """Reject an edit and restore the tested baseline binary too.
+
+        A failed build deletes the old binary; reverting only the source left
+        later runs blocked with 'baseline binary is missing' even though no
+        edit had been accepted.
+        """
+        self._revert_unit(unit, backup)
+        build = self._rebuild()
+        if build["status"] != "ok":
+            self._log("failed to rebuild baseline binary after reverting "
+                      f"{unit.name}: {_tail(build['log'], 20)}")
+
+    def _update_manifest_digest(self, digest: str) -> None:
+        """Record an accepted source edit as the new baseline digest."""
+        path = self.project / "manifest.json"
+        manifest = _read_json(path)
+        if isinstance(manifest, dict):
+            manifest["source_digest_sha256"] = digest
+            path.write_text(json.dumps(manifest, indent=2) + "\n")
+
     # -- rev.ng --------------------------------------------------------
 
     def _revng(self):
@@ -526,6 +687,11 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
 
         if final == "accepted":
             self.report["source_digest_after"] = source_digest(self.project)
+            # An accepted edit changes the source tree. The manifest is the
+            # baseline digest the next run checks, so it must follow the
+            # accepted source or every subsequent pass blocks with a false
+            # "source tree changed" gate failure.
+            self._update_manifest_digest(self.report["source_digest_after"])
             self._stage("ai-readability", "accepted",
                         "readable-source edit(s) built and reproduced the "
                         "baseline process evidence",
@@ -550,7 +716,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
         last_detail = ""
         for attempt in range(1, self.max_attempts + 1):
             if self.deadline.expired():
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 return "budget-exhausted"
             out = work / f"{unit.name}.attempt{attempt}.c"
             feedback_path = work / f"{unit.name}.attempt{attempt}.feedback.txt"
@@ -603,7 +769,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
                 continue
             except OSError as exc:
                 self._record_attempt(rel, attempt, "provider", False, str(exc))
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 self._log(f"ai provider cannot run: {exc}")
                 return "failed"
             if rc != 0:
@@ -622,8 +788,23 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             if new_text == original_text:
                 self._record_attempt(rel, attempt, "provider", True,
                                      "no changes returned")
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 return "no-changes"
+
+            # Pre-build guard: a renamed exported/dispatched symbol (e.g.
+            # sub_00402020) can only fail at link. Reject before touching the
+            # source or starting a build so the attempt is not wasted, and
+            # hand the provider a precise, actionable reason to repair.
+            symbol_changes = find_symbol_name_changes(original_text, new_text)
+            if symbol_changes:
+                detail = format_symbol_guard_feedback(rel, symbol_changes)
+                self._record_attempt(rel, attempt, "symbol-guard", False, detail)
+                feedback = detail
+                last_step, last_detail = "symbol-guard", detail
+                self._log(f"symbol guard rejected candidate for {rel}: "
+                          + ", ".join(c["symbol"] for c in symbol_changes))
+                continue
+
             unit.write_text(new_text)
             self._record_attempt(rel, attempt, "provider", True,
                                  "candidate applied")
@@ -632,7 +813,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
             if build["status"] != "ok":
                 detail = "build failed: " + _tail(build["log"], 40)
                 self._record_attempt(rel, attempt, "build", False, detail)
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 feedback = detail
                 last_step, last_detail = "build", detail
                 continue
@@ -644,7 +825,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
                          evidence["stdout_tail"][-1000:] + "\n" + \
                          evidence["stderr_tail"][-1000:]
                 self._record_attempt(rel, attempt, "rerun", False, detail)
-                self._revert_unit(unit, backup)
+                self._revert_and_rebuild(unit, backup)
                 feedback = detail
                 last_step, last_detail = "rerun", detail
                 continue
@@ -669,7 +850,7 @@ Outcome: <strong>{esc(self.report['outcome'])}</strong> - {esc(self.report['reas
                                     if p["file"] != str(rel)]
             return "accepted"
 
-        self._revert_unit(unit, backup)
+        self._revert_and_rebuild(unit, backup)
         self.report["edits"].append({
             "file": str(rel), "provider": "ai-readability",
             "result": f"reverted after {self.max_attempts} attempts",

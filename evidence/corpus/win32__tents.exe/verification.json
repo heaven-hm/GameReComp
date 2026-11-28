@@ -1,0 +1,89 @@
+{
+  "b1_arch": "pe32_i386",
+  "b1_detail": "timeout after 900s",
+  "b1_status": "BLOCKED",
+  "b2_native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "binary_hash_mismatch": false,
+  "binary_rejected": false,
+  "classification": "BLOCKED",
+  "copied": [
+    "evidence/corpus/win32__tents.exe/status.json",
+    "evidence/corpus/win32__tents.exe/build.log",
+    "evidence/corpus/win32__tents.exe/summary.json",
+    "evidence/corpus/win32__tents.exe/run.log"
+  ],
+  "cross_os_paths": {
+    "linux_to_windows_shared": {
+      "citation": "PR #176: evidence/corpus/_cross_os/PR176_LINUX_TO_WINDOWS_SOURCE_BUILD.md",
+      "status": "SHARED PROOF (PR #176)"
+    },
+    "windows_to_linux": {
+      "citation": "PR #175: evidence/corpus/_cross_os/PR175_LINUX_RUNNER_EVIDENCE.md (real ELF build+run of a generated project on a Linux host)",
+      "status": "NOT TESTED per target"
+    },
+    "x64_to_macos": {
+      "citation": "PR #174: evidence/corpus/_cross_os/PR174_X64_CORPUS_EVIDENCE.md",
+      "status": "N/A (x86 target)"
+    }
+  },
+  "engines": {
+    "frida": {
+      "reason": "no verified native binary in this snapshot",
+      "status": "BLOCKED"
+    },
+    "native": {
+      "reason": "no verified native binary in this snapshot",
+      "status": "BLOCKED"
+    },
+    "reason": "not attempted: no verified native binary in this snapshot",
+    "status": "BLOCKED",
+    "unicorn": {
+      "reason": "no verified native binary in this snapshot",
+      "status": "BLOCKED"
+    }
+  },
+  "exit": null,
+  "frame_proof_ok": false,
+  "frames": [],
+  "frames_claimed": 0,
+  "frames_verified": 0,
+  "linux_to_windows": {
+    "reason": "not attempted in this snapshot: no real C source / no native build",
+    "status": "BLOCKED"
+  },
+  "macos_to_windows": {
+    "reason": "no generated C project or no native build in this snapshot",
+    "status": "BLOCKED"
+  },
+  "native": {
+    "exists": false,
+    "magic": null,
+    "path": null,
+    "sha256": null,
+    "valid": false
+  },
+  "nonblank_verified": 0,
+  "rationale": "B1 could not produce a native binary; see build.log",
+  "rejects": [],
+  "report_ok": false,
+  "run_log_ok": true,
+  "screenshots": [],
+  "slug": "win32__tents.exe",
+  "snapshot": "2026-11-24T13:39:05",
+  "source": {
+    "exists": true,
+    "machine": "0x14c",
+    "magic": "MZ",
+    "pe_type": "PE32",
+    "sha256": "b287a1d93f802f1f5563bc57108e29f8ccec47b56873ee196b1fbd80c402cb04",
+    "valid": true
+  },
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tents.exe",
+  "source_rejected": false
+}

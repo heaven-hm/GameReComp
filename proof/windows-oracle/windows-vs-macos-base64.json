@@ -1,0 +1,14 @@
+{
+ "schema": 1,
+ "game": "base64.exe",
+ "windows_command": "highball run -b Games <base64.exe> < input.txt",
+ "native_command": "<rebuilt native> < input.txt",
+ "input_script": "1\\nhello world\\n3\\n",
+ "windows_exit": 0,
+ "native_exit": 0,
+ "windows_result_marker": "aGVsbG8gd29ybGQA",
+ "native_result_marker": "aGVsbG8gd29ybGQA",
+ "markers_match": true,
+ "verdict": "PARTIAL (process-level Windows-oracle match, scripted stdin)",
+ "not_claimed": "gameplay equivalence beyond this scenario"
+}

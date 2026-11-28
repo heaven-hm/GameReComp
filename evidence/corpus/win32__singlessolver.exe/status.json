@@ -1,0 +1,16 @@
+{
+  "slug": "win32__singlessolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/singlessolver.exe",
+  "sha256": "365e9e8e3c2223499ea9409865846d3a4f0461ae4e05002a1cd06b4c2c6749e7",
+  "size": 217311,
+  "is_game": true,
+  "started": 1795505423.4965298,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/bin_singlessolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__singlessolver.exe/report.json",
+  "seconds": 32.9
+}

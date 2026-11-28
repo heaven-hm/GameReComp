@@ -1,0 +1,49 @@
+{
+  "schema": 2,
+  "kind": "matrix",
+  "generated_at": "2026-11-25T08:18:42Z",
+  "input": {
+    "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe",
+    "sha256": "47b443772e36be8a8cf8c45fe80951a466264f370fa28a4851ea57b5c1f17d95"
+  },
+  "target": {
+    "description": "macOS arm64 native",
+    "sha256": "8eeeb353716258ad888096417df79e76b5801aa3e2d5ba4b42cb77488c0ef2a4",
+    "command": [
+      "/Users/haseeb-mir/legacy-proof/solver-src/build-macos/fifteensolver"
+    ],
+    "path": "/Users/haseeb-mir/legacy-proof/solver-src/build-macos/fifteensolver"
+  },
+  "commands": {
+    "original": [
+      "highball",
+      "run",
+      "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe"
+    ],
+    "rebuilt": [
+      "/Users/haseeb-mir/legacy-proof/solver-src/build-macos/fifteensolver"
+    ]
+  },
+  "scope": "usage/error path parity only",
+  "scenarios": [
+    {
+      "name": "controlled",
+      "stdin_hex": "",
+      "args": [],
+      "expected": {
+        "exit_code": 1,
+        "guest_stdout_sha256": "6613f42a4023fc1510d2bca47d1ed2c155d23766708e285319d38624556892a8"
+      },
+      "actual": {
+        "exit_code": 1,
+        "guest_stdout_sha256": "6613f42a4023fc1510d2bca47d1ed2c155d23766708e285319d38624556892a8"
+      },
+      "raw_original": "Launching fifteensolver.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=1 after 1s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261125T081840Z-Games-fifteensolver.exe.log\nusage: Z:\\Users\\haseeb-mir\\Downloads\\recomp-apps\\win32\\fifteensolver.exe [-g | -v] <game_id>\r\n",
+      "raw_rebuilt": "[pe] <embedded image> mapped at 0x00400000, span 0x2A000\n[pe] static TLS: template 0x0040D000..0x0040D004 (+0 zero), index 0\n[pe] bound 58 imports (0 delay), 0 unresolved\n[host] C:\\fifteensolver.exe booted: entry 0x00401460, 0 unresolved imports\nusage: C:\\fifteensolver.exe [-g | -v] <game_id>\n",
+      "guest_normalized": "usage: <exe> [-g | -v] <game_id>\n",
+      "verdict": "pass"
+    }
+  ],
+  "aggregate": "pass",
+  "limits": "Process-level parity for the stated scenario only. No gameplay, GUI, audio or timing equivalence."
+}

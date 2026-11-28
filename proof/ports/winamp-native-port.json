@@ -1,0 +1,12 @@
+{
+  "title": "Winamp PE32 -> macOS arm64 native rebuild",
+  "input": {
+    "sha256_prefix": "d064eefc27c7"
+  },
+  "binary": {
+    "local_path": "evidence/PROOF/binaries/winamp-macos-arm64-bootfailed",
+    "sha256": "005c268488d18e278e50c4228d0af45836a86f294bcb3dc35eae9060d6bde8ae"
+  },
+  "native_run_log_excerpt": "[pe] unresolved import GDI32.dll!CreateFontIndirectW ... (34 total)\n[host] booted: 34 unresolved imports",
+  "verdict": "FAIL - boot-failed, no frames"
+}

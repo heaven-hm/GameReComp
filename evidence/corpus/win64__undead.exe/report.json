@@ -1,0 +1,31 @@
+{
+  "target": "/Users/haseeb-mir/Downloads/recomp-apps/win64/undead.exe",
+  "arch": "pe32plus_x64",
+  "host": {
+    "platform": "darwin",
+    "machine": "arm64"
+  },
+  "pipeline": {
+    "disassembler": "disasm64.py",
+    "lifter": "generate64.py",
+    "meta": {
+      "image_base": 5368709120,
+      "entry_point": 5368811236,
+      "size_of_image": 172032,
+      "functions": 340,
+      "translation_units": 1,
+      "lift_errors": 0,
+      "recomp_todo_sites": 15,
+      "imports": 192
+    }
+  },
+  "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__undead.exe/undead",
+  "binary_format": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__undead.exe/undead: Mach-O 64-bit executable arm64",
+  "native_run": {
+    "exit": -10,
+    "stdout_hex": "",
+    "stderr": "[cpu64] image loaded: entry 0x140018ee4, delta 0, imports 192\n"
+  },
+  "imports": 192,
+  "translation_units": 1
+}

@@ -1,0 +1,16 @@
+{
+  "slug": "games__herocore__herocore__gm5.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/herocore/herocore gm5.exe",
+  "sha256": "be411b8b64cf821470e17e1dc913410b14f1eaab46187c5ab57c8da03d09a8ce",
+  "size": 3544595,
+  "is_game": true,
+  "started": 1795505784.7603788,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__herocore__herocore__gm5.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

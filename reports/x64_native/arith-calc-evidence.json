@@ -1,0 +1,88 @@
+{
+  "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+  "scope": "one real PE32+ console executable; NOT general x64 support",
+  "host": {
+    "platform": "darwin",
+    "machine": "arm64"
+  },
+  "pipeline": {
+    "disassembler": "disasm64.py",
+    "lifter": "generate64.py",
+    "meta": {
+      "image_base": 5368709120,
+      "entry_point": 5368716224,
+      "size_of_image": 16384,
+      "functions": 5,
+      "translation_units": 1,
+      "lift_errors": 0,
+      "recomp_todo_sites": 0,
+      "imports": 3
+    }
+  },
+  "native": {
+    "compiler": "/opt/homebrew/opt/llvm/bin/clang",
+    "target": "arm64-apple-macos11",
+    "binary": "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/grc-x64-ilgh2xht/arith64",
+    "exit": 0,
+    "stdout_hex": "61726974683a73746172740d0a7072696d65733c3230303d34360d0a666962283230293d363736350d0a67636428313037312c343632293d32310d0a706f70636f756e742830784630463046304630293d31360d0a726f746c28307831323334353637382c38293d3837383038323036360d0a706f6c793d31323531320d0a6d756c3d2d383336393931300d0a6469763d2d31380d0a6d6f643d2d3134310d0a61726974683a646f6e650d0a",
+    "stderr": "[cpu64] image loaded: entry 0x140001bc0, delta 0, stack 0x106d1fff8\n"
+  },
+  "engines": {
+    "unicorn": {
+      "engine": "unicorn",
+      "version": "2.1.4",
+      "pe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+      "stdout_hex": "61726974683a73746172740d0a7072696d65733c3230303d34360d0a666962283230293d363736350d0a67636428313037312c343632293d32310d0a706f70636f756e742830784630463046304630293d31360d0a726f746c28307831323334353637382c38293d3837383038323036360d0a706f6c793d31323531320d0a6d756c3d2d383336393931300d0a6469763d2d31380d0a6d6f643d2d3134310d0a61726974683a646f6e650d0a",
+      "exit": 0,
+      "fault": null,
+      "imports": [
+        "KERNEL32.dll!ExitProcess",
+        "KERNEL32.dll!GetStdHandle",
+        "KERNEL32.dll!WriteFile"
+      ]
+    },
+    "wine": {
+      "engine": "highball-wine",
+      "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+      "attempts": [
+        {
+          "detail": "TimeoutExpired: Command '['/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine', '/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe']' timed out after 90 seconds"
+        },
+        {
+          "exit": 0,
+          "stdout_hex": "61726974683a73746172740d0a7072696d65733c3230303d34360d0a666962283230293d363736350d0a67636428313037312c343632293d32310d0a706f70636f756e742830784630463046304630293d31360d0a726f746c28307831323334353637382c38293d3837383038323036360d0a706f6c793d31323531320d0a6d756c3d2d383336393931300d0a6469763d2d31380d0a6d6f643d2d3134310d0a61726974683a646f6e650d0a",
+          "stderr": ""
+        }
+      ],
+      "outcome": "PASS",
+      "exit": 0,
+      "stdout_hex": "61726974683a73746172740d0a7072696d65733c3230303d34360d0a666962283230293d363736350d0a67636428313037312c343632293d32310d0a706f70636f756e742830784630463046304630293d31360d0a726f746c28307831323334353637382c38293d3837383038323036360d0a706f6c793d31323531320d0a6d756c3d2d383336393931300d0a6469763d2d31380d0a6d6f643d2d3134310d0a61726974683a646f6e650d0a",
+      "stderr": ""
+    },
+    "frida": {
+      "engine": "frida",
+      "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/arith-calc.exe",
+      "attempts": [
+        {
+          "mode": "attach",
+          "outcome": "BLOCKED",
+          "detail": "NotSupportedError: unable to read from process memory"
+        },
+        {
+          "mode": "spawn",
+          "outcome": "BLOCKED",
+          "detail": "NotSupportedError: unexpected error while probing dyld of target process"
+        }
+      ],
+      "version": "17.24.3",
+      "outcome": "BLOCKED"
+    }
+  },
+  "verdict": {
+    "native_vs_unicorn": "MATCH",
+    "native_vs_wine": "MATCH",
+    "wine_outcome": "PASS",
+    "frida": "BLOCKED",
+    "claim": "native ARM64 recompilation of THIS real PE matches the original under Unicorn; Wine and Frida results are recorded verbatim above. Not a claim of general x64 support."
+  }
+}

@@ -42,7 +42,8 @@ generated directory, so the dispatch table and declarations follow. Run it on
 a fresh lift; it refuses a directory it has already named.
 
     python tools/lift/name_lift.py game.exe --gen src/recomp/gen --rtti work/rtti.json \\
-                                   [--known 0x004068E0=Debug_Log ...] [--report names.json]
+                                   [--known 0x004068E0=Debug_Log ...] [--known-file names.json]
+                                   [--report names.json]
 """
 import argparse
 import json
@@ -374,16 +375,48 @@ def name_lift(gen_dir, image, rtti, known):
     return functions
 
 
+def load_known_file(path):
+    """Read host-known names from the JSON written by map_names.py resolve.
+
+    Accepts both `{"0x00401000": "name"}` and this tool's own `--report` shape
+    `{"0x00401000": {"name": ..., "why": ...}}`. A bad file fails closed with a
+    clear error: a partially applied name table puts confident, wrong names in
+    the generated C, which is worse than no names at all.
+    """
+    with open(path, encoding='utf-8') as f:
+        obj = json.load(f)
+    if not isinstance(obj, dict):
+        raise SystemExit('%s: expected a JSON object {address: name}' % path)
+    out = {}
+    for key, value in obj.items():
+        try:
+            va = int(key, 16) if re.fullmatch(r'[0-9a-fA-F]{8}', key) else int(key, 0)
+        except (TypeError, ValueError):
+            raise SystemExit('%s: invalid address %r' % (path, key)) from None
+        if va < 0:
+            raise SystemExit('%s: negative address %r' % (path, key))
+        if isinstance(value, dict):
+            value = value.get('name')
+        if not isinstance(value, str) or not value.strip():
+            raise SystemExit('%s: invalid name for %r' % (path, key))
+        out[va] = value
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('exe')
     ap.add_argument('--gen', required=True, help='the lift\'s output directory, rewritten in place')
     ap.add_argument('--rtti', help='tools/cpp/rtti.py\'s JSON')
     ap.add_argument('--known', action='append', default=[], metavar='VA=NAME', help='a name the host knows')
+    ap.add_argument('--known-file', metavar='JSON', help='JSON {address: name} from tools/pe/map_names.py resolve, merged with --known (explicit --known wins)')
     ap.add_argument('--report', help='write {va: {name, why}} here')
     a = ap.parse_args(argv)
     rtti = json.load(open(a.rtti)) if a.rtti and os.path.exists(a.rtti) else {}
-    known = {int(k, 0): v for k, v in (x.split('=', 1) for x in a.known)}
+    known = load_known_file(a.known_file) if a.known_file else {}
+    for x in a.known:
+        key, value = x.split('=', 1)
+        known[int(key, 0)] = value
     functions = name_lift(a.gen, Image(a.exe), rtti, known)
     named = Counter(f.why.split(' ')[0] if f.why else None for f in functions.values())
     print('[*] named %d of %d functions (%s)' % (

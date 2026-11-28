@@ -1,0 +1,19 @@
+==> inspect
+    ok         0.0s  inspect: i386 PE32, 3 imports, entry 0x00401B00
+==> recover
+    ok         0.7s  recover: 33 functions, 6645 instructions
+==> translate
+    ok         0.2s  translate: 2 source files, 848312 bytes, 0 lift errors
+==> project
+    ok         0.1s  project: project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p3-real-projects/arith_calc
+==> report
+    ok         0.0s  report: reports in /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p3-real-projects/arith_calc/reports
+
+project:      /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p3-real-projects/arith_calc
+input:        windows/x86 (arith-calc.exe)
+output:       macos/arm64 native
+source code:  /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p3-real-projects/arith_calc/src/recomp/gen
+stages:       inspect(ok), recover(ok), translate(ok), project(ok), report(ok)
+score:        50/100
+verification: not-run
+report:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/p3-real-projects/arith_calc/reports/report.html

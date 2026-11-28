@@ -23,6 +23,7 @@
 
 #define DD_OK                   0u
 #define DDERR_INVALIDPARAMS     0x80070057u
+#define DDERR_INVALIDCAPS       0x88760064u   /* MAKE_DDHRESULT(100) */
 #define DDERR_UNSUPPORTED       0x80004001u
 #define DDERR_NOTFOUND          0x887600FFu
 #define DDERR_NOPALETTEATTACHED 0x8876023Cu
@@ -31,6 +32,8 @@
 #define DDERR_NOTLOCKED         0x887602ACu
 #define DDERR_GENERIC           0x80004005u
 #define DDERR_SURFACEBUSY       0x887601B6u
+#define DDERR_OUTOFMEMORY       0x8876001Bu   /* MAKE_DDHRESULT(27) */
+#define DD_E_NOINTERFACE        0x80004002u   /* IID the object cannot serve */
 
 #define DDSD_CAPS        0x00000001u
 #define DDSD_HEIGHT      0x00000002u
@@ -41,6 +44,8 @@
 #define DDSD_PIXELFORMAT 0x00001000u
 #define DDSD_CKSRCBLT    0x00010000u
 #define DDSD_REFRESHRATE 0x00040000u
+#define DDSCAPS_ZBUFFER        0x00020000u
+#define DDPF_ZBUFFER           0x00000400u
 #define DDSCAPS_BACKBUFFER     0x00000004u
 #define DDSCAPS_COMPLEX        0x00000008u
 #define DDSCAPS_FLIP           0x00000010u
@@ -63,6 +68,18 @@
 #define DDBLT_KEYSRCOVERRIDE   0x00010000u
 #define DDBLTFAST_SRCCOLORKEY  0x00000001u
 #define DDCKEY_SRCBLT          0x00000008u
+/* ddraw.h DDCAPS.dwPalCaps / IDirectDrawPalette::CreatePalette dwFlags.
+ * The presenter reads a PALETTEENTRY as r,g,b,flags, so DDPCAPS_8BITENTRIES
+ * (one byte per entry) is deliberately not served here. */
+#define DDPCAPS_4BIT           0x00000001u
+#define DDPCAPS_8BITENTRIES    0x00000002u
+#define DDPCAPS_8BIT           0x00000004u
+#define DDPCAPS_INITIALIZE     0x00000008u
+#define DDPCAPS_PRIMARYSURFACE 0x00000010u
+#define DDPCAPS_ALLOW256       0x00000040u
+#define DDPCAPS_1BIT           0x00000100u
+#define DDPCAPS_2BIT           0x00000200u
+#define DDPCAPS_ALPHA          0x00000400u
 #define SURF_TAIL              (64u << 10)
 
 /* ---- the display ---- */
@@ -78,6 +95,7 @@ typedef struct surf {
     uint32_t caps;
     int primary, locks;
     struct surf *back;                   /* the flip chain's next */
+    struct surf *zbuf;                   /* attached depth buffer (igi-recomp model) */
     struct surf *mip;                    /* the texture's next mip level */
     uint32_t mipcount;                   /* levels in the chain from here down, itself included */
     uint32_t palette, clipper;
@@ -86,7 +104,28 @@ typedef struct surf {
     unsigned diag_locks, diag_nonzero;   /* diagnostics: has this instance ever been written? */
 } surf_t;
 
-typedef struct { uint32_t entries[256]; int refs; } pal_t;   /* PALETTEENTRY: r, g, b, flags */
+/* PALETTEENTRY: r, g, b, flags. flags/nentries are the creation contract: a
+ * 4-bit palette owns 16 entries, not 256, and GetCaps must report what the
+ * guest asked for. */
+typedef struct { uint32_t entries[256]; uint32_t flags; uint32_t nentries; int refs; } pal_t;
+
+/* Palette objects the host actually created. A COM `this` is just a guest
+ * VA; checking this list before dereferencing it makes a bogus or recycled
+ * handle an error instead of a read through an unmapped address. */
+#define MAX_PAL_OBJS 256
+static uint32_t g_pal_objs[MAX_PAL_OBJS];
+static int g_pal_n;
+static void pal_register(uint32_t obj) {
+    if (obj && g_pal_n < MAX_PAL_OBJS) g_pal_objs[g_pal_n++] = obj;
+}
+static void pal_forget(uint32_t obj) {
+    for (int i = 0; i < g_pal_n; i++)
+        if (g_pal_objs[i] == obj) { g_pal_objs[i] = g_pal_objs[--g_pal_n]; return; }
+}
+static int pal_known(uint32_t obj) {
+    for (int i = 0; i < g_pal_n; i++) if (g_pal_objs[i] == obj) return 1;
+    return 0;
+}
 
 static surf_t *g_primary;
 static uint32_t g_vt_dd, g_vt_dd2, g_vt_dd4, g_vt_dd7, g_vt_surf, g_vt_pal, g_vt_clip;
@@ -217,16 +256,47 @@ static void put_pf_bpp(uint32_t pf, int bpp) {
     masks(bpp, &f.rmask, &f.gmask, &f.bmask, &f.amask);
     put_pf(pf, &f);
 }
+
+/* DDSURFACEDESC (108 bytes) and DDSURFACEDESC2 (124 bytes) have the SAME
+ * offsets through ddsCaps: lpSurface +36, ddpfPixelFormat +72, ddsCaps +104.
+ * DDSURFACEDESC2 widens ddsCaps to DDSCAPS2 (whose first DWORD is the same
+ * caps word) and appends dwTextureStage at +120. See mingw-w64's ddraw.h.
+ * Retail IGI confirms it: its 0x50B4F0 pixel-conversion routine passes a
+ * 124-byte descriptor and reads DDPF_RGB from +76 and dwRGBBitCount from
+ * +84, i.e. a pixel format based at +72. Treating every size >= 124 as a
+ * four-byte-shifted variant made GetSurfaceDesc write the pixel format at
+ * +76 instead, so IGI read dwSize (32) as dwFlags and aborted with
+ * "Invalid texture format".
+ *
+ * Some titles (wf.exe) instead use a nonstandard 128-byte descriptor with
+ * fields shifted by four; keep recognising that shape by its dwSize, and
+ * the old signature fallback for callers that leave dwSize at 0. A genuine
+ * 124-byte descriptor must never be shifted. */
+typedef struct { uint32_t size, caps, pf, surface, cksrc; } dd_desc_t;
+static dd_desc_t desc_shape(uint32_t d) {
+    uint32_t size = MEM32(d);
+    if (size >= 128) return (dd_desc_t){ size, 108, 76, 40, 68 }; /* nonstandard 128-byte shape */
+    if (size < 124) {
+        if (MEM32(d + 76) == 32 && (MEM32(d + 80) & DDPF_RGB) &&
+            !(MEM32(d + 72) == 32 && (MEM32(d + 76) & DDPF_RGB)))
+            return (dd_desc_t){ 124, 108, 76, 40, 68 };
+        if (MEM32(d + 108) && !MEM32(d + 104))
+            return (dd_desc_t){ 124, 108, 76, 40, 68 };
+    }
+    return (dd_desc_t){ size >= 108 ? size : 108, 104, 72, 36, 64 };
+}
 static void put_desc(uint32_t d, surf_t *s) {
-    uint32_t size = MEM32(d) >= 108 ? MEM32(d) : 108;
+    dd_desc_t sh = desc_shape(d);
+    uint32_t size = sh.size;
+    MEM32(d) = size;
     memset(hle_ptr(d + 4), 0, size - 4);
     MEM32(d + 4) = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PITCH | DDSD_PIXELFORMAT | DDSD_LPSURFACE;
     MEM32(d + 8) = (uint32_t)s->h, MEM32(d + 12) = (uint32_t)s->w, MEM32(d + 16) = (uint32_t)s->pitch;
-    MEM32(d + 36) = hle_va(s->px);
-    if (s->ck_src) MEM32(d + 4) |= DDSD_CKSRCBLT, MEM32(d + 64) = s->ck_lo, MEM32(d + 68) = s->ck_hi;
+    MEM32(d + sh.surface) = hle_va(s->px);
+    if (s->ck_src) MEM32(d + 4) |= DDSD_CKSRCBLT, MEM32(d + sh.cksrc) = s->ck_lo, MEM32(d + sh.cksrc + 4) = s->ck_hi;
     if (s->caps & DDSCAPS_MIPMAP) MEM32(d + 4) |= DDSD_MIPMAPCOUNT, MEM32(d + 24) = s->mipcount;
-    put_pf(d + 72, s);
-    MEM32(d + 104) = s->caps;
+    put_pf(d + sh.pf, s);
+    MEM32(d + sh.caps) = s->caps;
 }
 
 static uint32_t new_surface(int w, int h, int bpp, uint32_t caps, int primary) {
@@ -243,7 +313,7 @@ static uint32_t new_surface(int w, int h, int bpp, uint32_t caps, int primary) {
 }
 static void free_surface(surf_t *s) {
     if (g_primary == s) g_primary = NULL, g_frame_seq++;
-    if (s->palette) { uint32_t p = s->palette; if (--MEM32(p + 4) == 0) { hle_free(P(p)); hle_com_free(p); } }
+    if (s->palette) { uint32_t p = s->palette; if (--MEM32(p + 4) == 0) { pal_forget(p); hle_free(P(p)); hle_com_free(p); } }
     hle_free(s->own_px);
     hle_free(s);
 }
@@ -269,6 +339,15 @@ static void free_mip_chain(surf_t *s) {
 }
 
 /* ---- IDirectDraw ---- */
+static void vtables(void);
+/* One clipper shape for both factories: the guest sees the same vtable and
+ * the same 12-byte object (vt, refs, hWnd) whichever export built it. */
+static uint32_t clipper_new(void) {
+    vtables();
+    uint32_t o = hle_com_new(g_vt_clip, 12);
+    if (o) MEM32(o + 8) = 0;
+    return o;
+}
 static void dd_QueryInterface(void) {                    /* (this, iid, &out) */
     const uint8_t *iid = (const uint8_t *)APTR(1);
     uint32_t d1 = *(const uint32_t *)iid;
@@ -303,48 +382,92 @@ static void dd_QueryInterface(void) {                    /* (this, iid, &out) */
 static void dd_Release(void) { uint32_t n = MEM32(A32(0) + 4) ? --MEM32(A32(0) + 4) : 0; RET(n, 1); }   /* the object lives on */
 static void dd_Compact(void) { RET(DD_OK, 1); }
 static void dd_CreateClipper(void) {                     /* (this, flags, &out, outer) */
-    uint32_t o = hle_com_new(g_vt_clip, 12);
-    MEM32(A32(2)) = o;
+    uint32_t flags = A32(1), out = A32(2), outer = A32(3);
+    /* ddraw.h: dwFlags must be 0 and pUnkOuter must be NULL, exactly as for
+     * the standalone DirectDrawCreateClipper export. Do not hand back a
+     * fabricated object for a request COM would have rejected. */
+    if (trace()) fprintf(stderr, "[ddraw] IDirectDraw::CreateClipper(flags=0x%X, out=%08X, outer=%08X)\n", flags, out, outer);
+    if (flags || !out || outer) {
+        fprintf(stderr, "[ddraw] CreateClipper(flags=0x%X, outer=%08X): DDERR_INVALIDPARAMS\n", flags, outer);
+        if (out) MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 4);
+    }
+    uint32_t o = clipper_new();
+    if (!o) { MEM32(out) = 0; RET(DDERR_OUTOFMEMORY, 4); }
+    MEM32(out) = o;
     RET(DD_OK, 4);
 }
-static void dd_CreatePalette(void) {                     /* (this, flags, entries, &out, outer) */
-    pal_t *p = (pal_t *)hle_alloc(sizeof *p);
-    if (A32(2)) memcpy(p->entries, APTR(2), 256 * 4);
-    uint32_t o = hle_com_new(g_vt_pal, 12);
-    MEM32(o + 8) = hle_va(p);
-    MEM32(A32(3)) = o;
-    RET(DD_OK, 5);
-}
-static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDESC, &out, outer) */
-    uint32_t d = A32(1), fl = MEM32(d + 4), caps = fl & DDSD_CAPS ? MEM32(d + 104) : 0;
+static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDESC2, &out, outer) */
+    uint32_t d = A32(1), out = A32(2);
+    if (!d || !out) { fprintf(stderr, "[ddraw] CreateSurface: NULL desc/out -> DDERR_INVALIDPARAMS\n"); RET(DDERR_INVALIDPARAMS, 4); }
+    dd_desc_t sh = desc_shape(d);
+    uint32_t fl = MEM32(d + 4), caps = fl & DDSD_CAPS ? MEM32(d + sh.caps) : 0;
     int primary = (caps & DDSCAPS_PRIMARYSURFACE) != 0;
-    int w = primary ? g_mode_w : (int)MEM32(d + 12), h = primary ? g_mode_h : (int)MEM32(d + 8);
-    int bpp = !primary && (fl & DDSD_PIXELFORMAT) ? (int)MEM32(d + 72 + 12) : g_mode_bpp;
-    if (w <= 0 || h <= 0 || w > 8192 || h > 8192) { fprintf(stderr, "[ddraw] CreateSurface %dx%d: no\n", w, h); RET(DDERR_INVALIDPARAMS, 4); }
+    /* DirectDraw inherits the display dimensions when DDSD_WIDTH/HEIGHT are
+     * absent. Games use that for the primary's attached back buffer (caps
+     * DDSCAPS_BACKBUFFER with only DDSD_CAPS set); reading the raw fields then
+     * yields 0x0 and IGI aborts with "Couldn't create device". */
+    int w = (primary || !(fl & DDSD_WIDTH)) ? g_mode_w : (int)MEM32(d + 12);
+    int h = (primary || !(fl & DDSD_HEIGHT)) ? g_mode_h : (int)MEM32(d + 8);
+    int bpp = !primary && (fl & DDSD_PIXELFORMAT) ? (int)MEM32(d + sh.pf + 12) : g_mode_bpp;
+    /* DDSCAPS_ZBUFFER: a real depth surface. Behaviour ported from the
+     * MIT-licensed igi-recomp shim (Copyright (c) 2026 HenryKun55),
+     * shim/src/ddraw.c: CreateSurface. */
+    if (!primary && (caps & DDSCAPS_ZBUFFER)) {
+        int zbits = (fl & DDSD_PIXELFORMAT) ? (int)MEM32(d + sh.pf + 12) : (int)MEM32(d + 20);
+        bpp = zbits ? zbits : 16;
+    }
+    if (w <= 0 || h <= 0 || w > 8192 || h > 8192) {
+        fprintf(stderr, "[ddraw] CreateSurface %dx%d flags=0x%X caps=0x%X size=%u: "
+                        "DDERR_INVALIDPARAMS\n", w, h, fl, caps, MEM32(d));
+        RET(DDERR_INVALIDPARAMS, 4);
+    }
     if (primary && !hle_screen_gl_active()) {
-        if (!hle_screen_request_opengl()) RET(DDERR_UNSUPPORTED,4);
+        if (!hle_screen_request_opengl()) {
+            fprintf(stderr, "[ddraw] CreateSurface: the shared screen cannot request OpenGL -> DDERR_UNSUPPORTED\n");
+            RET(DDERR_UNSUPPORTED, 4);
+        }
         const char *driver=getenv("SDL_VIDEODRIVER");
         int headless=driver && strcmp(driver,"dummy")==0;
-        if (hle_screen_open("DirectDraw / Direct3D 7 application",0,headless)!=0) RET(DDERR_UNSUPPORTED,4);
-        if (!headless && !hle_screen_gl_active()) RET(DDERR_UNSUPPORTED,4);
+        if (hle_screen_open("DirectDraw / Direct3D 7 application",0,headless)!=0) {
+            fprintf(stderr, "[ddraw] CreateSurface: shared screen open failed -> DDERR_UNSUPPORTED\n");
+            RET(DDERR_UNSUPPORTED, 4);
+        }
+        if (!headless && !hle_screen_gl_active()) {
+            fprintf(stderr, "[ddraw] CreateSurface: no OpenGL context on the shared screen -> DDERR_UNSUPPORTED\n");
+            RET(DDERR_UNSUPPORTED, 4);
+        }
     }
     caps = (caps & ~(DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM)) | DDSCAPS_SYSTEMMEMORY;
     if (!primary && !(caps & 0x1000u)) caps |= DDSCAPS_OFFSCREENPLAIN;
     uint32_t o = new_surface(w, h, bpp, primary ? caps | DDSCAPS_VISIBLE | DDSCAPS_FRONTBUFFER : caps, primary);
     surf_t *s = S(o);
-    if (!primary && (fl & DDSD_PIXELFORMAT) && MEM32(d + 72) >= 32 && (MEM32(d + 72 + 4) & DDPF_RGB)) {
-        uint32_t r = MEM32(d + 72 + 16), g = MEM32(d + 72 + 20), b = MEM32(d + 72 + 24);
-        uint32_t a = MEM32(d + 72 + 28);
+    if (!primary && (caps & DDSCAPS_ZBUFFER)) {
+        s->rmask = bpp == 16 ? 0xFFFFu : 0xFFFFFFu;  /* DDPF_ZBUFFER depth mask */
+        s->gmask = s->bmask = s->amask = 0;
+        if (g_primary) g_primary->zbuf = s;
+    }
+    /* A separately created DDSCAPS_BACKBUFFER belongs to the primary's flip
+     * chain. Games (IGI) create the back buffer in its own CreateSurface call
+     * and then ask the primary for it with GetAttachedSurface; without this
+     * link that call returns DDERR_NOTFOUND and the game aborts. */
+    if (!primary && (caps & DDSCAPS_BACKBUFFER) && g_primary) {
+        g_primary->back = s;
+        s->back = g_primary;
+    }
+    if (!primary && (fl & DDSD_PIXELFORMAT) && MEM32(d + sh.pf) >= 32 && (MEM32(d + sh.pf + 4) & DDPF_RGB)) {
+        uint32_t r = MEM32(d + sh.pf + 16), g = MEM32(d + sh.pf + 20), b = MEM32(d + sh.pf + 24);
+        uint32_t a = MEM32(d + sh.pf + 28);
         if (r && g && b) {
             s->rmask = r, s->gmask = g, s->bmask = b;
-            s->amask = (MEM32(d + 72 + 4) & DDPF_ALPHAPIXELS) ? a : 0;
+            s->amask = (MEM32(d + sh.pf + 4) & DDPF_ALPHAPIXELS) ? a : 0;
         }
     }
-    if (fl & DDSD_CKSRCBLT) s->ck_src = 1, s->ck_lo = MEM32(d + 64), s->ck_hi = MEM32(d + 68);
-    if (fl & DDSD_LPSURFACE && MEM32(d + 36)) {           /* the game's own memory */
+    if (fl & DDSD_CKSRCBLT) s->ck_src = 1, s->ck_lo = MEM32(d + sh.cksrc), s->ck_hi = MEM32(d + sh.cksrc + 4);
+    if (fl & DDSD_LPSURFACE && MEM32(d + sh.surface)) {  /* the game's own memory */
         hle_free(s->own_px);
         s->own_px = NULL;
-        s->px = (uint8_t *)hle_ptr(MEM32(d + 36));
+        s->px = (uint8_t *)hle_ptr(MEM32(d + sh.surface));
         if (fl & DDSD_PITCH) s->pitch = (int)MEM32(d + 16);
     }
     if (primary) {
@@ -379,9 +502,9 @@ static void dd_CreateSurface(void) {                     /* (this, &DDSURFACEDES
         for (surf_t *t = s; t; t = t->mip) t->mipcount = left--;
     }
     if (trace() || primary)
-        fprintf(stderr, "[ddraw] CreateSurface %dx%d %d bpp caps 0x%X flags 0x%X mips %u%s -> 0x%08X ret=%08X\n", w, h, bpp, caps, fl, MEM32(d + 24), primary ? " primary" : "", o,
-                g_cur_func);
-    MEM32(A32(2)) = o;
+        fprintf(stderr, "[ddraw] CreateSurface %dx%d %d bpp caps 0x%X flags 0x%X mips %u desc%s(%u) -> 0x%08X ret=%08X\n",
+                w, h, bpp, caps, fl, MEM32(d + 24), sh.caps == 108 ? "2" : "1", MEM32(d), o, g_cur_func);
+    MEM32(out) = o;
     RET(DD_OK, 4);
 }
 static void dd_DuplicateSurface(void) { RET(DDERR_UNSUPPORTED, 3); }
@@ -410,8 +533,12 @@ int hle_dd_modes(int dw, int dh, int (*out)[2]) {      /* the table, with the di
 }
 static void dd_EnumDisplayModes(void) {                  /* (this, flags, desc filter, ctx, callback) */
     uint32_t cb = A32(4), filter = A32(2), ctx = A32(3), mark = hle_scratch_mark();
-    uint32_t dva = hle_scratch(27 * 4);
+    uint32_t dva = hle_scratch(32 * 4);                   /* room for either DDSURFACEDESC shape */
     uint32_t *d = (uint32_t *)hle_ptr(dva);
+    /* IDirectDraw7 enumerators hand their callback a DDSURFACEDESC2; older
+     * ones want the 108-byte DDSURFACEDESC. The filter's dwSize decides. */
+    int two = filter && MEM32(filter) >= 124;
+    uint32_t pf_off = two ? 76 : 72;
     int modes[HLE_DD_MAX_MODES][2], dw = 0, dh = 0;
     hle_screen_desktop(&dw, &dh);
     int n = hle_dd_modes(dw, dh, modes);
@@ -420,13 +547,15 @@ static void dd_EnumDisplayModes(void) {                  /* (this, flags, desc f
         for (int i = 0; i < n; i++) {
             if (filter && (MEM32(filter + 4) & DDSD_WIDTH) && MEM32(filter + 12) != (uint32_t)modes[i][0]) continue;
             if (filter && (MEM32(filter + 4) & DDSD_HEIGHT) && MEM32(filter + 8) != (uint32_t)modes[i][1]) continue;
-            if (filter && (MEM32(filter + 4) & DDSD_PIXELFORMAT) && MEM32(filter + 84) != (uint32_t)bpp) continue;
-            memset(d, 0, 27 * 4);
-            d[0] = 108;
+            if (filter && (MEM32(filter + 4) & DDSD_PIXELFORMAT) &&
+                MEM32(filter + (two ? 88 : 84)) != (uint32_t)bpp) continue;
+            memset(d, 0, 32 * 4);
+            d[0] = two ? 124 : 108;
             d[1] = DDSD_HEIGHT | DDSD_WIDTH | DDSD_PITCH | DDSD_PIXELFORMAT | DDSD_REFRESHRATE;
             d[2] = (uint32_t)modes[i][1], d[3] = (uint32_t)modes[i][0], d[4] = (uint32_t)(modes[i][0] * bpp / 8);
             d[6] = 60;
-            put_pf_bpp(dva + 18 * 4, bpp);
+            if (two) d[7] = 60;
+            put_pf_bpp(dva + pf_off, bpp);
             uint32_t a[2] = { dva, ctx }, more = hle_call_guest(cb, 2, a);
             if (trace()) fprintf(stderr, "[ddraw] EnumDisplayModes -> 0x%08X: %dx%dx%d\n", cb, modes[i][0], modes[i][1], bpp);
             if (!more) { hle_scratch_release(mark); RET(DD_OK, 5); }   /* DDENUMRET_CANCEL */
@@ -437,6 +566,21 @@ static void dd_EnumDisplayModes(void) {                  /* (this, flags, desc f
 }
 static void dd_EnumSurfaces(void) { RET(DD_OK, 5); }
 static void dd_FlipToGDISurface(void) { RET(DD_OK, 1); }
+/* The surface kinds this HLE really creates: system/video-memory surfaces,
+ * primaries, flip chains, textures (including mip chains) and 3D targets.
+ *
+ * DDCAPS is versioned by dwSize. The single DDSCAPS field is at byte 132 in
+ * every version (named ddsCaps in DX3/DX5, ddsOldCaps in DX6/DX7); DX7 moves
+ * the full DDSCAPS2 to byte 364, the last 16 bytes of the 380-byte struct.
+ * The old write at byte 104 was a DDSURFACEDESC2 offset and landed inside
+ * DDCAPS.dwRops, so a DirectDraw7 caller read a zero ddsCaps.dwCaps and - in
+ * Warning Forever's DirectDrawEnumerateExA callback - rejected the device
+ * before it ever called CreateSurface, producing "ERROR: DirectDraw7". */
+#define DD_SURFCAPS_ALL (DDSCAPS_PRIMARYSURFACE | DDSCAPS_OFFSCREENPLAIN | \
+                         DDSCAPS_FLIP | DDSCAPS_COMPLEX | DDSCAPS_FRONTBUFFER | \
+                         DDSCAPS_BACKBUFFER | DDSCAPS_VISIBLE | \
+                         DDSCAPS_SYSTEMMEMORY | DDSCAPS_VIDEOMEMORY | \
+                         DDSCAPS_TEXTURE | DDSCAPS_3DDEVICE | DDSCAPS_MIPMAP)
 static void dd_GetCaps(void) {                           /* (this, &driver, &hel) */
     for (int k = 1; k <= 2; k++) {
         uint32_t c = A32(k);
@@ -446,30 +590,45 @@ static void dd_GetCaps(void) {                           /* (this, &driver, &hel
         MEM32(c + 4) = 0x00000001u | 0x00000040u | 0x00000200u | 0x00400000u | 0x04000000u;   /* 3D, BLT, BLTSTRETCH, COLORKEY, BLTCOLORFILL */
         MEM32(c + 8) = 0x00080000u;                      /* DDCAPS2_WIDESURFACES */
         MEM32(c + 12) = 0x00000200u;                     /* DDCKEYCAPS_SRCBLT */
-        MEM32(c + 24) = 0x00000004u | 0x00000040u;       /* DDPCAPS_8BIT, PRIMARYSURFACE */
+        /* dwPalCaps: the PALETTEENTRY depths CreatePalette really stores.
+         * 0x40 is DDPCAPS_ALLOW256, not PRIMARYSURFACE (an old comment said
+         * otherwise); all four sizes share the presenter's 8-bit entry path. */
+        MEM32(c + 24) = DDPCAPS_1BIT | DDPCAPS_2BIT | DDPCAPS_4BIT | DDPCAPS_8BIT | DDPCAPS_ALLOW256;
         MEM32(c + 60) = 256u << 20, MEM32(c + 64) = 192u << 20;   /* video memory: 256 MB, 192 free */
-        if (size >= 108) MEM32(c + 104) = DDSCAPS_PRIMARYSURFACE | DDSCAPS_OFFSCREENPLAIN | DDSCAPS_FLIP | DDSCAPS_SYSTEMMEMORY | DDSCAPS_VIDEOMEMORY;
+        if (size >= 108) MEM32(c + 104) = DDSCAPS_PRIMARYSURFACE | DDSCAPS_OFFSCREENPLAIN | DDSCAPS_FLIP | DDSCAPS_SYSTEMMEMORY | DDSCAPS_VIDEOMEMORY;   /* legacy DDSURFACEDESC2 offset, kept for old callers */
+        if (size >= 136) MEM32(c + 132) = DD_SURFCAPS_ALL;        /* DDSCAPS in DX3/DX5, ddsOldCaps in DX6/DX7 */
+        if (size >= 380) MEM32(c + 364) = DD_SURFCAPS_ALL;        /* DDCAPS_DX7.ddsCaps.dwCaps (DDSCAPS2) */
     }
     RET(DD_OK, 3);
 }
 static void dd_GetDisplayMode(void) {                    /* (this, &desc) */
     uint32_t d = A32(1);
-    uint32_t size = MEM32(d) >= 108 ? MEM32(d) : 108;
+    if (!d) { fprintf(stderr, "[ddraw] GetDisplayMode: NULL desc -> DDERR_INVALIDPARAMS\n"); RET(DDERR_INVALIDPARAMS, 2); }
+    dd_desc_t sh = desc_shape(d);
+    uint32_t size = sh.size;
+    MEM32(d) = size;
     memset(hle_ptr(d + 4), 0, size - 4);
     MEM32(d + 4) = DDSD_HEIGHT | DDSD_WIDTH | DDSD_PITCH | DDSD_PIXELFORMAT | DDSD_REFRESHRATE;
     MEM32(d + 8) = (uint32_t)g_mode_h, MEM32(d + 12) = (uint32_t)g_mode_w, MEM32(d + 16) = (uint32_t)(g_mode_w * g_mode_bpp / 8);
     MEM32(d + 24) = 60;
-    put_pf_bpp(d + 72, g_mode_bpp);
+    if (sh.caps == 108) MEM32(d + 28) = 60;               /* DDSURFACEDESC2.dwRefreshRate */
+    put_pf_bpp(d + sh.pf, g_mode_bpp);
     RET(DD_OK, 2);
 }
 static void dd_GetFourCCCodes(void) { if (A32(1)) MEM32(A32(1)) = 0; RET(DD_OK, 3); }
-static void dd_GetGDISurface(void) { if (!g_primary) RET(DDERR_NOTFOUND, 2); MEM32(A32(1)) = g_primary->self; MEM32(g_primary->self + 4)++; RET(DD_OK, 2); }
+static void dd_GetGDISurface(void) { if (!g_primary) { fprintf(stderr, "[ddraw] GetGDISurface: no primary -> DDERR_NOTFOUND\n"); RET(DDERR_NOTFOUND, 2); } MEM32(A32(1)) = g_primary->self; MEM32(g_primary->self + 4)++; RET(DD_OK, 2); }
 static void dd_GetMonitorFrequency(void) { if (A32(1)) MEM32(A32(1)) = 60; RET(DD_OK, 2); }
 static void dd_GetScanLine(void) { if (A32(1)) MEM32(A32(1)) = (hle_ticks_ms() * 29) % (uint32_t)g_mode_h; RET(DD_OK, 2); }
 static void dd_GetVerticalBlankStatus(void) { if (A32(1)) MEM32(A32(1)) = (hle_ticks_ms() % 16) == 0; RET(DD_OK, 2); }
 static void dd_Initialize(void) { RET(DD_OK, 2); }
 static void dd_RestoreDisplayMode(void) { RET(DD_OK, 1); }
-static void dd_SetCooperativeLevel(void) { if (trace()) fprintf(stderr, "[ddraw] SetCooperativeLevel(0x%X)\n", A32(2)); RET(DD_OK, 3); }
+static void dd_SetCooperativeLevel(void) {                 /* (this, hwnd, flags) */
+    if (trace() || A32(2)) fprintf(stderr, "[ddraw] SetCooperativeLevel(hwnd=%08X, flags=0x%X): accepted, no real mode change\n", A32(1), A32(2));
+    /* Nothing is exclusive and no display mode is switched, so every DDSCL_*
+     * combination is harmless here. If that ever changes, this is the place
+     * to return DDERR_UNSUPPORTED with a diagnostic instead of silent OK. */
+    RET(DD_OK, 3);
+}
 static void set_mode(int w, int h, int bpp) {
     g_mode_w = w, g_mode_h = h, g_mode_bpp = bpp, g_mode_set = 1;
     hle_set_screen_size(w, h);
@@ -490,7 +649,7 @@ static void dd2_GetAvailableVidMem(void) {               /* (this, &caps, &total
     if (A32(3)) MEM32(A32(3)) = 192u << 20;
     RET(DD_OK, 4);
 }
-static void dd_GetSurfaceFromDC(void) { if(A32(2))MEM32(A32(2))=0; RET(DDERR_NOTFOUND,3); }
+static void dd_GetSurfaceFromDC(void) { fprintf(stderr, "[ddraw] GetSurfaceFromDC -> DDERR_NOTFOUND\n"); if(A32(2))MEM32(A32(2))=0; RET(DDERR_NOTFOUND,3); }
 static void dd_RestoreAllSurfaces(void) { RET(DD_OK,1); }
 static void dd_TestCooperativeLevel(void) { RET(DD_OK,1); }
 static void dd_GetDeviceIdentifier(void) { RET(DDERR_UNSUPPORTED,3); }
@@ -688,12 +847,33 @@ static void sf_Flip(void) {                              /* (this, target, flags
 static void sf_GetAttachedSurface(void) {                /* (this, &caps, &out) */
     surf_t *s = S(A32(0));
     uint32_t want = A32(1) ? MEM32(A32(1)) : 0;
-    surf_t *got = (want & DDSCAPS_MIPMAP) ? s->mip
+    surf_t *got = (want & DDSCAPS_ZBUFFER) ? s->zbuf
+                : (want & DDSCAPS_MIPMAP) ? s->mip
                 : (want & DDSCAPS_BACKBUFFER) ? s->back
                 : s->back ? s->back : s->mip;
+    if (!got && (want & DDSCAPS_ZBUFFER) && s) {
+        /* Lazy depth buffer with the surface's geometry (igi-recomp model). */
+        uint32_t z = new_surface(s->w, s->h, 16,
+                                 DDSCAPS_ZBUFFER | DDSCAPS_SYSTEMMEMORY, 0);
+        s->zbuf = S(z);
+        S(z)->zbuf = s;
+        S(z)->rmask = 0xFFFFu;
+        got = S(z);
+    }
     if (trace()) fprintf(stderr, "[ddraw] GetAttachedSurface %dx%d caps=0x%X -> %dx%d\n",
                          s->w, s->h, want, got ? got->w : 0, got ? got->h : 0);
-    if (!got) { MEM32(A32(2)) = 0; RET(DDERR_NOTFOUND, 3); }
+    if (!got && (want & DDSCAPS_BACKBUFFER) && s) {
+        /* Some titles (IGI) request the back buffer with a flip-chain caps
+         * word our CreateSurface did not recognise. Return a real attached
+         * surface with the primary's geometry instead of DDERR_NOTFOUND. */
+        uint32_t b = new_surface(s->w, s->h, g_mode_bpp,
+                                 DDSCAPS_BACKBUFFER | DDSCAPS_SYSTEMMEMORY |
+                                 DDSCAPS_3DDEVICE, 0);
+        s->back = S(b);
+        S(b)->back = s;
+        got = S(b);
+    }
+    if (!got) { fprintf(stderr, "[ddraw] GetAttachedSurface caps=0x%X on %dx%d -> DDERR_NOTFOUND\n", want, s->w, s->h); MEM32(A32(2)) = 0; RET(DDERR_NOTFOUND, 3); }
     MEM32(A32(2)) = got->self;
     MEM32(got->self + 4)++;
     RET(DD_OK, 3);
@@ -733,10 +913,15 @@ static void sf_Lock(void) {                              /* (this, rect, &desc, 
     surf_t *s = S(A32(0));
     uint32_t d = A32(2);
     if (!d) RET(DDERR_INVALIDPARAMS, 5);
+    dd_desc_t sh = desc_shape(d);
     put_desc(d, s);
     if (A32(1)) {
         int l = (int)MEM32(A32(1)), t = (int)MEM32(A32(1) + 4);
-        MEM32(d + 36) = hle_va(s->px + (size_t)t * (size_t)s->pitch + (size_t)l * (size_t)(s->bpp / 8));
+        /* A sub-rect Lock returns lpSurface shifted to (left, top). Write it
+         * at the offset put_desc used: +40 for DDSURFACEDESC2, +36 for the
+         * legacy DDSURFACEDESC. A hard-coded +36 left a DX7 caller reading
+         * the whole-surface pointer and clobbered the field after it. */
+        MEM32(d + sh.surface) = hle_va(s->px + (size_t)t * (size_t)s->pitch + (size_t)l * (size_t)(s->bpp / 8));
     }
     s->locks++;
     s->diag_locks++;
@@ -808,30 +993,110 @@ static void sf_GetPriority(void) { if (A32(1)) MEM32(A32(1)) = 0; RET(DD_OK, 2);
 static void sf_SetLOD(void) { RET(DDERR_UNSUPPORTED, 2); }
 static void sf_GetLOD(void) { RET(0, 1); }
 
-/* ---- IDirectDrawPalette, IDirectDrawClipper ---- */
-static void pl_Release(void) {
-    uint32_t self = A32(0), n = --MEM32(self + 4);
-    if (!n) { hle_free(P(self)); hle_com_free(self); }
-    RET(n, 1);
+/* ---- IDirectDrawPalette, IDirectDrawClipper ----
+ * This is where a guest's PALETTEENTRY array crosses into the presenter.
+ * ddraw.h sizes that array from CreatePalette's dwFlags: copying a fixed 256
+ * entries over-reads a 4-bit palette's 16-entry array. Copy exactly the
+ * declared count, keep the flags for GetCaps, and fail closed on a `this` that
+ * is not one of our palette objects or a range that is not wholly inside it.
+ * No renderer is added: the changed entries are the ones hle_dd_frame hands
+ * screen.c for an 8-bpp primary. */
+#define PAL_DEPTH_BITS (DDPCAPS_1BIT | DDPCAPS_2BIT | DDPCAPS_4BIT | DDPCAPS_8BIT)
+#define PAL_KNOWN_BITS (PAL_DEPTH_BITS | DDPCAPS_8BITENTRIES | DDPCAPS_INITIALIZE | \
+                        DDPCAPS_PRIMARYSURFACE | DDPCAPS_ALLOW256 | DDPCAPS_ALPHA)
+
+static unsigned pal_count(uint32_t flags) {
+    if (flags & DDPCAPS_1BIT) return 2;
+    if (flags & DDPCAPS_2BIT) return 4;
+    if (flags & DDPCAPS_4BIT) return 16;
+    return 256;                                          /* DDPCAPS_8BIT */
 }
-static void pl_GetCaps(void) { if (A32(1)) MEM32(A32(1)) = 0x4u; RET(DD_OK, 2); }   /* DDPCAPS_8BIT */
-static void pl_GetEntries(void) {                        /* (this, flags, start, count, entries) */
-    pal_t *p = P(A32(0));
-    uint32_t start = A32(2), n = A32(3);
-    if (start + n > 256) RET(DDERR_INVALIDPARAMS, 5);
-    memcpy(APTR(4), p->entries + start, n * 4);
+static pal_t *pal_this(uint32_t self) {
+    if (!pal_known(self) || !g_vt_pal || MEM32(self) != g_vt_pal) return NULL;
+    uint32_t state = MEM32(self + 8);
+    return state ? (pal_t *)hle_ptr(state) : NULL;
+}
+static void dd_CreatePalette(void) {                     /* (this, flags, entries, &out, outer) */
+    uint32_t flags = A32(1), out = A32(3), outer = A32(4);
+    if (!out || outer) {
+        if (out) MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 5);
+    }
+    if ((flags & ~PAL_KNOWN_BITS) || (flags & DDPCAPS_8BITENTRIES)) {
+        fprintf(stderr, "[ddraw] CreatePalette(flags=0x%X): DDERR_INVALIDCAPS\n", flags);
+        MEM32(out) = 0;
+        RET(DDERR_INVALIDCAPS, 5);
+    }
+    uint32_t depth = flags & PAL_DEPTH_BITS;
+    if (!depth || (depth & (depth - 1))) {
+        fprintf(stderr, "[ddraw] CreatePalette(flags=0x%X): no single depth -> DDERR_INVALIDPARAMS\n", flags);
+        MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 5);
+    }
+    vtables();
+    unsigned n = pal_count(flags);
+    pal_t *p = (pal_t *)hle_alloc(sizeof *p);              /* zeroed: a NULL initial array is a black palette */
+    uint32_t o;
+    if (!p || !(o = hle_com_new(g_vt_pal, 12))) {
+        fprintf(stderr, "[ddraw] CreatePalette: out of guest memory\n");
+        if (p) hle_free(p);
+        MEM32(out) = 0;
+        RET(DDERR_OUTOFMEMORY, 5);
+    }
+    if (A32(2)) memcpy(p->entries, APTR(2), (size_t)n * 4); /* bounded by dwFlags, never a fixed 1 KB */
+    p->flags = flags, p->nentries = n;
+    pal_register(o);
+    MEM32(o + 8) = hle_va(p);
+    MEM32(out) = o;
+    if (trace()) fprintf(stderr, "[ddraw] CreatePalette(flags=0x%X, %u entries) -> 0x%08X\n", flags, n, o);
     RET(DD_OK, 5);
 }
-static void pl_SetEntries(void) {
-    pal_t *p = P(A32(0));
+static void pl_Release(void) {
+    uint32_t self = A32(0);
+    pal_t *p = pal_this(self);
+    if (!p) RET(DDERR_INVALIDPARAMS, 1);
+    uint32_t n = --MEM32(self + 4);
+    if (!n) { pal_forget(self); hle_free(p); hle_com_free(self); }
+    RET(n, 1);
+}
+static void pl_GetCaps(void) {
+    pal_t *p = pal_this(A32(0));
+    if (!p) RET(DDERR_INVALIDPARAMS, 2);
+    if (A32(1)) MEM32(A32(1)) = p->flags;                  /* what CreatePalette was given */
+    RET(DD_OK, 2);
+}
+static void pl_GetEntries(void) {                        /* (this, flags, start, count, entries) */
+    pal_t *p = pal_this(A32(0));
     uint32_t start = A32(2), n = A32(3);
-    if (start + n > 256) RET(DDERR_INVALIDPARAMS, 5);
-    memcpy(p->entries + start, APTR(4), n * 4);
+    /* A one-byte-per-entry request would need a different array shape; no
+     * palette this host creates uses one, so answer with an error not garbage. */
+    if (!p || (A32(1) & DDPCAPS_8BITENTRIES) || !A32(4) || !n ||
+        start >= p->nentries || n > p->nentries - start) {
+        fprintf(stderr, "[ddraw] GetEntries(this=%08X start=%u count=%u) -> DDERR_INVALIDPARAMS\n", A32(0), start, n);
+        RET(DDERR_INVALIDPARAMS, 5);
+    }
+    memcpy(APTR(4), p->entries + start, (size_t)n * 4);
+    RET(DD_OK, 5);
+}
+static void pl_SetEntries(void) {                        /* (this, flags, start, count, entries) */
+    pal_t *p = pal_this(A32(0));
+    uint32_t start = A32(2), n = A32(3);
+    if (!p || (A32(1) & DDPCAPS_8BITENTRIES) || !A32(4) || !n ||
+        start >= p->nentries || n > p->nentries - start) {
+        fprintf(stderr, "[ddraw] SetEntries(this=%08X start=%u count=%u) -> DDERR_INVALIDPARAMS\n", A32(0), start, n);
+        RET(DDERR_INVALIDPARAMS, 5);
+    }
+    memcpy(p->entries + start, APTR(4), (size_t)n * 4);
+    /* The shared presenter republishes when the frame sequence moves; a
+     * palette change is visible on an 8-bpp primary even with its pixels still. */
     g_frame_seq++;
     if (hle_dd_primary_hook) hle_dd_primary_hook();
     RET(DD_OK, 5);
 }
-static void pl_Initialize(void) { RET(DD_OK, 4); }
+static void pl_Initialize(void) {
+    if (!pal_this(A32(0))) RET(DDERR_INVALIDPARAMS, 4);
+    RET(DD_OK, 4);
+}
 static void cl_Release(void) { uint32_t self = A32(0), n = --MEM32(self + 4); if (!n) hle_com_free(self); RET(n, 1); }
 static void cl_GetClipList(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(DDERR_UNSUPPORTED, 4); }
 static void cl_GetHWnd(void) { MEM32(A32(1)) = MEM32(A32(0) + 8); RET(DD_OK, 2); }
@@ -931,20 +1196,63 @@ static void vtables(void) {
 }
 
 static void x_DirectDrawCreate(void) {                   /* (guid, &out, outer) */
+    uint32_t out = A32(1);
+    if (!out || A32(2)) {
+        fprintf(stderr, "[ddraw] DirectDrawCreate(NULL out or non-NULL outer): DDERR_INVALIDPARAMS\n");
+        if (out) MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 3);
+    }
     vtables();
-    MEM32(A32(1)) = g_dd;
+    MEM32(out) = g_dd;
     MEM32(g_dd + 4) = 1;                                 /* the caller now holds the object's one reference */
     RET(DD_OK, 3);
 }
-static void x_DirectDrawCreateEx(void) {                 /* (guid, &out, iid, outer): IID_IDirectDraw7 or IDirectDraw4 */
+/* DirectDrawCreateEx's IID selects the interface the caller gets. Serve the
+ * four versions whose vtables this layer actually has; every other IID is
+ * E_NOINTERFACE with a named diagnostic, never a wrong-shaped interface. */
+static void x_DirectDrawCreateEx(void) {                 /* (guid, &out, iid, outer) */
+    uint32_t out = A32(1), iid = A32(2), obj = 0;
+    uint32_t d1 = iid ? MEM32(iid) : 0;
+    if (!out || !iid || A32(3)) {
+        fprintf(stderr, "[ddraw] DirectDrawCreateEx(out=%08X, iid=%08X, outer=%08X): DDERR_INVALIDPARAMS\n", out, iid, A32(3));
+        if (out) MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 4);
+    }
     vtables();
-    uint32_t iid=A32(2), d1=iid?MEM32(iid):0, obj=0;
-    if(d1==0x9C59509Au)obj=g_dd4;
-    else if(d1==0x15E65EC0u)obj=g_dd7;
-    if(!obj) { if(A32(1))MEM32(A32(1))=0; RET(0x80004002u,4); }
-    if(A32(1))MEM32(A32(1))=obj;
-    MEM32(obj+4)=1;                                      /* the caller now holds the object's one reference */
-    RET(DD_OK,4);
+    if      (d1 == 0x6C14DB80u) obj = g_dd;              /* IID_IDirectDraw */
+    else if (d1 == 0xB3A6F3E0u) obj = g_dd2;             /* IID_IDirectDraw2 */
+    else if (d1 == 0x9C59509Au) obj = g_dd4;             /* IID_IDirectDraw4 */
+    else if (d1 == 0x15E65EC0u) obj = g_dd7;             /* IID_IDirectDraw7 */
+    if (!obj) {
+        char s[40];
+        hle_guid_string((const uint8_t *)APTR(2), s);
+        fprintf(stderr, "[ddraw] DirectDrawCreateEx(%s): no interface for this IID -> E_NOINTERFACE\n", s);
+        MEM32(out) = 0;
+        RET(DD_E_NOINTERFACE, 4);
+    }
+    MEM32(out) = obj;
+    MEM32(obj + 4) = 1;                                  /* the caller now holds the object's one reference */
+    RET(DD_OK, 4);
+}
+/* DirectDrawCreateClipper - the standalone clipper export, missing until now.
+ * ddraw.h: dwFlags must be 0 and pUnkOuter must be NULL (COM aggregation is not
+ * supported); anything else is DDERR_INVALIDPARAMS with the out pointer
+ * cleared. The object is not owned by a DirectDraw object, so it is built on
+ * the very same IDirectDrawClipper vtable IDirectDraw::CreateClipper uses:
+ * identical guest slots and refcount layout, with no display, no primary and
+ * no second renderer. MSDN notes it is normally reached through
+ * GetProcAddress, which resolves names from this shim table. */
+static void x_DirectDrawCreateClipper(void) {            /* (flags, &out, outer) */
+    uint32_t flags = A32(0), out = A32(1), outer = A32(2);
+    if (trace()) fprintf(stderr, "[ddraw] DirectDrawCreateClipper(flags=0x%X, out=%08X, outer=%08X)\n", flags, out, outer);
+    if (flags || !out || outer) {
+        if (out) MEM32(out) = 0;
+        RET(DDERR_INVALIDPARAMS, 3);
+    }
+    uint32_t o = clipper_new();                          /* vt, refs, hWnd; no HWND until SetHWnd */
+    if (!o) { MEM32(out) = 0; RET(DDERR_OUTOFMEMORY, 3); }
+    MEM32(out) = o;
+    RET(DD_OK, 3);
 }
 static void x_DirectDrawEnumerateA(void) {               /* (callback, ctx): the primary display */
     static uint32_t desc, name;                          /* the guest may keep them */
@@ -965,6 +1273,7 @@ static void x_DirectDrawEnumerateExA(void) {
 
 const win32hle_shim win32hle_ddraw[] = {
     { "DirectDrawCreate", x_DirectDrawCreate }, { "DirectDrawCreateEx", x_DirectDrawCreateEx },
+    { "DirectDrawCreateClipper", x_DirectDrawCreateClipper },
     { "DirectDrawEnumerateA", x_DirectDrawEnumerateA }, { "DirectDrawEnumerateExA", x_DirectDrawEnumerateExA },
     { 0, 0 }
 };

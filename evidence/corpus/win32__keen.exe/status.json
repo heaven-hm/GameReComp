@@ -1,0 +1,16 @@
+{
+  "slug": "win32__keen.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/keen.exe",
+  "sha256": "912de2c925e0a7a4d63d7b8bd867babf94813f14d853c512f69581f6662fe5d3",
+  "size": 346033,
+  "is_game": true,
+  "started": 1795505784.6597528,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keen.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

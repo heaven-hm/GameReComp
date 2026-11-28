@@ -1,0 +1,4 @@
+{"exe": "/Users/haseeb-mir/Documents/Code/Cpp/DataDemo/igi2.exe", "name": "igi2", "status": "BLOCKED", "reason": "original hangs under Wine without input", "tag": "0001-igi2", "seconds": 10.1}
+{"exe": "/Users/haseeb-mir/Documents/Code/Cpp/c-plus-library-upstreams/stb/tests/oversample/oversample.exe", "name": "oversample", "status": "BLOCKED", "reason": "original hangs under Wine without input", "tag": "0002-oversample", "seconds": 14.6}
+{"exe": "/Users/haseeb-mir/Documents/Code/Cpp/igi2-hm.exe", "name": "igi2-hm", "status": "BLOCKED", "reason": "original hangs under Wine without input", "tag": "0003-igi2-hm", "seconds": 10.1}
+{"exe": "/Users/haseeb-mir/Documents/Code/Cpp/igi2.exe", "name": "igi2", "original": {"exit_code": 53, "sha256": "4e4dd1858676aa07a755f2811189c41c442e1e673bcdad6fa7fc983dea23db98", "stdout_bytes": 0}, "pipeline": {"score": 85, "verification": "trace-diverged"}, "status": "FAIL", "reason": "exit_code", "tag": "0004-igi2", "seconds": 471.2}

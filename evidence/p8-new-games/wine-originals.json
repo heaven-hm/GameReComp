@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "note": "original PE32 executed under local Highball Wine; exit/stdout/stderr are real captures; timeout=12s",
+  "runs": [
+    {
+      "game": "tetris-win-32-jp",
+      "command": [
+        "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+        "C:\\recomp-oracle\\tetris-win-32-jp.exe"
+      ],
+      "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+      "sha256": "f732c43fb147737a436d382a4e735519dbc13e7811ba304c3f6d500b559de249",
+      "exit_code": "TIMEOUT",
+      "stdout_bytes": 0,
+      "stderr_bytes": 875,
+      "stdout_tail": "",
+      "stderr_tail": "Wine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\n"
+    },
+    {
+      "game": "tetris-win-32-ch",
+      "command": [
+        "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+        "C:\\recomp-oracle\\tetris-win-32-ch.exe"
+      ],
+      "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+      "sha256": "27a64e559d735e383de67fda5658f72a212e92cf2090256f7a9157b22d61b8c4",
+      "exit_code": "TIMEOUT",
+      "stdout_bytes": 0,
+      "stderr_bytes": 875,
+      "stdout_tail": "",
+      "stderr_tail": "Wine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\nWine cannot find the FreeType font library.  To enable Wine to\nuse TrueType fonts please install a version of FreeType greater than\nor equal to 2.0.5.\nhttp://www.freetype.org\n"
+    }
+  ]
+}

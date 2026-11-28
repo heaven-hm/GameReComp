@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "generator": "tools/corpus_capacity_final.py",
+  "target_distinct_real_windows_games": 10000,
+  "inputs_digest": "829e4544d2dd876b1203ca9e107b7c65d9fed585fe8a181d7a281ff66a9d0c3b",
+  "sources": [
+    {
+      "role": "local-games-inventory",
+      "path": "reports/local-games-inventory.json",
+      "sha256": "0cbc6a6fb9ecf50cc4d4c971719d038ecfdeb93c5e11f0ba337476b61864f2d0",
+      "bytes": 137123,
+      "rows": 262,
+      "unique_dedup_keys": 214,
+      "unique_sha256": 213,
+      "rows_missing_sha256": 10,
+      "in_scope_rows": 165,
+      "synthetic_fixture_rows": 0,
+      "kind_counts": {
+        "unspecified": 262
+      },
+      "status_counts": {
+        "UNSPECIFIED": 262
+      },
+      "pass_rows": 0,
+      "verified_pass_rows": 0,
+      "refused_pass_rows": 0,
+      "verified_pass_keys": []
+    },
+    {
+      "role": "pe32-1000-static",
+      "path": "reports/pe32-1000-static.json",
+      "sha256": "88a8ba6af46e04dc43a2a9115c7a18294bda6cb3981d37f697d0b5665a12873a",
+      "bytes": 659129,
+      "rows": 1000,
+      "unique_dedup_keys": 550,
+      "unique_sha256": 550,
+      "rows_missing_sha256": 0,
+      "in_scope_rows": 0,
+      "synthetic_fixture_rows": 1,
+      "kind_counts": {
+        "dll": 77,
+        "exe": 923
+      },
+      "status_counts": {
+        "STATIC_OK": 1000
+      },
+      "pass_rows": 0,
+      "verified_pass_rows": 0,
+      "refused_pass_rows": 0,
+      "verified_pass_keys": []
+    },
+    {
+      "role": "b1-results-snapshot",
+      "path": "reports/b1_results_snapshot.jsonl",
+      "sha256": "c7808be53b026488d07d22688b3a7ee1bac9738372ba6449381dc0f38b0a980c",
+      "bytes": 89207,
+      "rows": 126,
+      "unique_dedup_keys": 126,
+      "unique_sha256": 126,
+      "rows_missing_sha256": 0,
+      "in_scope_rows": 0,
+      "synthetic_fixture_rows": 0,
+      "kind_counts": {
+        "unspecified": 126
+      },
+      "status_counts": {
+        "BLOCKED": 57,
+        "BUILD-ONLY": 69
+      },
+      "pass_rows": 0,
+      "verified_pass_rows": 0,
+      "refused_pass_rows": 0,
+      "verified_pass_keys": []
+    }
+  ],
+  "dedup": {
+    "dedup_key": "lowercased 64-hex sha256, or <missing-sha256> when absent",
+    "total_rows_supplied": 1388,
+    "union_dedup_keys": 715,
+    "union_actual_sha256": 714,
+    "duplicate_rows_eliminated": 673,
+    "rows_with_missing_sha256": 10,
+    "synthetic_fixture_rows_excluded": 1,
+    "dll_labeled_sha256_excluded": 73,
+    "executable_game_candidate_sha256": 640,
+    "note": "Candidate keys exclude synthetic fixtures, rows without a SHA-256, and any binary labelled DLL. STATIC_OK is a PE parse result, not a build or a launch."
+  },
+  "verification": {
+    "status_counts": {
+      "BLOCKED": 57,
+      "BUILD-ONLY": 69,
+      "STATIC_OK": 1000,
+      "UNSPECIFIED": 262
+    },
+    "pass_rows": 0,
+    "verified_pass_distinct_sha256": 0,
+    "refused_pass_rows": 0,
+    "no_fake_pass": true,
+    "pass_requires": [
+      "verified is true",
+      "64-hex evidence_sha256",
+      "non-empty oracle"
+    ],
+    "note": "BUILD-ONLY is a compile result, BLOCKED means no build, and STATIC_OK is a static PE parse. None establishes a running, verified game."
+  },
+  "capacity": {
+    "target_distinct_real_windows_games": 10000,
+    "status": "CAPACITY_LIMIT",
+    "upper_bound_distinct_real_windows_games": 640,
+    "shortfall_to_upper_bound": 9360,
+    "verified_distinct_real_windows_games": 0,
+    "shortfall_to_verified_target": 10000,
+    "blocker": "LEGAL_CORPUS_ABSENT",
+    "reason": "A legal corpus of 10,000 distinct real Windows games is not present; the supplied reports cap the claim at 640 executable candidates with 0 verified games. Issue #130 stays OPEN until such a corpus with fail-closed per-game evidence is supplied."
+  },
+  "issue_130": "OPEN"
+}

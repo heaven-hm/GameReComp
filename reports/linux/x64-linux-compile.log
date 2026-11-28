@@ -1,0 +1,7 @@
+CC recomp_dispatch.c
+CC recomp_funcs_0000.c
+CC recomp_funcs_0001.c
+CC recomp_funcs_0002.c
+/tmp/ccexGam8.s: Assembler messages:
+/tmp/ccexGam8.s:22984: Error: unknown mnemonic `movq' -- `movq %gs:(x3),x3'
+/tmp/ccexGam8.s:25905: Error: unknown mnemonic `movq' -- `movq %gs:(x0),x0'

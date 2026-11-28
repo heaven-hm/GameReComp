@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:25:30Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/game2048.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__game2048.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.03,
+      "status": "ok",
+      "message": "i386 PE32, 46 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/game2048.exe",
+        "size": 137107,
+        "sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940",
+        "md5": "fe9d767c5974e82f3674e09d727d8505",
+        "sha1": "f5b026c3a3b81e82f83a6521075ad5ffcbc146df",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x00402E00"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll",
+          "api-ms-win-crt-utility-l1-1-0.dll"
+        ],
+        "import_count": 46,
+        "iat_entries": 46
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 0.41,
+      "status": "ok",
+      "message": "219 functions, 13408 instructions",
+      "data": {
+        "count": 219,
+        "instructions": 13408
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.06,
+      "status": "ok",
+      "message": "2 source files, 1407508 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 1407508,
+        "lift_errors": 0,
+        "seconds": 0.1
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.02,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__game2048.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__game2048.exe/project",
+        "name": "game2048",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 219,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "50f18536d7b0e815f40592ac603dacfe3b453850b811a8e513bc55962c148940"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 7.49,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__game2048.exe/project/build/game2048 (1359768 bytes, 7.5s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__game2048.exe/project/build/game2048",
+        "sha256": "7bcf217c56e35b5ada961af8d03c5bee6c7a303e3501d1158a0aa2b10b7af187",
+        "seconds": 7.5,
+        "source_bytes": 2910593,
+        "build_timeout_seconds": 613.8787889480591,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}

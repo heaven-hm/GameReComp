@@ -1,0 +1,16 @@
+{
+  "slug": "win32__towerssolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/towerssolver.exe",
+  "sha256": "5d4b560daa972a968c8156cbcf3d896c76edf5e91d0394b46f160dc810960b10",
+  "size": 217969,
+  "is_game": true,
+  "started": 1795505456.4549708,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__towerssolver.exe/bin_towerssolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__towerssolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__towerssolver.exe/report.json",
+  "seconds": 30.2
+}

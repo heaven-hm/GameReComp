@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:25:38Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/guess_game_x86.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.03,
+      "status": "ok",
+      "message": "i386 PE32, 46 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/guess_game_x86.exe",
+        "size": 137388,
+        "sha256": "7c0cb00a04dc1f0dee2152a52ba23d86120022eaa6e58f826a648eaa3edf6459",
+        "md5": "ae651c2c315659b876b5b09216f96ce3",
+        "sha1": "fadd113052685c26cc11d6df3e66e2411fdc2590",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x00402E00"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll",
+          "api-ms-win-crt-time-l1-1-0.dll",
+          "api-ms-win-crt-utility-l1-1-0.dll"
+        ],
+        "import_count": 46,
+        "iat_entries": 46
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 0.54,
+      "status": "ok",
+      "message": "221 functions, 14423 instructions",
+      "data": {
+        "count": 221,
+        "instructions": 14423
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 0.07,
+      "status": "ok",
+      "message": "2 source files, 1501017 bytes, 0 lift errors",
+      "data": {
+        "source_units": 2,
+        "source_bytes": 1501017,
+        "lift_errors": 0,
+        "seconds": 0.1
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.04,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/project",
+        "name": "guess_game_x86",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 221,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "7c0cb00a04dc1f0dee2152a52ba23d86120022eaa6e58f826a648eaa3edf6459"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "7c0cb00a04dc1f0dee2152a52ba23d86120022eaa6e58f826a648eaa3edf6459"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 7.01,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/project/build/guess_game_x86 (1442416 bytes, 7.0s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__guess_game_x86.exe/project/build/guess_game_x86",
+        "sha256": "f34d55b12ca187fb0c84c12dc0aec46d6df1c8ba41fb68d2ba0d498e0d583dcd",
+        "seconds": 7.0,
+        "source_bytes": 3004481,
+        "build_timeout_seconds": 614.3264818191528,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}

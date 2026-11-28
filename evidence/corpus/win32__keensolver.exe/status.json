@@ -1,0 +1,16 @@
+{
+  "slug": "win32__keensolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/keensolver.exe",
+  "sha256": "6e36aaa7bd453da42a71bdf6570cf840a12e8c506076503c71bc648f939196f4",
+  "size": 228096,
+  "is_game": true,
+  "started": 1795505667.36322,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keensolver.exe/bin_keensolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keensolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__keensolver.exe/report.json",
+  "seconds": 38.2
+}

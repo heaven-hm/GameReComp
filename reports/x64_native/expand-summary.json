@@ -1,0 +1,65 @@
+{
+  "base64": {
+    "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/base64.exe",
+    "functions": 100,
+    "imports": 45,
+    "native_exit": 0,
+    "native_stdout_bytes": 228,
+    "verdict": {
+      "native": "PASS",
+      "native_vs_unicorn": "MATCH",
+      "native_vs_wine": "MATCH",
+      "claim": "native ARM64 recompilation of THIS real PE matches the original bytes under both Unicorn and Highball Wine."
+    }
+  },
+  "tictactoe": {
+    "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tictactoe.exe",
+    "functions": 105,
+    "imports": 44,
+    "native_exit": 0,
+    "native_stdout_bytes": 738,
+    "verdict": {
+      "native": "PASS",
+      "native_vs_unicorn": "MATCH",
+      "native_vs_wine": "MATCH",
+      "claim": "native ARM64 recompilation of THIS real PE matches the original bytes under both Unicorn and Highball Wine."
+    }
+  },
+  "tetris": {
+    "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tetris.exe",
+    "functions": 103,
+    "imports": 46,
+    "native_exit": 0,
+    "native_stdout_bytes": 367,
+    "verdict": {
+      "native": "PASS",
+      "native_vs_unicorn": "MATCH",
+      "native_vs_wine": "MATCH",
+      "claim": "native ARM64 recompilation of THIS real PE matches the original bytes under both Unicorn and Highball Wine."
+    }
+  },
+  "flood": {
+    "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/flood.exe",
+    "functions": 293,
+    "imports": 191,
+    "native_exit": -6,
+    "native_stdout_bytes": 0,
+    "verdict": {
+      "native": "BLOCKED",
+      "blocker": "call-import unmodelled: KERNEL32.dll!GetSystemTimeAsFileTime",
+      "claim": "disasm64 + generate64 + clang succeeded, but native run stopped at the recorded unmodelled import; no PASS is claimed."
+    }
+  },
+  "busybox": {
+    "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/apps/busybox.exe",
+    "functions": 2605,
+    "imports": 313,
+    "native_exit": -6,
+    "native_stdout_bytes": 0,
+    "verdict": {
+      "native": "BLOCKED",
+      "blocker": "jmp-import unmodelled: msvcrt.dll!__set_app_type",
+      "claim": "disasm64 + generate64 + clang succeeded, but native run stopped at the recorded unmodelled import; no PASS is claimed."
+    }
+  }
+}

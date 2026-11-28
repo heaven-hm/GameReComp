@@ -97,22 +97,38 @@ typedef int LONG;
  * spelt on disk, where one is there. A part that is not (a file about to be
  * made) is left as the program wrote it. */
 static void fix_case(char* path) {
-    for (char* p = path + 1;; p++) {
-        char c = *p;
-        if (c != '/' && c) continue;
-        *p = 0;
+    if (!path || !*path) return;              /* no bytes to walk, no name to fix */
+    const size_t len = strlen(path);
+    /* Walk the string's own bytes only: the separator or the terminator at
+     * `end` is the last byte this function ever touches. */
+    for (size_t end = 1; end <= len;) {
+        while (end < len && path[end] != '/') end++;
+        char c = path[end];                   /* '/' or the NUL at path[len] */
+        path[end] = 0;                        /* the prefix ending at this separator */
         struct stat st;
         if (stat(path, &st) != 0) {
+            /* Last separator of the prefix. A bare relative name has none:
+             * look it up in the current directory instead of dereferencing
+             * the NULL strrchr result. */
             char* s = strrchr(path, '/');
-            *s = 0;
-            DIR* d = opendir(s == path ? "/" : path);
-            *s = '/';
-            for (struct dirent* e; d && (e = readdir(d)) != NULL; )
-                if (!strcasecmp(e->d_name, s + 1)) { memcpy(s + 1, e->d_name, strlen(s + 1)); break; }
-            if (d) closedir(d);
+            char* name = s ? s + 1 : path;
+            const char* dir = s ? (s == path ? "/" : path) : ".";
+            if (s) *s = 0;                    /* split prefix into directory + name */
+            DIR* d = opendir(dir);
+            if (d) {
+                for (struct dirent* e; (e = readdir(d)) != NULL; )
+                    if (!strcasecmp(e->d_name, name)
+                        && strlen(e->d_name) == strlen(name)) {
+                        memcpy(name, e->d_name, strlen(name));
+                        break;
+                    }
+                closedir(d);
+            }
+            if (s) *s = '/';
         }
-        *p = c;
+        path[end] = c;
         if (!c) break;
+        end++;
     }
 }
 

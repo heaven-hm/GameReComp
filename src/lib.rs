@@ -6,6 +6,7 @@
 pub mod pe;
 pub mod pipeline_opts;
 pub mod theme_tokens;
+pub mod verify;
 
 #[cfg(feature = "cli")]
 pub mod agent;

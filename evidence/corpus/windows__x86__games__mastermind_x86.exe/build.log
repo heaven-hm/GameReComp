@@ -1,0 +1,8 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/mastermind_x86.exe
+arch=pe32_i386 sha256=dc637c1e19616b2b856b7c194e0459fa8c54a3d88c9b8ceacd2e22fc898e38a9
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games/mastermind_x86.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x86__games__mastermind_x86.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/windows/x86/games --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+
+[LAUNCH ERROR: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli']

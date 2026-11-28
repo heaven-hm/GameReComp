@@ -62,10 +62,12 @@ desktop.ini
 *.pak
 *.pk3
 
-# The one exception: the synthetic PE32 fixture the test suite and CI build
-# themselves (tests/fixtures/make_pe32_fixture.py). It is our own bytes, it
-# contains no third-party code, and --check fails if it drifts.
+# Exceptions: the synthetic PE fixtures the test suite and CI build themselves
+# (tests/fixtures/make_pe32_fixture.py and make_pe_api_fixture.py). They are our
+# own bytes, contain no third-party code, and --check fails if they drift.
 !tests/fixtures/*.exe
+!tests/fixtures/pe32-api.dll
+!tests/fixtures/pe64-api.dll
 
 # Claude
 .claude/
@@ -140,3 +142,18 @@ gui/build/
 
 # Command Code agent state (taste, session scratch); not part of the project.
 .commandcode/
+.opencode/
+
+# Generated autorecomp project trees (multi-GB, regenerable; never commit).
+# Covers the default `projects/<game>` layout at any directory depth and the
+# `<name>-project` layout written by tools/{full_corpus_sweep,oracle_sweep}.py
+# wherever --out points, so a generated tree can never leak into git.
+**/projects/
+**/*-project/
+
+# local generated build trees (regenerable; never commit)
+/.chocd-new/
+/.igi-rebuild/
+/.tetris-new/
+/results/
+reports/linux-matrix/staging/

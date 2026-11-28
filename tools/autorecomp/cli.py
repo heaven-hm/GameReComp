@@ -106,13 +106,50 @@ def _pe_identity(pe_path):
             head = fh.read(4096)
     except OSError as exc:
         return None, f"cannot read the input: {exc}"
-    if len(head) < 0x40 or head[:2] != b"MZ":
-        return None, "not an MZ/PE executable"
+    if len(head) < 2:
+        return None, "file too small to identify: not a Windows PE executable"
+    # Explicit format detection before the MZ check: the pipeline only
+    # reconstructs Windows PE32 guests. Refuse other OS formats with a named
+    # reason instead of reporting a generic "not MZ" that hides what the
+    # caller actually supplied (cross-OS issues #133-#138).
+    if head[:4] == b"\x7fELF":
+        cls = head[4] if len(head) > 4 else 0
+        bits = "64" if cls == 2 else "32" if cls == 1 else "unknown-width"
+        return None, (f"ELF {bits} executable supplied: Linux/ELF inputs are "
+                      "not supported by this PE32 x86 pipeline (issues #137, "
+                      "#138); no conversion is attempted")
+    if len(head) >= 4:
+      for magic, label in (
+        (b"\xfe\xed\xfa\xce", "Mach-O 32-bit big-endian"),
+        (b"\xce\xfa\xed\xfe", "Mach-O 32-bit little-endian"),
+        (b"\xfe\xed\xfa\xcf", "Mach-O 64-bit big-endian"),
+        (b"\xcf\xfa\xed\xfe", "Mach-O 64-bit little-endian"),
+        (b"\xca\xfe\xba\xbe", "Mach-O fat/universal binary"),
+        (b"\xbe\xba\xfe\xca", "Mach-O fat/universal binary (swapped)"),
+    ):
+        if head[:4] == magic:
+            return None, (f"{label} supplied: macOS/Mach-O inputs are not "
+                          "supported by this PE32 x86 pipeline (issues #135, "
+                          "#136); tools/macho reads NeXTSTEP i386 only and "
+                          "does not produce Windows or Linux binaries")
+    if head[:2] != b"MZ":
+        return None, "not an MZ/PE executable (no Windows PE signature)"
+    if len(head) < 0x40:
+        return None, "truncated DOS header: not a Windows PE executable"
     e_lfanew = int.from_bytes(head[0x3C:0x40], "little")
     if e_lfanew + 6 > len(head) or head[e_lfanew:e_lfanew + 4] != b"PE\x00\x00":
         return None, ("MZ header but no PE signature: DOS MZ, NE or LE "
                       "executables are not supported; this pipeline "
                       "reconstructs Windows PE32 games")
+    # A PE can still carry the CLR header: that is a managed .NET assembly,
+    # not a native PE32 game. Directory 14 is COM_DESCRIPTOR (CLI header).
+    magic32 = int.from_bytes(head[e_lfanew + 24:e_lfanew + 26], "little")
+    dd_off = e_lfanew + 24 + (112 if magic32 == 0x20b else 96)
+    if dd_off + 15 * 8 <= len(head) and int.from_bytes(
+            head[dd_off + 14 * 8:dd_off + 14 * 8 + 4], "little"):
+        return None, (".NET/CLR assembly supplied: managed executables are "
+                      "DEFERRED (issue #8 scope note); no CLR runtime exists "
+                      "in this native PE32 pipeline")
     machine = int.from_bytes(head[e_lfanew + 4:e_lfanew + 6], "little")
     return ("windows", _MACHINE_ARCH_NAMES.get(machine, hex(machine))), None
 
@@ -393,7 +430,7 @@ def build_parser():
     parser.add_argument("--list-stages", action="store_true",
                         help="print the stage plan with weights and exit")
     parser.add_argument("--input-os", "--in-os", dest="input_os",
-                        choices=["auto", "windows"], default=None,
+                        choices=["auto", "windows", "macos", "linux"], default=None,
                         help="what the input binary is (omit to assume 'auto': "
                              "the PE header is read; an explicit declaration "
                              "that disagrees with the bytes is refused). "
@@ -401,7 +438,7 @@ def build_parser():
                              "--input-arch, --target-os and --target-arch, to "
                              "silence the missing-identity warning")
     parser.add_argument("--input-arch", "--in-arch", dest="input_arch",
-                        choices=["auto", "x86"], default=None,
+                        choices=["auto", "x86", "x86_64", "arm64"], default=None,
                         help="guest CPU architecture of the input (omit to "
                              "assume 'auto' from the PE header; the pipeline "
                              "reconstructs 32-bit x86 guests). Defaults to "

@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "issue": 28,
+  "verdict": "EVIDENCE_COMPLETE_SCOPED",
+  "what_is_proven": "All 19 named imports bind with zero unresolved, Chocolate Doom boots and renders non-blank frames from a legally redistributable Freedoom WAD.",
+  "what_is_not_proven": "No original-Windows gameplay oracle comparison was performed; this is not a claim of gameplay equivalence or Windows parity.",
+  "originals": [
+    {
+      "name": "chocolate-doom.exe",
+      "sha256": "d1b9dabc567d0a79480a4b319850b69ea76e69a3b4be578586ae045b96af33cc"
+    },
+    {
+      "name": "tetris-win-32-en.exe",
+      "sha256": "024dccd5e227ac4bfcf698e948b1682c4a42ddadde87ec5f18193ee16ca77b8d"
+    }
+  ],
+  "wad": {
+    "name": "freedoom1.wad (copied as doom.wad)",
+    "sha256": "7323bcc168c5a45ff10749b339960e98314740a734c30d4b9f3337001f9e703d",
+    "licence": "Freedoom is a freely redistributable Doom data replacement; no copyrighted DOOM.WAD was used."
+  },
+  "selftest": {
+    "command": "bash runtime/win32hle/build_selftests.sh",
+    "status_line": "ok    api_gap_selftest.c",
+    "families": [
+      "W-message and cursor/icon helpers",
+      "SDL 1.2 cursor and string helpers",
+      "CRT stdio symbols"
+    ]
+  },
+  "rebuild": {
+    "command": "python3 -m tools.autorecomp chocolate-doom.exe --project-dir <dir> --assets-dir <game folder> --input-os windows --input-arch x86 --target-os host --target-arch host --out-mode full",
+    "stages": {
+      "inspect": "ok",
+      "recover": "ok",
+      "translate": "ok",
+      "project": "ok",
+      "compile": "ok",
+      "run": "ok",
+      "verify": "ok (partial: process launched and exited 255; no oracle supplied)"
+    },
+    "functions": 3804,
+    "instructions": 476069,
+    "source_units": 7,
+    "lift_errors": 0,
+    "score": 93,
+    "native_binary_sha256": "c4c000a39369c3964cac0ab11bbba86e8fcd1d2d1980f2aa2f5db14f9640a411"
+  },
+  "run": {
+    "command": "python3 -m tools.game_runner --game chocolate-doom-freedoom1 --binary <native binary> --folder <game folder> --out <out> --timeout 25",
+    "imports_bound": 166,
+    "companion_sdl_net_imports_bound": 34,
+    "unresolved_imports": 0,
+    "exit_code": 255,
+    "exit_reason": "guest engine reported R_DrawPlanes visplane overflow (43) after rendering; not an unresolved-import failure",
+    "frame_count": 3
+  },
+  "frames": [
+    {
+      "path": "proof/issue-28/frames/frame-0000.bmp",
+      "sha256": "9b547da7426542ce27f39dc2c57bccf9942e309628d50b2666f4464e9656513b",
+      "width": 256,
+      "height": 200,
+      "distinct_colors": 3468,
+      "blank": false
+    },
+    {
+      "path": "proof/issue-28/frames/frame-0001.bmp",
+      "sha256": "9b547da7426542ce27f39dc2c57bccf9942e309628d50b2666f4464e9656513b",
+      "width": 256,
+      "height": 200,
+      "distinct_colors": 3468,
+      "blank": false
+    },
+    {
+      "path": "proof/issue-28/frames/frame-0002.bmp",
+      "sha256": "9b547da7426542ce27f39dc2c57bccf9942e309628d50b2666f4464e9656513b",
+      "width": 256,
+      "height": 200,
+      "distinct_colors": 3468,
+      "blank": false
+    }
+  ],
+  "tetris_frames": [
+    "evidence/screenshots/tetris-oucc-new-01.png",
+    "evidence/screenshots/tetris-oucc-new-02.png",
+    "evidence/p8-new-games/screenshots/tetris-jp-p8-frame-0001.png",
+    "evidence/p8-new-games/screenshots/tetris-jp-p8-frame-0002.png"
+  ],
+  "limits": [
+    "A hash proves byte identity only, not Windows or gameplay equivalence.",
+    "Exit 255 is an engine visplane-overflow error after rendering, not a binding failure; it is recorded honestly.",
+    "The selftest suite timed out as a whole on this host but api_gap_selftest.c completed with status ok; no other suite result is claimed here.",
+    "Frame colour counts are computed from committed BMP bytes by tools/frame_proof.py and re-verified by tests/test_issue28_proof.py."
+  ]
+}

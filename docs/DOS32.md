@@ -27,8 +27,13 @@ and `mprotect` for what is used, the locks are recursive pthread mutexes,
 guest faults are `sigaction` on an alternate stack, and the time comes from
 `CLOCK_MONOTONIC`. Linux file names have case and DOS names do not, so each
 part of a guest path is matched to the name on disk whatever its case; `int 21h
-4Eh` searches with `fnmatch`, case-blind. Theme Park's guest memory after the
-same 58-second scripted run is byte for byte the same on both.
+4Eh` searches with `fnmatch`, case-blind. The case fix walks only the bytes of
+the host path it was given: empty and `NULL` paths are left alone, a bare
+relative name is looked up in the current directory, and a component is
+overwritten only when the directory entry has the same length. Theme Park's
+guest memory after the same 58-second scripted run is byte for byte the same on
+both. `tests/test_dos32_fix_case.py` exercises the real function with the path
+against a guard page, so a read or write past the terminator faults.
 
 Lifted code compiled by gcc needs `-foptimize-sibling-calls` (on at `-O2`,
 off at `-O1`): a guest `jmp` to another function is a C tail call, and

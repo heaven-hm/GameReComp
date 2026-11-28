@@ -1,0 +1,16 @@
+{
+  "slug": "games__warning_forever__wf.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/warning_forever/wf.exe",
+  "sha256": "5eb8095ed202f27a6edb8d27768947aa9c4e3687f4b8771e6ae58e023002eb3c",
+  "size": 430080,
+  "is_game": true,
+  "started": 1795505784.714229,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__warning_forever__wf.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

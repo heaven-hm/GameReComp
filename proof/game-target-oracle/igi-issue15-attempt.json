@@ -1,0 +1,784 @@
+{
+  "artifacts_dir": "/Users/haseeb-mir/Documents/Code/GameReComp-game-target-oracle/proof/game-target-oracle/igi-issue15-attempt-artifacts",
+  "comparison": {
+    "declared_input_sha256": null,
+    "input_hashes_match": false,
+    "min_similarity": 0.85,
+    "native_input_sha256": null,
+    "original_input_sha256": null,
+    "similarity": null,
+    "similarity_met": false
+  },
+  "declared_input_sha256": "",
+  "evidence_path": "/Users/haseeb-mir/Documents/Code/GameReComp-game-target-oracle/proof/game-target-oracle/igi-issue15-attempt-evidence.json",
+  "evidence_sha256": "5a7205c08992dccb93e6b6b70fa9296e0f287f65c37e6cce9ed6f74a3fbc4547",
+  "game_id": "igi",
+  "generator": "tools/game_target_oracle_run.py",
+  "issues": [
+    15
+  ],
+  "limits": "Frame similarity is a coarse global colour-layout metric, not a pixel, perceptual or gameplay-state diff; checkpoint state, AI state, timing and audio are not compared here. Frames come from a Highball/Wine emulation of the original and from one native process on this host.",
+  "matrix_promotion": false,
+  "native": null,
+  "not_claimed": "PASS means only that this one declared original-vs-native scenario comparison passed: both sides executed, real non-blank frames were captured from independently confirmed game windows, identical input bytes were delivered, and a coarse 8x8 frame layout similarity exceeded the declared threshold. No claim of gameplay, graphics, audio or input equivalence, issue closure, other editions, other scenarios or other titles is made.",
+  "oracle": "game-target-oracle-dual-run",
+  "original": {
+    "binary": "/Users/haseeb-mir/Downloads/IGI/igi.exe",
+    "binary_sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01",
+    "capture_backend": "cua",
+    "command": [
+      "/Users/haseeb-mir/.local/bin/highball",
+      "run",
+      "-b",
+      "Games",
+      "-e",
+      "x64-crossover26.3-r27",
+      "-d",
+      "/Users/haseeb-mir/Downloads/IGI",
+      "--",
+      "/Users/haseeb-mir/Downloads/IGI/igi.exe"
+    ],
+    "command_display": "/Users/haseeb-mir/.local/bin/highball run -b Games -e x64-crossover26.3-r27 -d /Users/haseeb-mir/Downloads/IGI -- /Users/haseeb-mir/Downloads/IGI/igi.exe",
+    "executed": true,
+    "exit_code": -15,
+    "frames": [
+      {
+        "analysis": {
+          "blank": false,
+          "distinct_colors": 1664,
+          "format": "png8",
+          "grid": 8,
+          "height": 2100,
+          "sample_step": 35,
+          "sampled_pixels": 5760,
+          "signature": [
+            [
+              110,
+              96,
+              87
+            ],
+            [
+              90,
+              84,
+              87
+            ],
+            [
+              76,
+              72,
+              79
+            ],
+            [
+              81,
+              82,
+              93
+            ],
+            [
+              75,
+              80,
+              94
+            ],
+            [
+              80,
+              93,
+              109
+            ],
+            [
+              64,
+              76,
+              96
+            ],
+            [
+              71,
+              89,
+              119
+            ],
+            [
+              80,
+              71,
+              63
+            ],
+            [
+              63,
+              61,
+              61
+            ],
+            [
+              46,
+              45,
+              44
+            ],
+            [
+              47,
+              46,
+              45
+            ],
+            [
+              45,
+              44,
+              43
+            ],
+            [
+              45,
+              43,
+              43
+            ],
+            [
+              38,
+              40,
+              46
+            ],
+            [
+              66,
+              74,
+              93
+            ],
+            [
+              79,
+              69,
+              57
+            ],
+            [
+              43,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              37,
+              39,
+              45
+            ],
+            [
+              78,
+              53,
+              44
+            ],
+            [
+              111,
+              89,
+              59
+            ],
+            [
+              43,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              44,
+              42,
+              41
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              37,
+              39,
+              45
+            ],
+            [
+              104,
+              70,
+              47
+            ],
+            [
+              112,
+              93,
+              75
+            ],
+            [
+              44,
+              42,
+              41
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              37,
+              39,
+              45
+            ],
+            [
+              75,
+              52,
+              41
+            ],
+            [
+              88,
+              76,
+              66
+            ],
+            [
+              38,
+              41,
+              48
+            ],
+            [
+              48,
+              52,
+              61
+            ],
+            [
+              39,
+              40,
+              43
+            ],
+            [
+              45,
+              49,
+              52
+            ],
+            [
+              34,
+              35,
+              38
+            ],
+            [
+              33,
+              36,
+              44
+            ],
+            [
+              52,
+              47,
+              44
+            ],
+            [
+              68,
+              59,
+              54
+            ],
+            [
+              52,
+              64,
+              75
+            ],
+            [
+              59,
+              64,
+              75
+            ],
+            [
+              54,
+              59,
+              70
+            ],
+            [
+              48,
+              53,
+              64
+            ],
+            [
+              31,
+              36,
+              47
+            ],
+            [
+              31,
+              36,
+              47
+            ],
+            [
+              42,
+              36,
+              33
+            ],
+            [
+              114,
+              95,
+              86
+            ],
+            [
+              94,
+              87,
+              86
+            ],
+            [
+              72,
+              81,
+              98
+            ],
+            [
+              88,
+              89,
+              94
+            ],
+            [
+              52,
+              59,
+              71
+            ],
+            [
+              45,
+              46,
+              53
+            ],
+            [
+              44,
+              50,
+              57
+            ],
+            [
+              41,
+              44,
+              46
+            ]
+          ],
+          "width": 3360
+        },
+        "bytes": 3918756,
+        "file": "original/original-frame-000.png",
+        "name": "original-screen-000.png",
+        "sha256": "c012831b72d1fd51c75bc4e70f8713d82565d5cf10c7cd2a088ebad9c1c8d985",
+        "source": "cua"
+      },
+      {
+        "analysis": {
+          "blank": false,
+          "distinct_colors": 1666,
+          "format": "png8",
+          "grid": 8,
+          "height": 2100,
+          "sample_step": 35,
+          "sampled_pixels": 5760,
+          "signature": [
+            [
+              110,
+              96,
+              87
+            ],
+            [
+              90,
+              84,
+              87
+            ],
+            [
+              76,
+              72,
+              79
+            ],
+            [
+              81,
+              82,
+              93
+            ],
+            [
+              74,
+              79,
+              93
+            ],
+            [
+              80,
+              93,
+              109
+            ],
+            [
+              64,
+              76,
+              96
+            ],
+            [
+              68,
+              87,
+              117
+            ],
+            [
+              80,
+              71,
+              63
+            ],
+            [
+              63,
+              61,
+              61
+            ],
+            [
+              46,
+              45,
+              44
+            ],
+            [
+              47,
+              46,
+              45
+            ],
+            [
+              45,
+              44,
+              43
+            ],
+            [
+              45,
+              43,
+              43
+            ],
+            [
+              38,
+              40,
+              46
+            ],
+            [
+              66,
+              74,
+              93
+            ],
+            [
+              79,
+              69,
+              57
+            ],
+            [
+              43,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              37,
+              39,
+              45
+            ],
+            [
+              78,
+              53,
+              44
+            ],
+            [
+              111,
+              89,
+              59
+            ],
+            [
+              43,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              44,
+              42,
+              41
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              37,
+              39,
+              45
+            ],
+            [
+              104,
+              70,
+              47
+            ],
+            [
+              112,
+              93,
+              75
+            ],
+            [
+              44,
+              42,
+              41
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              42,
+              40,
+              39
+            ],
+            [
+              37,
+              39,
+              45
+            ],
+            [
+              75,
+              52,
+              41
+            ],
+            [
+              88,
+              76,
+              66
+            ],
+            [
+              38,
+              41,
+              48
+            ],
+            [
+              48,
+              52,
+              61
+            ],
+            [
+              39,
+              40,
+              43
+            ],
+            [
+              45,
+              49,
+              52
+            ],
+            [
+              34,
+              35,
+              38
+            ],
+            [
+              33,
+              36,
+              44
+            ],
+            [
+              52,
+              47,
+              44
+            ],
+            [
+              68,
+              59,
+              54
+            ],
+            [
+              52,
+              64,
+              75
+            ],
+            [
+              59,
+              64,
+              75
+            ],
+            [
+              54,
+              59,
+              70
+            ],
+            [
+              48,
+              53,
+              64
+            ],
+            [
+              31,
+              36,
+              47
+            ],
+            [
+              31,
+              36,
+              47
+            ],
+            [
+              42,
+              36,
+              33
+            ],
+            [
+              114,
+              95,
+              86
+            ],
+            [
+              94,
+              87,
+              86
+            ],
+            [
+              72,
+              81,
+              98
+            ],
+            [
+              88,
+              89,
+              94
+            ],
+            [
+              52,
+              59,
+              71
+            ],
+            [
+              45,
+              46,
+              53
+            ],
+            [
+              44,
+              50,
+              57
+            ],
+            [
+              41,
+              44,
+              46
+            ]
+          ],
+          "width": 3360
+        },
+        "bytes": 3919231,
+        "file": "original/original-frame-001.png",
+        "name": "original-screen-001.png",
+        "sha256": "1dfca65344518b1d89edbfd5df8eb24fb05eec9a5adf734c0fd05563e203b338",
+        "source": "cua"
+      }
+    ],
+    "input_delivered_sha256": null,
+    "raw": {
+      "stderr": {
+        "bytes": 12069,
+        "file": "original/stderr.raw",
+        "sha256": "64a1cedc8b45e3db1a376a8c8b868a9c990a614c358603390869e1e776ef2514"
+      },
+      "stdout": {
+        "bytes": 0,
+        "file": "original/stdout.raw",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "role": "original",
+    "timed_out": true,
+    "witness": {
+      "capture_backend": "cua",
+      "command": "/Users/haseeb-mir/.local/bin/highball run -b Games -e x64-crossover26.3-r27 -d /Users/haseeb-mir/Downloads/IGI -- /Users/haseeb-mir/Downloads/IGI/igi.exe",
+      "declared_window_title": "Project I.G.I.",
+      "focused_window": null,
+      "window_title_confirmed": false,
+      "window_titles": [
+        "AirDrop",
+        "GameReComp \u2014 Pick your game and turn it to native port",
+        "IGI",
+        "Downloads",
+        "Storage"
+      ]
+    }
+  },
+  "reason": "ORIGINAL_WINDOW_UNCONFIRMED: no independently confirmed game window; a running process or desktop pixels alone are not evidence",
+  "reasons": [
+    "ORIGINAL_WINDOW_UNCONFIRMED: no independently confirmed game window; a running process or desktop pixels alone are not evidence",
+    "MISSING_NATIVE_INPUT: no native recompiled binary/run supplied; cannot compare an original against a native side",
+    "NO_DECLARED_INPUT: --input-file is required for PASS"
+  ],
+  "records": [
+    {
+      "declared_input_sha256": "",
+      "evidence_path": "/Users/haseeb-mir/Documents/Code/GameReComp-game-target-oracle/proof/game-target-oracle/igi-issue15-attempt-evidence.json",
+      "evidence_sha256": "5a7205c08992dccb93e6b6b70fa9296e0f287f65c37e6cce9ed6f74a3fbc4547",
+      "game_id": "igi",
+      "matrix_promotion": false,
+      "native_input_sha256": null,
+      "native_sha256": null,
+      "not_claimed": "PASS means only that this one declared original-vs-native scenario comparison passed: both sides executed, real non-blank frames were captured from independently confirmed game windows, identical input bytes were delivered, and a coarse 8x8 frame layout similarity exceeded the declared threshold. No claim of gameplay, graphics, audio or input equivalence, issue closure, other editions, other scenarios or other titles is made.",
+      "oracle": "game-target-oracle-dual-run",
+      "oracle_verified": true,
+      "original_input_sha256": null,
+      "original_sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01",
+      "scenario": "igi",
+      "similarity": null,
+      "verdict": "PARTIAL"
+    }
+  ],
+  "scenario": "igi",
+  "schema": 1,
+  "status": "PARTIAL",
+  "verdict": "PARTIAL",
+  "verification": "NOT VERIFIED"
+}

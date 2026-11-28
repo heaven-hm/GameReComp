@@ -1,0 +1,16 @@
+{
+  "slug": "win32__mapsolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/mapsolver.exe",
+  "sha256": "d3fc9b2ad1fb332ef7af45956f540d1e9c8cece5bd7fa54038e7194e6ca1a390",
+  "size": 205344,
+  "is_game": true,
+  "started": 1795505391.7252,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__mapsolver.exe/bin_mapsolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__mapsolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__mapsolver.exe/report.json",
+  "seconds": 31.7
+}

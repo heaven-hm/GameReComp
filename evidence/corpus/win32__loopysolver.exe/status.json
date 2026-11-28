@@ -1,0 +1,16 @@
+{
+  "slug": "win32__loopysolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/loopysolver.exe",
+  "sha256": "8872226363df5d0efbb1b5b83baa20bb211047ceaadf2a67abacc4a8be37cfb6",
+  "size": 445949,
+  "is_game": true,
+  "started": 1795505784.7199948,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__loopysolver.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

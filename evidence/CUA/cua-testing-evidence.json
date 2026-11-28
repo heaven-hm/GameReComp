@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "driver": "CuaDriver 0.17.0",
+  "session": "gamerecomp-proof",
+  "capture_scope": "desktop",
+  "permissions": {
+    "accessibility": true,
+    "screen_recording": true,
+    "source": "com.trycua.driver"
+  },
+  "screen": {
+    "logical": [
+      1680,
+      1050
+    ],
+    "backing": [
+      3360,
+      2100
+    ],
+    "scale": 1.0
+  },
+  "tools_verified": [
+    "start_session",
+    "get_desktop_state",
+    "list_windows",
+    "press_key"
+  ],
+  "target": {
+    "app": "AssaultCube native macOS arm64 (source build)",
+    "pid": 76631,
+    "window_id": 4743,
+    "title": "AssaultCube"
+  },
+  "frame": {
+    "file": "ac-setup-cua.png",
+    "size": [
+      1024,
+      768
+    ],
+    "colours": 17689,
+    "sha256": "6b341ca298e969ffecb7a97b33ec4b295ab8e7f3a11eba34be4491b1926e2f03"
+  },
+  "input_note": "CUA press_key(w, foreground) returned delivery.mode=foreground, effect=unverifiable; the following desktop capture showed a different app frontmost, so no AC input-state change is claimed.",
+  "verdict": "CUA-driven visual proof of a real AssaultCube gameplay frame; input delivery confirmed but state change not proven"
+}

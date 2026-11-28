@@ -1,0 +1,2 @@
+note: input/output identity not fully specified (omitted: --input-os, --input-arch, --target-os, --target-arch); assuming windows/x86 -> macos/arm64
+  [1mGame[0m[1m[30;103mReComp[0m[0m  [1mtetris-win-32-jp.exe[0m [2m(windows/x86)[0m -> macos/arm64

@@ -1,0 +1,5 @@
+[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/tictactoe__TicTacToe.exe/screenshots, at most one every 500 ms
+[pe] <embedded image> mapped at 0x00400000, span 0x14000
+[pe] unresolved import mscoree.dll!_CorExeMain
+[pe] bound 0 imports, 1 unresolved
+[host] C:\TicTacToe.exe booted: entry 0x0040FE96, 1 unresolved imports

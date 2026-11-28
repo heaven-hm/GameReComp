@@ -1,0 +1,38 @@
+{
+  "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/flood.exe",
+  "stdin_hex": "",
+  "scope": "real PE32+ recompiled to native ARM64; BLOCKED means the bounded import shim cannot model this binary",
+  "pipeline": {
+    "disassembler": "disasm64.py",
+    "lifter": "generate64.py",
+    "meta": {
+      "image_base": 5368709120,
+      "entry_point": 5368792008,
+      "size_of_image": 151552,
+      "functions": 293,
+      "translation_units": 1,
+      "lift_errors": 0,
+      "recomp_todo_sites": 4,
+      "imports": 191
+    }
+  },
+  "native": {
+    "compiler": "/opt/homebrew/opt/llvm/bin/clang",
+    "target": "arm64-apple-macos11",
+    "binary": "/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/grc-x64-expand-2db3phmj/flood/native",
+    "exit": -6,
+    "stdout_hex": "",
+    "stderr": "cpu64: call-import unmodelled: KERNEL32.dll!GetSystemTimeAsFileTime (HLE slot 74)\n"
+  },
+  "engines": {
+    "unicorn": {
+      "outcome": "NOT_RUN",
+      "detail": "native recompilation blocked before oracle comparison"
+    }
+  },
+  "verdict": {
+    "native": "BLOCKED",
+    "blocker": "call-import unmodelled: KERNEL32.dll!GetSystemTimeAsFileTime",
+    "claim": "disasm64 + generate64 + clang succeeded, but native run stopped at the recorded unmodelled import; no PASS is claimed."
+  }
+}

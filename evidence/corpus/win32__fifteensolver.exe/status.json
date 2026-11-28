@@ -1,0 +1,16 @@
+{
+  "slug": "win32__fifteensolver.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/fifteensolver.exe",
+  "sha256": "47b443772e36be8a8cf8c45fe80951a466264f370fa28a4851ea57b5c1f17d95",
+  "size": 177020,
+  "is_game": true,
+  "started": 1795505153.52474,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fifteensolver.exe/bin_fifteensolver",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fifteensolver.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__fifteensolver.exe/report.json",
+  "seconds": 12.4
+}

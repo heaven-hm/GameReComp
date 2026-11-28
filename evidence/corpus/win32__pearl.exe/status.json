@@ -1,0 +1,16 @@
+{
+  "slug": "win32__pearl.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pearl.exe",
+  "sha256": "f000ad535b97d1f2c553f86a5411e80ad78b071b6796d3d254e0e65dc2c9daa4",
+  "size": 528368,
+  "is_game": true,
+  "started": 1795505784.727278,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__pearl.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

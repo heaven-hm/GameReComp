@@ -1,0 +1,16 @@
+{
+  "slug": "win32__bridges.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/bridges.exe",
+  "sha256": "c1b131626cba992678505fdd3b46b050cad615ca2656b4b406f6fb0246983a0e",
+  "size": 341123,
+  "is_game": true,
+  "started": 1795505784.6522171,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__bridges.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

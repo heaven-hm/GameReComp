@@ -1,0 +1,8 @@
+{
+  "source": "original PE32 executed under Wine (process-level, not retail Windows)",
+  "sha256": "4e4dd1858676aa07a755f2811189c41c442e1e673bcdad6fa7fc983dea23db98",
+  "wine": "/Users/haseeb-mir/Library/Application Support/Highball/engines/x64-crossover26.3-r27/engine/bin/wine",
+  "stdout_contains": [],
+  "stderr_contains": [],
+  "exit_code": 53
+}

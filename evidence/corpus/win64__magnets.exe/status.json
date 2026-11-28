@@ -1,0 +1,16 @@
+{
+  "slug": "win64__magnets.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/magnets.exe",
+  "sha256": "5f1af615d12b71fa637bf16aaccde94f0e3aae91904579ba517692b819f89e1e",
+  "size": 174664,
+  "is_game": true,
+  "started": 1795506240.647684,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -11, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x1400180d8, delta 0, imports 191\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__magnets.exe/bin_magnets",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__magnets.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__magnets.exe/report.json",
+  "seconds": 24.9
+}

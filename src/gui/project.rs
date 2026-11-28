@@ -11,7 +11,7 @@ use super::home::{
 use super::style;
 use super::{
     FnFilter, FnSort, FocusInput, GameReCompApp, JobStatus, MapColorMode, ProjectTab, Route,
-    WorkerKind,
+    SourceImproveMethod, WorkerKind,
 };
 use crate::model::{FunctionRow, ProjectModel};
 use crate::pipeline_opts::AppProfile;
@@ -596,7 +596,11 @@ fn render_overview_tab(
                 .child(
                     style::primary_btn("post_launch_game_btn", t, "▶  Launch Standalone", true)
                         .on_click(cx.listener(move |this, _, _, cx| {
-                            this.launch_rebuilt_binary_with_data(&bin, None);
+                            // Infer the original PE's data directory the same
+                            // way the pipeline's run stage does; launching from
+                            // build/ with no assets root leaves the guest
+                            // unable to find its own files on macOS.
+                            this.launch_rebuilt_binary(&bin);
                             cx.notify();
                         })),
                 )
@@ -634,14 +638,19 @@ fn render_overview_tab(
                     "✨ Improve C Readability (AI)",
                 )
                 .on_click(cx.listener(move |this, _, _, cx| {
-                    this.start_readability_agent_for_dir(proj_dir_ai.clone(), None, cx);
+                    this.start_readability_agent_for_dir(
+                        SourceImproveMethod::AiLocal,
+                        proj_dir_ai.clone(),
+                        None,
+                        cx,
+                    );
                 })),
             )
             .child(
                 style::ghost_btn("post_revng_btn", t, "🔬 Rev.ng Source Pass")
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.start_readability_agent_for_dir_with(
-                            proj_dir_revng.clone(), None, "revng", cx,
+                            proj_dir_revng.clone(), None, "revng", Some(SourceImproveMethod::Revng), cx,
                         );
                     })),
             )
@@ -2121,7 +2130,7 @@ fn render_agents_tab(
                             style::ghost_btn("ag_revng_btn", t, "🔬 Rev.ng Source Pass")
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     this.start_readability_agent_for_dir_with(
-                                        revng_dir.clone(), None, "revng", cx,
+                                        revng_dir.clone(), None, "revng", Some(SourceImproveMethod::Revng), cx,
                                     );
                                 })),
                         )
@@ -2522,7 +2531,7 @@ fn render_project_settings_tab(
                                     style::ghost_btn("proj_pe_browse", t, "Browse…").on_click(
                                         cx.listener(|this, _, window, cx| {
                                             this.pick_file_async(
-                                                "Choose a 32-bit Windows PE executable (.exe)",
+                                                "Choose a Windows, macOS or Linux game/app executable",
                                                 window,
                                                 cx,
                                                 |this, f, _, _| {

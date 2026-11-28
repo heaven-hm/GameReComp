@@ -3,7 +3,7 @@ use gpui::{
 };
 
 use super::style;
-use super::{FocusInput, GameReCompApp, InspectorTab};
+use super::{FocusInput, GameReCompApp, InspectorTab, SourceImproveMethod};
 use crate::theme_tokens::ThemeTokens;
 
 pub fn render_function_inspector(
@@ -22,6 +22,8 @@ pub fn render_function_inspector(
     let addr_for_star = func.address.clone();
     let addr_for_agent = func.address.clone();
     let dir_for_agent = model.dir.clone();
+    let addr_for_run = addr_for_agent.clone();
+    let dir_for_run = dir_for_agent.clone();
     let addr_for_note = func.address.clone();
     let sym_for_copy = func.symbol.clone();
     let src_for_copy = app.inspector_source.clone();
@@ -194,17 +196,90 @@ pub fn render_function_inspector(
                     ))
                 })
                 .child(
-                    style::ghost_btn("insp_run_agent", t, "✨ Improve C Readability (AI)")
-                        .on_click(cx.listener(move |this, _, _, cx| {
-                            this.agent_target_fn = addr_for_agent.clone();
-                            this.start_readability_agent_for_dir(
-                                dir_for_agent.clone(),
-                                Some(addr_for_agent.clone()),
-                                cx,
-                            );
-                        })),
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .child(
+                            style::ghost_btn(
+                                "insp_improve_menu_btn",
+                                t,
+                                format!(
+                                    "✨ Improve source: {}",
+                                    app.source_improve_method.short_label()
+                                ),
+                            )
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.show_source_improve_menu = !this.show_source_improve_menu;
+                                cx.notify();
+                            })),
+                        )
+                        .child(
+                            style::primary_btn(
+                                "insp_improve_run_btn",
+                                t,
+                                format!("▶ Run {}", app.source_improve_method.short_label()),
+                                true,
+                            )
+                            .on_click(cx.listener(
+                                move |this, _, _, cx| {
+                                    let method = this.source_improve_method;
+                                    this.show_source_improve_menu = false;
+                                    this.agent_target_fn = addr_for_run.clone();
+                                    this.start_readability_agent_for_dir(
+                                        method,
+                                        dir_for_run.clone(),
+                                        Some(addr_for_run.clone()),
+                                        cx,
+                                    );
+                                },
+                            )),
+                        ),
                 ),
         );
+
+    // Inline method menu (same pattern as the sidebar's "+ New project" menu).
+    // Exactly three methods are offered; every one is still gated by the
+    // compile-and-rerun readability harness.
+    let improve_menu = if app.show_source_improve_menu {
+        let mut menu = div()
+            .id("insp_improve_menu")
+            .mx(px(24.0))
+            .mb(px(10.0))
+            .p(px(5.0))
+            .flex()
+            .flex_col()
+            .gap(px(2.0))
+            .rounded(px(4.0))
+            .bg(rgb(t.panel))
+            .border_1()
+            .border_color(rgb(t.ink))
+            .child(
+                div()
+                    .px(px(9.0))
+                    .py(px(5.0))
+                    .font_family(t.mono_font)
+                    .text_size(px(t.ui_px(10.5)))
+                    .text_color(rgb(t.muted))
+                    .child(format!("Improve source code · target {addr_for_agent}")),
+            );
+        for (id, method) in [
+            ("insp_improve_revng", SourceImproveMethod::Revng),
+            ("insp_improve_ai_local", SourceImproveMethod::AiLocal),
+            ("insp_improve_ai_web", SourceImproveMethod::AiWeb),
+        ] {
+            menu = menu.child(improve_method_item(
+                id,
+                t,
+                method,
+                app.source_improve_method == method,
+                cx,
+            ));
+        }
+        Some(menu)
+    } else {
+        None
+    };
 
     let body = match app.inspector_tab {
         InspectorTab::Source => {
@@ -422,6 +497,7 @@ pub fn render_function_inspector(
         }))
         .child(header)
         .child(subtabs)
+        .when_some(improve_menu, |el, menu| el.child(menu))
         .child(
             div()
                 .id("inspector_body_scroll")
@@ -445,4 +521,77 @@ pub fn render_function_inspector(
             }))
             .child(drawer),
     )
+}
+
+fn improve_method_item(
+    id: &'static str,
+    t: &ThemeTokens,
+    method: SourceImproveMethod,
+    selected: bool,
+    cx: &mut Context<GameReCompApp>,
+) -> Stateful<Div> {
+    let hover_bg = t.bg_alt;
+    let detail = match method {
+        SourceImproveMethod::Revng => "deterministic decompiler, no AI command",
+        SourceImproveMethod::AiLocal => "local CLI/model via REVENG_AI_CMD",
+        SourceImproveMethod::AiWeb => "opt-in command via REVENG_WEB_AI_CMD",
+    };
+    div()
+        .id(id)
+        .flex()
+        .items_center()
+        .justify_between()
+        .gap(px(8.0))
+        .px(px(9.0))
+        .py(px(7.0))
+        .rounded(px(3.0))
+        .cursor_pointer()
+        .when(selected, |el| {
+            el.bg(rgb(t.hl_soft)).text_color(rgb(t.hl_ink))
+        })
+        .when(!selected, |el| el.hover(move |s| s.bg(rgb(hover_bg))))
+        // Keep the menu mounted while the click is dispatched: removing the
+        // clicked element during its own click lets the event land on the
+        // scrim behind this drawer and close the Inspector.
+        .on_click(cx.listener(move |this, _, _, cx| {
+            this.source_improve_method = method;
+            cx.notify();
+        }))
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(1.0))
+                .child(
+                    div()
+                        .font_family(t.ui_font)
+                        .font_weight(FontWeight::BOLD)
+                        .text_size(px(t.ui_px(13.0)))
+                        .text_color(if selected { rgb(t.hl_ink) } else { rgb(t.ink) })
+                        .child(method.label()),
+                )
+                .child(
+                    div()
+                        .font_family(t.ui_font)
+                        .text_size(px(t.ui_px(11.5)))
+                        .text_color(if selected {
+                            rgb(t.hl_ink)
+                        } else {
+                            rgb(t.muted)
+                        })
+                        .child(detail),
+                ),
+        )
+        .child(
+            div()
+                .font_family(t.mono_font)
+                .font_weight(FontWeight::BOLD)
+                .text_size(px(t.ui_px(11.0)))
+                .text_color(if selected {
+                    rgb(t.hl_ink)
+                } else {
+                    rgb(t.muted)
+                })
+                .child(if selected { "✓" } else { "" }),
+        )
 }

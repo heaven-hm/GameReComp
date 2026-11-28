@@ -5,6 +5,50 @@ All notable changes to this repository: the GameReComp PCRecomp-first product
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.2.0] - 2026-11-24
+
+Evidence-backed release of the PE32 x86 to host pipeline. 1105 Python tests,
+16/16 paired Unicorn difftest, 7/7 differential gate, 35 Rust tests; real
+binaries, frames and per-OS status in `proof/`. No game is claimed 100%
+verified without an original-Windows scenario. See `docs/RELEASE_0.2.0.md`.
+
+## [0.3.0] - 2026-11-26
+
+Evidence-backed tracker-complete release. 88 reviewed PRs landed since 0.2.0.
+
+### Added
+- Fail-closed evidence gates for multi-lifter selection, Linux-host CI,
+  Windows-oracle capture, audio, input replay, controller/network capability,
+  corpus capacity and game-target original-vs-native attempts.
+- Real Windows-oracle console proofs (arith-calc, base64), three non-blank
+  Chocolate Doom frames with 0 unresolved imports, a green Ubuntu CI run, and
+  a real rev.ng run on GitHub Linux with an honest NOT PROVEN verdict.
+- Source-improvement GUI method selection (rev.ng / local AI / web AI) with
+  CUA screenshots, and OpenGL present-frame capture for SDL games.
+- Evidence-based defer/decision documents for issues #3, #4, #5, #6, #7,
+  #131, #133 and #134, plus scoped acceptance proofs for #28, #144 and #171.
+
+### Fixed
+- DMD catch-owner frame selection from the DHandlerTable fptr, with a measured
+  record that the remaining Gunroar blocker needs a lifter-side EH checkpoint.
+- Controller audit reason codes for every API verdict.
+
+### Limits
+- No original-Windows gameplay oracle for proprietary game targets; no
+  non-silent real audio capture; no legal 10,000-game corpus; no x64 game run.
+  Fail-closed verdicts remain PARTIAL/BLOCKED where evidence is absent.
+
+## [Unreleased]
+
+### Fixed
+- dos32: `fix_case` no longer faults on an empty or `NULL` path or on a relative
+  name without a separator; the walk is bounded by the path's own terminator
+  and a component is copied only when its length matches the directory entry
+  (#335).
+- Adapted upstream PCRecomp #195 (`a67767b`): mouse mapping now reaches the
+  right and bottom edges of a scaled/HiDPI picture instead of stopping a pixel
+  or two short. Added a deterministic `screen_map_selftest` regression.
+
 ## [0.0.1] - 2026-11-19
 
 First beta release of the Rust GameReComp CLI and orchestrator.

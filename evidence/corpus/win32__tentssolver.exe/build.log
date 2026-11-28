@@ -1,0 +1,152 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win32/tentssolver.exe
+arch=pe32_i386 sha256=036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581
+host=macos/arm64
+======================================================================
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/cargo-target/release/game-recomp-cli /Users/haseeb-mir/Downloads/recomp-apps/win32/tentssolver.exe --repo /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build --project-dir /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project --assets-dir /Users/haseeb-mir/Downloads/recomp-apps/win32 --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --out-mode binary --no-table --no-progress --json
+==> inspect
+    ok         0.1s  inspect: i386 PE32, 59 imports, entry 0x00401460
+==> recover
+    ok        11.1s  recover: 701 functions, 236007 instructions
+==> translate
+    ok         1.8s  translate: 5 source files, 27191341 bytes, 0 lift errors
+==> project
+    ok         0.0s  project: project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project
+==> compile
+    ok        34.5s  compile: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/build/tentssolver (3991128 bytes, 34.4s)
+==> report
+    ok         0.2s  report: reports in /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/reports
+
+project:      /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project
+input:        windows/x86 (tentssolver.exe)
+output:       macos/arm64 native
+source code:  /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/src/recomp/gen
+binary:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/build/tentssolver
+stages:       inspect(ok), recover(ok), translate(ok), project(ok), compile(ok), report(ok)
+score:        70/100
+verification: not-run
+report:       /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/reports/report.html
+{
+  "schema": 1,
+  "tool": "GameReComp autorecomp",
+  "version": "0.0.1",
+  "generated_at": "2026-11-24T07:29:12Z",
+  "input": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tentssolver.exe",
+  "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project",
+  "stages": [
+    {
+      "name": "inspect",
+      "seconds": 0.13,
+      "status": "ok",
+      "message": "i386 PE32, 59 imports, entry 0x00401460",
+      "data": {
+        "path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/tentssolver.exe",
+        "size": 200829,
+        "sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581",
+        "md5": "aa98a7be26a3d6c4ea2a2bebad3d0f6e",
+        "sha1": "1d04320e0f728a5d77cd9163bac2edaf2b45f789",
+        "machine": "i386",
+        "pe_type": "PE32",
+        "subsystem": "Windows Console",
+        "image_base": "0x00400000",
+        "entry_point": "0x00401460",
+        "linker_version": "2.47",
+        "code_range": [
+          "0x00401000",
+          "0x0040D200"
+        ],
+        "import_dlls": [
+          "KERNEL32.dll",
+          "api-ms-win-crt-convert-l1-1-0.dll",
+          "api-ms-win-crt-environment-l1-1-0.dll",
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-private-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "api-ms-win-crt-string-l1-1-0.dll"
+        ],
+        "import_count": 59,
+        "iat_entries": 59
+      }
+    },
+    {
+      "name": "recover",
+      "seconds": 11.1,
+      "status": "ok",
+      "message": "701 functions, 236007 instructions",
+      "data": {
+        "count": 701,
+        "instructions": 236007
+      }
+    },
+    {
+      "name": "translate",
+      "seconds": 1.78,
+      "status": "ok",
+      "message": "5 source files, 27191341 bytes, 0 lift errors",
+      "data": {
+        "source_units": 5,
+        "source_bytes": 27191341,
+        "lift_errors": 0,
+        "seconds": 1.8
+      }
+    },
+    {
+      "name": "project",
+      "seconds": 0.04,
+      "status": "ok",
+      "message": "project at /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project",
+      "data": {
+        "project": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project",
+        "name": "tentssolver",
+        "source_categories": {
+          "HIGH_LEVEL_VERIFIED": 0,
+          "HIGH_LEVEL_UNVERIFIED": 0,
+          "LOW_LEVEL_FALLBACK": 701,
+          "UNRESOLVED": 0
+        },
+        "high_level_functions": [],
+        "highlevel_modules_skipped": [
+          {
+            "module": "doukutsu-sweep",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "fa18379fe942ecb5fd69360ede81675ad6bb8b743bef2120305c4b439c732218",
+            "executable_sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581"
+          },
+          {
+            "module": "ikachan",
+            "reason": "target.sha256 does not match this executable",
+            "module_sha256": "22923218ba97271a5acc5753b17fcb67d5dd98c00369a317abda44204a10df80",
+            "executable_sha256": "036cf5f9a8e182fb2321092510f5acedd0ecf902862a76f3718b24f6fd0c9581"
+          }
+        ],
+        "runtime_files": 42,
+        "highlevel_files": 0
+      }
+    },
+    {
+      "name": "compile",
+      "seconds": 34.45,
+      "status": "ok",
+      "message": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/build/tentssolver (3991128 bytes, 34.4s)",
+      "data": {
+        "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__tentssolver.exe/project/build/tentssolver",
+        "sha256": "c1682d2e7b3b0ca33abf77bc40de020b29fc5e4d2e0a31e24c40dce4d3e172d3",
+        "seconds": 34.4,
+        "source_bytes": 28779564,
+        "build_timeout_seconds": 737.2316551208496,
+        "build_timeout_adaptive": true
+      }
+    }
+  ],
+  "outcome": {
+    "status": "not-run",
+    "reason": "verification did not run"
+  },
+  "score": 70,
+  "manifest": "manifest.json"
+}
+
+[exit 0 in 48.5s]

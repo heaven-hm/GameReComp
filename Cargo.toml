@@ -1,6 +1,6 @@
 [package]
 name = "game-recomp"
-version = "0.0.1"
+version = "0.3.3"
 edition = "2021"
 license = "AGPL-3.0-only"
 description = "GameReComp Rust CLI (game-recomp-cli) and GPUI desktop GUI (game-recomp-gui) with WASM-ready core"
@@ -12,6 +12,11 @@ path = "src/lib.rs"
 [[bin]]
 name = "game-recomp-cli"
 path = "src/bin/game-recomp-cli.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "game-recomp-verify"
+path = "src/bin/game-recomp-verify.rs"
 required-features = ["cli"]
 
 [[bin]]
@@ -36,6 +41,7 @@ gui = [
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 # CLI dependencies (excluded on wasm32-unknown-unknown --lib --no-default-features)
 chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }

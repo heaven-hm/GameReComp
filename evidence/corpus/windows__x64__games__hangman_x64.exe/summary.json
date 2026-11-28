@@ -1,0 +1,55 @@
+{
+  "game": "windows__x64__games__hangman_x64.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/hangman_x64",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/hangman_x64.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+  "arch": "PE32+ x64",
+  "match_reason": "path partial match",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__hangman_x64.exe",
+  "native": {
+    "game": "windows__x64__games__hangman_x64.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/hangman_x64",
+    "binary_sha256": "ee48e9be33efd62b2a0caa8d3ebb5d95fe7b399a4cff52e5267443ca04e48b45",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/hangman_x64"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__hangman_x64.exe/screenshots"
+    },
+    "exit_code": 2,
+    "stdout_tail": "usage: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__hangman_x64.exe/hangman_x64 <pe32plus.exe>\n",
+    "seconds": 0.0,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__hangman_x64.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "windows__x64__games__hangman_x64.exe exit=      2 frames=0 0.0s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 2,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__hangman_x64.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run hangman_x64.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games",
+    "exit": 0,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/windows__x64__games__hangman_x64.exe/highball.log",
+    "bytes": 1021,
+    "seconds": 11.3,
+    "tail": "\n\u001b[35m\u001b[1m========================================\n        C99 HANGMAN WORD PUZZLE         \n========================================\u001b[0m\n\n\u001b[33m  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\u001b[0m\n\nWord: _ _ _ _ _ _ _ _ _ _ _ \nGuessed so far: \nLives remaining: 6\nEnter a letter guess: \nPlay again? (y/n): \n\u001b[32mThanks for playing! Goodbye.\u001b[0m\n\nLaunching hangman_x64.exe in bottle 'Games' [engine: x64-crossover26.3-r27, renderer: dxvk]...\nexit=0 after 7s \u2014 log: /Users/haseeb-mir/Library/Application Support/Highball/logs/20261124T074215Z-Games-hangman_x64.exe.log\n\nmsync: bootstrapped mach port on wine-12ba06b9-msync.\nmsync: up and running.\n002c:err:wineboot:process_run_key Error running cmd L\"C:\\\\windows\\\\system32\\\\winemenubuilder.exe -a -r\" (126).\n0074:err:module:import_dll Library fwpkclnt.sys (which is needed by L\"C:\\\\windows\\\\system32\\\\drivers\\\\idmwfp.sys\") not found\n0074:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\IDMWFP\": c0000142\n"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "game": "win32__galaxiespicture.exe",
+  "status": "TESTED",
+  "native_binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiespicture.exe/bin_galaxiespicture",
+  "source_exe": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiespicture.exe",
+  "source_folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+  "arch": "PE32 i386",
+  "match_reason": "exact input SHA-256 in B1 metadata",
+  "evidence_dir": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiespicture.exe",
+  "native": {
+    "game": "win32__galaxiespicture.exe",
+    "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiespicture.exe/bin_galaxiespicture",
+    "binary_sha256": "cfac68ad2b41ea23246c5f3ab6fc93330ffc4eb3dbfff1453419593fb79fbb9b",
+    "folder": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "command": [
+      "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiespicture.exe/bin_galaxiespicture"
+    ],
+    "env": {
+      "SDL_VIDEODRIVER": "cocoa",
+      "SDL_AUDIODRIVER": "dummy",
+      "RECOMP_SCREENSHOT": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiespicture.exe/screenshots"
+    },
+    "exit_code": 1,
+    "stdout_tail": "[screenshot] writing up to 3 frame(s) to /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiespicture.exe/screenshots, at most one every 500 ms\n[pe] <embedded image> mapped at 0x00400000, span 0x33000\n[pe] static TLS: template 0x00416000..0x00416004 (+0 zero), index 0\n[pe] bound 63 imports, 0 unresolved\n[host] C:\\galaxiespicture.exe booted: entry 0x00401460, 0 unresolved imports\nfailed to read enough bitmap data\n",
+    "seconds": 0.1,
+    "frames": [],
+    "frame_count": 0,
+    "evidence": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiespicture.exe",
+    "runner_returncode": 0,
+    "runner_stdout": "win32__galaxiespicture.exe exit=      1 frames=0 0.1s\nsummary: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/summary.json\n",
+    "runner_stderr": ""
+  },
+  "exit": 1,
+  "frames": 0,
+  "frame_proof": {
+    "proof_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiespicture.exe/frame-proof.json",
+    "frames_proven": 0,
+    "nonblank": 0,
+    "blank": 0,
+    "errors": 0,
+    "frame_rows": [],
+    "returncode": 0,
+    "stderr": ""
+  },
+  "screenshots_png": [],
+  "highball": {
+    "command": "highball run galaxiespicture.exe",
+    "cwd": "/Users/haseeb-mir/Downloads/recomp-apps/win32",
+    "exit": 124,
+    "log": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b2-tests/win32__galaxiespicture.exe/highball.log",
+    "bytes": 6168,
+    "seconds": 24.4,
+    "tail": "ize_control v2\n\tVK_EXT_surface_maintenance1 v1\n\tVK_EXT_swapchain_colorspace v5\n\tVK_EXT_swapchain_maintenance1 v1\n\tVK_EXT_texel_buffer_alignment v1\n\tVK_EXT_texture_compression_astc_hdr v1\n\tVK_EXT_tooling_info v1\n\tVK_EXT_vertex_attribute_divisor v3\n\tVK_AMD_gpu_shader_half_float v2\n\tVK_AMD_negative_viewport_height v1\n\tVK_AMD_shader_image_load_store_lod v1\n\tVK_AMD_shader_trinary_minmax v1\n\tVK_GOOGLE_display_timing v1\n\tVK_IMG_format_pvrtc v1\n\tVK_INTEL_shader_integer_functions2 v1\n\tVK_MVK_macos_surface v3\n\tVK_MVK_moltenvk v37\n\tVK_NV_fragment_shader_barycentric v1\n[mvk-info] GPU device:\n\tmodel: Apple M2\n\ttype: Integrated\n\tvendorID: 0x106b\n\tdeviceID: 0x1b020208\n\tpipelineCacheUUID: DB660224-1B02-0208-0000-000100000000\n\tGPU memory available: 5461 MB\n\tGPU memory used: 0 MB\n\tMetal Shading Language 4.0\n\tsupports the following GPU Features:\n\t\tGPU Family Metal 4\n\t\tGPU Family Apple 8\n\t\tGPU Family Mac 1\n\t\tGPU Family Mac 2\n\t\tRead-Write Texture Tier 2\n[mvk-info] Created VkInstance for Vulkan version 1.0.357, as requested by app, with the following 3 Vulkan extensions enabled:\n\tVK_KHR_external_memory_capabilities v1\n\tVK_KHR_external_semaphore_capabilities v1\n\tVK_KHR_get_physical_device_properties2 v2\n"
+  }
+}

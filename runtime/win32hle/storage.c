@@ -48,7 +48,19 @@ typedef struct node {
     int refs;                            /* objects open on it */
 } node_t;
 
-typedef struct { node_t *root; char path[1024]; int writable, dirty, refs; } file_t;
+typedef struct { node_t *root; char path[1024]; int writable, dirty, refs; uint32_t lockbytes; } file_t;
+
+/* A storage can be backed by a disk file, or by a caller-supplied ILockBytes
+ * (StgCreateDocfileOnILockBytes). Vtable order: IUnknown (0-2), ReadAt,
+ * WriteAt, Flush, SetSize, LockRegion, UnlockRegion, Stat (3-9). Calling the
+ * byte array through its guest vtable makes it work for a host-served
+ * ILockBytes (ole32.c) and for one the guest implemented itself. */
+static uint32_t ilb_call(uint32_t obj, int slot, int nargs, const uint32_t *args) {
+    uint32_t a[8] = { obj };
+    for (int i = 0; i < nargs && i < 7; i++) a[1 + i] = args[i];
+    /* obj[0] is the vtable pointer; vtable[slot] is the method's import VA. */
+    return hle_call_guest(MEM32(MEM32(obj) + 4u * (uint32_t)slot), nargs + 1, a);
+}
 
 static int wlen(const uint16_t *w) { int n = 0; while (w && w[n]) n++; return n; }
 static int wcmp_upper(const uint16_t *a, const uint16_t *b) {   /* the CFB order: length, then upper case */
@@ -105,11 +117,15 @@ static int read_cfb(const uint8_t *f, size_t n, node_t **out) {
     if (n < 512 || memcmp(f, sig, 8)) return 0;
     rd_t r;
     memset(&r, 0, sizeof r);
+    int valid = 1;                              /* a corrupt stream rejects the whole file */
     r.f = f, r.n = n, r.ss = 1u << *(const uint16_t *)(f + 30);
     if (r.ss != 512 && r.ss != 4096) return 0;
     uint32_t nfatsec = *(const uint32_t *)(f + 44), dir0 = *(const uint32_t *)(f + 48);
     uint32_t cutoff = *(const uint32_t *)(f + 56), mini0 = *(const uint32_t *)(f + 60);
     uint32_t difat0 = *(const uint32_t *)(f + 68), ndifat = *(const uint32_t *)(f + 72);
+    /* A FAT sector count larger than the file could hold is corrupt; allocating
+     * it would either fail or let later reads walk off the file buffer. */
+    if (nfatsec > n / r.ss + 2) return 0;
     /* the FAT's sectors: 109 in the header, the rest through the DIFAT chain */
     uint32_t *fs = (uint32_t *)calloc(nfatsec + 1, 4), k = 0;
     for (uint32_t i = 0; i < 109 && k < nfatsec; i++) fs[k++] = *(const uint32_t *)(f + 76 + 4 * i);
@@ -128,9 +144,14 @@ static int read_cfb(const uint8_t *f, size_t n, node_t **out) {
     uint32_t mlen;
     r.minifat = (uint32_t *)chain(&r, mini0, &mlen);
     r.nmini = mlen / 4;
+    /* The first 128 bytes hold the root directory entry; a truncated
+     * directory chain cannot supply it, and reading dir+116 would be an
+     * out-of-bounds read. */
+    if (!dir || dlen < 128) {
+        free(dir); free(r.fat); free(r.minifat); return 0;
+    }
     uint32_t ndir = dlen / 128;
-    if (!ndir) { free(dir); free(r.fat); free(r.minifat); return 0; }
-    /* the root's chain is the mini stream */
+    /* the root's chain is the mini stream; it may legitimately be empty */
     r.ministream = chain(&r, *(const uint32_t *)(dir + 116), &r.ministream_n);
     node_t **nodes = (node_t **)calloc(ndir, sizeof *nodes);
     for (uint32_t i = 0; i < ndir; i++) {
@@ -148,16 +169,24 @@ static int read_cfb(const uint8_t *f, size_t n, node_t **out) {
             x->size = x->cap = size;
             x->data = (uint8_t *)calloc(1, size ? size : 1);
             if (size < cutoff) {                     /* in the mini stream, 64-byte sectors */
-                uint32_t got = 0, steps = 0;
-                for (uint32_t s = start; s != ENDOFCHAIN && s < r.nmini && got < size && steps < 1u << 20; s = r.minifat[s], steps++) {
-                    uint32_t take = size - got < 64 ? size - got : 64;
-                    if ((size_t)s * 64 + take <= r.ministream_n) memcpy(x->data + got, r.ministream + (size_t)s * 64, take);
-                    got += take;
+                /* A stream that lives in the mini stream must have a mini FAT
+                 * and a mini stream to back it. Returning an empty buffer here
+                 * would be a fake success on a corrupt file. */
+                if (size && (!r.ministream || start == ENDOFCHAIN || start >= r.nmini)) {
+                    valid = 0;
+                } else {
+                    uint32_t got = 0, steps = 0;
+                    for (uint32_t s = start; s != ENDOFCHAIN && s < r.nmini && got < size && steps < 1u << 20; s = r.minifat[s], steps++) {
+                        uint32_t take = size - got < 64 ? size - got : 64;
+                        if ((size_t)s * 64 + take <= r.ministream_n)
+                            memcpy(x->data + got, r.ministream + (size_t)s * 64, take);
+                        got += take;
+                    }
                 }
             } else {
                 uint32_t cl;
                 uint8_t *c = chain(&r, start, &cl);
-                memcpy(x->data, c, cl < size ? cl : size);
+                if (c) memcpy(x->data, c, cl < size ? cl : size);
                 free(c);
             }
         }
@@ -165,7 +194,7 @@ static int read_cfb(const uint8_t *f, size_t n, node_t **out) {
     }
     /* each storage's children are the tree under its child id: in-order */
     node_t *root = nodes[0];
-    int ok = root && root->type == 5;
+    int ok = valid && root && root->type == 5;
     for (uint32_t i = 0; ok && i < ndir; i++) {
         if (!nodes[i] || nodes[i]->type == 2) continue;
         uint32_t stack[256], sp = 0, c = *(const uint32_t *)(dir + 128 * i + 76);
@@ -216,7 +245,10 @@ static uint32_t balance(uint32_t *ids, int lo, int hi) {   /* a balanced BST of 
 }
 static uint32_t id_of(node_t *n) { for (uint32_t i = 0; i < g_nents; i++) if (g_ents[i].n == n) return i; return NOSTREAM; }
 
-static int write_cfb(const char *path, node_t *root) {
+/* Serialize the tree into a freshly malloc'd compound-file image. The caller
+ * owns the buffer; both the file-backed and the ILockBytes-backed paths use
+ * exactly the same bytes. */
+static uint8_t *build_cfb(node_t *root, size_t *out_len) {
     g_ents = NULL, g_nents = 0;
     number(root);
     for (uint32_t i = 0; i < g_nents; i++) {
@@ -261,7 +293,7 @@ static int write_cfb(const char *path, node_t *root) {
     uint32_t dir_secs = (g_nents * 128 + 511) / 512;
     uint32_t used = nbigsec + mini_secs + minifat_secs + dir_secs, fat_secs = 1;
     while (fat_secs * 128 < used + fat_secs) fat_secs++;
-    if (fat_secs > 109) { free(mini.b), free(big.b), free(minifat), free(bigfat), free(g_ents); return 0; }   /* ponytail: no DIFAT; a 7 MB save is far off */
+    if (fat_secs > 109) { free(mini.b), free(big.b), free(minifat), free(bigfat), free(g_ents); return NULL; }   /* ponytail: no DIFAT; a 7 MB save is far off */
     uint32_t total = used + fat_secs, a_mini = nbigsec, a_minifat = a_mini + mini_secs, a_dir = a_minifat + minifat_secs, a_fat = a_dir + dir_secs;
     uint32_t *fat = (uint32_t *)malloc(4u * fat_secs * 128);
     for (uint32_t i = 0; i < fat_secs * 128; i++) fat[i] = FREESECT;
@@ -320,11 +352,19 @@ static int write_cfb(const char *path, node_t *root) {
         put(&out, e, 128);
     }
     put(&out, fat, (size_t)fat_secs * 512);
-    FILE *f = fopen(path, "wb");
-    int ok = f && fwrite(out.b, 1, out.n, f) == out.n;
-    if (f) fclose(f);
-    free(out.b), free(mini.b), free(big.b), free(minifat), free(bigfat), free(fat), free(g_ents);
+    free(mini.b), free(big.b), free(minifat), free(bigfat), free(fat), free(g_ents);
     g_ents = NULL;
+    *out_len = out.n;
+    return out.b;
+}
+static int write_cfb(const char *path, node_t *root) {
+    size_t len = 0;
+    uint8_t *b = build_cfb(root, &len);
+    if (!b) return 0;
+    FILE *f = fopen(path, "wb");
+    int ok = f && fwrite(b, 1, len, f) == len;
+    if (f) fclose(f);
+    free(b);
     return ok;
 }
 
@@ -343,16 +383,38 @@ static uint32_t new_obj(uint32_t vt, file_t *f, node_t *n) {
     return c;
 }
 static void commit(file_t *f) {
-    if (f->writable && f->dirty) {
-        if (!write_cfb(f->path, f->root)) fprintf(stderr, "[storage] cannot write %s\n", f->path);
-        f->dirty = 0;
+    if (!f->writable || !f->dirty) return;
+    size_t len = 0;
+    uint8_t *img = build_cfb(f->root, &len);
+    if (!img) { fprintf(stderr, "[storage] cannot serialize storage\n"); return; }
+    if (f->lockbytes) {
+        /* Write the whole image through ILockBytes: SetSize(0), WriteAt(0),
+         * Flush. The bytes live in guest memory for the duration of the call. */
+        uint32_t zero[2] = { 0, 0 };
+        uint32_t dst = hle_va(hle_alloc(len ? (uint32_t)len : 1u));
+        if (dst) memcpy(hle_ptr(dst), img, len);
+        uint32_t mark = hle_scratch_mark(), p = hle_scratch(4);
+        uint32_t w[5] = { 0, 0, dst, (uint32_t)len, p };   /* out ptr is guest memory */
+        ilb_call(f->lockbytes, 6, 2, zero);          /* SetSize(0) */
+        ilb_call(f->lockbytes, 4, 5, w);             /* WriteAt(0, dst, len, &written) */
+        ilb_call(f->lockbytes, 5, 0, NULL);          /* Flush */
+        hle_scratch_release(mark);
+        if (dst) hle_free(hle_ptr(dst));
+    } else {
+        FILE *file = fopen(f->path, "wb");
+        if (!(file && fwrite(img, 1, len, file) == len))
+            fprintf(stderr, "[storage] cannot write %s\n", f->path);
+        if (file) fclose(file);
     }
+    free(img);
+    f->dirty = 0;
 }
 static void obj_release(uint32_t self) {
     obj_t *o = OBJ(self);
     o->node->refs--;
     if (--o->file->refs == 0) {
         commit(o->file);
+        if (o->file->lockbytes) ilb_call(o->file->lockbytes, 2, 0, NULL);  /* Release */
         free_tree(o->file->root);
         free(o->file);
     }
@@ -545,6 +607,7 @@ static void s_StgCreateDocfile(void) {                   /* (name, mode, reserve
     vtables();
     char path[1024];
     if (!A32(0) || !A32(3)) RET(STG_E_INVALIDPOINTER, 4);
+    MEM32(A32(3)) = 0;                          /* COM: null the out param on failure */
     wide_path(A32(0), path, sizeof path);
     FILE *t = fopen(path, "rb");
     if (t && !(A32(1) & STGM_CREATE)) { fclose(t); RET(STG_E_FILEALREADYEXISTS, 4); }
@@ -561,6 +624,7 @@ static void s_StgOpenStorage(void) {                     /* (name, priority, mod
     vtables();
     char path[1024];
     if (!A32(0) || !A32(5)) RET(STG_E_INVALIDPOINTER, 6);
+    MEM32(A32(5)) = 0;                          /* COM: null the out param on failure */
     wide_path(A32(0), path, sizeof path);
     FILE *fp = fopen(path, "rb");
     if (!fp) RET(STG_E_FILENOTFOUND, 6);
@@ -579,6 +643,55 @@ static void s_StgOpenStorage(void) {                     /* (name, priority, mod
     f->root = root, f->writable = (A32(2) & 3u) != 0;
     MEM32(A32(5)) = new_obj(g_vt_stg, f, root);
     RET(S_OK, 6);
+}
+
+/* StgCreateDocfileOnILockBytes: the caller hands us the byte array instead of
+ * a file name. Wine's storage32.c answers STG_E_INVALIDPOINTER for a NULL
+ * byte array or output pointer and otherwise builds the same root storage on
+ * that byte array. With STGM_CREATE the image is written at once; without it
+ * an existing compound file in the array is read back (the file-backed
+ * StgCreateDocfile path refuses to overwrite an existing file). */
+static void s_StgCreateDocfileOnILockBytes(void) {   /* (lockbytes, mode, reserved, &stg) */
+    vtables();
+    uint32_t lb = A32(0), out = A32(3);
+    if (!lb || !out) RET(STG_E_INVALIDPOINTER, 4);
+    MEM32(out) = 0;
+    file_t *f = (file_t *)calloc(1, sizeof *f);
+    f->root = (node_t *)calloc(1, sizeof(node_t));
+    f->root->type = 5, f->writable = (A32(1) & 3u) != 0, f->dirty = 1;
+    f->lockbytes = lb;
+    if (!(A32(1) & STGM_CREATE)) {
+        uint32_t mark = hle_scratch_mark(), stat = hle_scratch(80);
+        uint32_t sa[2] = { stat, 0 };
+        ilb_call(lb, 9, 2, sa);                      /* ILockBytes::Stat */
+        uint32_t sz = MEM32(stat + 8);
+        hle_scratch_release(mark);
+        if (sz >= 512) {
+            uint8_t *host = (uint8_t *)malloc(sz);
+            uint32_t gbuf = hle_va(hle_alloc(sz));
+            uint32_t mark2 = hle_scratch_mark(), p = hle_scratch(4);
+            uint32_t r[5] = { 0, 0, gbuf, sz, p };
+            ilb_call(lb, 3, 5, r);                   /* ReadAt(0, gbuf, sz, &got) */
+            hle_scratch_release(mark2);
+            node_t *root = NULL;
+            int ok = host && gbuf && MEM32(p) == sz;
+            if (ok) { memcpy(host, hle_ptr(gbuf), sz); ok = read_cfb(host, sz, &root); }
+            free(host);
+            if (gbuf) hle_free(hle_ptr(gbuf));
+            if (!ok || !root) {
+                free_tree(f->root);
+                free(f);
+                RET(STG_E_FILEALREADYEXISTS, 4);
+            }
+            free_tree(f->root);
+            f->root = root;
+            f->dirty = 0;
+        }
+    }
+    ilb_call(lb, 1, 0, NULL);                        /* COM holds a reference */
+    MEM32(out) = new_obj(g_vt_stg, f, f->root);
+    commit(f);                                       /* write the initial CFB image */
+    RET(S_OK, 4);
 }
 
 /* OleSaveToStream / OleLoadFromStream: the class ID, then the object's own
@@ -636,6 +749,7 @@ static void s_OleLoadFromStream(void) {                  /* (stream, iid, &obj) 
 
 const win32hle_shim win32hle_storage[] = {
     { "StgCreateDocfile", s_StgCreateDocfile }, { "StgOpenStorage", s_StgOpenStorage },
+    { "StgCreateDocfileOnILockBytes", s_StgCreateDocfileOnILockBytes },
     { "OleSaveToStream", s_OleSaveToStream }, { "OleLoadFromStream", s_OleLoadFromStream },
     { 0, 0 }
 };

@@ -1,0 +1,36 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tictactoe.exe
+arch=pe32plus_x64 sha256=bfc12319beeda7a3029a055e4cdf25b5fc9e13b05a772f11403767effdb9e23c
+host=macos/arm64
+======================================================================
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/disasm/disasm64.py /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tictactoe.exe -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/funcs.json --funcs-txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/funcs.txt
+[*] tictactoe.exe: base=0x140000000, 1 exec sections, 8,144 code bytes
+[*] seeds: pdata=54, guard_cf=0, exports=0, entry=1, reloc=8, thunk=0, funclet=1, chunks=0
+[*] functions: 86 (32 thunks)
+
+[exit 0 in 0.2s]
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/lift/generate64.py /Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tictactoe.exe /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/funcs.txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/gen
+[*] image base 0x140000000, entry 0x140001440, 18 sections
+[*] catalog: 86 functions
+[*] imports: 44 IAT slots
+[*] closure round 1: +10 dispatch targets not in the catalog
+[*] closure round 2: +7 dispatch targets not in the catalog
+[*] closure round 3: +2 dispatch targets not in the catalog
+[*] catalog closed after 4 rounds, 19 entries added (105 total)
+
+[*] === COMPLETE in 0s ===
+[*] image_base           0x140000000
+[*] entry_point          0x140001440
+[*] size_of_image        159744
+[*] functions            105
+[*] translation_units    1
+[*] lift_errors          0
+[*] recomp_todo_sites    1
+[*] imports              44
+
+[exit 0 in 0.2s]
+
+$ clang -target arm64-apple-macos11 -O1 -w -I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/gen -I/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu/cpu64.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/runner64_generic.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/gen/recomp_funcs_0000.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/gen/recomp_dispatch.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/gen/recomp_imports.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tictactoe.exe/tictactoe
+
+[exit 0 in 1.1s]

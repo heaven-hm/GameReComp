@@ -1,0 +1,16 @@
+{
+  "slug": "win32__filling.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/filling.exe",
+  "sha256": "2aaee7c8243de7db98edc15a9155f7f7dcdd98b4e155113d41293f1c637faf13",
+  "size": 321100,
+  "is_game": true,
+  "started": 1795505784.6207218,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__filling.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

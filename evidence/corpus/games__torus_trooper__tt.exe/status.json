@@ -1,0 +1,16 @@
+{
+  "slug": "games__torus_trooper__tt.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/torus_trooper/tt.exe",
+  "sha256": "b3a93b12e110e885d5ccc5546722dbee8864e69d1b9cf111c31e43b1012ce1cb",
+  "size": 546332,
+  "is_game": true,
+  "started": 1795505784.730912,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__torus_trooper__tt.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

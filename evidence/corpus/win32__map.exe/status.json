@@ -1,0 +1,16 @@
+{
+  "slug": "win32__map.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/map.exe",
+  "sha256": "5c7fe4e711ea0fff40be617df1c5f4ea7ee4ab6e12985eeaaa2be024382abae6",
+  "size": 328660,
+  "is_game": true,
+  "started": 1795505784.630852,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__map.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

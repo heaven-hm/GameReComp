@@ -1,0 +1,13 @@
+{
+  "verdict": "DEFER",
+  "reasons": ["NO_RENDERER_FIXTURES", "NO_LICENSED_GAME_SCENARIO", "IMPORT_MENTIONS_ARE_NOT_DEMAND"],
+  "evidence": {
+    "corpus": "reports/local-games-inventory.json, reports/all-windows-binaries.json, reports/games/game-target-issues-15-24.json",
+    "finding": "d3d10.dll/d3d11.dll/dxgi.dll strings occur only in Wine system DLL paths and inventory notes; no owned PE32 game in the corpus imports them",
+    "d3d9_backend": "No d3d9.dll / d3d9ex / dxgi HLE backend in runtime/win32hle",
+    "cost": "D3D10/11 needs guest COM object registry, shader bytecode/translation licence, DXGI swapchain and versioned host backend; none present",
+    "compatibility": "No versioned renderer fixture, no licensed later-era game scenario, no original-vs-native frame evidence"
+  },
+  "dual_engine_match": null,
+  "limits": "DEFER only; no universal support or rendering PASS claimed."
+}

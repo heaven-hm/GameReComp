@@ -1,0 +1,210 @@
+{
+  "schema": 1,
+  "records": [
+    {
+      "app": "prime-gen",
+      "bits": 32,
+      "status": "BUILT",
+      "source_sha256": "c0efb0d610b43590612fc9501cddd25a39d13724ef18671fded8fb8aa3850427",
+      "exe_sha256": "a6637c38bcd9faca63e9bfb7d444be5b1ccb7f37ed15038ade3d5909fc5d7f9f",
+      "exe_bytes": 145679,
+      "highball_exit": 0,
+      "stdout_lines": [
+        "",
+        "\u001b[36m\u001b[1m========================================",
+        "     C PRIME NUMBER GENERATOR & TEST    ",
+        "========================================\u001b[0m",
+        "1. Generate primes up to N",
+        "2. Check if a number is prime & factorize",
+        "3. Exit",
+        "\u001b[33mChoose an option (1-3): \u001b[0m",
+        "\u001b[32mGoodbye!\u001b[0m",
+        ""
+      ]
+    },
+    {
+      "app": "prime-gen",
+      "bits": 64,
+      "status": "BUILT",
+      "source_sha256": "c0efb0d610b43590612fc9501cddd25a39d13724ef18671fded8fb8aa3850427",
+      "exe_sha256": "10bafaae3d84ac35dadfb3524eae29079d995fed44eadd3b88aae5191be4c3b4",
+      "exe_bytes": 152335,
+      "highball_exit": 0,
+      "stdout_lines": [
+        "",
+        "\u001b[36m\u001b[1m========================================",
+        "     C PRIME NUMBER GENERATOR & TEST    ",
+        "========================================\u001b[0m",
+        "1. Generate primes up to N",
+        "2. Check if a number is prime & factorize",
+        "3. Exit",
+        "\u001b[33mChoose an option (1-3): \u001b[0m",
+        "\u001b[32mGoodbye!\u001b[0m",
+        ""
+      ]
+    },
+    {
+      "app": "passgen",
+      "bits": 32,
+      "status": "BUILT",
+      "source_sha256": "725c65cb128c91cba292324163e3603e2cfa6211ce88b3f0564c60bc65e9723e",
+      "exe_sha256": "4d3c44a8d62e566dc6208a1d15163167af5f71bfd67b8c85c909050bef1af40c",
+      "exe_bytes": 11376521,
+      "highball_exit": 0,
+      "stdout_lines": [
+        "",
+        "\u001b[36m\u001b[1m========================================",
+        "    C++ SECURE PASSWORD GENERATOR       ",
+        "========================================\u001b[0m",
+        "",
+        "Enter password length (8-128) [default 16]: ",
+        "\u001b[1mGenerated Password:\u001b[0m",
+        "\u001b[32m\u001b[1m\u250c----------\u2510",
+        "\u2502 dmhHB}EC \u2502",
+        "\u2514----------\u2518\u001b[0m",
+        "Entropy  : \u001b[36m51 bits\u001b[0m",
+        "Strength : \u001b[33mModerate\u001b[0m",
+        ""
+      ]
+    },
+    {
+      "app": "passgen",
+      "bits": 64,
+      "status": "BUILT",
+      "source_sha256": "725c65cb128c91cba292324163e3603e2cfa6211ce88b3f0564c60bc65e9723e",
+      "exe_sha256": "b02a9c823523a31b580a5cc69c3b188cd045173ff4a5b1352b9d4a41bfbfcf84",
+      "exe_bytes": 12912208,
+      "highball_exit": 0,
+      "stdout_lines": [
+        "",
+        "\u001b[36m\u001b[1m========================================",
+        "    C++ SECURE PASSWORD GENERATOR       ",
+        "========================================\u001b[0m",
+        "",
+        "Enter password length (8-128) [default 16]: ",
+        "\u001b[1mGenerated Password:\u001b[0m",
+        "\u001b[32m\u001b[1m\u250c----------\u2510",
+        "\u2502 9}d;aUC% \u2502",
+        "\u2514----------\u2518\u001b[0m",
+        "Entropy  : \u001b[36m51 bits\u001b[0m",
+        "Strength : \u001b[33mModerate\u001b[0m",
+        ""
+      ]
+    },
+    {
+      "app": "base64-tool",
+      "bits": 32,
+      "status": "BUILT",
+      "source_sha256": "db69572d639fde9f8b284b7690eb569577950106dfa935e08f407d646028b3e9",
+      "exe_sha256": "e3dc6a656a09aaa5f7cfc8617dcbe2e1e06fa2e7cdfbe345fa3f21e699688dc1",
+      "exe_bytes": 136310,
+      "highball_exit": 0,
+      "stdout_lines": [
+        "",
+        "\u001b[36m\u001b[1m========================================",
+        "        C BASE64 ENCODER / DECODER      ",
+        "========================================\u001b[0m",
+        "1. Base64 Encode String",
+        "2. Base64 Decode String",
+        "3. Exit",
+        "Choose (1-3): ",
+        "Goodbye!",
+        ""
+      ]
+    },
+    {
+      "app": "base64-tool",
+      "bits": 64,
+      "status": "BUILT",
+      "source_sha256": "db69572d639fde9f8b284b7690eb569577950106dfa935e08f407d646028b3e9",
+      "exe_sha256": "01d64998c2c9e768a5451e55389d7b00821697b45e61fc3385c7e4371ce97d71",
+      "exe_bytes": 153210,
+      "highball_exit": 0,
+      "stdout_lines": [
+        "",
+        "\u001b[36m\u001b[1m========================================",
+        "        C BASE64 ENCODER / DECODER      ",
+        "========================================\u001b[0m",
+        "1. Base64 Encode String",
+        "2. Base64 Decode String",
+        "3. Exit",
+        "Choose (1-3): ",
+        "Goodbye!",
+        ""
+      ]
+    },
+    {
+      "app": "guess-game",
+      "bits": 32,
+      "status": "BUILT",
+      "source_sha256": "bb31dc54451e8a7bf6ee5bd2c59029222dfeb2bd038bb577ed665500fcaa8e8a",
+      "exe_sha256": "30a83fb882b6b00d35c85d338a0151a4ee013a1f2957ab15acaca6f6cfc4feca",
+      "exe_bytes": 137388,
+      "highball_exit": 124
+    },
+    {
+      "app": "guess-game",
+      "bits": 64,
+      "status": "BUILT",
+      "source_sha256": "bb31dc54451e8a7bf6ee5bd2c59029222dfeb2bd038bb577ed665500fcaa8e8a",
+      "exe_sha256": "2a59fe0325065f42f3586064b5115392f779934f20eee65c3831c127d82e6f2b",
+      "exe_bytes": 153773,
+      "highball_exit": 124
+    },
+    {
+      "app": "hangman",
+      "bits": 32,
+      "status": "BUILT",
+      "source_sha256": "87b499acdea53e6a16a470b859fc24ca2d47ecd25ca5cec03f37caa5e3917592",
+      "exe_sha256": "26004df5e4f6207f3d1c5ed0e68035ecb36627fb8e2233b4d1c625888b4c18e2",
+      "exe_bytes": 138289,
+      "highball_exit": 0
+    },
+    {
+      "app": "hangman",
+      "bits": 64,
+      "status": "BUILT",
+      "source_sha256": "87b499acdea53e6a16a470b859fc24ca2d47ecd25ca5cec03f37caa5e3917592",
+      "exe_sha256": "49df26f1dec813aff522d0a3892bf6aa502b03cc160fb5b269d1284f356f75d9",
+      "exe_bytes": 154160,
+      "highball_exit": 0
+    },
+    {
+      "app": "tictactoe",
+      "bits": 32,
+      "status": "BUILT",
+      "source_sha256": "0e1af0f490b7f96c294043d169ceadbbc1cd7b7c2b2a51c0fb39546467c200a6",
+      "exe_sha256": "f88594da6d54474a3ad6ba37d4ea45ed673dd125d48005ada9b6646a06fb8c75",
+      "exe_bytes": 11285297,
+      "highball_exit": 124
+    },
+    {
+      "app": "tictactoe",
+      "bits": 64,
+      "status": "BUILT",
+      "source_sha256": "0e1af0f490b7f96c294043d169ceadbbc1cd7b7c2b2a51c0fb39546467c200a6",
+      "exe_sha256": "a017acfae0515083f989999e2d0a7b03e2ea382d8138893a0ec9f27362abdbe8",
+      "exe_bytes": 12816319,
+      "highball_exit": 124
+    },
+    {
+      "app": "mastermind",
+      "bits": 32,
+      "status": "BUILT",
+      "source_sha256": "899a5f6e731f488b5f9bbe7d2f00edbafaf9557c6017fd2c9eaa4c5809728803",
+      "exe_sha256": "79da97e88520d6296cf7bdb7f0bad0d83d865d05e1d179e948d0ff040ac5c604",
+      "exe_bytes": 11372995,
+      "highball_exit": 124
+    },
+    {
+      "app": "mastermind",
+      "bits": 64,
+      "status": "BUILT",
+      "source_sha256": "899a5f6e731f488b5f9bbe7d2f00edbafaf9557c6017fd2c9eaa4c5809728803",
+      "exe_sha256": "74ef7d0f500afccf2fb1fe49ce19e38de9edd29a280ea1e79df1b889a25070ab",
+      "exe_bytes": 12911296,
+      "highball_exit": 124
+    }
+  ],
+  "note": "Local MinGW-w64 cross-builds from macOS/Linux source; 7 apps x PE32/PE32+ = 14 outputs; no new repo claim."
+}

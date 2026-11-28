@@ -1,0 +1,16 @@
+{
+  "slug": "win64__undead.exe",
+  "arch": "pe32plus_x64",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win64/undead.exe",
+  "sha256": "8077f7ef0e7234101a3ebb63d1042ec3ad5fd63d56d5348fccb13e2db797f916",
+  "size": 178248,
+  "is_game": true,
+  "started": 1795506325.188365,
+  "status": "BUILD-ONLY",
+  "detail": "native ARM64 binary built; run not verified: {'exit': -10, 'stdout_hex': '', 'stderr': '[cpu64] image loaded: entry 0x140018ee4, delta 0, imports 192\\n'}",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__undead.exe/bin_undead",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__undead.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__undead.exe/report.json",
+  "seconds": 22.5
+}

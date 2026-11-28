@@ -1,0 +1,20 @@
+{
+  "decision": "BLOCKED",
+  "chosen_lifter": null,
+  "reasons": [
+    "'revng': UNVERIFIED: report has neither a 'verdict' nor an 'addresses' list"
+  ],
+  "lifters": [
+    {
+      "name": "revng",
+      "status": "UNVERIFIED",
+      "verdict": null,
+      "address": null,
+      "diverged_cases": 0,
+      "total_cases": 0,
+      "reasons": [
+        "report has neither a 'verdict' nor an 'addresses' list"
+      ]
+    }
+  ]
+}

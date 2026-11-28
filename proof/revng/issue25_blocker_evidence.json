@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "criterion": "revng_selection",
+  "selection": null,
+  "verified": false,
+  "real_revng_difftest_report": null,
+  "blocker": "The pinned rev.ng container image could not be acquired: the registry fetch stalled after consuming about 5.8 GiB of host disk and was killed; the image is not present, and the runner's disk guard now refuses to start another pull with 2.7 GiB free. No real rev.ng C output or difftest report exists.",
+  "attempt_report": "proof/revng/container_attempt.json",
+  "note": "Sealed blocker record. This is NOT an acceptance pass for any criterion.",
+  "sha256": "1ec8e355ab699d1463c863a2d25f826842c60711b384d9a1901ae81d1cfbf203"
+}

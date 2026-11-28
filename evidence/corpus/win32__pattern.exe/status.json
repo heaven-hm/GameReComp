@@ -1,0 +1,16 @@
+{
+  "slug": "win32__pattern.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/pattern.exe",
+  "sha256": "8bbcea84712028d93a9ff1f8a1e839fbe8ff6a83daa0412049a65616fce30feb",
+  "size": 315887,
+  "is_game": true,
+  "started": 1795505784.601804,
+  "status": "BLOCKED",
+  "detail": "timeout after 900s",
+  "returncode": null,
+  "binary_path": null,
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__pattern.exe/build.log",
+  "report_path": null,
+  "seconds": 0.0
+}

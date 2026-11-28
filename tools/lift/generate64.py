@@ -59,7 +59,8 @@ HLE_STRIDE = 8
 
 
 def read_pe(path):
-    data = open(path, 'rb').read()
+    with open(path, 'rb') as f:
+        data = f.read()
     pe = struct.unpack_from('<I', data, 0x3c)[0]
     nsec = struct.unpack_from('<H', data, pe + 6)[0]
     optsz = struct.unpack_from('<H', data, pe + 20)[0]
@@ -71,15 +72,22 @@ def read_pe(path):
     soi = struct.unpack_from('<I', data, opt + 56)[0]
     entry = struct.unpack_from('<I', data, opt + 16)[0]
     secs = []
+    execsecs = []
     off = opt + optsz
     for i in range(nsec):
         n, vs, va, rs, ra = struct.unpack_from('<8sIIII', data, off + i * 40)
+        chars = struct.unpack_from('<I', data, off + i * 40 + 36)[0]
         secs.append((n.rstrip(b'\0').decode(), va, vs, ra, rs))
+        # Not every PE calls its code section ".text" (imgview64.exe does
+        # not). Section CHARACTERISTICS are the authority; reading a fixed
+        # name raised IndexError before any code could be lifted.
+        if chars & 0x20000000:          # IMAGE_SCN_MEM_EXECUTE
+            execsecs.append((va, vs, rs))
     # data directory 1 is the import table; 12 is the IAT
     ddoff = opt + 112
     imp_rva, imp_sz = struct.unpack_from('<II', data, ddoff + 8)
     reloc_rva, reloc_sz = struct.unpack_from('<II', data, ddoff + 5 * 8)
-    return data, base, soi, entry, secs, imp_rva, reloc_rva, reloc_sz
+    return data, base, soi, entry, secs, imp_rva, reloc_rva, reloc_sz, execsecs
 
 
 def make_reader(data, base, secs):
@@ -365,15 +373,26 @@ def eh_tables(data, base, secs):
 
     def u32(rva):
         o = rva_to_off(secs, rva)
-        return struct.unpack_from('<I', data, o)[0] if o is not None else 0
+        return struct.unpack_from('<I', data, o)[0] if o is not None and o + 4 <= len(data) else 0
 
-    for i in range(pd_size // 12):
+    # A truncated .pdata (imgview64.exe: directory says 2,135 entries, file
+    # holds far fewer) used to raise struct.error here. Clamp to what the
+    # section actually mapped before walking the table.
+    n = 0
+    if off is not None and off >= 0:
+        sec = next((s for s in secs if s[1] <= pd_rva < s[1] + max(s[2], s[4])), None)
+        avail = len(data) - off
+        if sec is not None:
+            avail = min(avail, sec[4] - (pd_rva - sec[1]))
+        n = min(pd_size // 12, max(0, avail // 12))
+
+    for i in range(n):
         begin, end, unwind = struct.unpack_from('<III', data, off + 12 * i)
         seen = 0
         while unwind and seen < 8:
             seen += 1
             uo = rva_to_off(secs, unwind)
-            if uo is None:
+            if uo is None or uo + 3 >= len(data):
                 break
             ver_flags = data[uo]
             ncodes = data[uo + 2]
@@ -436,7 +455,7 @@ def main():
     exe_path, funcs_path, outdir = argv[0], argv[1], argv[2]
     os.makedirs(outdir, exist_ok=True)
 
-    data, base, soi, entry, secs, imp_rva, reloc_rva, reloc_sz = read_pe(exe_path)
+    data, base, soi, entry, secs, imp_rva, reloc_rva, reloc_sz, execsecs = read_pe(exe_path)
     lift64_cpu.IMAGE_BASE = base
     read_va = make_reader(data, base, secs)
     lf = Lifter(image_size=soi, read_va=read_va, image_base=base)
@@ -478,8 +497,10 @@ def main():
                     'void %s(CPU *c) { (void)c; RECOMP_TODO(%#x, "lift error"); }'
                     % (name, va, e, fname, va))
 
-    text_lo = base + [s for s in secs if s[0] == '.text'][0][1]
-    text_hi = text_lo + [s for s in secs if s[0] == '.text'][0][2]
+    if not execsecs:
+        raise SystemExit('%s: no executable section in the PE header' % exe_path)
+    text_lo = base + min(va for va, _vs, _rs in execsecs)
+    text_hi = max(base + va + max(vs, rs) for va, vs, rs in execsecs)
 
     # Stored code pointers first: these are entries the disassembler could not
     # have found, and adding them before the closure loop means their own

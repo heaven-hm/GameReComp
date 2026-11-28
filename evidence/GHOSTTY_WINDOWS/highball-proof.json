@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "title": "Ghostty native Windows port -> Highball on macOS",
+  "binary": {
+    "path": "software/ghostty-win/ghostty.exe",
+    "sha256": "0fbfaf3071573d3eb1d2f11c992c9473cf51b8b6bf71c8ab22202e8ddaeb766b",
+    "bytes": 28470784
+  },
+  "source": "Thr45hx/ghostty-windows prebuilt native Windows x64 port (Zig 0.15.2, win32 app-runtime, DirectWrite, OpenGL)",
+  "highball": {
+    "engine": "x64-crossover26.3-r27",
+    "renderer": "dxvk",
+    "command": "highball run ghostty.exe --version",
+    "exit": 0,
+    "stdout": "Ghostty 1.3.0-windows-apprt+0e5ca30 ... app runtime .win32",
+    "gui_log": "Created top-level window / tab bar / child surface"
+  },
+  "cua_capture": {
+    "frame": "ghostty-windows-highball-cua.png",
+    "verdict": "FAIL - capture showed desktop, not the Ghostty window; not used as proof"
+  },
+  "verdict": "PASS (process) - real Windows PE runs under Highball with exact version output; no reliable GUI frame in this environment"
+}

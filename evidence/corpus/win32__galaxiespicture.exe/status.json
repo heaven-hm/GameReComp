@@ -1,0 +1,16 @@
+{
+  "slug": "win32__galaxiespicture.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/win32/galaxiespicture.exe",
+  "sha256": "36d0ec0bfb7158d9af612d10e4a4d58bfcc6787e957d3c0cd60d1b154f1afec7",
+  "size": 220542,
+  "is_game": true,
+  "started": 1795505601.6749911,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiespicture.exe/bin_galaxiespicture",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiespicture.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win32__galaxiespicture.exe/report.json",
+  "seconds": 23.4
+}

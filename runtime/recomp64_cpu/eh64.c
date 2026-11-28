@@ -24,7 +24,20 @@ extern void dispatch(CPU *c, uint64_t target);
 extern int  es3_cs_depth_get(void);
 extern void es3_cs_depth_set(int d);
 
-static __declspec(thread) es3_ehframe_t *eh_top;
+/* The landing-pad stack is per host thread, but MSVC's spelling is not C.
+ * Prefer standard C11 TLS; keep __declspec(thread) for MSVC and __thread for
+ * pre-C11 GNU compilers so the same file builds with every supported host. */
+#if defined(_MSC_VER)
+#define ES3_EH_TLS __declspec(thread)
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define ES3_EH_TLS _Thread_local
+#elif defined(__GNUC__)
+#define ES3_EH_TLS __thread
+#else
+#define ES3_EH_TLS
+#endif
+
+static ES3_EH_TLS es3_ehframe_t *eh_top;
 
 void es3_eh_push(es3_ehframe_t *f, uint64_t func, jmp_buf *jb)
 {
@@ -73,24 +86,42 @@ static uint32_t pdata_n;
 
 static void eh_init(void)
 {
-    uint32_t pe, dd;
+    uint32_t pe, dd, rva, size;
     if (pdata || !es3_eh_image_base) return;
     pe = ru32(0x3c);
     /* OptionalHeader at pe+0x18, data directories 0x70 into it, exception is
      * entry 3. */
     dd = pe + 0x18 + 0x70 + 3 * 8;
-    pdata = (rfunc_t *)img(ru32(dd));
-    pdata_n = ru32(dd + 4) / 12;
+    rva = ru32(dd);
+    size = ru32(dd + 4);
+    /* An empty (or truncated) exception directory means there is no unwind
+     * data. Fail closed: RVA 0 points at the DOS header, not at .pdata, and a
+     * non-zero size there would make pdata_find read headers as entries. */
+    if (!rva || size < 12) return;
+    pdata = (rfunc_t *)img(rva);
+    pdata_n = size / 12;
+}
+
+/* uintptr_t halves: (lo + hi) / 2 in signed int can overflow and turn the
+ * middle of a large table into a negative subscript. */
+static uintptr_t pdata_mid(uintptr_t lo, uintptr_t hi)
+{
+    return lo + (hi - lo) / 2;
 }
 
 static rfunc_t *pdata_find(uint32_t rva)
 {
-    int lo = 0, hi = (int)pdata_n - 1;
+    uintptr_t lo = 0, hi;
+    if (!pdata || !pdata_n) return 0;
+    hi = (uintptr_t)pdata_n - 1;
     while (lo <= hi) {
-        int m = (lo + hi) / 2;
-        if (rva < pdata[m].begin) hi = m - 1;
-        else if (rva >= pdata[m].end) lo = m + 1;
-        else return &pdata[m];
+        uintptr_t m = pdata_mid(lo, hi);
+        if (rva < pdata[m].begin) {
+            if (!m) break;
+            hi = m - 1;
+        } else if (rva >= pdata[m].end) {
+            lo = m + 1;
+        } else return &pdata[m];
     }
     return 0;
 }

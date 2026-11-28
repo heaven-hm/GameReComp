@@ -1,0 +1,206 @@
+# ARM32 target evidence - verbatim command transcript
+# Generated: 2026-11-24T07:59:13Z
+# Repo commit: e5225434f5d35c1e07ec74f0bea3598a4263a19d
+# NOTE: outputs are captured with 2>&1; EXIT is the command exit status.
+
+## 0. Host facts
+
+$ uname -a
+Darwin Haseebs-MacBook-Pro.local 27.2.0 Darwin Kernel Version 27.2.0: Wed Oct 14 23:48:16 PDT 2026; root:xnu-13432.41.4~25/RELEASE_ARM64_T8112 arm64
+EXIT=0
+
+$ clang --version
+Homebrew clang version 23.1.6
+Target: arm64-apple-darwin27.2.0
+Thread model: posix
+InstalledDir: /opt/homebrew/Cellar/llvm/23.1.6/bin
+Configuration file: /opt/homebrew/Cellar/llvm/23.1.6/etc/clang/arm64-apple-darwin27.cfg
+EXIT=0
+
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+EXIT=0
+
+$ xcrun --show-sdk-path
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+EXIT=0
+
+$ xcrun --show-sdk-version
+15.2
+EXIT=0
+
+$ xcodebuild -showsdks
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+EXIT=1
+
+$ ls -la /Library/Developer/CommandLineTools/SDKs/
+total 0
+drwxr-xr-x  10 root  wheel  320 Jan  4  2025 .
+drwxr-xr-x   5 root  wheel  160 Jan  4  2025 ..
+lrwxr-xr-x   1 root  wheel   14 Jan  4  2025 MacOSX.sdk -> MacOSX15.2.sdk
+drwxr-xr-x   7 root  wheel  224 May 12  2023 MacOSX13.3.sdk
+lrwxr-xr-x   1 root  wheel   14 Jan  4  2025 MacOSX13.sdk.bak -> MacOSX13.3.sdk
+drwxr-xr-x   7 root  wheel  224 Feb 20  2024 MacOSX14.4.sdk
+drwxr-xr-x   7 root  wheel  224 May  1  2024 MacOSX14.5.sdk
+lrwxr-xr-x   1 root  wheel   14 Jan  4  2025 MacOSX14.sdk.bak -> MacOSX14.5.sdk
+drwxr-xr-x   7 root  wheel  224 Nov 21  2024 MacOSX15.2.sdk
+lrwxr-xr-x   1 root  wheel   14 Jan  4  2025 MacOSX15.sdk -> MacOSX15.2.sdk
+
+$ ls -la /Applications/Xcode.app/Contents/Developer/Platforms/
+ls: /Applications/Xcode.app/Contents/Developer/Platforms/: No such file or directory
+
+## 1. clang target registration (backend support != shipping target)
+
+$ clang --print-targets
+
+  Registered Targets:
+    aarch64     - AArch64 (little endian)
+    aarch64_32  - AArch64 (little endian ILP32)
+    aarch64_be  - AArch64 (big endian)
+    amdgcn      - legacy name for amdgpu
+    amdgpu      - AMDGPU gfx6+
+    arm         - ARM
+    arm64       - ARM64 (little endian)
+    arm64_32    - ARM64 (little endian ILP32)
+    armeb       - ARM (big endian)
+    avr         - Atmel AVR Microcontroller
+    bpf         - BPF (host endian)
+    bpfeb       - BPF (big endian)
+    bpfel       - BPF (little endian)
+    hexagon     - Hexagon
+    lanai       - Lanai
+    loongarch32 - 32-bit LoongArch
+    loongarch64 - 64-bit LoongArch
+    mips        - MIPS (32-bit big endian)
+    mips64      - MIPS (64-bit big endian)
+    mips64el    - MIPS (64-bit little endian)
+    mipsel      - MIPS (32-bit little endian)
+    msp430      - MSP430 [experimental]
+    nvptx       - NVIDIA PTX 32-bit
+    nvptx64     - NVIDIA PTX 64-bit
+    ppc32       - PowerPC 32
+    ppc32le     - PowerPC 32 LE
+    ppc64       - PowerPC 64
+    ppc64le     - PowerPC 64 LE
+    r600        - AMD GPUs HD2XXX-HD6XXX
+    riscv32     - 32-bit RISC-V
+    riscv32be   - 32-bit big endian RISC-V
+    riscv64     - 64-bit RISC-V
+    riscv64be   - 64-bit big endian RISC-V
+    sparc       - Sparc
+    sparcel     - Sparc LE
+    sparcv9     - Sparc V9
+    spirv       - SPIR-V Logical
+    spirv32     - SPIR-V 32-bit
+    spirv64     - SPIR-V 64-bit
+    systemz     - SystemZ
+    thumb       - Thumb
+    thumbeb     - Thumb (big endian)
+    ve          - VE
+    wasm32      - WebAssembly 32-bit
+    wasm64      - WebAssembly 64-bit
+    x86         - 32-bit X86: Pentium-Pro and above
+    x86-64      - 64-bit X86: EM64T and AMD64
+    xcore       - XCore
+
+## 2. Apple SDK / sysroot availability
+
+$ xcrun --sdk iphoneos --show-sdk-path
+xcrun: error: SDK "iphoneos" cannot be located
+xcrun: error: SDK "iphoneos" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphoneos'
+EXIT=1
+
+$ xcrun --sdk iphonesimulator --show-sdk-path
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'
+EXIT=1
+
+$ xcrun --sdk iphoneos --find clang
+xcrun: error: SDK "iphoneos" cannot be located
+/Library/Developer/CommandLineTools/usr/bin/clang
+EXIT=0
+
+$ xcrun -sdk iphoneos clang -O2 -c generated_unit.c -o gen_iphoneos.o  # then: file gen_iphoneos.o
+xcrun: error: SDK "iphoneos" cannot be located
+EXIT=0
+file output: Mach-O 64-bit object arm64
+TRAP: xcrun printed an SDK error, exited 0, and silently emitted a HOST arm64 object.
+
+## 3. Cross-build a generated-style C unit for armv7-apple-ios
+
+$ clang -target armv7-apple-ios -O2 -ffreestanding -nostdinc -c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/generated_unit.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_armv7.o
+EXIT=0
+file output: Mach-O object arm_v7
+lipo output: Non-fat file: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_armv7.o is architecture: armv7
+
+$ clang -target armv7-apple-ios -O2 -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_armv7 /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/generated_unit.c
+ld: warning: Csu support file -lcrt1.3.1.o not found, changing to target iOS 7.0 where it is not needed
+ld: library not found for -lSystem
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+EXIT=1
+
+$ clang -target armv7-apple-ios -nostdlib -Wl,-e,_sub_00401000 -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_armv7_bare /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/generated_unit.c
+EXIT=0
+file output: Mach-O executable arm_v7
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_armv7_bare
+zsh:67: bad CPU type in executable: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_armv7_bare
+EXIT=127
+
+## 4. Other 32-bit-pointer Apple triples (NOT ARM32 ISA)
+
+$ clang -target armv7s-apple-ios -O2 -ffreestanding -nostdinc -c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/generated_unit.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_armv7s.o
+EXIT=0
+
+$ clang -target arm64_32-apple-watchos -O2 -ffreestanding -nostdinc -c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/generated_unit.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_arm64_32.o
+EXIT=0
+file output: Mach-O object arm64_32_v8
+
+$ clang -target armv7-apple-macosx10.15 -O2 -ffreestanding -nostdinc -c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/generated_unit.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/gen_armv7_macos.o
+clang: warning: using sysroot for 'macOS 15.2' but targeting 'thumbv7-apple-macosx10.15.0' [-Wincompatible-sysroot]
+EXIT=0
+
+## 5. REAL pre-existing generated C unit from this repo
+# /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/a32-target/highlevel/ikachan/revng/0x00401000.c
+
+$ clang -target armv7-apple-ios -O2 -ffreestanding -nostdinc -include /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_shim_def.h -c /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/a32-target/highlevel/ikachan/revng/0x00401000.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_armv7.o
+EXIT=0
+file output: Mach-O object arm_v7
+
+$ clang -target armv7-apple-ios -O2 -ffreestanding -nostdinc -include /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_shim_def.h -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_armv7 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/a32-target/highlevel/ikachan/revng/0x00401000.c
+ld: warning: Csu support file -lcrt1.3.1.o not found, changing to target iOS 7.0 where it is not needed
+ld: library not found for -lSystem
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+EXIT=1
+
+$ clang -target armv7-apple-ios -O2 -nostdlib -Wl,-e,_function_0x401000_Code_x86 -include /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_shim_def.h -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_armv7_bare /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/a32-target/highlevel/ikachan/revng/0x00401000.c
+EXIT=0
+file output: Mach-O executable arm_v7
+lipo output: Non-fat file: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_armv7_bare is architecture: armv7
+
+$ /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_armv7_bare
+zsh:88: bad CPU type in executable: /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/a32-arm32-transcript/revng_armv7_bare
+EXIT=127
+
+## 6. Emulator availability
+qemu-arm: NOT FOUND
+qemu-arm-static: NOT FOUND
+qemu-aarch64: NOT FOUND
+qemu-aarch64-static: NOT FOUND
+
+$ qemu-system-arm --version
+QEMU emulator version 9.2.1
+Copyright (c) 2003-2024 Fabrice Bellard and the QEMU Project developers
+EXIT=0
+
+$ qemu-system-arm -M help   # first 8 lines (full-system machines only)
+Supported machines are:
+ast1030-evb          Aspeed AST1030 MiniBMC (Cortex-M4)
+ast2500-evb          Aspeed AST2500 EVB (ARM1176)
+ast2600-evb          Aspeed AST2600 EVB (Cortex-A7)
+b-l475e-iot01a       B-L475E-IOT01A Discovery Kit (Cortex-M4)
+bletchley-bmc        Facebook Bletchley BMC (Cortex-A7)
+bpim2u               Bananapi M2U (Cortex-A7)
+canon-a1100          Canon PowerShot A1100 IS (ARM946)

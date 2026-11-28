@@ -1,0 +1,29 @@
+{
+  "schema": 2,
+  "kind": "build-proof",
+  "generated_at": "2026-11-25T11:39:53Z",
+  "title": "Project I.G.I. Windows PE32 -> native Linux aarch64 ELF",
+  "input": {
+    "path": "/Users/haseeb-mir/Downloads/IGI/igi.exe",
+    "sha256": "dea34892d417715873ea61d7b2ba5556655f1ad65385104348146f9679915a01"
+  },
+  "commands": [
+    "python3 -m tools.autorecomp /Users/haseeb-mir/Downloads/IGI/igi.exe --project-dir /Users/haseeb-mir/igi-proof/igi-src-clean --assets-dir /Users/haseeb-mir/Downloads/IGI --out-mode source --input-os windows --input-arch x86 --target-os macos --target-arch arm64 --no-table",
+    "python3 -m tools.linux_matrix --project /Users/haseeb-mir/igi-proof/igi-src-clean --out /Users/haseeb-mir/igi-proof/igi-linux-clean --original /Users/haseeb-mir/Downloads/IGI/igi.exe --provision prebuilt --build-timeout 3600 --jobs 1"
+  ],
+  "target": {
+    "status": "OK",
+    "path": "/Users/haseeb-mir/igi-proof/igi-linux-clean/staging/igi/build/igi",
+    "class": "ELF64",
+    "data": "LSB",
+    "machine": "0xb7",
+    "machine_name": "aarch64",
+    "size": 34188856,
+    "sha256": "e9c377c9cf2f9e05db0180bc5cfe340351c9677e5db0fa2c2c4511d5477af692"
+  },
+  "build_rc": 0,
+  "run_rc": 1,
+  "run_log_excerpt": "[pe] /original mapped at 0x00400000, span 0x835000\n[pe] bound 128 imports (0 delay), 0 unresolved\n[host] /original booted: entry 0x004A50F5, 0 unresolved imports\n[ddraw] SetCooperativeLevel(hwnd=00000000, flags=0x8): accepted, no real mode change\n[ddraw] CreateSurface 640x480 16 bpp caps 0xA00 flags 0x1 mips 0 desc1(108) -> 0x10003FD0 ret=00498480\n[dsound] dummy, 44100 Hz\n[MessageBox] IGI: Fatal error:\n\nIGI CD not found. Please insert CD in drive.\n[win32hle] ExitProcess(1) from guest 0x004A5AF7\n",
+  "scope": "Build succeeds; native process reaches IGI own CD check (no proprietary assets). PARTIAL, not playable.",
+  "limits": "No original-Windows Mission 1 oracle; no gameplay/audio claim."
+}

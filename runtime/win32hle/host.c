@@ -7,20 +7,28 @@
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700                     /* macOS: ucontext_t for the fault PC */
 #endif
+#define _GNU_SOURCE   /* strcasestr for forwarded export names */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>                             /* PATH_MAX for realpath() buffers */
 #include <signal.h>
 #include <unistd.h>
 #include <strings.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+/* Source-level Windows console cross-build: the POSIX host facilities this
+ * file uses are provided by win32_port.h/.c (real Win32 implementations). */
+#include "win32_port.h"
+#else
 #ifdef __APPLE__
 #include <ucontext.h>
 #include <mach-o/dyld.h>
 #elif defined(__linux__)
 #include <ucontext.h>
+#endif
 #endif
 #include "win32hle.h"
 #include "pe_loader.h"
@@ -62,9 +70,42 @@ static void setup_static_tls(const pe_image *img) {
             start, end, g_tls_zero_fill, g_tls_index);
 }
 
+/* Run the PE's TLS callbacks (DataDirectory[9].AddressOfCallBacks) before the
+ * entry point. Windows calls them with DLL_PROCESS_ATTACH after imports are
+ * bound; the array is NULL-terminated. Every callback VA must lie inside the
+ * mapped image, and hle_call_guest still refuses any VA with no lifted body. */
+void hle_pe_run_tls_callbacks(const pe_image *img) {
+    pe_dos_header *dos = (pe_dos_header *)hle_ptr(img->base);
+    if (!dos || dos->e_magic != 0x5A4D) return;
+    pe_nt_headers32 *nt = (pe_nt_headers32 *)hle_ptr(img->base + (uint32_t)dos->e_lfanew);
+    pe_opt_header32 *opt = &nt->OptionalHeader;
+    if (opt->NumberOfRvaAndSizes <= PE_DIR_TLS) return;
+    pe_data_dir d = opt->DataDirectory[PE_DIR_TLS];
+    if (!d.VirtualAddress || !d.Size || d.VirtualAddress + d.Size > img->span) return;
+    pe_tls_dir32 *tls = (pe_tls_dir32 *)hle_ptr(img->base + d.VirtualAddress);
+    uint32_t array = tls->AddressOfCallBacks;
+    if (!array || array < img->base || array >= img->base + img->span) return;
+    uint32_t args[3] = { img->base, 1u /* DLL_PROCESS_ATTACH */, 0u };
+    for (unsigned i = 0; i < 64; i++) {
+        uint32_t cb = MEM32(array + 4u * i);
+        if (!cb) break;
+        if (!recomp_lookup(cb)) {
+            fprintf(stderr, "[pe] TLS callback 0x%08X has no lifted body; chain rejected\n", cb);
+            break;
+        }
+        (void)hle_call_guest(cb, 3, args);
+    }
+}
+
 /* A fault in lifted code is a bad guest address, and without a debugger the
  * only useful fact is which function and which address. Report both, then let
- * the default action proceed so the exit status still says what happened. */
+ * the default action proceed so the exit status still says what happened.
+ *
+ * Windows has no sigaction/siginfo_t/ucontext and this console port does not
+ * install a structured exception handler, so there is no equivalent here.
+ * A fault in a Windows build gets the platform's default handling; it is NOT
+ * reported as a recompiler-specific diagnostic. */
+#ifndef _WIN32
 static void fault_report(int sig, siginfo_t *info, void *ctx) {
     char buf[260];
     uintptr_t a = (uintptr_t)info->si_addr;
@@ -81,7 +122,18 @@ static void fault_report(int sig, siginfo_t *info, void *ctx) {
         pc -= (uintptr_t)_dyld_get_image_vmaddr_slide(0);   /* link-time address, as nm prints it */
     }
 #elif defined(__linux__)
-    if (ctx) pc = (uintptr_t)((ucontext_t *)ctx)->uc_mcontext.gregs[REG_RIP];
+    if (ctx) {
+        ucontext_t *uc = (ucontext_t *)ctx;
+#if defined(__x86_64__)
+        pc = (uintptr_t)uc->uc_mcontext.gregs[REG_RIP];
+#elif defined(__i386__)
+        pc = (uintptr_t)uc->uc_mcontext.gregs[REG_EIP];
+#elif defined(__aarch64__)
+        pc = (uintptr_t)uc->uc_mcontext.pc;
+#elif defined(__arm__)
+        pc = (uintptr_t)uc->uc_mcontext.arm_pc;
+#endif
+    }
 #endif
     int n;
     if (a >= base && a - base <= 0xFFFFFFFFu)
@@ -96,14 +148,17 @@ static void fault_report(int sig, siginfo_t *info, void *ctx) {
     signal(sig, SIG_DFL);
     raise(sig);
 }
+#endif /* !_WIN32 */
 
 void recomp_host_init(void) {
+#ifndef _WIN32
     struct sigaction sa;
     sa.sa_sigaction = fault_report;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
     sigaction(SIGBUS, &sa, NULL);
     sigaction(SIGSEGV, &sa, NULL);
+#endif
     win32hle_register(win32hle_kernel32);
     win32hle_register(win32hle_kernel32_ext);
     win32hle_register(win32hle_kernel32_crt);
@@ -111,6 +166,8 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_gdidc);
     win32hle_register(win32hle_gdi32);
     win32hle_register(win32hle_user32);
+    extern const win32hle_shim win32hle_comctl32[];    /* local: the shared header is not edited here */
+    win32hle_register(win32hle_comctl32);
     win32hle_register(win32hle_winmm);
     win32hle_register(win32hle_avifil32);
     win32hle_register(win32hle_msvfw32);                 /* the AVI decompressor API */
@@ -121,7 +178,10 @@ void recomp_host_init(void) {
     win32hle_register(win32hle_advapi32);
     win32hle_register(win32hle_dsound);
     win32hle_register(win32hle_ddraw);
+    win32hle_register(win32hle_d3d8);
+    win32hle_register(win32hle_d3d9);
     win32hle_register(win32hle_sdl12);
+    win32hle_register(win32hle_sdl2);       /* SDL2 window/render on the shared present path */
     win32hle_register(win32hle_sdlmix);
     win32hle_register(win32hle_gl32);
     win32hle_register(win32hle_msvcrt);
@@ -150,6 +210,20 @@ static uint32_t data_import(const char *name) {
     return hle_msvcrt_data(name);
 }
 
+#ifdef _WIN32
+/* MinGW/PE folds a weak definition in the SAME translation unit to its
+ * initialiser, so the generated strong definitions in recomp_image.c/.S were
+ * being ignored and every Windows build claimed it had no embedded image.
+ * On this target declare them extern: the console cross-build requires an
+ * embedded image (the tool reports a clear FAIL otherwise).  Companion-table
+ * defaults are supplied by win32_port.c for RECOMP_CONSOLE_ONLY builds. */
+extern const recomp_companion_t *const recomp_companion_list;
+extern const uint32_t recomp_companion_count;
+extern const unsigned char recomp_original_image[];
+extern const unsigned long recomp_original_image_size;
+extern const char recomp_original_name[];
+extern const int recomp_has_embedded_image;
+#else
 /* Weak defaults for the generated bundled-DLL table. A project with no
  * companions does not define these; one with them does, and the linker picks
  * the generated definitions. Weak *definitions* rather than declarations,
@@ -167,6 +241,7 @@ __attribute__((weak)) const unsigned char recomp_original_image[1] = { 0 };
 __attribute__((weak)) const unsigned long recomp_original_image_size = 0;
 __attribute__((weak)) const char recomp_original_name[1] = { 0 };
 __attribute__((weak)) const int recomp_has_embedded_image = 0;
+#endif /* _WIN32 */
 
 static int have_embedded_image(void) { return recomp_has_embedded_image; }
 
@@ -252,13 +327,43 @@ static int map_companions(void) {
     return 0;
 }
 
-/* The import a bundled DLL answers, or 0. */
+/* Case-insensitive substring search (the BSD/GNU strcasestr is not declared
+ * by the macOS SDK headers even with the feature macros above). */
+static const char *ci_find(const char *hay, const char *needle) {
+    size_t nl = strlen(needle);
+    for (; *hay; hay++)
+        if (!strncasecmp(hay, needle, nl)) return hay;
+    return NULL;
+}
+
+/* The import a bundled DLL answers, or 0.
+ * Ordinal imports arrive from the binder as "dll#N" (not "#N"), so the '#' is
+ * searched anywhere in the string. Forwarded exports ("other.dll.Func" or
+ * "other.dll.#N" in the export name table) are resolved recursively instead
+ * of handing the guest a string address as if it were code. */
 static uint32_t companion_import(const char *dll, const char *name) {
     if (!recomp_companion_count || !dll || !name) return 0;
-    /* Base names only: the import table carries a path, the companion table a
-     * bare file name. */
     const char *d = dll, *n = name;
     for (const char *p = dll; *p; p++) if (*p == '\\' || *p == '/') d = p + 1;
+    uint32_t ordinal = 0;
+    const char *hash = strchr(n, '#');
+    if (hash) ordinal = (uint32_t)strtoul(hash + 1, NULL, 10);
+    /* An explicit ordinal name must belong to this DLL: "a.dll#3" must not be
+     * answered by b.dll's export number 3. */
+    const char *hash_dll = NULL;
+    if (hash) {
+        size_t prefix = (size_t)(hash - n);
+        if (prefix > 0) {                 /* "#N" (a forwarder's target) has no DLL prefix */
+            char want[96];
+            if (prefix >= sizeof want) return 0;
+            memcpy(want, n, prefix); want[prefix] = 0;
+            hash_dll = want;
+            const char *cmp_dll = hash_dll;
+            size_t k = 0;
+            while (d[k] && cmp_dll[k] && (d[k] == cmp_dll[k] || (d[k] | 32) == (cmp_dll[k] | 32))) k++;
+            if (d[k] || cmp_dll[k]) return 0;
+        }
+    }
     for (uint32_t i = 0; i < recomp_companion_count; i++) {
         const recomp_companion_t *c = &recomp_companion_list[i];
         const char *cb = c->dll;
@@ -266,11 +371,34 @@ static uint32_t companion_import(const char *dll, const char *name) {
         size_t k = 0;
         while (d[k] && cb[k] && (d[k] == cb[k] || (d[k] | 32) == (cb[k] | 32))) k++;
         if (d[k] || cb[k]) continue;                     /* not this companion */
-        /* An ordinal import ("dll#N") has no name to match by. */
-        if (n[0] == '#') return 0;
-        for (uint32_t e = 0; e < c->export_count; e++)
-            if (c->exports[e].name && !strcmp(c->exports[e].name, n))
-                return c->exports[e].va;
+        for (uint32_t e = 0; e < c->export_count; e++) {
+            const recomp_export_t *x = &c->exports[e];
+            int match = ordinal ? (x->ordinal == ordinal)
+                                : (x->name && !strcmp(x->name, n));
+            if (!match) continue;
+            /* A forwarder's VA points into the export string table, not code. */
+            if (x->name) {
+                /* Forwarders are "DLL.dll.Func" or "DLL.dll.#N". Locate the
+                 * ".dll" marker so the DLL's own dot is not mistaken for the
+                 * separator before the function/ordinal. */
+                const char *marker = ci_find(x->name, ".dll");
+                if (marker) {
+                    const char *rest = marker + 4;
+                    if (*rest == '.') rest++;
+                    if (*rest) {
+                        char other[128], what[128];
+                        size_t dl = (size_t)(rest - x->name) - (*(rest - 1) == '.' ? 1u : 0u);
+                        if (dl >= sizeof other || strlen(rest) >= sizeof what) return 0;
+                        memcpy(other, x->name, dl); other[dl] = 0;
+                        snprintf(what, sizeof what, "%s", rest);
+                        uint32_t forwarded = companion_import(other, what);
+                        if (forwarded) return forwarded;
+                        return hle_resolve_import(what);
+                    }
+                }
+            }
+            return x->va;
+        }
         return 0;
     }
     return 0;
@@ -329,6 +457,9 @@ static int finish_boot(const char *log_name, const char *guest_name,
     int comp_ok = (map_companions() == 0);
     int unresolved = recomp_pe_bind_companions(&g_img, resolve,
                                                comp_ok ? companion_import : NULL);
+    /* Imports are bound, so a TLS callback may call them. This must precede
+     * the guest entry point. */
+    hle_pe_run_tls_callbacks(&g_img);
     g_booted = 1;
     fprintf(stderr, "[host] %s booted: entry 0x%08X, %d unresolved imports\n",
             log_name, g_img.entry, unresolved);
@@ -336,7 +467,9 @@ static int finish_boot(const char *log_name, const char *guest_name,
 }
 
 static int boot(const char *path, uint32_t (*resolve)(const char *)) {
-    char image[1024];
+    /* glibc's __realpath_chk requires a PATH_MAX-sized output buffer; a shorter
+     * one aborts with "buffer overflow detected" before any guest code runs. */
+    char image[PATH_MAX];
     if (!realpath(path, image)) { fprintf(stderr, "[host] cannot find %s: %s\n", path, strerror(errno)); return -1; }
     enter_image_directory(image);
     if (recomp_pe_map(image, &g_img) != 0) return -1;
@@ -351,7 +484,7 @@ static int boot(const char *path, uint32_t (*resolve)(const char *)) {
  * the original exe did. Companions (a bundled DLL the game ships) are still
  * resolved relative to that directory -- they are the game's files. */
 static int boot_embedded(const char *assets_dir, uint32_t (*resolve)(const char *)) {
-    char dir[1024];
+    char dir[PATH_MAX];                          /* realpath() requires PATH_MAX */
     if (assets_dir && *assets_dir && realpath(assets_dir, dir)) {
         hle_set_drive('C', dir);
         if (chdir(dir) != 0)

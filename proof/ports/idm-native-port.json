@@ -1,0 +1,12 @@
+{
+  "title": "IDM PE32 -> macOS arm64 native rebuild",
+  "input": {
+    "sha256_prefix": "7346128fab42"
+  },
+  "binary": {
+    "local_path": "evidence/PROOF/binaries/idm-macos-arm64",
+    "sha256": "7ad46b49de69d060373d78b8c44f40ed550659ea47038dba8d883d31856c26eb"
+  },
+  "native_run_log_excerpt": "[pe] bound 104 imports (0 delay), 0 unresolved\n[MessageBox] IDM Setup: IDM no longer supports older versions of Windows such as Windows XP or Vista. IDM requires Windows 7 or later.\n[win32hle] ExitProcess(0)",
+  "verdict": "BUILD_OK; own version check; not full functionality"
+}

@@ -1,0 +1,16 @@
+{
+  "slug": "games__tumiki_fighters__tf.exe",
+  "arch": "pe32_i386",
+  "pe_path": "/Users/haseeb-mir/Downloads/recomp-apps/games/tumiki_fighters/tf.exe",
+  "sha256": "8e77d496d636431384fe49577450fa5b7ddf1211b2521d09de73174500305ce1",
+  "size": 219676,
+  "is_game": true,
+  "started": 1795505516.600119,
+  "status": "BUILD-ONLY",
+  "detail": "compiled native ARM64 binary; run/verify stage not executed (--out-mode binary)",
+  "returncode": 0,
+  "binary_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__tumiki_fighters__tf.exe/bin_tf",
+  "log_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__tumiki_fighters__tf.exe/build.log",
+  "report_path": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/games__tumiki_fighters__tf.exe/report.json",
+  "seconds": 68.4
+}

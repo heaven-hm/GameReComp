@@ -769,7 +769,7 @@ pub fn run_about_cmd(cfg: &AppConfig) -> i32 {
     println!("  {}", "PIPELINE OPTIONS".bright_yellow().bold());
     println!(
         "    {}",
-        "--input-os auto|windows  --input-arch auto|x86  --target-os host|macos|linux|windows|web"
+        "--input-os auto|windows|macos|linux  --input-arch auto|x86|x86_64|arm64  --target-os host|macos|linux|windows|web"
             .dimmed()
     );
     println!(

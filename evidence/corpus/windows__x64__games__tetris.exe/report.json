@@ -1,0 +1,31 @@
+{
+  "target": "/Users/haseeb-mir/Downloads/recomp-apps/windows/x64/games/tetris.exe",
+  "arch": "pe32plus_x64",
+  "host": {
+    "platform": "darwin",
+    "machine": "arm64"
+  },
+  "pipeline": {
+    "disassembler": "disasm64.py",
+    "lifter": "generate64.py",
+    "meta": {
+      "image_base": 5368709120,
+      "entry_point": 5368714304,
+      "size_of_image": 159744,
+      "functions": 103,
+      "translation_units": 1,
+      "lift_errors": 0,
+      "recomp_todo_sites": 1,
+      "imports": 46
+    }
+  },
+  "binary": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tetris.exe/tetris",
+  "binary_format": "/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/windows__x64__games__tetris.exe/tetris: Mach-O 64-bit executable arm64",
+  "native_run": {
+    "exit": -11,
+    "stdout_hex": "",
+    "stderr": "[cpu64] image loaded: entry 0x140001440, delta 0, imports 46\n"
+  },
+  "imports": 46,
+  "translation_units": 1
+}

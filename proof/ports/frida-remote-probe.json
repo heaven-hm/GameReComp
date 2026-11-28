@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "engine": "frida",
+  "side": "remote-linux-container",
+  "version": "17.27.5",
+  "image": "gamerecomp/frida-probe:local",
+  "verified": [
+    "frida.spawn",
+    "frida.attach",
+    "create_script",
+    "script.load",
+    "console.log",
+    "send() message",
+    "session.detach"
+  ],
+  "evidence": "ATTACHED True / SCRIPT_LOADED / HOOK_READY message received",
+  "host_note": "Host macOS remains SIP-blocked (PermissionDeniedError); remote side is fully live."
+}

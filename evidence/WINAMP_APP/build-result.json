@@ -1,0 +1,7 @@
+{
+  "title": "Winamp real app native build",
+  "binary": "e96ccd09dc88e1f5db86d51da2e513fb34c802d9f00588753af705ad22ce309b",
+  "build": "cmake -O0 -g0 -j4 exit 0",
+  "run": "exit 2, 460 imports bound (56 delay), 275 unresolved (tataki.dll C++ exports), 0 frames",
+  "verdict": "FAIL - real winamp.exe rebuilt but companion C++ DLL exports unresolved"
+}

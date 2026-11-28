@@ -1,0 +1,37 @@
+B1 build of /Users/haseeb-mir/Downloads/recomp-apps/win64/blackbox.exe
+arch=pe32plus_x64 sha256=cae195b8ebcbf6d5708472e6673bb9d3847b0dbfd55ec5c9af0e7f5b0c65ea96
+host=macos/arm64
+======================================================================
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/disasm/disasm64.py /Users/haseeb-mir/Downloads/recomp-apps/win64/blackbox.exe -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/funcs.json --funcs-txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/funcs.txt
+[*] blackbox.exe: base=0x140000000, 1 exec sections, 86,118 code bytes
+[*] seeds: pdata=182, guard_cf=0, exports=0, entry=1, reloc=63, thunk=1, funclet=2, chunks=0
+[*] functions: 266 (37 thunks)
+
+[exit 0 in 0.5s]
+
+$ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/tools/lift/generate64.py /Users/haseeb-mir/Downloads/recomp-apps/win64/blackbox.exe /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/funcs.txt /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/gen
+[*] image base 0x140000000, entry 0x1400155c8, 7 sections
+[*] catalog: 266 functions
+[*] imports: 191 IAT slots
+[*] closure round 1: +25 dispatch targets not in the catalog
+[*] closure round 2: +8 dispatch targets not in the catalog
+[*] closure round 3: +11 dispatch targets not in the catalog
+[*] closure round 4: +1 dispatch targets not in the catalog
+[*] catalog closed after 5 rounds, 45 entries added (311 total)
+
+[*] === COMPLETE in 1s ===
+[*] image_base           0x140000000
+[*] entry_point          0x1400155c8
+[*] size_of_image        159744
+[*] functions            311
+[*] translation_units    1
+[*] lift_errors          0
+[*] recomp_todo_sites    4
+[*] imports              191
+
+[exit 0 in 1.1s]
+
+$ clang -target arm64-apple-macos11 -O1 -w -I/private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/gen -I/Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu /Users/haseeb-mir/.local/share/opencode/worktree/1b47e2/b1-build/runtime/recomp64_cpu/cpu64.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/runner64_generic.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/gen/recomp_funcs_0000.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/gen/recomp_dispatch.c /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/gen/recomp_imports.c -o /private/var/folders/q0/rj0k1xgn28x14thfz4gnbm5c0000gn/T/opencode/b1-builds/win64__blackbox.exe/blackbox
+
+[exit 0 in 20.2s]
