@@ -5,6 +5,34 @@ All notable changes to this repository: the GameReComp PCRecomp-first product
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [0.4.0] - 2026-11-28
+
+### Added
+- Runtime verification that runs the original Windows binary and the rebuilt
+  program with identical inputs and compares exit code, stdout and stderr. It
+  no longer repeats lifting/recompilation; source parity is read from the
+  pipeline's recorded value.
+- Separate GUI percentages for source-code parity and run verification, with a
+  verbose verification-detail panel instead of a toast-only failure.
+- Direct path entry that accepts any Windows PE, macOS `.app`/Mach-O, Linux ELF
+  or folder, plus a **Batch folder** action that carries the selected target
+  into CLI batch runs.
+- Rev.ng container source pass with a live-socket fallback and PTML capture.
+- Win32 HLE shims and Linux portability fixes for generated C (aarch64 fault PC,
+  fortified `realpath`, BSD-only socket field, absolute `.incbin` paths).
+
+### Changed
+- Repository/docs cleaned: internal proof, evidence and generated build trees
+  are no longer committed. Release notes and user guides remain.
+- Verification is measured over named checks; blocked checks are never reported
+  as passes.
+
+### Known limitations
+- Windows target builds and x86-64 guest lifting are not implemented; inputs are
+  accepted and fail closed with named reasons.
+- Frida attach is unavailable on some macOS hosts; runtime verification does not
+  depend on it.
+
 ## [0.0.1] - 2026-11-19
 
 First beta release of the Rust GameReComp CLI and orchestrator.
